@@ -57,8 +57,8 @@ function ladderRoot(t: TestContext): string {
     kind: "suite",
     name: "rays",
     defaults: {
-      engines: ["ref", "ref-bent", "ref-twin"],
-      referenceEngine: "ref",
+      engines: ["reference-tracer", "ref-bent", "ref-twin"],
+      referenceEngine: "reference-tracer",
       rungs: ["built-system", "ray-trace", "optical-path"],
       fields: { kind: "angles-deg", values: [0, 10] },
       sampling: { bundleGrid: 12 },
@@ -101,7 +101,7 @@ test("ref against a faithful copy passes R2 and R3 with no difference at all; a 
     for (const set of sets(rung, "reference-vs-each")) {
       const [bent, twin] = set.pairs;
       assert.deepEqual([bent.b, bent.verdict, bent.metrics], ["ref-bent", "BLOCKED", []]);
-      assert.equal(bent.reason, "not judged: rung built-system failed for ref and ref-bent on this case");
+      assert.equal(bent.reason, "not judged: rung built-system failed for ref-bent and reference-tracer on this case");
       // The faithful copy is the same arithmetic on the same rays: every figure is 0, and no ray is in doubt.
       assert.deepEqual([twin.b, twin.verdict], ["ref-twin", "PASS"]);
       for (const metric of twin.metrics) {
@@ -111,7 +111,7 @@ test("ref against a faithful copy passes R2 and R3 with no difference at all; a 
   }
   // A probe lattice has no chief ray: the path relative to one is not measured, and the pair says so and passes.
   const [path] = sets("optical-path", "pairwise").map((set) =>
-    set.pairs.find((pair) => pair.a === "ref" && pair.b === "ref-twin"),
+    set.pairs.find((pair) => pair.a === "ref-twin" && pair.b === "reference-tracer"),
   );
   assert.equal(path?.reason, "opd.maxAbs was not measured: the set has no chief ray");
   assert.deepEqual(
@@ -119,7 +119,9 @@ test("ref against a faithful copy passes R2 and R3 with no difference at all; a 
     ["opticalPath.maxAbs", "opticalPathToImage.maxAbs"],
   );
   // Rays were compared: a twelve-by-twelve lattice over the front element, of which the stop passes the middle.
-  const [geometry] = sets("ray-trace", "pairwise").map((set) => set.pairs.find((pair) => pair.b === "ref-twin"));
+  const [geometry] = sets("ray-trace", "pairwise").map((set) =>
+    set.pairs.find((pair) => pair.a === "ref-twin" && pair.b === "reference-tracer"),
+  );
   const count = geometry?.metrics.find((metric) => metric.name === "rays.compared")?.value ?? 0;
   assert.ok(count >= 8 && count < 144, String(count));
   // The field of the set is in every place a metric occurs at.
@@ -146,7 +148,7 @@ test("ref against a faithful copy passes R2 and R3 with no difference at all; a 
 
 test("compare reads each case from the run directory, and a case that is not there is said, not guessed", async (t) => {
   const rootDir = ladderRoot(t);
-  assert.equal((await lvrtc(rootDir, "run", "suite.json", "--engines", "ref,ref-twin")).code, EXIT_OK);
+  assert.equal((await lvrtc(rootDir, "run", "suite.json", "--engines", "reference-tracer,ref-twin")).code, EXIT_OK);
   const directory = join(rootDir, "runs", "rays");
   // The case of the run, as the run wrote it.
   assert.deepEqual(readRunCase(directory, DOUBLE_GAUSS.id), DOUBLE_GAUSS);
@@ -165,14 +167,14 @@ test("compare reads each case from the run directory, and a case that is not the
   // Without its case a rung of traced rays cannot be judged: every pair of it is an error that says why.
   const compared = await lvrtc(rootDir, "compare", "rays");
   assert.equal(compared.code, EXIT_FAILURE);
-  assert.match(compared.out, /^double-gauss +built-system +every pair +ref +ref-twin +Pass$/m);
+  assert.match(compared.out, /^double-gauss +built-system +every pair +ref-twin +reference-tracer +Pass$/m);
   assert.match(
     compared.out,
-    /^double-gauss +ray-trace +every pair +ref +ref-twin +Error +the case is not at hand: its clip radii say which rays lie in the rim band$/m,
+    /^double-gauss +ray-trace +every pair +ref-twin +reference-tracer +Error +the case is not at hand: its clip radii say which rays lie in the rim band$/m,
   );
   assert.match(
     compared.out,
-    /^double-gauss +optical-path +every pair +ref +ref-twin +Error +the request and its case are not at hand: /m,
+    /^double-gauss +optical-path +every pair +ref-twin +reference-tracer +Error +the request and its case are not at hand: /m,
   );
   writeFileSync(file, original);
   assert.equal((await lvrtc(rootDir, "compare", "rays")).code, EXIT_OK);
@@ -195,14 +197,14 @@ function unblocking(): Policy {
   return { ...own, rungs: { ...own.rungs, "built-system": r0 } };
 }
 
-/** The R2 and R3 pairs of `ref` against a bent copy, for each of two fields of the Double-Gauss, R0 not blocking. */
+/** The R2 and R3 pairs of `reference-tracer` against a bent copy, for each of two fields of the Double-Gauss, R0 not blocking. */
 async function against(
   t: TestContext,
   bend: Omit<BentOptions, "id">,
   opticalCase: OpticalCase = DOUBLE_GAUSS,
 ): Promise<{ r2: PairComparison[]; r3: PairComparison[]; manifest: RunManifest; store: ResultStore }> {
   const runsDir = tempDir(t);
-  const { registry } = watchedRegistry({ ref: REF, "ref-bent": bentEngine(bend) });
+  const { registry } = watchedRegistry({ "reference-tracer": REF, "ref-bent": bentEngine(bend) });
   const run = {
     name: "one",
     opticalCase,
@@ -223,7 +225,7 @@ async function against(
     manifest,
     store,
     policy: unblocking(),
-    reference: "ref",
+    reference: "reference-tracer",
     modes: ["reference-vs-each"],
     cases: () => opticalCase,
   });

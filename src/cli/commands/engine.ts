@@ -11,6 +11,7 @@ import type { ConformanceReport, ConformanceStatus } from "../../engines/conform
 import { enginesText } from "../../engines/adapter.ts";
 import type { BuiltinEngines } from "../../engines/builtin.ts";
 import { createEngineRegistry, createEngineTransport, engineTimeouts } from "../../engines/registry.ts";
+import { aliasEngineId } from "../../core/legacyIds.ts";
 import type { EngineTimeouts } from "../../engines/remote.ts";
 import { parseArguments } from "../arguments.ts";
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "../command.ts";
@@ -150,10 +151,14 @@ export function createEngineCommand(inputs: EngineCommandInputs): CliCommand {
       const loaded = loadConfig({ rootDir, env: inputs.env });
       const { builtins } = inputs;
       const registry = createEngineRegistry(loaded, undefined, builtins);
+      const [configured, builtin] = [registry.ids(), registry.builtinIds()];
+      // An engine named by the id it had before it was renamed is that engine, under its id of today, and the command
+      // says so once (`aliasEngineId`); an id the registry knows is never read as an old one.
+      const ids = asked.ids.map((id) => (configured.includes(id) || builtin.includes(id) ? id : aliasEngineId(id)));
       if (asked.action === "describe") {
         // An engine that cannot be used, an id that names none included, is said to be unavailable with its code.
         const engines: ManifestEngine[] = [];
-        for (const id of asked.ids) engines.push(await describeEngineForManifest(registry, id));
+        for (const id of ids) engines.push(await describeEngineForManifest(registry, id));
         io.stdout(
           asked.json
             ? `${canonicalJson({ engines })}\n`
@@ -161,8 +166,7 @@ export function createEngineCommand(inputs: EngineCommandInputs): CliCommand {
         );
         return EXIT_OK;
       }
-      const [id] = asked.ids;
-      const [configured, builtin] = [registry.ids(), registry.builtinIds()];
+      const [id] = ids;
       if (!configured.includes(id) && !builtin.includes(id)) {
         io.stderr(`lvrtc engine: unknown engine "${id}": ${enginesText(configured, builtin)}\n`);
         return EXIT_USAGE;

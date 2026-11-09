@@ -1,5 +1,5 @@
-// The engine `ref-seidel` and its third-order sums, held to what is derived here another way: tan of an angle by a
-// series in whole numbers; a single refracting surface by its closed forms, and its spherical aberration by the limit
+// The engine `reference-seidel` and its third-order sums, held to what is derived here another way: tan of an angle by
+// a series in whole numbers; a single refracting surface by its closed forms, and its spherical aberration by the limit
 // of a real ray's longitudinal aberration, with a term of power 4 too; an aplanatic surface (S1 = S2 = S3 = 0) and a
 // surface whose centre of curvature is the stop (S2 = S3 = S5 = 0); a thin lens with the stop on it (S3 = H^2 K,
 // S4 = H^2 K / n, S5 = 0); the Petzval sum of separated thin lenses; a plane-parallel plate in a diverging beam; a
@@ -775,7 +775,7 @@ async function ask(opticalCase: OpticalCase, spec: JsonObject): Promise<ResultEn
 
 test("ref-seidel describes itself apart from ref, which imports nothing of it", async () => {
   const descriptor = refSeidelDescriptor();
-  assert.equal(descriptor.identity.id, "ref-seidel");
+  assert.equal(descriptor.identity.id, "reference-seidel");
   assert.deepEqual(descriptor.capabilities.quantities, { "seidel.native": { version: 1 } });
   assert.notEqual(descriptor.identity.fingerprint, refDescriptor().identity.fingerprint);
   // ref's closure has nothing of ref-seidel, which reaches ref's model and kernel.

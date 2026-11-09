@@ -1,7 +1,7 @@
 // The ids a check or an engine had before it was renamed, and what each is called now. A run, a suite, a command
 // line or a committed baseline written before a rename still names the old id; each is read through these maps, so
-// that nothing with an old id is persisted again or enters a key. The check ids are renamed (Stage 9.7); the engine
-// map is empty until the engine ids are (Stage 9.8).
+// that nothing with an old id is persisted again or enters a key. The check ids are renamed (Stage 9.7), and the
+// engine ids (Stage 9.8).
 //
 // This file imports nothing and is in no engine's import closure: no fingerprint or adapter revision moves for it.
 // It is never applied where the catalog snapshot is held to its frozen policy and known failures (`parseBaseline`,
@@ -40,8 +40,19 @@ export const LEGACY_CHECK_IDS: Readonly<Record<string, string>> = Object.freeze(
   r14b: "zernike-vs-optiland",
 });
 
-/** Old engine id to new engine id. Empty: no engine has been renamed. */
-export const LEGACY_ENGINE_IDS: Readonly<Record<string, string>> = Object.freeze({});
+/**
+ * Old engine id to new engine id (Stage 9.8): an engine the comparator builds is named `<what it computes>-of-<whose
+ * data>`. `lv` and `optiland` keep their ids. The catalog snapshot, its known failures and reproducers keep the old
+ * ids.
+ */
+export const LEGACY_ENGINE_IDS: Readonly<Record<string, string>> = Object.freeze({
+  ref: "reference-tracer",
+  "ref-seidel": "reference-seidel",
+  replay: "replay-of-lv-mtf",
+  wave: "wave-mtf-of-lv-rays",
+  flux: "flux-of-lv-rays",
+  "optiland-wave": "otf-of-optiland-wavefront",
+});
 
 /** Both maps, as a function that reads ids is handed them; a test hands synthetic ones. */
 export interface LegacyMaps {

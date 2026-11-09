@@ -331,7 +331,7 @@ export const r6aRung: RungDefinition = Object.freeze({
 });
 
 /** The engines of the rung `r4f`: LensVisualizer, and the comparator's estimator on a replay of its sampling. */
-export const R4F_ENGINES: readonly string[] = Object.freeze(["lv", "replay"]);
+export const R4F_ENGINES: readonly string[] = Object.freeze(["lv", "replay-of-lv-mtf"]);
 
 /**
  * The `mtf.native` spec that asks for the geometric MTF of a recipe, on the plane of the case: the recipe's
@@ -352,7 +352,7 @@ export function geometricMtfSpec(recipe: MtfRecipe): MtfNativeSpec | null {
 /**
  * The rung `r4f`, the fidelity of the comparator's reading of LensVisualizer's MTF sampling: one `mtf.native`
  * request for the geometric MTF of the run's recipe on the plane of the case (`geometricMtfSpec`), asked of
- * LensVisualizer, whose answer is its own `computeMtf`, and of the engine `replay`, whose answer is the
+ * LensVisualizer, whose answer is its own `computeMtf`, and of the engine `replay-of-lv-mtf`, whose answer is the
  * comparator's estimator on a replay of the same sampling. It is asked of those two and of no other engine
  * (`R4F_ENGINES`), and only for a recipe LensVisualizer resolved: a case read from a file has no sampling of
  * LensVisualizer's to replay, and no request. Both engines are handed the run's `sampling.lvGridCap` as their
@@ -376,7 +376,7 @@ export const r4fRung: RungDefinition = Object.freeze({
 });
 
 /** The engines of the rung `r6b`: LensVisualizer, and the comparator's wave estimator on LensVisualizer's rays. */
-export const R6B_ENGINES: readonly string[] = Object.freeze(["lv", "wave"]);
+export const R6B_ENGINES: readonly string[] = Object.freeze(["lv", "wave-mtf-of-lv-rays"]);
 
 /**
  * The `mtf.native` spec that asks for the MTF of a recipe by `method`, on the plane of the case: the recipe's
@@ -410,11 +410,11 @@ export function waveMtfSpec(recipe: MtfRecipe, fields: RunFields = DEFAULT_RAY_F
 /**
  * The rung `r6b`, LensVisualizer's own diffraction MTF beside the comparator's wave estimator on LensVisualizer's
  * rays: one `mtf.native` request for the diffraction MTF of the run's recipe on the plane of the case
- * (`waveMtfSpec`), asked of LensVisualizer, whose answer is its own `computeMtf`, and of the engine `wave`, whose
- * answer is Hopkins' autocorrelation of the optical paths LensVisualizer traces on the lattices rung `r6a` judges.
- * It is asked of those two and of no other engine (`R6B_ENGINES`), and only for a recipe LensVisualizer resolved.
- * Both engines are handed the run's `sampling.lvGridCap` and `sampling.bundleGrid` as the options `lvGridCap` and
- * `bundleGrid`, where the run states them; each reads its own.
+ * (`waveMtfSpec`), asked of LensVisualizer, whose answer is its own `computeMtf`, and of the engine
+ * `wave-mtf-of-lv-rays`, whose answer is Hopkins' autocorrelation of the optical paths LensVisualizer traces on the
+ * lattices rung `r6a` judges. It is asked of those two and of no other engine (`R6B_ENGINES`), and only for a recipe
+ * LensVisualizer resolved. Both engines are handed the run's `sampling.lvGridCap` and `sampling.bundleGrid` as the
+ * options `lvGridCap` and `bundleGrid`, where the run states them; each reads its own.
  */
 export const r6bRung: RungDefinition = Object.freeze({
   id: "mtf-vs-wave-estimate",
@@ -435,7 +435,7 @@ export const r6bRung: RungDefinition = Object.freeze({
 });
 
 /** The engines of the rung `r5`: LensVisualizer, optiland, and the comparator's wave estimator on LensVisualizer's rays. */
-export const R5_ENGINES: readonly string[] = Object.freeze(["lv", "optiland", "wave"]);
+export const R5_ENGINES: readonly string[] = Object.freeze(["lv", "optiland", "wave-mtf-of-lv-rays"]);
 
 /** The engine of `r5` and `r5g` that is handed the angles of the fields, and the option it is handed them as. */
 export const R5_ANGLES_ENGINE = "optiland";
@@ -456,8 +456,8 @@ export function recipeAngles(recipe: MtfRecipe, spec: MtfNativeSpec): number[] |
  * The rung `r5`, LensVisualizer's product MTF beside an engine's own: the one `mtf.native` request of `r6b`
  * (`waveMtfSpec`: the diffraction MTF of the run's recipe on the plane of the case, at the fields the run traces
  * rays for, as fractions of the reference image height), asked of LensVisualizer, of optiland, whose answer is its
- * FFT MTF, and of the engine `wave`, the comparator's wave estimator on LensVisualizer's rays. One request, so
- * the three answers are one comparison and an answer `r6b` has in the store is not computed again.
+ * FFT MTF, and of the engine `wave-mtf-of-lv-rays`, the comparator's wave estimator on LensVisualizer's rays. One
+ * request, so the three answers are one comparison and an answer `r6b` has in the store is not computed again.
  *
  * No engine but LensVisualizer knows which angle a fraction of its image height is. The recipe states it, and
  * optiland is handed the recipe's angles as its option `fieldAnglesDeg`, one for each field of the spec; the other
@@ -485,15 +485,15 @@ export const r5Rung: RungDefinition = Object.freeze({
 export const r6cRung: RungDefinition = Object.freeze({
   ...r5Rung,
   id: "mtf-vs-optiland-wavefront",
-  engines: Object.freeze(["lv", "wave", "optiland", "optiland-wave"]),
+  engines: Object.freeze(["lv", "wave-mtf-of-lv-rays", "optiland", "otf-of-optiland-wavefront"]),
   engineOptions: (runSpec: RunSpec, inputs?: RungInputs, engineId?: string): JsonObject | undefined =>
-    r5Rung.engineOptions?.(runSpec, inputs, engineId === "optiland-wave" ? "optiland" : engineId),
+    r5Rung.engineOptions?.(runSpec, inputs, engineId === "otf-of-optiland-wavefront" ? "optiland" : engineId),
   buildRequests: (opticalCase: OpticalCase, runSpec: RunSpec, inputs?: RungInputs): QuantityRequest[] =>
     r5Rung.buildRequests(opticalCase, runSpec, inputs),
 });
 
 /** The engines of the rung `r5g`: LensVisualizer, optiland, and the comparator's estimator on a replay of LensVisualizer's sampling. */
-export const R5G_ENGINES: readonly string[] = Object.freeze(["lv", "optiland", "replay"]);
+export const R5G_ENGINES: readonly string[] = Object.freeze(["lv", "optiland", "replay-of-lv-mtf"]);
 
 /**
  * The `mtf.native` specs of `r5g`, one for each field: the geometric MTF of a recipe at the fields and the
@@ -513,7 +513,8 @@ export function geometricFieldMtfSpecs(recipe: MtfRecipe, fields?: RunFields): M
  * The rung `r5g`, LensVisualizer's geometric MTF beside an engine's own: the geometric MTF of the run's recipe on
  * the plane of the case, at the fields the run traces rays for, as fractions of the reference image height, at the
  * frequencies of `r5` (`geometricFieldMtfSpecs`), asked of LensVisualizer, of optiland, whose answer is its own
- * geometric MTF, and of the engine `replay`, the comparator's estimator on a replay of LensVisualizer's sampling.
+ * geometric MTF, and of the engine `replay-of-lv-mtf`, the comparator's estimator on a replay of LensVisualizer's
+ * sampling.
  *
  * **One request a field.** optiland's geometric MTF of a fast lens wide open has been measured at 26 s a field and
  * line on its ladder of 128 and 256 rays and at 135 s on the finer one, a request of the worker has a budget of
@@ -727,8 +728,9 @@ export const r10bRung: RungDefinition = Object.freeze({
  * vignetting sets (`RungInputs.vignettingRaySets`): the tab's own trace of each field's beam (since LensVisualizer #931
  * the half of its aimed stop lattice it traces) and the field's stop-centre ray, which every engine traces as given.
  * Which rays get through, how much flux the two engines disagree about, the flux each field's beam brings into the
- * image relative to the axis's and where the stop-centre rays land are compared (`src/compare/raysVignetting.ts`). It is asked of the engines of the
- * run, and only of a run whose source has vignetting sets: a LensVisualizer lens at infinity focus that is not folded.
+ * image relative to the axis's and where the stop-centre rays land are compared (`src/compare/raysVignetting.ts`). It
+ * is asked of the engines of the run, and only of a run whose source has vignetting sets: a LensVisualizer lens at
+ * infinity focus that is not folded.
  */
 export const r11aRung: RungDefinition = Object.freeze({
   id: "vignetting-rays",
@@ -739,19 +741,19 @@ export const r11aRung: RungDefinition = Object.freeze({
 });
 
 /** The engines of the rung `r11b`: LensVisualizer, whose tab is asked, and the comparator's flux estimator on its rays. */
-export const R11B_ENGINES: readonly string[] = Object.freeze(["lv", "flux"]);
+export const R11B_ENGINES: readonly string[] = Object.freeze(["lv", "flux-of-lv-rays"]);
 
 /**
  * The rung `r11b`, LensVisualizer's vignetting tab beside the comparator's flux in two dimensions: one
  * `vignetting.native` request (`RungInputs.vignettingAsks`), at the lines the tab traces and its own fields, asked of
- * LensVisualizer, whose answer is its tab's curve, and of the engine `flux`, whose answer is the area and the flux into
- * the image of LensVisualizer's lattice over each field's beam, traced by LensVisualizer. Where the run states a
- * `sampling.bundleGrid`, the engine `flux` is handed `FINE_GRID_FACTOR` times it as its option `bundleGrid`, the cells
- * across the coarser of its two lattices: as its default (64, then 128) is twice the run's default of 32, its coarser
- * lattice is never the run's own, whose staircase rim moves a field's figures by up to 0.02 on doubling. A run of more
- * than 64 cells gives the engine more than its largest lattice, which it answers as unsupported (`option.bundleGrid`),
- * never on a lattice it was not asked for. Recorded, of those two engines and of no other, and run only where it is
- * named.
+ * LensVisualizer, whose answer is its tab's curve, and of the engine `flux-of-lv-rays`, whose answer is the area and
+ * the flux into the image of LensVisualizer's lattice over each field's beam, traced by LensVisualizer. Where the run
+ * states a `sampling.bundleGrid`, the engine `flux-of-lv-rays` is handed `FINE_GRID_FACTOR` times it as its option
+ * `bundleGrid`, the cells across the coarser of its two lattices: as its default (64, then 128) is twice the run's
+ * default of 32, its coarser lattice is never the run's own, whose staircase rim moves a field's figures by up to 0.02
+ * on doubling. A run of more than 64 cells gives the engine more than its largest lattice, which it answers as
+ * unsupported (`option.bundleGrid`), never on a lattice it was not asked for. Recorded, of those two engines and of no
+ * other, and run only where it is named.
  */
 export const r11bRung: RungDefinition = Object.freeze({
   id: "vignetting-vs-flux-estimate",
@@ -761,7 +763,9 @@ export const r11bRung: RungDefinition = Object.freeze({
   onlyWhereNamed: true,
   engineOptions: (runSpec: RunSpec, _inputs?: RungInputs, engineId?: string): JsonObject | undefined => {
     const bundleGrid = runSpec.sampling?.bundleGrid;
-    return engineId === "flux" && bundleGrid !== undefined ? { bundleGrid: FINE_GRID_FACTOR * bundleGrid } : undefined;
+    return engineId === "flux-of-lv-rays" && bundleGrid !== undefined
+      ? { bundleGrid: FINE_GRID_FACTOR * bundleGrid }
+      : undefined;
   },
   buildRequests: (opticalCase: OpticalCase, _runSpec: RunSpec, inputs?: RungInputs): QuantityRequest[] =>
     (inputs?.vignettingAsks ?? []).map((spec) =>
@@ -806,7 +810,7 @@ export const r12bRung: RungDefinition = Object.freeze({
 });
 
 /** The engines of the rung `r13b`: the comparator's sums on the reference engine's model, and optiland's own. */
-export const R13B_ENGINES: readonly string[] = Object.freeze(["ref-seidel", "optiland"]);
+export const R13B_ENGINES: readonly string[] = Object.freeze(["reference-seidel", "optiland"]);
 
 /**
  * The `seidel.native` spec of a case and its recipe: at the case's first line (its reference line, OpticStudio's
@@ -827,9 +831,9 @@ export function seidelNativeSpec(opticalCase: OpticalCase, recipe: MtfRecipe): S
 
 /**
  * The rung `r13b`, the engines' own Seidel sums: one `seidel.native` request (`seidelNativeSpec`) of each case whose
- * run has a recipe, asked of `ref-seidel`, the comparator's sums on the reference engine's model, and of optiland, its
- * own `aberrations`. Recorded, of those two engines and of no other, and run only where it is named: optiland is not on
- * every machine. LensVisualizer presents no Seidel sums.
+ * run has a recipe, asked of `reference-seidel`, the comparator's sums on the reference engine's model, and of
+ * optiland, its own `aberrations`. Recorded, of those two engines and of no other, and run only where it is named:
+ * optiland is not on every machine. LensVisualizer presents no Seidel sums.
  */
 export const r13bRung: RungDefinition = Object.freeze({
   id: "seidel-vs-optiland",
@@ -847,7 +851,7 @@ export const r13bRung: RungDefinition = Object.freeze({
 });
 
 /** The engines of the rung `r14b`: optiland's own Zernike fit, and the comparator's fit of optiland's raw samples. */
-export const R14B_ENGINES: readonly string[] = Object.freeze(["optiland", "optiland-wave"]);
+export const R14B_ENGINES: readonly string[] = Object.freeze(["optiland", "otf-of-optiland-wavefront"]);
 
 /** The grid of `r14b`'s samples: cells across the square of normalised pupil coordinates, R6c's first. */
 export const ZERNIKE_GRID = 128;
@@ -879,9 +883,9 @@ export function zernikeNativeSpecs(recipe: MtfRecipe): ZernikeNativeSpec[] {
 
 /**
  * The rung `r14b`, the engines' own Zernike fits of one wavefront: the `zernike.native` requests of a run's recipe
- * (`zernikeNativeSpecs`), asked of optiland, its own fit of its `Wavefront`, and of `optiland-wave`, the comparator's
- * estimator on optiland's raw samples of the same wavefront. Recorded, of those two engines and of no other, and run
- * only where it is named. LensVisualizer presents no wavefront.
+ * (`zernikeNativeSpecs`), asked of optiland, its own fit of its `Wavefront`, and of `otf-of-optiland-wavefront`, the
+ * comparator's estimator on optiland's raw samples of the same wavefront. Recorded, of those two engines and of no
+ * other, and run only where it is named. LensVisualizer presents no wavefront.
  */
 export const r14bRung: RungDefinition = Object.freeze({
   id: "zernike-vs-optiland",
@@ -934,8 +938,8 @@ export const RUNGS: readonly RungDefinition[] = Object.freeze([
  * The rungs that `ids` name, in the order of `rungs` and each once, however `ids` orders or repeats them. When
  * `ids` is undefined, as for a run that states none: every rung but those that are run only where they are named
  * (`RungDefinition.onlyWhereNamed`). An id that no rung of `rungs` has, but a rung had before it was renamed
- * (`legacy`, `LEGACY_CHECK_IDS`), names the rung under its new id, and the command says so once (`aliasCheckId`). Throws a `UsageError` naming every id that
- * is not a rung, and for an empty list, which asks for nothing.
+ * (`legacy`, `LEGACY_CHECK_IDS`), names the rung under its new id, and the command says so once (`aliasCheckId`).
+ * Throws a `UsageError` naming every id that is not a rung, and for an empty list, which asks for nothing.
  */
 export function selectRungs(
   asked: readonly string[] | undefined,

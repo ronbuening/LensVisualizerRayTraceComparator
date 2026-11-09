@@ -299,10 +299,18 @@ export function buildMtfComparison(input: MtfComparisonInput): MtfComparison | n
 
 /** Four source columns and three separately classified differences against the raw-wavefront estimate. */
 export function buildWavefrontComparison(input: MtfComparisonInput): MtfComparison | null {
-  const columnOrder = ["lv", "wave", "optiland", "optiland-wave"];
+  const columnOrder = ["lv", "wave-mtf-of-lv-rays", "optiland", "otf-of-optiland-wavefront"];
   const of = (engine: string) =>
-    buildMtfComparison({ ...input, kind: "wavefront", columnOrder, comparisonPair: [engine, "optiland-wave"] });
+    buildMtfComparison({
+      ...input,
+      kind: "wavefront",
+      columnOrder,
+      comparisonPair: [engine, "otf-of-optiland-wavefront"],
+    });
   const main = of("lv");
   if (main === null) return null;
-  return { ...main, peers: [of("wave"), of("optiland")].filter((table): table is MtfComparison => table !== null) };
+  return {
+    ...main,
+    peers: [of("wave-mtf-of-lv-rays"), of("optiland")].filter((table): table is MtfComparison => table !== null),
+  };
 }

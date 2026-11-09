@@ -26,7 +26,7 @@ export const GLOSSARY_TEXT = {
   kinds: { limit: "held to a limit", "side-by-side": "side by side, no limit" },
   engines: "Engines",
   enginesIntro:
-    "The engines built into this tool. LensVisualizer is under review, optiland is an independent external engine, and the others are this tool's own.",
+    "The engines built into this tool. LensVisualizer is under review, optiland is an independent external engine, and the others are this tool's own. The id is the one stored today; the old id is the one it had before the ids were renamed, which the catalog snapshot and files written before the rename still name and which is still read.",
   suites: "Suites",
   suitesIntro: "The suites committed under suites/.",
   verdicts: "Verdicts",
@@ -84,8 +84,8 @@ export function renderGlossary(): string {
   lines.push(`## ${t.engines}`, "", t.enginesIntro, "");
   lines.push(
     ...table(
-      ["Engine", "Id", "To be renamed", "What it is"],
-      ENGINES.map((engine) => [engine.name, `\`${engine.id}\``, `\`${engine.newId}\``, engine.description]),
+      ["Engine", "Id", "Old id", "What it is"],
+      ENGINES.map((engine) => [engine.name, `\`${engine.id}\``, `\`${engine.oldId}\``, engine.description]),
     ),
     "",
   );

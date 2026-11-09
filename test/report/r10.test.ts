@@ -19,10 +19,10 @@ test("R10a: a moved landing fails as a landing and as a tangential focus, a stop
       set.pairs.map((pair) => `${pair.a}-${pair.b} ${pair.verdict}`),
     ]);
     assert.deepEqual(verdicts, [
-      ["reference-vs-each", ["ref-moved PASS", "ref-stopped FAIL"]],
-      ["pairwise", ["moved-ref PASS", "moved-stopped FAIL", "ref-stopped FAIL"]],
-      ["reference-vs-each", ["ref-moved FAIL", "ref-stopped PASS"]],
-      ["pairwise", ["moved-ref FAIL", "moved-stopped FAIL", "ref-stopped PASS"]],
+      ["reference-vs-each", ["reference-tracer-moved PASS", "reference-tracer-stopped FAIL"]],
+      ["pairwise", ["moved-reference-tracer PASS", "moved-stopped FAIL", "reference-tracer-stopped FAIL"]],
+      ["reference-vs-each", ["reference-tracer-moved FAIL", "reference-tracer-stopped PASS"]],
+      ["pairwise", ["moved-reference-tracer FAIL", "moved-stopped FAIL", "reference-tracer-stopped PASS"]],
     ]);
     const moved = comparisons.comparisons[2].pairs[0];
     assert.match(

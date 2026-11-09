@@ -33,10 +33,10 @@ export const UNBASELINED_RUNGS: Readonly<Record<string, { quantity: string; engi
   "axial-vs-optiland": { quantity: "axial.native", engines: ["lv", "optiland"] },
   "chief-vs-optiland": { quantity: "chief.native", engines: ["lv", "optiland"] },
   "field-curve-vs-optiland": { quantity: "curvature.native", engines: ["lv", "optiland"] },
-  "vignetting-vs-flux-estimate": { quantity: "vignetting.native", engines: ["flux", "lv"] },
+  "vignetting-vs-flux-estimate": { quantity: "vignetting.native", engines: ["flux-of-lv-rays", "lv"] },
   "summary-vs-optiland": { quantity: "summary.native", engines: ["lv", "optiland"] },
-  "seidel-vs-optiland": { quantity: "seidel.native", engines: ["optiland", "ref-seidel"] },
-  "zernike-vs-optiland": { quantity: "zernike.native", engines: ["optiland", "optiland-wave"] },
+  "seidel-vs-optiland": { quantity: "seidel.native", engines: ["optiland", "reference-seidel"] },
+  "zernike-vs-optiland": { quantity: "zernike.native", engines: ["optiland", "otf-of-optiland-wavefront"] },
 };
 
 /** Reads only the benchmark's two baselines, refusing a missing or invalid one before anything is written. */

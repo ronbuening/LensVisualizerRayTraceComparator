@@ -70,7 +70,10 @@ function engineOn(t: TestContext, binding: LvBinding): RemoteEngineAdapter {
 }
 
 function refEngine(t: TestContext): RemoteEngineAdapter {
-  const adapter = new RemoteEngineAdapter({ id: "ref", transport: createInProcessTransport(createRefEngine()) });
+  const adapter = new RemoteEngineAdapter({
+    id: "reference-tracer",
+    transport: createInProcessTransport(createRefEngine()),
+  });
   t.after(() => adapter.close());
   return adapter;
 }
@@ -101,7 +104,7 @@ function f8(wire: NdArrayWire): number[] {
   return [...decoded.values];
 }
 
-/** The verdict of rung `rung` on what `lv` and `ref` answer about a case, with the reason of one that fails. */
+/** The verdict of rung `rung` on what `lv` and `reference-tracer` answer about a case, with the reason of one that fails. */
 async function verdictOf(
   rung: "built-system" | "first-order",
   lv: RemoteEngineAdapter,
@@ -118,7 +121,7 @@ async function verdictOf(
   });
   const pair = comparePair(
     participant("lv", mine),
-    participant("ref", theirs),
+    participant("reference-tracer", theirs),
     POLICY.rungs[rung],
     COMPARATORS.get(quantity, rung),
     undefined,
@@ -714,7 +717,7 @@ test("a system LensVisualizer finds afocal is unsupported, with the item system.
     assert.equal(await verdictOf("built-system", engine, ref, opticalCase), "PASS");
     assert.match(
       await verdictOf("first-order", engine, ref, opticalCase),
-      /^UNSUPPORTED: lv is unsupported; ref is unsupported$/,
+      /^UNSUPPORTED: lv is unsupported; reference-tracer is unsupported$/,
     );
     return result.unsupported?.[0].message ?? "";
   };
@@ -783,7 +786,7 @@ test("a term of power 1 or 2, which the paraxial kernel is not handed, is unsupp
       ["feature", QUADRATIC_SAG_TERM],
     ],
   );
-  assert.deepEqual([cone.r0, cone.r1], ["PASS", "UNSUPPORTED: lv is unsupported; ref is unsupported"]);
+  assert.deepEqual([cone.r0, cone.r1], ["PASS", "UNSUPPORTED: lv is unsupported; reference-tracer is unsupported"]);
   assert.deepEqual(
     [LINEAR_SAG_TERM, QUADRATIC_SAG_TERM],
     ["surface.asphere.linear-term", "surface.asphere.quadratic-term"],
@@ -1042,23 +1045,23 @@ test("a run with lv and no LensVisualizer fails lv's jobs with the code, and no 
     suite,
     registry,
     runsDir: join(rootDir, "runs"),
-    engines: ["lv", "ref"],
+    engines: ["lv", "reference-tracer"],
     rungs: ["built-system", "first-order"],
   });
   assert.deepEqual(
     result.manifest.jobs.map((job) => [job.rung, job.engine, job.status, job.error?.code ?? null]),
     [
       ["built-system", "lv", "error", "not-configured"],
-      ["built-system", "ref", "ok", null],
+      ["built-system", "reference-tracer", "ok", null],
       ["first-order", "lv", "error", "not-configured"],
-      ["first-order", "ref", "ok", null],
+      ["first-order", "reference-tracer", "ok", null],
     ],
   );
   assert.deepEqual(
     result.manifest.engines.map((engine) => [engine.id, engine.status]),
     [
       ["lv", "unavailable"],
-      ["ref", "available"],
+      ["reference-tracer", "available"],
     ],
   );
   assert.match(result.outcomes[0].detail ?? "", /LensVisualizer is not configured/);

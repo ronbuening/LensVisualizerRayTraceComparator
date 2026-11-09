@@ -5,7 +5,7 @@
 | Input | Value |
 |---|---|
 | Suite | r9a-stand-ins |
-| Suite hash | 80a5f33848b1efd7e755af3ac47205f9fae8b52882237b510a239bc66b8539dc |
+| Suite hash | 6cb480ef6b12d1f5a11a74209c19f2938e4df149a64720e4bef1d619e9394ec4 |
 | Contract version | 1.0 |
 | Limits file | v1 |
 | Limits file hash | ef14bfca5bca920713f866546fba5af46d7a0bd33c277b6975aaedf61a54e2ab |
@@ -14,9 +14,9 @@
 
 | Engine | Status | Version | Engine code | This tool's code behind it |
 |---|---|---|---|---|
-| moved | available | 1 | b7d0684b593261d14a1dfebb903774775bbe481a07ae2955689644dc0ffd919e | 2225e342b4fd8539480e933e59a3ca95a8ae2beeb24f45972b55fd4e4a59d357 |
-| ref | available | 1 | b7d0684b593261d14a1dfebb903774775bbe481a07ae2955689644dc0ffd919e | 2225e342b4fd8539480e933e59a3ca95a8ae2beeb24f45972b55fd4e4a59d357 |
-| stopped | available | 1 | b7d0684b593261d14a1dfebb903774775bbe481a07ae2955689644dc0ffd919e | 2225e342b4fd8539480e933e59a3ca95a8ae2beeb24f45972b55fd4e4a59d357 |
+| moved | available | 1 | 1285061cefc83b4538eba70d6a45fc6f0186be2b876f122a3721e150c5a34ed3 | 49ce9a07661a4cb64d5850ff62a4c3ac138b08fee37d05c86596498dcd7db117 |
+| reference-tracer | available | 1 | 1285061cefc83b4538eba70d6a45fc6f0186be2b876f122a3721e150c5a34ed3 | 49ce9a07661a4cb64d5850ff62a4c3ac138b08fee37d05c86596498dcd7db117 |
+| stopped | available | 1 | 1285061cefc83b4538eba70d6a45fc6f0186be2b876f122a3721e150c5a34ed3 | 49ce9a07661a4cb64d5850ff62a4c3ac138b08fee37d05c86596498dcd7db117 |
 
 ### Runs
 
@@ -60,12 +60,12 @@ Of 1 request with a consensus to look for, 0 have one.
 | Engine | In the consensus | Outlier | Apart | Placed, no consensus | Not placed |
 |---|---|---|---|---|---|
 | moved | 0 | 0 | 0 | 1 | 0 |
-| ref | 0 | 0 | 0 | 1 | 0 |
+| reference-tracer | 0 | 0 | 0 | 1 | 0 |
 | stopped | 0 | 0 | 0 | 1 | 0 |
 
 ## Support matrix
 
-| Run | Check | moved | ref | stopped |
+| Run | Check | moved | reference-tracer | stopped |
 |---|---|---|---|---|
 | lens | chief-rays, request 1 of 2 | ok | ok | ok |
 | lens | chief-rays, request 2 of 2 | ok | ok | ok |
@@ -78,7 +78,7 @@ Of 1 request with a consensus to look for, 0 have one.
 
 Quantity `rays.trace`: one estimator on each engine's trace of the same rays; held to a limit. Request `add1a7c3107bb0766d1c4d60bc944e33b6a4e4831df3a7320ad908eb8c5bc7b4`.
 
-Reference vs each, against `ref`:
+Reference vs each, against `reference-tracer`:
 
 | Engine | distortion.maxScaled (≤ 1.00e-8 mm) | distortion.maxAbs [percent] | exitPupil.maxScaled (≤ 1.00e-8 mm) | exitPupil.maxAbs [mm] | landing.maxAbs (≤ 1.00e-8 mm) | lateralColour.maxAbs (≤ 1.00e-8 mm) | mask.mismatches (≤ 0 rays) | mask.rimBand [rays] | rays.compared [rays] | rays.dropped [rays] | Verdict | Note |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -87,17 +87,17 @@ Reference vs each, against `ref`:
 
 Pairwise, the verdict of each two engines and the metric nearest to or furthest past its limit:
 
-| Engine | moved | ref | stopped |
+| Engine | moved | reference-tracer | stopped |
 |---|---|---|---|
 | moved | — | FAIL (distortion.maxScaled 1.49e-8 at line 1, ray 2) | FAIL (mask.mismatches 1 at line 0, ray 3, surface 0) |
-| ref | FAIL (distortion.maxScaled 1.49e-8 at line 1, ray 2) | — | FAIL (mask.mismatches 1 at line 0, ray 3, surface 0) |
+| reference-tracer | FAIL (distortion.maxScaled 1.49e-8 at line 1, ray 2) | — | FAIL (mask.mismatches 1 at line 0, ray 3, surface 0) |
 | stopped | FAIL (mask.mismatches 1 at line 0, ray 3, surface 0) | FAIL (mask.mismatches 1 at line 0, ray 3, surface 0) | — |
 
 No consensus: no two engines are within the limits of each other.
 
 Recorded values, as each engine reports them. They are listed and never judged:
 
-| Value | moved | ref | stopped |
+| Value | moved | reference-tracer | stopped |
 |---|---|---|---|
 | distortion.scaleMm[0] | 5.79843869e1 | 5.79843869e1 | 5.79843869e1 |
 | distortion.scaleMm[1] | 5.82198260e1 | 5.82198260e1 | 5.82198260e1 |

@@ -38,7 +38,7 @@ test("a floor belongs to a gated rung, names two engines, and has a metric whose
       "hits.maxDistance": { tolerance: 1e-8, unit: "mm", floor: { limit: 1e-7, agreement: 1e-10 } },
       "mask.mismatches": { tolerance: 0, unit: "rays" },
     },
-    floor: { engine: "lv", arbiter: "ref" },
+    floor: { engine: "lv", arbiter: "reference-tracer" },
   };
   const { floor: _floor, ...unfloored } = whole;
   const rung = (change: Partial<RungPolicy>, base: RungPolicy = whole): Policy =>

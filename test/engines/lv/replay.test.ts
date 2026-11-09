@@ -1,4 +1,4 @@
-// The replay of LensVisualizer's MTF sampling and the engine `replay`, with no LensVisualizer.
+// The replay of LensVisualizer's MTF sampling and the engine `replay-of-lv-mtf`, with no LensVisualizer.
 //
 // Two kinds of test. Against stand-ins written here, the replay's curves are held to closed forms derived in the
 // test: a spot of two points has the MTF |cos(2 pi nu a)|. Against the fake LV tree, whose geometric MTF is sampled
@@ -931,7 +931,7 @@ test("a field the fake cannot sample is unavailable in the replay with the fake'
 
 // ── The engine ───────────────────────────────────────────────────────────────────────────────────────────────────
 
-function engineOn(t: TestContext, binding: LvBinding, id: "lv" | "replay"): RemoteEngineAdapter {
+function engineOn(t: TestContext, binding: LvBinding, id: "lv" | "replay-of-lv-mtf"): RemoteEngineAdapter {
   const handler = id === "lv" ? createLvEngineOn(binding) : createLvReplayEngineOn(binding);
   const adapter = new RemoteEngineAdapter({ id, transport: createInProcessTransport(handler) });
   t.after(() => adapter.close());
@@ -959,10 +959,10 @@ function curve(wire: NdArrayWire): number[] {
 
 test("the engine replay describes itself: LensVisualizer's fingerprint, an adapter revision of its own, mtf.native", async (t) => {
   const binding = await bind(t, sampledTree(t));
-  const { identity, capabilities } = await engineOn(t, binding, "replay").describe();
+  const { identity, capabilities } = await engineOn(t, binding, "replay-of-lv-mtf").describe();
   const lv = (await engineOn(t, binding, "lv").describe()).identity;
-  assert.equal(LV_REPLAY_ENGINE_ID, "replay");
-  assert.equal(identity.id, "replay");
+  assert.equal(LV_REPLAY_ENGINE_ID, "replay-of-lv-mtf");
+  assert.equal(identity.id, "replay-of-lv-mtf");
   assert.equal(identity.fingerprint, binding.fingerprint().engineClosureHash);
   assert.equal(identity.fingerprint, lv.fingerprint, "its rays are LensVisualizer's");
   assert.equal(identity.adapterRevision, adapterRevision(LV_REPLAY_ENGINE_MODULE).revision);
@@ -978,7 +978,7 @@ test("the engine replay describes itself: LensVisualizer's fingerprint, an adapt
 
 test("replay answers the request lv answers, in lv's form: the two answers differ by a rounding and in no count", async (t) => {
   const binding = await bind(t, sampledTree(t));
-  const [lv, replay] = [engineOn(t, binding, "lv"), engineOn(t, binding, "replay")];
+  const [lv, replay] = [engineOn(t, binding, "lv"), engineOn(t, binding, "replay-of-lv-mtf")];
   for (const options of [{}, { lines: { kind: "photopic" }, imagePlane: { kind: "lv-best-axial" } }] as RunOptions[]) {
     const { opticalCase } = await modelOf(binding, options);
     const [product, replayed] = [
@@ -1022,7 +1022,7 @@ test("an aim-failed field is the same field in lv's answer and replay's: R4f fin
   const { opticalCase } = await modelOf(binding);
   const [product, replayed] = [
     dataOf(await ask(engineOn(t, binding, "lv"), opticalCase, SPEC)),
-    dataOf(await ask(engineOn(t, binding, "replay"), opticalCase, SPEC)),
+    dataOf(await ask(engineOn(t, binding, "replay-of-lv-mtf"), opticalCase, SPEC)),
   ];
   const lost = product.fields.filter((field) => field.reason === "aim-failed");
   assert.ok(
@@ -1042,17 +1042,17 @@ test("an aim-failed field is the same field in lv's answer and replay's: R4f fin
 
 test("replay has the geometric estimator and no profile; whatever lv refuses, it refuses with the same item", async (t) => {
   const binding = await bind(t, sampledTree(t));
-  const [lv, replay] = [engineOn(t, binding, "lv"), engineOn(t, binding, "replay")];
+  const [lv, replay] = [engineOn(t, binding, "lv"), engineOn(t, binding, "replay-of-lv-mtf")];
   const { opticalCase } = await modelOf(binding);
   assert.deepEqual((await ask(replay, opticalCase, { ...SPEC, method: "diffraction" })).unsupported, [
     {
       code: "option",
       item: "method.diffraction",
-      message: "the engine replay has the comparator's geometric estimator and no other",
+      message: "the engine replay-of-lv-mtf has the comparator's geometric estimator and no other",
     },
   ]);
   assert.deepEqual((await ask(replay, opticalCase, { ...SPEC, profile: "lv-tab-default" })).unsupported, [
-    { code: "option", item: "profile", message: "the engine replay has no profile: it is asked by a spec" },
+    { code: "option", item: "profile", message: "the engine replay-of-lv-mtf has no profile: it is asked by a spec" },
   ]);
   const shifted = (await modelOf(binding, { imagePlane: { kind: "shift", mm: 0.25 } })).opticalCase;
   const angles: MtfNativeSpec = { ...SPEC, fields: { kind: "angles-deg", values: [0, 5] } };
@@ -1072,5 +1072,8 @@ test("replay has the geometric estimator and no profile; whatever lv refuses, it
     fixture.unsupported?.map(({ code, item }) => [code, item]),
     [["case-source", "fixture"]],
   );
-  assert.match(fixture.unsupported?.[0].message ?? "", /^the engine replay answers from LensVisualizer's own state/);
+  assert.match(
+    fixture.unsupported?.[0].message ?? "",
+    /^the engine replay-of-lv-mtf answers from LensVisualizer's own state/,
+  );
 });

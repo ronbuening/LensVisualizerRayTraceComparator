@@ -66,7 +66,7 @@ test("lvrtc run --checks lv-mtf-replay: the replay of a sampled MTF passes, and 
     { name: "closed-form", lens: { kind: "lv", key: "acme-zoom-24-48" }, state: { zoomT: 0 } },
   ];
   // The suite names an engine that is none of the rung's: the rung is asked of its own two all the same.
-  const defaults = { engines: ["ref"], rungs: ["lv-mtf-replay"] };
+  const defaults = { engines: ["reference-tracer"], rungs: ["lv-mtf-replay"] };
   writeFileSync(suite, JSON.stringify({ contract: CONTRACT_VERSION, kind: "suite", name: "fidelity", defaults, runs }));
 
   const ran = lvrtc(rootDir, "run", suite);
@@ -75,11 +75,13 @@ test("lvrtc run --checks lv-mtf-replay: the replay of a sampled MTF passes, and 
   const manifest: RunManifest = JSON.parse(readFileSync(join(rootDir, "runs", "fidelity", MANIFEST_FILE), "utf8"));
   assert.deepEqual(
     manifest.jobs.map((job) => `${job.run} ${job.rung} ${job.quantity} ${job.engine} ${job.status}`),
-    runs.flatMap(({ name }) => ["lv", "replay"].map((engine) => `${name} lv-mtf-replay mtf.native ${engine} ok`)),
+    runs.flatMap(({ name }) =>
+      ["lv", "replay-of-lv-mtf"].map((engine) => `${name} lv-mtf-replay mtf.native ${engine} ok`),
+    ),
   );
   // The two engines are one LensVisualizer, with an adapter revision each.
   const [lv, replay] = manifest.engines;
-  assert.deepEqual([lv.id, replay.id, manifest.engines.length], ["lv", "replay", 2]);
+  assert.deepEqual([lv.id, replay.id, manifest.engines.length], ["lv", "replay-of-lv-mtf", 2]);
   assert.ok(lv.status === "available" && replay.status === "available");
   assert.equal(replay.fingerprint, lv.fingerprint);
   assert.equal(replay.adapterRevision, adapterRevision(LV_REPLAY_ENGINE_MODULE).revision);
@@ -108,9 +110,9 @@ test("lvrtc run --checks lv-mtf-replay: the replay of a sampled MTF passes, and 
   assert.deepEqual(
     pairwise.map((set) => [set.run, set.pairs.map((pair) => `${pair.a} ${pair.b} ${pair.verdict}`)]),
     [
-      ["sampled", ["lv replay PASS"]],
-      ["sampled-f8-best-photopic", ["lv replay PASS"]],
-      ["closed-form", ["lv replay FAIL"]],
+      ["sampled", ["lv replay-of-lv-mtf PASS"]],
+      ["sampled-f8-best-photopic", ["lv replay-of-lv-mtf PASS"]],
+      ["closed-form", ["lv replay-of-lv-mtf FAIL"]],
     ],
   );
   for (const set of pairwise.slice(0, 2)) {
@@ -155,7 +157,7 @@ test("a baseline may hold R4f: written from a run with it, it checks clean, and 
     { name: "sampled-best", lens, imagePlane: { kind: "lv-best-axial" } },
   ];
   const suite = join(rootDir, "suite.json");
-  const defaults = { engines: ["lv", "ref"], rungs: ["built-system", "first-order", "lv-mtf-replay"] };
+  const defaults = { engines: ["lv", "reference-tracer"], rungs: ["built-system", "first-order", "lv-mtf-replay"] };
   writeFileSync(suite, JSON.stringify({ contract: CONTRACT_VERSION, kind: "suite", name: "held", defaults, runs }));
 
   const ran = lvrtc(rootDir, "run", suite);
@@ -171,7 +173,7 @@ test("a baseline may hold R4f: written from a run with it, it checks clean, and 
   const baseline = JSON.parse(readFileSync(join(rootDir, "baselines", "held.json"), "utf8"));
   assert.deepEqual(
     baseline.engines.map((engine: { id: string }) => engine.id),
-    ["lv", "ref", "replay"],
+    ["lv", "reference-tracer", "replay-of-lv-mtf"],
   );
   for (const run of baseline.runs) {
     assert.deepEqual(
@@ -180,9 +182,9 @@ test("a baseline may hold R4f: written from a run with it, it checks clean, and 
         rung.pairs.map((pair) => `${pair.a} ${pair.b} ${pair.verdict}`),
       ]),
       [
-        ["built-system", ["lv ref PASS"]],
-        ["first-order", ["lv ref PASS"]],
-        ["lv-mtf-replay", ["lv replay PASS"]],
+        ["built-system", ["lv reference-tracer PASS"]],
+        ["first-order", ["lv reference-tracer PASS"]],
+        ["lv-mtf-replay", ["lv replay-of-lv-mtf PASS"]],
       ],
       run.name,
     );
@@ -204,9 +206,9 @@ test("a baseline may hold R4f: written from a run with it, it checks clean, and 
   assert.deepEqual(
     said.records.map((record) => `${record.rung} ${record.a} ${record.b} ${record.outcome}`),
     ["sampled", "sampled-best"].flatMap(() => [
-      "built-system lv ref OK",
-      "first-order lv ref OK",
-      "lv-mtf-replay lv replay OK",
+      "built-system lv reference-tracer OK",
+      "first-order lv reference-tracer OK",
+      "lv-mtf-replay lv replay-of-lv-mtf OK",
     ]),
   );
   const verified = lvrtc(rootDir, "verify");
@@ -222,7 +224,7 @@ test("an MTF baseline: write --mtf, verify and check --mtf hold it and its repor
   ];
   const suite = join(rootDir, "suite.json");
   const defaults = {
-    engines: ["lv", "ref"],
+    engines: ["lv", "reference-tracer"],
     rungs: ["first-order", "geometric-mtf", "lv-mtf-replay", "wave-mtf", "mtf-vs-wave-estimate"],
   };
   writeFileSync(suite, JSON.stringify({ contract: CONTRACT_VERSION, kind: "suite", name: "held", defaults, runs }));
@@ -368,7 +370,7 @@ test("station-selected suites round trip separate rays and gated MTF baselines w
         contract: CONTRACT_VERSION_1_3,
         kind: "suite",
         name,
-        defaults: { engines: ["lv", "ref"], lines: { kind: "reference" } },
+        defaults: { engines: ["lv", "reference-tracer"], lines: { kind: "reference" } },
         runs: [{ name: "selected", lens: { kind: "lv", key, stations } }],
       }),
     );
@@ -425,7 +427,7 @@ test("baseline write records a declared station refused by the fake gate without
       contract: CONTRACT_VERSION_1_3,
       kind: "suite",
       name: "refused",
-      defaults: { engines: ["lv", "ref"], lines: { kind: "reference" } },
+      defaults: { engines: ["lv", "reference-tracer"], lines: { kind: "reference" } },
       runs: [
         { name: "infinity", lens: { kind: "lv", key: "acme-singlet-50" } },
         { name: "selected", lens: { kind: "lv", key: "acme-singlet-50", stations: "certified-focus" } },

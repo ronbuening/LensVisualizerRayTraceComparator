@@ -479,7 +479,7 @@ test("a section page is of its store entries: one rewritten, then removed, under
     const path = `/run/r5-stand-ins/section/${section}`;
     const manifest = JSON.parse(readFileSync(join(runsDir, "r5-stand-ins", "manifest.json"), "utf8"));
     const wave = manifest.jobs.find(
-      (job: { run: string; engine: string }) => job.run === "edge" && job.engine === "wave",
+      (job: { run: string; engine: string }) => job.run === "edge" && job.engine === "wave-mtf-of-lv-rays",
     );
     const entry = join(runsDir, "store", `${wave.storeKey}.json.gz`);
     const first = (await fetchFrom(served.port, path)).body;
@@ -487,10 +487,13 @@ test("a section page is of its store entries: one rewritten, then removed, under
     writeFileSync(entry, gzipSync("{ not an entry"));
     const rewritten = (await fetchFrom(served.port, path)).body;
     assert.notEqual(rewritten, first);
-    assert.match(visibleText(rewritten), /The result cache entry for wave cannot be read, so that answer is not drawn/);
+    assert.match(
+      visibleText(rewritten),
+      /The result cache entry for wave-mtf-of-lv-rays cannot be read, so that answer is not drawn/,
+    );
     rmSync(entry);
     const removed = (await fetchFrom(served.port, path)).body;
-    assert.ok(visibleText(removed).includes(DASHBOARD_TEXT.charts.storeMissing("wave", wave.storeKey)));
+    assert.ok(visibleText(removed).includes(DASHBOARD_TEXT.charts.storeMissing("wave-mtf-of-lv-rays", wave.storeKey)));
   } finally {
     await served.close();
   }

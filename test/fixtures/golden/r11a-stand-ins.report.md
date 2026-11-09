@@ -5,7 +5,7 @@
 | Input | Value |
 |---|---|
 | Suite | r11a-stand-ins |
-| Suite hash | 052302ec782cfd714c6c2622ec60602793ce842789839767af17aeaa642c43e1 |
+| Suite hash | e3ac095fb9768cb02d38054d6437a462fa96f040d8e4fab01334cea1a16fcf09 |
 | Contract version | 1.0 |
 | Limits file | v1 |
 | Limits file hash | 21e282855578d12bb18027b74636778507dee2136c676e6b5aefc11b23626e9a |
@@ -14,10 +14,10 @@
 
 | Engine | Status | Version | Engine code | This tool's code behind it |
 |---|---|---|---|---|
-| moved | available | 1 | b7d0684b593261d14a1dfebb903774775bbe481a07ae2955689644dc0ffd919e | 2225e342b4fd8539480e933e59a3ca95a8ae2beeb24f45972b55fd4e4a59d357 |
-| ref | available | 1 | b7d0684b593261d14a1dfebb903774775bbe481a07ae2955689644dc0ffd919e | 2225e342b4fd8539480e933e59a3ca95a8ae2beeb24f45972b55fd4e4a59d357 |
-| stopped | available | 1 | b7d0684b593261d14a1dfebb903774775bbe481a07ae2955689644dc0ffd919e | 2225e342b4fd8539480e933e59a3ca95a8ae2beeb24f45972b55fd4e4a59d357 |
-| turned | available | 1 | b7d0684b593261d14a1dfebb903774775bbe481a07ae2955689644dc0ffd919e | 2225e342b4fd8539480e933e59a3ca95a8ae2beeb24f45972b55fd4e4a59d357 |
+| moved | available | 1 | 1285061cefc83b4538eba70d6a45fc6f0186be2b876f122a3721e150c5a34ed3 | 49ce9a07661a4cb64d5850ff62a4c3ac138b08fee37d05c86596498dcd7db117 |
+| reference-tracer | available | 1 | 1285061cefc83b4538eba70d6a45fc6f0186be2b876f122a3721e150c5a34ed3 | 49ce9a07661a4cb64d5850ff62a4c3ac138b08fee37d05c86596498dcd7db117 |
+| stopped | available | 1 | 1285061cefc83b4538eba70d6a45fc6f0186be2b876f122a3721e150c5a34ed3 | 49ce9a07661a4cb64d5850ff62a4c3ac138b08fee37d05c86596498dcd7db117 |
+| turned | available | 1 | 1285061cefc83b4538eba70d6a45fc6f0186be2b876f122a3721e150c5a34ed3 | 49ce9a07661a4cb64d5850ff62a4c3ac138b08fee37d05c86596498dcd7db117 |
 
 ### Runs
 
@@ -61,13 +61,13 @@ Of 1 request with a consensus to look for, 0 have one.
 | Engine | In the consensus | Outlier | Apart | Placed, no consensus | Not placed |
 |---|---|---|---|---|---|
 | moved | 0 | 0 | 0 | 1 | 0 |
-| ref | 0 | 0 | 0 | 1 | 0 |
+| reference-tracer | 0 | 0 | 0 | 1 | 0 |
 | stopped | 0 | 0 | 0 | 1 | 0 |
 | turned | 0 | 0 | 0 | 1 | 0 |
 
 ## Support matrix
 
-| Run | Check | moved | ref | stopped | turned |
+| Run | Check | moved | reference-tracer | stopped | turned |
 |---|---|---|---|---|---|
 | lens | vignetting-rays, request 1 of 3 | ok | ok | ok | ok |
 | lens | vignetting-rays, request 2 of 3 | ok | ok | ok | ok |
@@ -81,7 +81,7 @@ Of 1 request with a consensus to look for, 0 have one.
 
 Quantity `rays.trace`: one estimator on each engine's trace of the same rays; held to a limit. Request `1885953b4ac9e4f0ca84da87e19204a6b894b4733c7cc9c18dc05fff88c167c3`.
 
-Reference vs each, against `ref`:
+Reference vs each, against `reference-tracer`:
 
 | Engine | illumination.maxAbs (≤ 1.00e-9) | landing.maxAbs (≤ 1.00e-8 mm) | mask.mismatches (≤ 0 rays) | mask.rimBand [rays] | transmission.maxAbs (≤ 0) | transmission.rimBandOrFailed | rays.compared [rays] | rays.dropped [rays] | fields.compared [elements] | Verdict | Note |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -91,10 +91,10 @@ Reference vs each, against `ref`:
 
 Pairwise, the verdict of each two engines and the metric nearest to or furthest past its limit:
 
-| Engine | moved | ref | stopped | turned |
+| Engine | moved | reference-tracer | stopped | turned |
 |---|---|---|---|---|
 | moved | — | FAIL (landing.maxAbs 1.49e-8 at field 4, line 0, ray 102) | FAIL (mask.mismatches 1 at field 3, line 0, ray 44, surface 2) | FAIL (illumination.maxAbs 1.54e-6 at field 4, line 0) |
-| ref | FAIL (landing.maxAbs 1.49e-8 at field 4, line 0, ray 102) | — | FAIL (mask.mismatches 1 at field 3, line 0, ray 44, surface 2) | FAIL (illumination.maxAbs 1.54e-6 at field 4, line 0) |
+| reference-tracer | FAIL (landing.maxAbs 1.49e-8 at field 4, line 0, ray 102) | — | FAIL (mask.mismatches 1 at field 3, line 0, ray 44, surface 2) | FAIL (illumination.maxAbs 1.54e-6 at field 4, line 0) |
 | stopped | FAIL (mask.mismatches 1 at field 3, line 0, ray 44, surface 2) | FAIL (mask.mismatches 1 at field 3, line 0, ray 44, surface 2) | — | FAIL (mask.mismatches 1 at field 3, line 0, ray 44, surface 2) |
 | turned | FAIL (illumination.maxAbs 1.54e-6 at field 4, line 0) | FAIL (illumination.maxAbs 1.54e-6 at field 4, line 0) | FAIL (mask.mismatches 1 at field 3, line 0, ray 44, surface 2) | — |
 
@@ -102,7 +102,7 @@ No consensus: no two engines are within the limits of each other.
 
 Recorded values, as each engine reports them. They are listed and never judged:
 
-| Value | moved | ref | stopped | turned |
+| Value | moved | reference-tracer | stopped | turned |
 |---|---|---|---|---|
 | fieldAngleDeg[0] | 0 | 0 | 0 | 0 |
 | fieldAngleDeg[1] | 3 | 3 | 3 | 3 |

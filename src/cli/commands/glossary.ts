@@ -1,7 +1,7 @@
 // `lvrtc glossary [term]`: the words a reviewer meets, from the vocabulary. A term is found by its own word, by an
 // older word of this tool that it replaces, or, for a verdict, an outcome, an engine or a check, by the value stored for
 // it. A check is also found by the id it had before the rename.
-import { aliasCheckId } from "../../core/legacyIds.ts";
+import { aliasCheckId, aliasEngineId } from "../../core/legacyIds.ts";
 import { UsageError } from "../../core/usageError.ts";
 import {
   BADGE_TEXT,
@@ -57,7 +57,13 @@ function entries(): Entry[] {
     ...labelled(BADGE_TEXT),
     ...labelled(CLASS_TEXT),
     ...labelled(ROW_STATUS_TEXT),
-    ...ENGINES.map((engine) => ({ term: engine.name, meaning: engine.description, replaces: [], stored: engine.id })),
+    // An engine by its name, the id it had before the rename (where it was renamed) and its id of today.
+    ...ENGINES.map((engine) => ({
+      term: engine.name,
+      meaning: engine.description,
+      replaces: engine.oldId === engine.id ? [] : [engine.oldId],
+      stored: engine.id,
+    })),
     // A check by its title, the id it had before the rename and its id of today.
     ...CHECKS.map((check) => ({
       term: check.title,
@@ -124,9 +130,11 @@ export function createGlossaryCommand(): CliCommand {
         io.stderr(`lvrtc glossary: "${words.join(" ")}": ${GLOSSARY_COMMAND_TEXT.unknown}\n${SYNOPSIS}`);
         return EXIT_USAGE;
       }
-      // A check found by the id it had before the rename: the command says once which id it is now.
+      // A check or an engine found by the id it had before the rename: the command says once which id it is now.
       const old = CHECKS.find((check) => check.oldId.toLowerCase() === word);
       if (old !== undefined) aliasCheckId(old.oldId);
+      const oldEngine = ENGINES.find((engine) => engine.oldId !== engine.id && engine.oldId.toLowerCase() === word);
+      if (oldEngine !== undefined) aliasEngineId(oldEngine.oldId);
       io.stdout(
         json
           ? `${JSON.stringify({ terms: found }, null, 2)}\n`

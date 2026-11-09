@@ -1,6 +1,6 @@
-// The engine `lv` against the real LensVisualizer: rungs R0 and R1 of `lv` against `ref` on the committed suites,
-// through the commands as a user runs them, and LensVisualizer's own first-order module as the check of what the
-// engine assembles from the kernel. Run output goes to a temporary directory.
+// The engine `lv` against the real LensVisualizer: rungs R0 and R1 of `lv` against `reference-tracer` on the committed
+// suites, through the commands as a user runs them, and LensVisualizer's own first-order module as the check of what
+// the engine assembles from the kernel. Run output goes to a temporary directory.
 //
 // The numbers quoted in comments, and the pinned ones, were measured at LV commit d36f44b3 with the catalog of that
 // commit; those of the radius of a pupil at 1ed8cc3d (engine closure ff670f03), where they say so.
@@ -83,12 +83,20 @@ function worstMetrics(file: ComparisonFile): Record<string, { value: number; at:
 }
 
 /**
- * Runs a committed suite on `lv` and `ref` for R0 and R1 through `lvrtc run`, compares it through `lvrtc compare`,
- * and returns the manifest and the comparisons.
+ * Runs a committed suite on `lv` and `reference-tracer` for R0 and R1 through `lvrtc run`, compares it through `lvrtc
+ * compare`, and returns the manifest and the comparisons.
  */
 function ranAndCompared(t: TestContext, suite: "benchmark" | "features") {
   const runsDir = tempDir(t);
-  const ran = lvrtc(runsDir, "run", suitePath(suite), "--engines", "lv,ref", "--checks", "built-system,first-order");
+  const ran = lvrtc(
+    runsDir,
+    "run",
+    suitePath(suite),
+    "--engines",
+    "lv,reference-tracer",
+    "--checks",
+    "built-system,first-order",
+  );
   const compared = lvrtc(runsDir, "compare", suite);
   const manifest: RunManifest = JSON.parse(readFileSync(join(runsDir, suite, MANIFEST_FILE), "utf8"));
   const comparisons: ComparisonFile = JSON.parse(readFileSync(join(runsDir, suite, COMPARISONS_FILE), "utf8"));
@@ -110,13 +118,16 @@ function f8(wire: NdArrayWire): Float64Array {
   return decoded.values as Float64Array;
 }
 
-/** `lv` on the real LensVisualizer and `ref`, each behind an adapter, in this process. */
+/** `lv` on the real LensVisualizer and `reference-tracer`, each behind an adapter, in this process. */
 async function engines(
   t: TestContext,
 ): Promise<{ binding: LvBinding; lv: RemoteEngineAdapter; ref: RemoteEngineAdapter }> {
   const binding = await loadLvBinding(LV_PATH);
   const lv = new RemoteEngineAdapter({ id: "lv", transport: createInProcessTransport(createLvEngineOn(binding)) });
-  const ref = new RemoteEngineAdapter({ id: "ref", transport: createInProcessTransport(createRefEngine()) });
+  const ref = new RemoteEngineAdapter({
+    id: "reference-tracer",
+    transport: createInProcessTransport(createRefEngine()),
+  });
   t.after(() => Promise.all([lv.close(), ref.close()]));
   return { binding, lv, ref };
 }
@@ -135,7 +146,7 @@ function ask(engine: RemoteEngineAdapter, opticalCase: OpticalCase, quantity: st
   );
 }
 
-/** The metrics of a quantity's comparator on what `lv` and `ref` answer about a case, by name, and lv's answer. */
+/** The metrics of a quantity's comparator on what `lv` and `reference-tracer` answer about a case, by name, and lv's answer. */
 async function compared(
   lv: RemoteEngineAdapter,
   ref: RemoteEngineAdapter,
@@ -308,7 +319,7 @@ test("lvrtc run: a case with one index nudged is reported stale-case by lv, and 
     "--root",
     rootDir,
     "--engines",
-    "lv,ref",
+    "lv,reference-tracer",
     "--checks",
     "built-system,first-order",
   );
@@ -325,7 +336,7 @@ test("lvrtc run: a case with one index nudged is reported stale-case by lv, and 
         "m",
       ),
     );
-    assert.match(ran.out, new RegExp(`^nudged +${rung} +ref +answered +asked now$`, "m"));
+    assert.match(ran.out, new RegExp(`^nudged +${rung} +reference-tracer +answered +asked now$`, "m"));
   }
   const manifest: RunManifest = JSON.parse(readFileSync(join(runsDir, "stale", MANIFEST_FILE), "utf8"));
   assert.deepEqual(
@@ -639,7 +650,7 @@ function judged(
   });
   return comparePair(
     participant("lv", lvData),
-    participant("ref", refData),
+    participant("reference-tracer", refData),
     POLICY.rungs[rung],
     COMPARATORS.get(quantity, rung),
     undefined,

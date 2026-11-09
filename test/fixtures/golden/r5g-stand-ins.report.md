@@ -16,7 +16,7 @@
 |---|---|---|---|
 | lv | available | 1 | e446589a9d2d1f032334b5e798670d49c6268734494645c2a0f45c4a5bc007a2 |
 | optiland | available | 1 | 5b42de3b00b5524489ff7d64c6f9c2d9fd6d53eb0f33fb98439c766aa9b33d31 |
-| replay | available | 1 | 529061c7703d71616ecacf2563d68b74164d3efc60b9b25f22068518c4322fd9 |
+| replay-of-lv-mtf | available | 1 | 3425387646473bbf88d9c0bafc74a9879926834022d6156fc113ca1db7568666 |
 
 ### Runs
 
@@ -42,7 +42,7 @@ No pair is Fail or Error, of 15 compared.
 
 ## Support matrix
 
-| Run | Check | lv | optiland | replay |
+| Run | Check | lv | optiland | replay-of-lv-mtf |
 |---|---|---|---|---|
 | edge | geometric-mtf-vs-optiland | ok | ok | ok |
 | beyond | geometric-mtf-vs-optiland | ok | ok | ok |
@@ -61,15 +61,15 @@ Reference vs each, against `lv`:
 | Engine | chiefLanding.maxAbs (band 9.77e-4 mm) | mtfOffAxis.maxAbs (band 7.81e-3) | mtfOnAxis.maxAbs (band 3.91e-3) | fields.compared [elements] | fields.flagged [elements] | fields.rimLost [elements] | fields.data [elements] | fields.unavailable [elements] | Verdict | Note |
 |---|---|---|---|---|---|---|---|---|---|---|
 | optiland | 0 at field 0 | 7.81e-3 at cut tangential, field 5.00e-1, frequencyPerMm 30 | 3.91e-3 at cut sagittal, field 0, frequencyPerMm 10 | 2 | 0 | 0 | 0 | 1 | RECORDED | field 1: unsupported, no-curve (geometric-mtf: unavailable (frequency-beyond-bins)) |
-| replay | 0 at field 0 | 0 at cut sagittal, field 5.00e-1, frequencyPerMm 10 | 0 at cut sagittal, field 0, frequencyPerMm 10 | 3 | 0 | 0 | 0 | 0 | RECORDED |  |
+| replay-of-lv-mtf | 0 at field 0 | 0 at cut sagittal, field 5.00e-1, frequencyPerMm 10 | 0 at cut sagittal, field 0, frequencyPerMm 10 | 3 | 0 | 0 | 0 | 0 | RECORDED |  |
 
 Pairwise, the verdict of each two engines and the metric nearest to or furthest past its limit:
 
-| Engine | lv | optiland | replay |
+| Engine | lv | optiland | replay-of-lv-mtf |
 |---|---|---|---|
 | lv | — | RECORDED (mtfOffAxis.maxAbs 7.81e-3 at cut tangential, field 5.00e-1, frequencyPerMm 30) | RECORDED (chiefLanding.maxAbs 0 at field 0) |
 | optiland | RECORDED (mtfOffAxis.maxAbs 7.81e-3 at cut tangential, field 5.00e-1, frequencyPerMm 30) | — | RECORDED (mtfOffAxis.maxAbs 7.81e-3 at cut tangential, field 5.00e-1, frequencyPerMm 30) |
-| replay | RECORDED (chiefLanding.maxAbs 0 at field 0) | RECORDED (mtfOffAxis.maxAbs 7.81e-3 at cut tangential, field 5.00e-1, frequencyPerMm 30) | — |
+| replay-of-lv-mtf | RECORDED (chiefLanding.maxAbs 0 at field 0) | RECORDED (mtfOffAxis.maxAbs 7.81e-3 at cut tangential, field 5.00e-1, frequencyPerMm 30) | — |
 
 The engines' own geometric MTF, side by side. The difference of a row is lv − optiland.
 Each column is one engine's own estimate of the geometric MTF, of its own rays through its own sampling of the
@@ -82,7 +82,7 @@ are of two fields.
 Over every frequency of the request `lv` against `optiland` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | optiland | replay | lv: across | lv: last change | optiland: across | optiland: last change | Chief rays apart [mm] | Class | Reason |
+| Field | Angle [deg] | lv | optiland | replay-of-lv-mtf | lv: across | lv: last change | optiland: across | optiland: last change | Chief rays apart [mm] | Class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | 64 | 1.95e-3 | 256 | 9.77e-4 | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band |
 | 0.5 | 4.000 | ok | ok | ok | 64 | 1.95e-3 | 256 | 9.77e-4 | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band |
@@ -95,7 +95,7 @@ band (0.005 on the axis, 0.01 off it).
 Beside each engine's flag is its own sampling of the field: cells or rays across the pupil, and how far its
 curves moved between its last two samplings, which is that engine's own measure and judges no other.
 
-| Field | Cut | Cycles/mm | lv | optiland | replay | lv − optiland | Status | Class |
+| Field | Cut | Cycles/mm | lv | optiland | replay-of-lv-mtf | lv − optiland | Status | Class |
 |---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.8750 | 0.8711 | 0.8750 | 3.91e-3 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.7500 | 0.7500 | 0.7500 | 0 | Side by side | the methods differ |
@@ -123,7 +123,7 @@ Recorded values, as each engine reports them. They are listed and never judged:
 
 The MTF values at every frequency of the request are in `report.json`.
 
-| Value | lv | optiland | replay |
+| Value | lv | optiland | replay-of-lv-mtf |
 |---|---|---|---|
 | binningMaxDelta[0] | — | 2.44140625e-4 | — |
 | binningMaxDelta[1] | — | 2.44140625e-4 | — |
@@ -165,15 +165,15 @@ Reference vs each, against `lv`:
 | Engine | chiefLanding.maxAbs (band 9.77e-4 mm) | mtfOffAxis.maxAbs (band 7.81e-3) | mtfOnAxis.maxAbs (band 3.91e-3) | mtfOnAxis.firstStepMaxAbs | mtfFlagged.maxAbs | fields.compared [elements] | fields.flagged [elements] | fields.rimLost [elements] | fields.data [elements] | fields.unavailable [elements] | Verdict | Note |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | optiland | 1.95e-3 at field 5.00e-1 | — | 3.91e-3 at cut sagittal, field 0, frequencyPerMm 50 | 3.91e-3 at cut sagittal, field 0, frequencyPerMm 50 | 6.25e-2 at cut tangential, field 1, frequencyPerMm 70 | 1 | 1 | 0 | 1 | 0 | ATTENTION | chiefLanding.maxAbs 1.95e-3 is outside its attention band 9.77e-4 at field 5.00e-1; mtfOnAxis.maxAbs 3.91e-3 is outside its attention band 3.91e-3 at cut sagittal, field 0, frequencyPerMm 50; mtfOffAxis.maxAbs was not measured: no field off the axis is in a band; judged with geometric-mtf at its step geo512; the figures of the first answers are beside them; field 0.5: data, chief-landing-apart (the chief rays land 1.95e-3 mm apart); field 1: numerical, unconverged (geometric-mtf: unconverged (sampling-not-settled)) |
-| replay | 0 at field 0 | 0 at cut sagittal, field 5.00e-1, frequencyPerMm 10 | 0 at cut sagittal, field 0, frequencyPerMm 10 | — | — | 3 | 0 | 0 | 0 | 0 | RECORDED |  |
+| replay-of-lv-mtf | 0 at field 0 | 0 at cut sagittal, field 5.00e-1, frequencyPerMm 10 | 0 at cut sagittal, field 0, frequencyPerMm 10 | — | — | 3 | 0 | 0 | 0 | 0 | RECORDED |  |
 
 Pairwise, the verdict of each two engines and the metric nearest to or furthest past its limit:
 
-| Engine | lv | optiland | replay |
+| Engine | lv | optiland | replay-of-lv-mtf |
 |---|---|---|---|
 | lv | — | ATTENTION (chiefLanding.maxAbs 1.95e-3 at field 5.00e-1) | RECORDED (chiefLanding.maxAbs 0 at field 0) |
 | optiland | ATTENTION (chiefLanding.maxAbs 1.95e-3 at field 5.00e-1) | — | ATTENTION (chiefLanding.maxAbs 1.95e-3 at field 5.00e-1) |
-| replay | RECORDED (chiefLanding.maxAbs 0 at field 0) | ATTENTION (chiefLanding.maxAbs 1.95e-3 at field 5.00e-1) | — |
+| replay-of-lv-mtf | RECORDED (chiefLanding.maxAbs 0 at field 0) | ATTENTION (chiefLanding.maxAbs 1.95e-3 at field 5.00e-1) | — |
 
 The engines' own geometric MTF, side by side. The difference of a row is lv − optiland geo512.
 Each column is one engine's own estimate of the geometric MTF, of its own rays through its own sampling of the
@@ -186,7 +186,7 @@ are of two fields.
 Over every frequency of the request `lv` against `optiland` comes to Side by side, worth a look; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | optiland | optiland geo512 | replay | lv: across | lv: last change | optiland geo512: across | optiland geo512: last change | Chief rays apart [mm] | Class | Reason |
+| Field | Angle [deg] | lv | optiland | optiland geo512 | replay-of-lv-mtf | lv: across | lv: last change | optiland geo512: across | optiland geo512: last change | Chief rays apart [mm] | Class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 64 | 1.95e-3 | 512 | 4.88e-4 | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band |
 | 0.5 | 4.000 | ok | ok | ok | ok | 64 | 1.95e-3 | 512 | 4.88e-4 | 1.95e-3 | the inputs differ | chief-landing-apart: the chief rays land further apart than the limit: two image points; no difference is shown |
@@ -199,7 +199,7 @@ band (0.005 on the axis, 0.01 off it).
 Beside each engine's flag is its own sampling of the field: cells or rays across the pupil, and how far its
 curves moved between its last two samplings, which is that engine's own measure and judges no other.
 
-| Field | Cut | Cycles/mm | lv | optiland | optiland geo512 | replay | lv − optiland geo512 | Status | Class |
+| Field | Cut | Cycles/mm | lv | optiland | optiland geo512 | replay-of-lv-mtf | lv − optiland geo512 | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.8750 | 0.8750 | 0.8750 | 0.8750 | 0 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.7500 | 0.7500 | 0.7500 | 0.7500 | 0 | Side by side | the methods differ |
@@ -227,7 +227,7 @@ Recorded values, as each engine reports them. They are listed and never judged:
 
 The MTF values at every frequency of the request are in `report.json`.
 
-| Value | lv | optiland | replay |
+| Value | lv | optiland | replay-of-lv-mtf |
 |---|---|---|---|
 | binningMaxDelta[0] | — | 2.44140625e-4 | — |
 | binningMaxDelta[1] | — | 2.44140625e-4 | — |
@@ -294,15 +294,15 @@ Reference vs each, against `lv`:
 | Engine | chiefLanding.maxAbs (band 9.77e-4 mm) | mtfOffAxis.maxAbs (band 7.81e-3) | mtfOnAxis.maxAbs (band 3.91e-3) | fields.compared [elements] | fields.flagged [elements] | fields.rimLost [elements] | fields.data [elements] | fields.unavailable [elements] | Verdict | Note |
 |---|---|---|---|---|---|---|---|---|---|---|
 | optiland | 0 at field 0 | 1.56e-2 at cut sagittal, field 5.00e-1, frequencyPerMm 30 | 0 at cut sagittal, field 0, frequencyPerMm 10 | 3 | 0 | 0 | 0 | 0 | ATTENTION | mtfOffAxis.maxAbs 1.56e-2 is outside its attention band 7.81e-3 at cut sagittal, field 5.00e-1, frequencyPerMm 30 |
-| replay | 0 at field 0 | 0 at cut sagittal, field 5.00e-1, frequencyPerMm 10 | 0 at cut sagittal, field 0, frequencyPerMm 10 | 3 | 0 | 0 | 0 | 0 | RECORDED |  |
+| replay-of-lv-mtf | 0 at field 0 | 0 at cut sagittal, field 5.00e-1, frequencyPerMm 10 | 0 at cut sagittal, field 0, frequencyPerMm 10 | 3 | 0 | 0 | 0 | 0 | RECORDED |  |
 
 Pairwise, the verdict of each two engines and the metric nearest to or furthest past its limit:
 
-| Engine | lv | optiland | replay |
+| Engine | lv | optiland | replay-of-lv-mtf |
 |---|---|---|---|
 | lv | — | ATTENTION (mtfOffAxis.maxAbs 1.56e-2 at cut sagittal, field 5.00e-1, frequencyPerMm 30) | RECORDED (chiefLanding.maxAbs 0 at field 0) |
 | optiland | ATTENTION (mtfOffAxis.maxAbs 1.56e-2 at cut sagittal, field 5.00e-1, frequencyPerMm 30) | — | ATTENTION (mtfOffAxis.maxAbs 1.56e-2 at cut sagittal, field 5.00e-1, frequencyPerMm 30) |
-| replay | RECORDED (chiefLanding.maxAbs 0 at field 0) | ATTENTION (mtfOffAxis.maxAbs 1.56e-2 at cut sagittal, field 5.00e-1, frequencyPerMm 30) | — |
+| replay-of-lv-mtf | RECORDED (chiefLanding.maxAbs 0 at field 0) | ATTENTION (mtfOffAxis.maxAbs 1.56e-2 at cut sagittal, field 5.00e-1, frequencyPerMm 30) | — |
 
 The engines' own geometric MTF, side by side. The difference of a row is lv − optiland.
 Each column is one engine's own estimate of the geometric MTF, of its own rays through its own sampling of the
@@ -315,7 +315,7 @@ are of two fields.
 Over every frequency of the request `lv` against `optiland` comes to Side by side, worth a look; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | optiland | replay | lv: across | lv: last change | optiland: across | optiland: last change | Chief rays apart [mm] | Class | Reason |
+| Field | Angle [deg] | lv | optiland | replay-of-lv-mtf | lv: across | lv: last change | optiland: across | optiland: last change | Chief rays apart [mm] | Class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | 64 | 1.95e-3 | — | — | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band |
 | 0.5 | 4.000 | ok | ok | ok | 64 | 1.95e-3 | — | — | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band |
@@ -332,7 +332,7 @@ On several wavelengths the column of optiland is not a curve of optiland's own c
 the rays and their landings are optiland's, one wavelength a call, and the sum over them, the wavelengths added
 as complex numbers with their weights before the modulus is taken, is this tool's.
 
-| Field | Cut | Cycles/mm | lv | optiland | replay | lv − optiland | Status | Class |
+| Field | Cut | Cycles/mm | lv | optiland | replay-of-lv-mtf | lv − optiland | Status | Class |
 |---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.8750 | 0.8750 | 0.8750 | 0 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.7500 | 0.7500 | 0.7500 | 0 | Side by side | the methods differ |
@@ -360,7 +360,7 @@ Recorded values, as each engine reports them. They are listed and never judged:
 
 The MTF values at every frequency of the request are in `report.json`.
 
-| Value | lv | optiland | replay |
+| Value | lv | optiland | replay-of-lv-mtf |
 |---|---|---|---|
 | field[0] | 0 | 0 | 0 |
 | field[1] | 5.00000000e-1 | 5.00000000e-1 | 5.00000000e-1 |

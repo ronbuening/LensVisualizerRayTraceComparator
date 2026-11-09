@@ -19,8 +19,8 @@ test("R9a: a moved landing fails as a landing, a lateral colour and a distortion
       set.pairs.map((pair) => `${pair.a}-${pair.b} ${pair.verdict}`),
     ]);
     assert.deepEqual(verdicts, [
-      ["reference-vs-each", ["ref-moved FAIL", "ref-stopped FAIL"]],
-      ["pairwise", ["moved-ref FAIL", "moved-stopped FAIL", "ref-stopped FAIL"]],
+      ["reference-vs-each", ["reference-tracer-moved FAIL", "reference-tracer-stopped FAIL"]],
+      ["pairwise", ["moved-reference-tracer FAIL", "moved-stopped FAIL", "reference-tracer-stopped FAIL"]],
     ]);
     const [moved, stopped] = comparisons.comparisons[0].pairs;
     assert.match(

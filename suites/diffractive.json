@@ -3,7 +3,7 @@
   "kind": "suite",
   "name": "diffractive",
   "defaults": {
-    "engines": ["lv", "ref", "optiland"],
+    "engines": ["lv", "reference-tracer", "optiland"],
     "rungs": ["built-system", "first-order", "ray-trace", "optical-path"],
     "aperture": {
       "kind": "wide-open"

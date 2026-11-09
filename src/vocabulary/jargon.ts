@@ -32,6 +32,15 @@ export const JARGON: readonly JargonTerm[] = [
     pattern: /(?<![\w./-])(?:r(?:1[0-4]|[0-9])[a-g]?|selftest)(?![\w-]|\.\w)/i,
     replacement: "the check's id of today (lvrtc checks lists both)",
   },
+  // An engine's id from before the rename, where it can only be an id: `ref-seidel` and `optiland-wave` as whole
+  // tokens (never inside otf-of-optiland-wavefront), and ref, replay, wave and flux, which are also words or parts of
+  // run names (-ref), only in code (`ref`) or as one engine of a pair (lv – ref, lv / wave).
+  {
+    term: "old engine id",
+    pattern:
+      /(?<![\w./-])(?:ref-seidel|optiland-wave)(?![\w-])|`(?:ref|replay|wave|flux)`|(?<=\w [–/] )(?:ref|replay|wave|flux)(?![\w-])|(?<![\w./-])(?:ref|replay|wave|flux)(?= [–/] \w)/,
+    replacement: "the engine's id of today (lvrtc glossary lists both)",
+  },
 ];
 
 /**

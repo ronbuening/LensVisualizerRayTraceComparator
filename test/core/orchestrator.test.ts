@@ -387,7 +387,10 @@ test("an unknown rung or engine is a usage error, and nothing is created, run or
       { engines: ["fake-a", "optiland"] },
       'unknown engine "optiland": the configuration defines fake-a, fake-b, fake-none',
     ],
-    [{ engines: ["ref", "lv"] }, 'unknown engines "ref", "lv": the configuration defines fake-a, fake-b, fake-none'],
+    [
+      { engines: ["reference-tracer", "lv"] },
+      'unknown engines "reference-tracer", "lv": the configuration defines fake-a, fake-b, fake-none',
+    ],
     [{ engines: [] }, "no engine was named: the configuration defines fake-a, fake-b, fake-none"],
     [
       { suite: pairSuite({ engines: ["fake-b", "constructor"] }) },

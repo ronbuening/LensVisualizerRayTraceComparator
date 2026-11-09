@@ -71,8 +71,8 @@ export interface DashboardFixture {
   readonly mtfRunsDir: string;
   readonly mtfPolicyFile: string;
   /**
-   * The rays of `ref` against two copies of it (`RAYS_SUITE`), one with a radius one part in 1e6 too long, judged by
-   * the comparator's policy with an R0 that blocks nothing: its own root, runs directory and policy file.
+   * The rays of `reference-tracer` against two copies of it (`RAYS_SUITE`), one with a radius one part in 1e6 too long,
+   * judged by the comparator's policy with an R0 that blocks nothing: its own root, runs directory and policy file.
    */
   readonly raysRootDir: string;
   readonly raysRunsDir: string;
@@ -106,7 +106,7 @@ export const ODD_NAME = "a<b&c";
 /** The policy of the MTF part of the fixture: the R5 stand-ins' rung and the R5g stand-ins', with their bands. */
 export const MTF_FIXTURE_POLICY: Policy = { ...R5_POLICY, rungs: { ...R5_POLICY.rungs, ...R5G_POLICY.rungs } };
 
-/** The suite of the rays part of the fixture: `ref`, a copy with a bent radius and a faithful copy, on R0 and R2. */
+/** The suite of the rays part of the fixture: `reference-tracer`, a copy with a bent radius and a faithful copy, on R0 and R2. */
 export const RAYS_SUITE = "rays";
 
 /** The comparator's own policy with an R0 that blocks nothing, so that R2 speaks for itself. */
@@ -116,8 +116,8 @@ export function unblockingPolicy(): Policy {
   return { ...own, rungs: { ...own.rungs, "built-system": r0 } };
 }
 
-/** Runs `ref` and its two copies on the Double-Gauss case into `runsDir`, and compares them by `policy`. */
-/** The copy of `ref` whose radius on surface 8 is one part in 1e6 too long; it sorts after the faithful copy. */
+/** Runs `reference-tracer` and its two copies on the Double-Gauss case into `runsDir`, and compares them by `policy`. */
+/** The copy of `reference-tracer` whose radius on surface 8 is one part in 1e6 too long; it sorts after the faithful copy. */
 export const WARPED = "ref-warped";
 
 /**
@@ -150,7 +150,7 @@ async function raysCycle(runsDir: string, policy: Policy): Promise<ComparisonFil
       new RemoteEngineAdapter({ id, transport: createInProcessTransport(fixedIdentity(id, handler())) });
   const bend: BentOptions = { id: WARPED, edits: [{ pointer: "/system/surfaces/8/shape/radius", scale: 1 + 1e-6 }] };
   const { registry } = watchedRegistry({
-    ref: engine(() => createRefEngine()),
+    "reference-tracer": engine(() => createRefEngine()),
     [WARPED]: engine(() => createBentEngine(bend)),
     "ref-twin": engine(() => createBentEngine({ id: "ref-twin" })),
   });
@@ -168,7 +168,7 @@ async function raysCycle(runsDir: string, policy: Policy): Promise<ComparisonFil
   const sources = { fixture: createFixtureCaseSource(runsDir) };
   const { manifest } = await runSuite({ suite, registry, runsDir, sources });
   const store = createResultStore(join(runsDir, STORE_DIRECTORY));
-  return compareManifest({ manifest, store, policy, reference: "ref", cases: () => DOUBLE_GAUSS });
+  return compareManifest({ manifest, store, policy, reference: "reference-tracer", cases: () => DOUBLE_GAUSS });
 }
 
 /** The suite whose first field is off the axis and whose stand-in for optiland fails when asked again at 512 rays. */

@@ -53,7 +53,7 @@ test(
       "--profile",
       "benchmark",
       "--engines",
-      "lv,ref,optiland",
+      "lv,reference-tracer,optiland",
       "--aperture",
       "f/8",
     ]);

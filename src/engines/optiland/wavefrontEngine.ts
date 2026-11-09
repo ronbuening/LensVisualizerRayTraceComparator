@@ -30,7 +30,7 @@ import { OPTILAND_TIMEOUTS, optilandDefinition } from "./definition.ts";
 import { polychromaticWavefrontMtf, wavefrontMtf } from "./wavefrontMtf.ts";
 import { wavefrontZernike } from "./wavefrontZernike.ts";
 
-export const OPTILAND_WAVE_ENGINE_ID = "optiland-wave";
+export const OPTILAND_WAVE_ENGINE_ID = "otf-of-optiland-wavefront";
 
 /** How far from the case's image plane the centre of a reference sphere may be, mm: the worker's own limit. */
 const IMAGE_PLANE_MM = 1e-9;
@@ -43,7 +43,7 @@ export function wavefrontTransport(transport: Transport): Transport {
   return {
     kind: "in-process",
     open: async () => {
-      if (closed) throw new Error("optiland-wave transport is closed");
+      if (closed) throw new Error(`${OPTILAND_WAVE_ENGINE_ID} transport is closed`);
       const native = await source.describe();
       const revision = adapterRevision("engines/optiland/wavefrontEngine.ts").revision;
       const descriptor: EngineDescriptor = {
@@ -175,7 +175,7 @@ export function wavefrontTransport(transport: Transport): Transport {
       });
     },
     call: async (message) => {
-      if (handler === undefined) throw new Error("optiland-wave transport is not open");
+      if (handler === undefined) throw new Error(`${OPTILAND_WAVE_ENGINE_ID} transport is not open`);
       return handler(message);
     },
     close: async () => {

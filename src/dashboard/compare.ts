@@ -36,7 +36,11 @@ import { currentCheckId, currentEngineId } from "../core/legacyIds.ts";
 const TEXT = DASHBOARD_TEXT.compare;
 
 /** The engines a recorded rung sets beside LensVisualizer's own analysis: its counterparts. */
-export const COUNTERPARTS: readonly string[] = Object.freeze(["optiland", "optiland-wave", "flux"]);
+export const COUNTERPARTS: readonly string[] = Object.freeze([
+  "optiland",
+  "otf-of-optiland-wavefront",
+  "flux-of-lv-rays",
+]);
 /** LensVisualizer's engine. */
 export const LV_ENGINE = "lv";
 

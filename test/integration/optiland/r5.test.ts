@@ -46,12 +46,12 @@ test(
     const { manifest, comparisons, runsDir } = runAndCompare(t, {
       suite,
       name: "benchmark",
-      engines: "lv,ref",
+      engines: "lv,reference-tracer",
       rungs: "mtf-vs-optiland-fft",
     });
 
     const first = manifest.jobs.filter((job) => job.step === undefined);
-    assert.deepEqual([...new Set(first.map((job) => job.engine))].sort(), ["lv", "optiland", "wave"]);
+    assert.deepEqual([...new Set(first.map((job) => job.engine))].sort(), ["lv", "optiland", "wave-mtf-of-lv-rays"]);
     assert.equal(first.length, 3 * RUNS.length);
     for (const job of first) {
       const expected = job.run === PHOTOPIC && job.engine === "optiland" ? "unsupported" : "ok";

@@ -62,7 +62,7 @@ test(
     const cycle = runAndCompare(t, {
       suite: waveSuite(t),
       name: "benchmark",
-      engines: "lv,ref,optiland",
+      engines: "lv,reference-tracer,optiland",
       rungs: "wave-mtf",
     });
     const { manifest } = cycle;
@@ -108,7 +108,7 @@ test(
         assert.ok(step > QUARTER_WAVE || moved > 0.005, `${pair.run} ${pair.engines}: flagged at ${step}, ${moved}`);
       }
       // The exact tracers keep the absolute Stage 3.12 bound, whether the lattice is an arbiter or not.
-      if (pair.engines === "optiland / ref") assert.ok(value <= 2e-9, `${pair.run}: ${value}`);
+      if (pair.engines === "optiland / reference-tracer") assert.ok(value <= 2e-9, `${pair.run}: ${value}`);
       const held = worst.get(pair.engines) ?? { value: -1, at: "", judged: 0, flagged: 0 };
       if (judged) held.judged++;
       else held.flagged++;
@@ -118,7 +118,11 @@ test(
       }
       worst.set(pair.engines, held);
     }
-    assert.deepEqual([...worst.keys()].sort(), ["lv / optiland", "lv / ref", "optiland / ref"]);
+    assert.deepEqual([...worst.keys()].sort(), [
+      "lv / optiland",
+      "lv / reference-tracer",
+      "optiland / reference-tracer",
+    ]);
     for (const [engines, held] of [...worst].sort(([a], [b]) => (a < b ? -1 : 1))) {
       // Every pair of engines has fields that are judged: the gate is held, and not only passed by.
       assert.ok(held.judged > 0, engines);

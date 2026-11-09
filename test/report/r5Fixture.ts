@@ -1,6 +1,7 @@
-// Rung R5 from end to end on engines that know no optics: three stand-ins named `lv`, `optiland` and `wave` answer
-// one `mtf.native` request with curves this file writes out, a suite of three runs is run, compared and reported,
-// and the report is a golden file. Every number is synthetic: a binary fraction, or a band of the policy.
+// Rung R5 from end to end on engines that know no optics: three stand-ins named `lv`, `optiland` and
+// `wave-mtf-of-lv-rays` answer one `mtf.native` request with curves this file writes out, a suite of three runs is run,
+// compared and reported, and the report is a golden file. Every number is synthetic: a binary fraction, or a band of
+// the policy.
 import { join } from "node:path";
 
 import { compareManifest } from "../../src/compare/manifest.ts";
@@ -58,7 +59,7 @@ export const R5_POLICY: Policy = {
 export const R5_FIXTURE_RUNG: RungDefinition = {
   id: "mtf-vs-optiland-fft",
   quantity: MTF_NATIVE,
-  engines: ["lv", "optiland", "wave"],
+  engines: ["lv", "optiland", "wave-mtf-of-lv-rays"],
   buildRequests: (opticalCase) => [makeRequest({ caseId: opticalCase.id, quantity: MTF_NATIVE, spec: SPEC })],
 };
 
@@ -96,7 +97,7 @@ const ok = (data: MtfNativeData): ResultBody => ({ status: "ok", data });
  *   field 0.5 its chief ray lands twice the limit from LensVisualizer's.
  * - `polychromatic` (the case of every feature): optiland is unsupported.
  *
- * `wave` says of field 1 that it is unconverged in every run.
+ * `wave-mtf-of-lv-rays` says of field 1 that it is unconverged in every run.
  */
 export function standIns(): { readonly [engine: string]: EngineMaker } {
   const edge = (request: QuantityRequest): boolean => request.caseId === SINGLET.id;
@@ -126,7 +127,7 @@ export function standIns(): { readonly [engine: string]: EngineMaker } {
       }
       return ok(answer("scalar-fft-mtf", optilandFields(request)));
     }),
-    wave: mtfEngine(() =>
+    "wave-mtf-of-lv-rays": mtfEngine(() =>
       ok(answer("hopkins-autocorrelation", [{}, {}, { status: "unconverged", reason: "undersampled" }])),
     ),
   };

@@ -87,13 +87,19 @@ export function codeOf(text: string): string | null {
 
 /**
  * What a code means and what to do about it, wrapped after `indent` spaces: the vocabulary's sentence and remedy, or
- * nothing when the vocabulary has no words for the code.
+ * nothing when the vocabulary has no words for the code. `shown` is the message printed above, if any: a sentence of
+ * the remedy it already says is left out (the optiland engine's message names the setting to make, in the remedy's
+ * words), so that a fix is printed once.
  */
-export function codeLines(code: string | null, indent = 2, engine?: string): string[] {
+export function codeLines(code: string | null, indent = 2, engine?: string, shown = ""): string[] {
   if (code === null) return [];
   const text = engineCodeTextOf(engine, code);
   if (text === undefined) return [];
-  const said = text.remedy === "" ? text.sentence : `${text.sentence} ${text.remedy}`;
+  const remedy = text.remedy
+    .split(/(?<=\.) (?=[A-Z])/)
+    .filter((sentence) => sentence !== "" && !shown.includes(sentence))
+    .join(" ");
+  const said = remedy === "" ? text.sentence : `${text.sentence} ${remedy}`;
   return wrap(said, indent);
 }
 
@@ -102,7 +108,7 @@ export function codeLines(code: string | null, indent = 2, engine?: string): str
  * says.
  */
 export function explainedProblem(prefix: string, problem: string): string {
-  return [`${prefix}${problem}`, ...codeLines(codeOf(problem), 4), ""].join("\n");
+  return [`${prefix}${problem}`, ...codeLines(codeOf(problem), 4, undefined, problem), ""].join("\n");
 }
 
 /** "14 answered, 2 not computed": the counts above zero, by label; the first count when every one is zero. */

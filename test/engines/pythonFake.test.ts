@@ -331,16 +331,16 @@ test(
     };
     const first = run();
     assert.equal(first.code, EXIT_OK, first.out + first.err);
-    assert.match(first.out, /^singlet {7}pipeline-echo {16}fake-py {10}answered {17}asked now$/m);
-    assert.match(first.out, /^singlet {7}pipeline-echo {16}fake-py-oneshot {2}answered {17}asked now$/m);
-    assert.match(first.out, /^double-gauss {2}pipeline-echo {16}fake-py {10}answered {17}asked now$/m);
-    assert.match(first.out, /^double-gauss {2}pipeline-echo {16}fake-py-oneshot {2}answered {17}asked now$/m);
+    assert.match(first.out, /^singlet {7}pipeline-echo {16}fake-py {20}answered {17}asked now$/m);
+    assert.match(first.out, /^singlet {7}pipeline-echo {16}fake-py-oneshot {12}answered {17}asked now$/m);
+    assert.match(first.out, /^double-gauss {2}pipeline-echo {16}fake-py {20}answered {17}asked now$/m);
+    assert.match(first.out, /^double-gauss {2}pipeline-echo {16}fake-py-oneshot {12}answered {17}asked now$/m);
     assert.match(
       first.out,
       /^fake-pair: 18 jobs: 14 answered, 2 not computed, 2 waiting for an operator \(16 asked now, 2 not offered\)$/m,
     );
     // fake-human answers by file exchange: its jobs are handed over and pending, and pending is no failure.
-    assert.match(first.out, /^singlet {7}pipeline-echo {16}fake-human {7}waiting for an operator {2}asked now$/m);
+    assert.match(first.out, /^singlet {7}pipeline-echo {16}fake-human {17}waiting for an operator {2}asked now$/m);
 
     const manifestPath = join(runsDir, "fake-pair", MANIFEST_FILE);
     const manifestText = readFileSync(manifestPath, "utf8");

@@ -30,7 +30,7 @@ if (mode === "suite") {
 } else if (mode === "sampling") {
   const { manifest, answer } = readInvestigation(join(directory, "runs"));
   const rows = manifest.runs.flatMap((run) =>
-    ["lv", "wave", "optiland", "optiland-wave"].flatMap((engine) =>
+    ["lv", "wave-mtf-of-lv-rays", "optiland", "otf-of-optiland-wavefront"].flatMap((engine) =>
       answer(run.name, engine).data.fields.map(({ field, status, reason, sampling }) => ({
         run: run.name,
         engine,

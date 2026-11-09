@@ -145,7 +145,10 @@ test(
   { skip, timeout: 600_000 },
   async (t) => {
     const optiland = await createEngineRegistry(optilandRoot(t)).create("optiland");
-    const ref = new RemoteEngineAdapter({ id: "ref", transport: createInProcessTransport(createRefEngine()) });
+    const ref = new RemoteEngineAdapter({
+      id: "reference-tracer",
+      transport: createInProcessTransport(createRefEngine()),
+    });
     t.after(() => Promise.all([optiland.close(), ref.close()]));
     const opticalCase: OpticalCase = JSON.parse(readFileSync(caseFixture("double-gauss"), "utf8"));
 
@@ -238,7 +241,7 @@ test(
     const cycle = runAndCompare(t, {
       suite: "suite.json",
       name: "made-for-r2",
-      engines: "ref,optiland",
+      engines: "reference-tracer,optiland",
       rungs: "ray-trace",
       root: rootDir,
     });
@@ -256,7 +259,7 @@ test(
       [],
     );
     const { pairs, counts } = assertR2(t, "made for R2", cycle);
-    assert.deepEqual([...new Set(pairs.map((pair) => pair.engines))], ["optiland / ref"]);
+    assert.deepEqual([...new Set(pairs.map((pair) => pair.engines))], ["optiland / reference-tracer"]);
     assert.equal(pairs.length, sets);
     // The two engines stopped the same rays, at the same surfaces, for whatever reason each has.
     assert.deepEqual(counts.optiland, counts.ref);
@@ -291,10 +294,10 @@ test(
 
 /**
  * A suite on rung R2 by all three engines, then once more with optiland run without numba's JIT, into the same
- * runs directory, so that `lv` and `ref` are found in the result store and only optiland computes again.
+ * runs directory, so that `lv` and `reference-tracer` are found in the result store and only optiland computes again.
  */
 function threeWays(t: TestContext, suite: "benchmark" | "features"): { on: R2Summary; cycle: RunCycle } {
-  const engines = "lv,ref,optiland";
+  const engines = "lv,reference-tracer,optiland";
   const compiled = watchedInterpreter(t);
   const suiteFile = rungSuite(t, suite);
   const cycle = runAndCompare(t, {
@@ -314,8 +317,8 @@ function threeWays(t: TestContext, suite: "benchmark" | "features"): { on: R2Sum
   assert.equal(on.pairs.length, 3 * sets);
   assert.deepEqual([...new Set(on.pairs.map((pair) => pair.engines))].sort(), [
     "lv / optiland",
-    "lv / ref",
-    "optiland / ref",
+    "lv / reference-tracer",
+    "optiland / reference-tracer",
   ]);
   const optiland = manifest.engines.find((engine) => engine.id === "optiland");
   assert.ok(optiland !== undefined && optiland.status === "available" && optiland.details.jit === true);

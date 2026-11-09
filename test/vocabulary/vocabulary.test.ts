@@ -12,7 +12,7 @@ import { COMPARATORS } from "../../src/compare/index.ts";
 import { loadPolicy } from "../../src/compare/policyFile.ts";
 import type { Baseline } from "../../src/contract/baseline.ts";
 import { VERDICTS } from "../../src/contract/comparison.ts";
-import { LEGACY_CHECK_IDS } from "../../src/core/legacyIds.ts";
+import { LEGACY_CHECK_IDS, LEGACY_ENGINE_IDS } from "../../src/core/legacyIds.ts";
 import { RUNGS } from "../../src/core/rungs.ts";
 import { RUNG_CLASSES, RUNG_MODES } from "../../src/contract/policy.ts";
 import { badgeOf } from "../../src/dashboard/staleness.ts";
@@ -44,6 +44,7 @@ import {
   CODES,
   DIFFERENCE_CLASSES,
   ENGINES,
+  engineOf,
   GLOSSARY_TEXT,
   JARGON,
   MATRIX_CHECKS,
@@ -106,17 +107,25 @@ function calls(): string[] {
 
 /**
  * Every string of the vocabulary but the jargon it names on purpose: the words a term replaces, `JARGON`, each
- * check's old id (`oldId`, the id it had before the rename, which the checks command shows beside its id) and the
- * note that names `--rungs`.
+ * check's and each engine's old id (`oldId`, the id it had before the rename, which the checks command, the glossary
+ * and the help page show beside its id) and the note that names `--rungs`.
  */
 function plainStrings(): string[] {
-  const { TERMS: _terms, JARGON: _jargon, CHECKS: checks, OLD_ID_TEXT: oldIdText, ...rest } = vocabulary;
+  const {
+    TERMS: _terms,
+    JARGON: _jargon,
+    CHECKS: checks,
+    ENGINES: engines,
+    OLD_ID_TEXT: oldIdText,
+    ...rest
+  } = vocabulary;
   // The note on --rungs names the option, the older spelling of --checks.
   const { olderOption: _option, ...oldIdWords } = oldIdText;
   return [
     ...strings(rest),
     ...strings(oldIdWords),
     ...strings(checks.map(({ oldId: _oldId, ...check }) => check)),
+    ...strings(engines.map(({ oldId: _oldId, ...engine }) => engine)),
     ...TERMS.flatMap((term) => [term.term, term.definition]),
     ...JARGON.map((jargon) => jargon.replacement),
     ...calls(),
@@ -173,7 +182,7 @@ test("there is a check for every rung, of its class in the limits file, and each
 
 test("new ids are unique and kebab-case; a check held to a limit never says -vs-, a side-by-side check always does", () => {
   const kebab = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-  for (const list of [CHECKS.map((check) => check.id), ENGINES.map((engine) => engine.newId)]) {
+  for (const list of [CHECKS.map((check) => check.id), ENGINES.map((engine) => engine.id)]) {
     assert.equal(new Set(list).size, list.length);
     for (const id of list) assert.match(id, kebab);
   }
@@ -181,9 +190,11 @@ test("new ids are unique and kebab-case; a check held to a limit never says -vs-
   // No new id is an old one, and no old id a new one: each id has one name in each id space.
   const old = new Set(CHECKS.map((check) => check.oldId));
   for (const check of CHECKS) assert.ok(!old.has(check.id), check.id);
+  const renamed = new Set(ENGINES.filter((engine) => engine.oldId !== engine.id).map((engine) => engine.oldId));
+  for (const engine of ENGINES) assert.ok(!renamed.has(engine.id), engine.id);
   // LensVisualizer and optiland keep their ids, so their stored answers stay valid.
-  assert.equal(ENGINES.find((engine) => engine.id === "lv")?.newId, "lv");
-  assert.equal(ENGINES.find((engine) => engine.id === "optiland")?.newId, "optiland");
+  assert.equal(ENGINES.find((engine) => engine.id === "lv")?.oldId, "lv");
+  assert.equal(ENGINES.find((engine) => engine.id === "optiland")?.oldId, "optiland");
 });
 
 test("the new ids are the plan's, check by check and engine by engine, and the legacy map is the checks' own", () => {
@@ -216,7 +227,13 @@ test("the new ids are the plan's, check by check and engine by engine, and the l
     r13b: "seidel-vs-optiland",
     r14b: "zernike-vs-optiland",
   });
-  assert.deepEqual(Object.fromEntries(ENGINES.map((engine) => [engine.id, engine.newId])), {
+  // Every engine's old id to its id: the plan's table, and, for the six renamed, exactly the map the code reads old
+  // engine ids by; an engine is found by either id.
+  const renamed = ENGINES.filter((engine) => engine.oldId !== engine.id);
+  assert.deepEqual(Object.fromEntries(renamed.map((engine) => [engine.oldId, engine.id])), LEGACY_ENGINE_IDS);
+  for (const engine of ENGINES) assert.equal(engineOf(engine.oldId), engine, engine.oldId);
+  for (const engine of ENGINES) assert.equal(engineOf(engine.id), engine, engine.id);
+  assert.deepEqual(Object.fromEntries(ENGINES.map((engine) => [engine.oldId, engine.id])), {
     lv: "lv",
     optiland: "optiland",
     ref: "reference-tracer",
@@ -388,7 +405,7 @@ test("the glossary has every section, term, check and engine, and is the same te
     assert.ok(glossary.includes(`\n## ${heading}\n`), heading);
   for (const term of TERMS) assert.ok(glossary.includes(`| ${term.term} |`), term.term);
   for (const check of CHECKS) assert.ok(glossary.includes(`### ${check.title}\n`), check.id);
-  for (const engine of ENGINES) assert.ok(glossary.includes(`\`${engine.newId}\``), engine.id);
+  for (const engine of ENGINES) assert.ok(glossary.includes(`\`${engine.id}\``), engine.id);
   for (const text of strings(GLOSSARY_TEXT)) assert.doesNotMatch(text, /\|/);
   for (const text of [...TERMS.map((term) => term.definition), ...strings(ENGINES), ...strings(VERDICT_TEXT)])
     assert.doesNotMatch(text, /\|/, text);

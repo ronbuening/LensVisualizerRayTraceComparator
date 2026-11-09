@@ -36,8 +36,8 @@ export function investigationSuite(benchmark: Suite): Suite {
         sampling: {
           engines: {
             optiland: { fftRays: level.fftRays },
-            wave: { bundleGrid: level.bundleGrid },
-            "optiland-wave": { wavefrontGrids: [...level.wavefrontGrids] },
+            "wave-mtf-of-lv-rays": { bundleGrid: level.bundleGrid },
+            "otf-of-optiland-wavefront": { wavefrontGrids: [...level.wavefrontGrids] },
           },
         },
       })),
@@ -110,7 +110,7 @@ export function investigationTable(directory: string): string {
       for (const cut of ["sagittal", "tangential"] as const) {
         const spec = answer(run.name, "lv").spec;
         for (const [index, frequency] of spec.frequenciesPerMm.entries()) {
-          const values = ["lv", "wave", "optiland", "optiland-wave"].map((engine) => {
+          const values = ["lv", "wave-mtf-of-lv-rays", "optiland", "otf-of-optiland-wavefront"].map((engine) => {
             const levels = engine === "lv" ? LEVELS.slice(0, 1) : LEVELS;
             return levels
               .map(({ name }) => {

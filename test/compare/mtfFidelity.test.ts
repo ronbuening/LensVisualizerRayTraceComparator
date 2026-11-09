@@ -239,7 +239,14 @@ test("each answer's grid sizes and ray counts are recorded beside the comparison
 
 test("the policy judges it: a rounding passes, a difference above 1e-9 fails, and so does any count", () => {
   const pair = (other: MtfNativeData) =>
-    comparePair(participant("lv", BASE), participant("replay", other), R4F, mtfFidelityComparator, undefined, CONTEXT);
+    comparePair(
+      participant("lv", BASE),
+      participant("replay-of-lv-mtf", other),
+      R4F,
+      mtfFidelityComparator,
+      undefined,
+      CONTEXT,
+    );
   const rounding = pair(moved(BASE, 0, "sagittal", 1, 2 ** -40));
   assert.equal(rounding.verdict, "PASS");
   assert.deepEqual(
@@ -271,7 +278,7 @@ test("the policy judges it: a rounding passes, a difference above 1e-9 fails, an
       rung: "lv-mtf-replay",
       quantity: "mtf.native",
       requestId: "d".repeat(64),
-      participants: [participant("replay", BASE), participant("lv", BASE)],
+      participants: [participant("replay-of-lv-mtf", BASE), participant("lv", BASE)],
       policy: R4F,
       comparator: mtfFidelityComparator,
       context: CONTEXT,
@@ -282,7 +289,7 @@ test("the policy judges it: a rounding passes, a difference above 1e-9 fails, an
   assert.deepEqual(comparisonInvariantProblems(set), []);
   assert.deepEqual(
     set.pairs.map((each) => [each.a, each.b, each.verdict]),
-    [["lv", "replay", "PASS"]],
+    [["lv", "replay-of-lv-mtf", "PASS"]],
   );
   // A value that is no number is recorded as null.
   assert.deepEqual(set.participants[0].recorded?.gridSize, [32, 128, null]);

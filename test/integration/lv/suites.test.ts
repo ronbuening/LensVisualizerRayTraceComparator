@@ -261,7 +261,16 @@ test(
     // reference engine, which answers R0 and R1 for every one of these cases: each declines what the other offers.
     // The rungs that trace rays are left out: this is about the cases.
     const rungs = ["--checks", "pipeline-echo,built-system,first-order"];
-    const args = [BIN, "run", suitePath("smoke"), "--root", FAKE_ROOT, "--engines", "fake-a,ref", ...rungs];
+    const args = [
+      BIN,
+      "run",
+      suitePath("smoke"),
+      "--root",
+      FAKE_ROOT,
+      "--engines",
+      "fake-a,reference-tracer",
+      ...rungs,
+    ];
     const env = { ...process.env, LVRTC_RUNS_DIR: runsDir, LVRTC_LV_PATH: LV_PATH ?? "" };
     const child = spawnSync(process.execPath, args, { encoding: "utf8", cwd: REPO_ROOT, env });
     assert.equal(child.status, 0, child.stderr);
@@ -270,7 +279,11 @@ test(
     const zoomRuns = ["minolta-af-35-70-f4-ref-wide", "minolta-af-35-70-f4-ref-tele"];
     for (const run of ["carl-zeiss-tessar-50f35-ref", "carl-zeiss-tessar-50f35-photopic", ...zoomRuns]) {
       for (const rung of ["built-system", "first-order"]) {
-        assert.match(child.stdout, new RegExp(`^${run} +${rung} +ref +answered +asked now$`, "m"), `${run} ${rung}`);
+        assert.match(
+          child.stdout,
+          new RegExp(`^${run} +${rung} +reference-tracer +answered +asked now$`, "m"),
+          `${run} ${rung}`,
+        );
       }
       assert.match(child.stdout, new RegExp(`^${run} +pipeline-echo +fake-a +answered +asked now$`, "m"), run);
     }
@@ -323,8 +336,11 @@ test(
       ran.stdout,
       /^smoke: 818 jobs: 808 answered, 10 not computed \(646 asked now, 162 from the result cache, 10 not offered\)$/m,
     );
-    assert.match(ran.stdout, /^minolta-af-35-70-f4-ref-tele +mtf-vs-wave-estimate +wave +answered +asked now$/m);
-    assert.match(ran.stdout, /^minolta-af-35-70-f4-ref-tele +lv-mtf-replay +replay +answered +asked now$/m);
+    assert.match(
+      ran.stdout,
+      /^minolta-af-35-70-f4-ref-tele +mtf-vs-wave-estimate +wave-mtf-of-lv-rays +answered +asked now$/m,
+    );
+    assert.match(ran.stdout, /^minolta-af-35-70-f4-ref-tele +lv-mtf-replay +replay-of-lv-mtf +answered +asked now$/m);
     for (const end of ["wide", "tele"]) {
       for (const rung of ["optical-path", "geometric-mtf"]) {
         assert.match(
@@ -382,14 +398,18 @@ test(
       assert.equal(set.pairs[0].verdict, "PASS", set.run);
     for (const set of sets("wave-mtf")) {
       const [pair] = set.pairs;
-      assert.deepEqual([pair.a, pair.b, pair.verdict], ["lv", "ref", "PASS"], set.run);
+      assert.deepEqual([pair.a, pair.b, pair.verdict], ["lv", "reference-tracer", "PASS"], set.run);
       // A field is judged, or says why its lattice is no arbiter.
       const judged = pair.metrics.some((metric) => metric.name === "waveMtf.maxAbs");
       assert.equal(pair.reason === undefined, judged, `${set.run}: ${pair.reason ?? ""}`);
     }
     for (const set of sets("geometric-mtf")) {
       const [pair] = set.pairs;
-      assert.deepEqual([pair.a, pair.b, pair.verdict, pair.reason], ["lv", "ref", "PASS", undefined], set.run);
+      assert.deepEqual(
+        [pair.a, pair.b, pair.verdict, pair.reason],
+        ["lv", "reference-tracer", "PASS", undefined],
+        set.run,
+      );
       const lines = pair.metrics.find((metric) => metric.name === "lines.compared")?.value;
       assert.equal(lines, set.run.endsWith("-photopic") ? 5 : 1, set.run);
       assert.ok((pair.metrics.find((metric) => metric.name === "rays.compared")?.value ?? 0) > 0, set.run);
@@ -405,7 +425,7 @@ test(
     }
     assert.deepEqual(
       manifest.engines.map((engine) => engine.id),
-      ["lv", "ref", "replay", "wave"],
+      ["lv", "reference-tracer", "replay-of-lv-mtf", "wave-mtf-of-lv-rays"],
     );
   },
 );

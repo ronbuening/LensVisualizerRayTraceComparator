@@ -1,8 +1,8 @@
-// The legacy-id plumbing (`src/core/legacyIds.ts`): the check ids are renamed (Stage 9.7) and the engine map is empty
-// until the engine ids are, so a test of an engine rename hands the functions a rename of its own. An old id on input
-// is read as its new one with one note per command; a baseline committed before a rename is read under the new ids,
-// its pairs in the writer's order; a run directory written before one is refused; a configuration that defines an
-// engine under an old id is refused; and the catalog snapshot keeps the ids it was written with.
+// The legacy-id plumbing (`src/core/legacyIds.ts`): the check ids are renamed (Stage 9.7) and the engine ids (Stage
+// 9.8); a test may still hand the functions a rename of its own, to hold one property apart from the real maps. An old
+// id on input is read as its new one with one note per command; a baseline committed before a rename is read under the
+// new ids, its pairs in the writer's order; a run directory written before one is refused; a configuration that defines
+// an engine under an old id is refused; and the catalog snapshot keeps the ids it was written with.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -56,17 +56,25 @@ import { FAKE_PAIR_SUITE, FAKE_ROOT, tempDir } from "./support.ts";
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
 const NONE: LegacyMaps = { checks: {}, engines: {} };
 
-test("the check map renames every check and the engine map is empty until the engine rename; both are frozen", () => {
+test("the check map renames every check and the engine map the six engines this tool builds; both are frozen", () => {
   // Every check of today is the new id of exactly one old id.
   assert.deepEqual(new Set(Object.values(LEGACY_CHECK_IDS)), new Set(RUNGS.map((rung) => rung.id)));
   assert.equal(Object.keys(LEGACY_CHECK_IDS).length, RUNGS.length);
   assert.equal(currentCheckId("r2"), "ray-trace");
   assert.equal(currentCheckId("selftest"), "pipeline-echo");
-  assert.deepEqual(LEGACY_ENGINE_IDS, {});
+  assert.deepEqual(LEGACY_ENGINE_IDS, {
+    ref: "reference-tracer",
+    "ref-seidel": "reference-seidel",
+    replay: "replay-of-lv-mtf",
+    wave: "wave-mtf-of-lv-rays",
+    flux: "flux-of-lv-rays",
+    "optiland-wave": "otf-of-optiland-wavefront",
+  });
   assert.ok(Object.isFrozen(LEGACY_CHECK_IDS) && Object.isFrozen(LEGACY_ENGINE_IDS) && Object.isFrozen(LEGACY_IDS));
   for (const rung of RUNGS) assert.equal(currentCheckId(rung.id), rung.id);
-  for (const id of ["lv", "ref", "ref-seidel", "replay", "wave", "flux", "optiland", "optiland-wave"])
-    assert.equal(currentEngineId(id), id);
+  // LensVisualizer and optiland keep their ids (their stored answers stay valid), and an id of today is its own.
+  for (const id of ["lv", "optiland", ...Object.values(LEGACY_ENGINE_IDS)]) assert.equal(currentEngineId(id), id);
+  for (const [old, now] of Object.entries(LEGACY_ENGINE_IDS)) assert.equal(currentEngineId(old), now);
   assert.equal(currentCheckId("r2", { r2: "ray-trace" }), "ray-trace");
   assert.equal(currentEngineId("ref", { ref: "reference-tracer" }), "reference-tracer");
   // A member of Object.prototype is no old id.
@@ -325,8 +333,20 @@ test("every committed baseline names checks by the old ids, and is read under to
       read2.runs.every((run) => run.rungs.every((rung) => today.has(rung.rung))),
       `${file}: every check is one of today's`,
     );
-    // The engines are not renamed yet: the same engines in the same order.
-    assert.deepEqual(read2.engines, read.baseline.engines, file);
+    // Written before the engine rename: the renamed engines by their old ids, read under today's, in the writer's
+    // order.
+    const engines = read.baseline.engines.map((engine) => engine.id);
+    assert.ok(
+      engines.some((id) => Object.hasOwn(LEGACY_ENGINE_IDS, id)),
+      file,
+    );
+    const engines2 = read2.engines.map((engine) => engine.id);
+    assert.ok(
+      engines2.every((id) => !Object.hasOwn(LEGACY_ENGINE_IDS, id)),
+      `${file}: every engine is one of today's`,
+    );
+    assert.deepEqual(engines2, [...engines2].sort(), file);
+    assert.deepEqual(engines2, engines.map((id) => currentEngineId(id)).sort(), file);
     // And back again is the baseline as written.
     assert.deepEqual(snapshotIds(read2), read.baseline, file);
   }
@@ -517,11 +537,13 @@ test("the maps turn round only as bijections whose new ids are no old ids", () =
   assert.equal(legacyCheckId("ray-trace", maps), "r2");
   assert.equal(legacyEngineId("aaa", maps), "ref");
   assert.equal(legacyEngineId("lv", maps), "lv");
-  // The real maps turn round: every check's id of today to its old id, and no engine yet.
+  // The real maps turn round: every check's and every renamed engine's id of today to its old id.
   const back = inverseMaps();
   assert.equal(Object.keys(back.checks).length, Object.keys(LEGACY_CHECK_IDS).length);
   for (const [old, now] of Object.entries(LEGACY_CHECK_IDS)) assert.equal(back.checks[now], old);
-  assert.deepEqual(back.engines, {});
+  assert.equal(Object.keys(back.engines).length, Object.keys(LEGACY_ENGINE_IDS).length);
+  for (const [old, now] of Object.entries(LEGACY_ENGINE_IDS)) assert.equal(back.engines[now], old);
+  assert.equal(legacyEngineId("reference-tracer"), "ref");
   assert.throws(() => inverseMaps({ checks: {}, engines: { ref: "x", flux: "x" } }), /both renamed x/);
   assert.throws(() => inverseMaps({ checks: { r2: "r3", r3: "r4" }, engines: {} }), /itself an old id/);
   // There and back is the same baseline.
@@ -623,4 +645,108 @@ test("a catalog check holds today's run to the snapshot under the snapshot's ids
   const checked = checkInIdSpace(other, otherToday, [], policy, maps);
   assert.equal(checked.committed.runs[0].rungs[0].rung, "ray-trace");
   assert.equal(checked.fresh, otherToday);
+});
+
+test("with the real maps a listed FAIL of a pair with the reference tracer stays OK: its evidence names ref", () => {
+  const policy = loadPolicy();
+  const { baseline: committed, known } = catalogBaseline();
+  // The evidence hash of the listed FAIL names its two engines as the snapshot wrote them, `lv` and `ref`.
+  const listed = committed.runs[0].rungs[0].pairs[1];
+  assert.deepEqual([listed.a, listed.b], ["lv", "ref"]);
+  const { failures: _listed, ...listedToday } = listed;
+  // Today's run, as the real maps write it: `reference-tracer`, `ray-trace`.
+  const today = currentIds({
+    ...committed,
+    runs: [
+      {
+        ...committed.runs[0],
+        rungs: [{ ...committed.runs[0].rungs[0], pairs: committed.runs[0].rungs[0].pairs.with(1, listedToday) }],
+      },
+    ],
+  });
+  assert.deepEqual(
+    today.runs[0].rungs[0].pairs.map(({ a, b }) => [a, b]),
+    [
+      ["lv", "optiland"],
+      ["lv", "reference-tracer"],
+      ["optiland", "reference-tracer"],
+    ],
+  );
+  // The hash of today's pair under today's ids is another: the run must be read back before it is classified.
+  assert.notEqual(failureEvidence(1, today.runs[0].rungs[0].pairs[1]), known[0].evidenceHash);
+
+  const { committed: held, fresh, records } = checkInIdSpace(committed, today, known, policy);
+  assert.equal(held, committed, "the snapshot is held as written");
+  assert.deepEqual(
+    fresh.runs[0].rungs[0].pairs.map(({ a, b }) => [a, b]),
+    [
+      ["lv", "optiland"],
+      ["lv", "ref"],
+      ["optiland", "ref"],
+    ],
+    "today's run is read back under the snapshot's engine ids",
+  );
+  const outcome = (a: string, b: string) => records.find((record) => record.a === a && record.b === b);
+  assert.equal(outcome("lv", "ref")?.outcome, "OK");
+  assert.equal(outcome("lv", "ref")?.knownFailure, true);
+  assert.equal(outcome("optiland", "ref")?.outcome, "DRIFT", "an unlisted FAIL is still DRIFT");
+  assert.equal(records.length, 3);
+});
+
+test("a committed baseline read against today's renamed engines is out of date by engine code, never NEW or GONE", async () => {
+  const { adapterRevision } = await import("../../src/engines/adapterRevision.ts");
+  const { sha256Hex, hashCanonical } = await import("../../src/core/numeric/hash.ts");
+  const policy = loadPolicy();
+  // The adapter revision of each renamed engine today: its id constant moved, so its revision did.
+  const modules: Readonly<Record<string, string>> = {
+    "reference-tracer": "engines/ref/engine.ts",
+    "reference-seidel": "engines/refSeidel/engine.ts",
+    "replay-of-lv-mtf": "engines/lv/replayEngine.ts",
+    "wave-mtf-of-lv-rays": "engines/lv/waveEngine.ts",
+    "flux-of-lv-rays": "engines/lv/fluxEngine.ts",
+  };
+  for (const file of ["benchmark.json", "benchmark.mtf.json"]) {
+    const read = parseBaseline(readFileSync(join(ROOT, "baselines", file), "utf8"));
+    assert.ok("baseline" in read, file);
+    const committed = read.baseline;
+    const at = currentIds(committed);
+    const optiland = at.engines.find((engine) => engine.id === "optiland");
+    const revisionOf = (id: string, was: string | undefined): string | undefined =>
+      Object.hasOwn(modules, id)
+        ? adapterRevision(modules[id]).revision
+        : id === "otf-of-optiland-wavefront"
+          ? sha256Hex(
+              `${optiland?.adapterRevision}\n${adapterRevision("engines/optiland/wavefrontEngine.ts").revision}`,
+            )
+          : was;
+    // Today's run gives the same results under the new ids, by today's engines, judged by the limits file at hand.
+    const today = {
+      ...at,
+      policy: { version: policy.version, hash: hashCanonical(policy) },
+      engines: at.engines.map((engine) => ({
+        ...engine,
+        adapterRevision: revisionOf(engine.id, engine.adapterRevision),
+      })),
+    };
+    const renamed = new Set(Object.values(LEGACY_ENGINE_IDS));
+    const moved = today.engines.filter((engine, place) => engine.adapterRevision !== at.engines[place].adapterRevision);
+    assert.deepEqual(
+      moved.map((engine) => engine.id),
+      at.engines.map((engine) => engine.id).filter((id) => renamed.has(id)),
+      `${file}: exactly the renamed engines have moved`,
+    );
+    const { records } = checkInIdSpace(committed, today, [], policy);
+    assert.ok(records.length > 0, file);
+    let byEngine = 0;
+    for (const record of records) {
+      const stale = renamed.has(record.a) || renamed.has(record.b) ? ["engine", "policy"] : ["policy"];
+      if (stale.length === 2) byEngine += 1;
+      assert.deepEqual(
+        [record.stale, record.outcome],
+        [stale, "REFRESHABLE"],
+        `${file} ${record.run} ${record.rung} ${record.a} ${record.b}`,
+      );
+    }
+    assert.ok(byEngine > 0, `${file}: some record is of a renamed engine`);
+  }
 });

@@ -19,42 +19,42 @@ engines are still those of the baseline. How to read this, near the end, says wh
 |---|---|---|---|
 | lv | LensVisualizer | 1 | clean checkout, 184 engine files |
 | optiland | optiland | 0.6.2.post117+g4e893f53 | backend numpy, checkout with uncommitted changes, JIT compilation on, Numba 0.65.1, NumPy 2.3.5, precision float64, Python 3.14.8, SciPy 1.16.3, 534 source files |
-| ref | Reference tracer | 1 | 13 source files |
+| reference-tracer | Reference tracer | 1 | 13 source files |
 
 ## Summary
 
 | Check | Quantity | Runs | Requests | Pair | Runs by verdict | Requests by verdict |
 |---|---|---|---|---|---|---|
 | Built system — `built-system` | `system.describe` | 128 | 128 | lv – optiland | 128 Pass | 128 Pass |
-| Built system — `built-system` | `system.describe` | 128 | 128 | lv – ref | 128 Pass | 128 Pass |
-| Built system — `built-system` | `system.describe` | 128 | 128 | optiland – ref | 128 Pass | 128 Pass |
+| Built system — `built-system` | `system.describe` | 128 | 128 | lv – reference-tracer | 128 Pass | 128 Pass |
+| Built system — `built-system` | `system.describe` | 128 | 128 | optiland – reference-tracer | 128 Pass | 128 Pass |
 | First-order data — `first-order` | `paraxial.first-order` | 128 | 128 | lv – optiland | 128 Pass | 128 Pass |
-| First-order data — `first-order` | `paraxial.first-order` | 128 | 128 | lv – ref | 128 Pass | 128 Pass |
-| First-order data — `first-order` | `paraxial.first-order` | 128 | 128 | optiland – ref | 128 Pass | 128 Pass |
+| First-order data — `first-order` | `paraxial.first-order` | 128 | 128 | lv – reference-tracer | 128 Pass | 128 Pass |
+| First-order data — `first-order` | `paraxial.first-order` | 128 | 128 | optiland – reference-tracer | 128 Pass | 128 Pass |
 | Ray trace — `ray-trace` | `rays.trace` | 128 | 1152 | lv – optiland | 128 Pass | 1152 Pass |
-| Ray trace — `ray-trace` | `rays.trace` | 128 | 1152 | lv – ref | 128 Pass | 1152 Pass |
-| Ray trace — `ray-trace` | `rays.trace` | 128 | 1152 | optiland – ref | 128 Pass | 1152 Pass |
+| Ray trace — `ray-trace` | `rays.trace` | 128 | 1152 | lv – reference-tracer | 128 Pass | 1152 Pass |
+| Ray trace — `ray-trace` | `rays.trace` | 128 | 1152 | optiland – reference-tracer | 128 Pass | 1152 Pass |
 | Optical path — `optical-path` | `rays.trace` | 128 | 1152 | lv – optiland | 128 Pass | 1152 Pass |
-| Optical path — `optical-path` | `rays.trace` | 128 | 1152 | lv – ref | 128 Pass | 1152 Pass |
-| Optical path — `optical-path` | `rays.trace` | 128 | 1152 | optiland – ref | 128 Pass | 1152 Pass |
+| Optical path — `optical-path` | `rays.trace` | 128 | 1152 | lv – reference-tracer | 128 Pass | 1152 Pass |
+| Optical path — `optical-path` | `rays.trace` | 128 | 1152 | optiland – reference-tracer | 128 Pass | 1152 Pass |
 | Geometric MTF of the same rays — `geometric-mtf` | `rays.trace` | 128 | 384 | lv – optiland | 128 Pass | 384 Pass |
-| Geometric MTF of the same rays — `geometric-mtf` | `rays.trace` | 128 | 384 | lv – ref | 128 Pass | 384 Pass |
-| Geometric MTF of the same rays — `geometric-mtf` | `rays.trace` | 128 | 384 | optiland – ref | 128 Pass | 384 Pass |
+| Geometric MTF of the same rays — `geometric-mtf` | `rays.trace` | 128 | 384 | lv – reference-tracer | 128 Pass | 384 Pass |
+| Geometric MTF of the same rays — `geometric-mtf` | `rays.trace` | 128 | 384 | optiland – reference-tracer | 128 Pass | 384 Pass |
 | Spot and fan rays — `spot-rays` | `rays.trace` | 128 | 3840 | lv – optiland | 128 Pass | 3840 Pass |
-| Spot and fan rays — `spot-rays` | `rays.trace` | 128 | 3840 | lv – ref | 128 Pass | 3840 Pass |
-| Spot and fan rays — `spot-rays` | `rays.trace` | 128 | 3840 | optiland – ref | 128 Pass | 3840 Pass |
+| Spot and fan rays — `spot-rays` | `rays.trace` | 128 | 3840 | lv – reference-tracer | 128 Pass | 3840 Pass |
+| Spot and fan rays — `spot-rays` | `rays.trace` | 128 | 3840 | optiland – reference-tracer | 128 Pass | 3840 Pass |
 | Spherical aberration and axial colour rays — `axial-rays` | `rays.trace` | 128 | 832 | lv – optiland | 128 Pass | 832 Pass |
-| Spherical aberration and axial colour rays — `axial-rays` | `rays.trace` | 128 | 832 | lv – ref | 128 Pass | 832 Pass |
-| Spherical aberration and axial colour rays — `axial-rays` | `rays.trace` | 128 | 832 | optiland – ref | 128 Pass | 832 Pass |
+| Spherical aberration and axial colour rays — `axial-rays` | `rays.trace` | 128 | 832 | lv – reference-tracer | 128 Pass | 832 Pass |
+| Spherical aberration and axial colour rays — `axial-rays` | `rays.trace` | 128 | 832 | optiland – reference-tracer | 128 Pass | 832 Pass |
 | Chief rays (distortion, pupils, lateral colour) — `chief-rays` | `rays.trace` | 128 | 512 | lv – optiland | 128 Pass | 512 Pass |
-| Chief rays (distortion, pupils, lateral colour) — `chief-rays` | `rays.trace` | 128 | 512 | lv – ref | 128 Pass | 512 Pass |
-| Chief rays (distortion, pupils, lateral colour) — `chief-rays` | `rays.trace` | 128 | 512 | optiland – ref | 128 Pass | 512 Pass |
+| Chief rays (distortion, pupils, lateral colour) — `chief-rays` | `rays.trace` | 128 | 512 | lv – reference-tracer | 128 Pass | 512 Pass |
+| Chief rays (distortion, pupils, lateral colour) — `chief-rays` | `rays.trace` | 128 | 512 | optiland – reference-tracer | 128 Pass | 512 Pass |
 | Field-curve rays — `field-curve-rays` | `rays.trace` | 128 | 768 | lv – optiland | 128 Pass | 768 Pass |
-| Field-curve rays — `field-curve-rays` | `rays.trace` | 128 | 768 | lv – ref | 128 Pass | 768 Pass |
-| Field-curve rays — `field-curve-rays` | `rays.trace` | 128 | 768 | optiland – ref | 128 Pass | 768 Pass |
+| Field-curve rays — `field-curve-rays` | `rays.trace` | 128 | 768 | lv – reference-tracer | 128 Pass | 768 Pass |
+| Field-curve rays — `field-curve-rays` | `rays.trace` | 128 | 768 | optiland – reference-tracer | 128 Pass | 768 Pass |
 | Vignetting rays — `vignetting-rays` | `rays.trace` | 128 | 384 | lv – optiland | 128 Pass | 384 Pass |
-| Vignetting rays — `vignetting-rays` | `rays.trace` | 128 | 384 | lv – ref | 128 Pass | 384 Pass |
-| Vignetting rays — `vignetting-rays` | `rays.trace` | 128 | 384 | optiland – ref | 128 Pass | 384 Pass |
+| Vignetting rays — `vignetting-rays` | `rays.trace` | 128 | 384 | lv – reference-tracer | 128 Pass | 384 Pass |
+| Vignetting rays — `vignetting-rays` | `rays.trace` | 128 | 384 | optiland – reference-tracer | 128 Pass | 384 Pass |
 
 ## Support
 
@@ -65,34 +65,34 @@ In how many runs the jobs of an engine ended in each way. An engine that cannot 
 |---|---|---|
 | Built system — `built-system` | lv | 128 answered |
 | Built system — `built-system` | optiland | 128 answered |
-| Built system — `built-system` | ref | 128 answered |
+| Built system — `built-system` | reference-tracer | 128 answered |
 | First-order data — `first-order` | lv | 128 answered |
 | First-order data — `first-order` | optiland | 128 answered |
-| First-order data — `first-order` | ref | 128 answered |
+| First-order data — `first-order` | reference-tracer | 128 answered |
 | Ray trace — `ray-trace` | lv | 128 answered |
 | Ray trace — `ray-trace` | optiland | 128 answered |
-| Ray trace — `ray-trace` | ref | 128 answered |
+| Ray trace — `ray-trace` | reference-tracer | 128 answered |
 | Optical path — `optical-path` | lv | 128 answered |
 | Optical path — `optical-path` | optiland | 128 answered |
-| Optical path — `optical-path` | ref | 128 answered |
+| Optical path — `optical-path` | reference-tracer | 128 answered |
 | Geometric MTF of the same rays — `geometric-mtf` | lv | 128 answered |
 | Geometric MTF of the same rays — `geometric-mtf` | optiland | 128 answered |
-| Geometric MTF of the same rays — `geometric-mtf` | ref | 128 answered |
+| Geometric MTF of the same rays — `geometric-mtf` | reference-tracer | 128 answered |
 | Spot and fan rays — `spot-rays` | lv | 128 answered |
 | Spot and fan rays — `spot-rays` | optiland | 128 answered |
-| Spot and fan rays — `spot-rays` | ref | 128 answered |
+| Spot and fan rays — `spot-rays` | reference-tracer | 128 answered |
 | Spherical aberration and axial colour rays — `axial-rays` | lv | 128 answered |
 | Spherical aberration and axial colour rays — `axial-rays` | optiland | 128 answered |
-| Spherical aberration and axial colour rays — `axial-rays` | ref | 128 answered |
+| Spherical aberration and axial colour rays — `axial-rays` | reference-tracer | 128 answered |
 | Chief rays (distortion, pupils, lateral colour) — `chief-rays` | lv | 128 answered |
 | Chief rays (distortion, pupils, lateral colour) — `chief-rays` | optiland | 128 answered |
-| Chief rays (distortion, pupils, lateral colour) — `chief-rays` | ref | 128 answered |
+| Chief rays (distortion, pupils, lateral colour) — `chief-rays` | reference-tracer | 128 answered |
 | Field-curve rays — `field-curve-rays` | lv | 128 answered |
 | Field-curve rays — `field-curve-rays` | optiland | 128 answered |
-| Field-curve rays — `field-curve-rays` | ref | 128 answered |
+| Field-curve rays — `field-curve-rays` | reference-tracer | 128 answered |
 | Vignetting rays — `vignetting-rays` | lv | 128 answered |
 | Vignetting rays — `vignetting-rays` | optiland | 128 answered |
-| Vignetting rays — `vignetting-rays` | ref | 128 answered |
+| Vignetting rays — `vignetting-rays` | reference-tracer | 128 answered |
 
 ## Built system — `built-system`
 
@@ -108,22 +108,22 @@ The worst of every figure over the suite:
 | lv – optiland | Refractive indices that differ — `index.mismatches` | elements | ≤ 0 | 0 | — | — |
 | lv – optiland | Largest sag difference at the sampled heights, over the size of a rounding there — `sag.maxScaled` | (no unit) | ≤ 1.00e-12 | 3.94e-16 | nikon-z-24-70f4s-f5.6-ref-wide | sample 6, surface 10 |
 | lv – optiland | Largest sag difference at the sampled heights — `sag.maxAbs` | mm | — | 3.55e-15 | sony-fe-400mm-f28-gm-oss-f5.6-ref | sample 8, surface 13 |
-| lv – ref | Surfaces whose count or place differs — `layout.mismatches` | elements | ≤ 0 | 0 | — | — |
-| lv – ref | Surfaces whose curvature, conic or asphere terms differ — `shape.mismatches` | elements | ≤ 0 | 0 | — | — |
-| lv – ref | Stops and clear apertures that differ — `aperture.mismatches` | elements | ≤ 0 | 0 | — | — |
-| lv – ref | Refractive indices that differ — `index.mismatches` | elements | ≤ 0 | 0 | — | — |
-| lv – ref | Largest sag difference at the sampled heights, over the size of a rounding there — `sag.maxScaled` | (no unit) | ≤ 1.00e-12 | 3.97e-16 | sony-fe-20mm-f18-g-f5.6-ref | sample 8, surface 6 |
-| lv – ref | Largest sag difference at the sampled heights — `sag.maxAbs` | mm | — | 3.55e-15 | sigma-35mm-f14-dg-hsm-a-f5.6-ref | sample 8, surface 0 |
-| optiland – ref | Surfaces whose count or place differs — `layout.mismatches` | elements | ≤ 0 | 0 | — | — |
-| optiland – ref | Surfaces whose curvature, conic or asphere terms differ — `shape.mismatches` | elements | ≤ 0 | 0 | — | — |
-| optiland – ref | Stops and clear apertures that differ — `aperture.mismatches` | elements | ≤ 0 | 0 | — | — |
-| optiland – ref | Refractive indices that differ — `index.mismatches` | elements | ≤ 0 | 0 | — | — |
-| optiland – ref | Largest sag difference at the sampled heights, over the size of a rounding there — `sag.maxScaled` | (no unit) | ≤ 1.00e-12 | 4.51e-16 | sony-fe-20mm-f18-g-f5.6-ref | sample 6, surface 0 |
-| optiland – ref | Largest sag difference at the sampled heights — `sag.maxAbs` | mm | — | 2.66e-15 | sigma-35mm-f14-dg-hsm-a-f5.6-ref | sample 8, surface 13 |
+| lv – reference-tracer | Surfaces whose count or place differs — `layout.mismatches` | elements | ≤ 0 | 0 | — | — |
+| lv – reference-tracer | Surfaces whose curvature, conic or asphere terms differ — `shape.mismatches` | elements | ≤ 0 | 0 | — | — |
+| lv – reference-tracer | Stops and clear apertures that differ — `aperture.mismatches` | elements | ≤ 0 | 0 | — | — |
+| lv – reference-tracer | Refractive indices that differ — `index.mismatches` | elements | ≤ 0 | 0 | — | — |
+| lv – reference-tracer | Largest sag difference at the sampled heights, over the size of a rounding there — `sag.maxScaled` | (no unit) | ≤ 1.00e-12 | 3.97e-16 | sony-fe-20mm-f18-g-f5.6-ref | sample 8, surface 6 |
+| lv – reference-tracer | Largest sag difference at the sampled heights — `sag.maxAbs` | mm | — | 3.55e-15 | sigma-35mm-f14-dg-hsm-a-f5.6-ref | sample 8, surface 0 |
+| optiland – reference-tracer | Surfaces whose count or place differs — `layout.mismatches` | elements | ≤ 0 | 0 | — | — |
+| optiland – reference-tracer | Surfaces whose curvature, conic or asphere terms differ — `shape.mismatches` | elements | ≤ 0 | 0 | — | — |
+| optiland – reference-tracer | Stops and clear apertures that differ — `aperture.mismatches` | elements | ≤ 0 | 0 | — | — |
+| optiland – reference-tracer | Refractive indices that differ — `index.mismatches` | elements | ≤ 0 | 0 | — | — |
+| optiland – reference-tracer | Largest sag difference at the sampled heights, over the size of a rounding there — `sag.maxScaled` | (no unit) | ≤ 1.00e-12 | 4.51e-16 | sony-fe-20mm-f18-g-f5.6-ref | sample 6, surface 0 |
+| optiland – reference-tracer | Largest sag difference at the sampled heights — `sag.maxAbs` | mm | — | 2.66e-15 | sigma-35mm-f14-dg-hsm-a-f5.6-ref | sample 8, surface 13 |
 
 By run, each pair with its verdict and the judged figure that is largest against its limit:
 
-| Run | Requests | lv – optiland | lv – ref | optiland – ref |
+| Run | Requests | lv – optiland | lv – reference-tracer | optiland – reference-tracer |
 |---|---|---|---|---|
 | canon-ef-135-f2l-usm-f5.6-ref | 1 | Pass: sag.maxScaled 3.05e-16 | Pass: sag.maxScaled 2.51e-16 | Pass: sag.maxScaled 2.85e-16 |
 | canon-ef-135-f2l-usm-f5.6-photopic | 1 | Pass: sag.maxScaled 3.05e-16 | Pass: sag.maxScaled 2.51e-16 | Pass: sag.maxScaled 2.85e-16 |
@@ -267,20 +267,20 @@ The worst of every figure over the suite:
 | lv – optiland | Largest difference of a pupil position — `pupilZ.maxAbs` | mm | — | 7.96e-13 | sony-fe-400mm-f28-gm-oss-f5.6-ref | line 0, quantity entrancePupilZ |
 | lv – optiland | Largest difference of a pupil radius, scaled by its pupil's distance from the image — `pupilRadius.maxScaled` | mm | ≤ 1.00e-9 | 2.13e-14 | sony-fe-400mm-f28-gm-oss-f5.6-ref | line 0, quantity entrancePupilSemiDiameter |
 | lv – optiland | Largest difference of a pupil radius — `pupilRadius.maxAbs` | mm | — | 2.13e-14 | sony-fe-400mm-f28-gm-oss-f5.6-ref | line 0, quantity entrancePupilSemiDiameter |
-| lv – ref | Largest difference of a focal length, focal point, principal point or back focus — `firstOrder.maxAbs` | mm | ≤ 1.00e-9 | 2.05e-12 | sony-fe-400mm-f28-gm-oss-f5.6-photopic | line 4, quantity frontFocalZ |
-| lv – ref | Largest difference of a pupil position, scaled by its distance from the image plane — `pupilZ.maxScaled` | mm | ≤ 1.00e-9 | 3.41e-13 | sony-fe-400mm-f28-gm-oss-f5.6-photopic | line 3, quantity entrancePupilZ |
-| lv – ref | Largest difference of a pupil position — `pupilZ.maxAbs` | mm | — | 3.41e-13 | sony-fe-400mm-f28-gm-oss-f5.6-photopic | line 3, quantity entrancePupilZ |
-| lv – ref | Largest difference of a pupil radius, scaled by its pupil's distance from the image — `pupilRadius.maxScaled` | mm | ≤ 1.00e-9 | 1.42e-14 | sony-fe-400mm-f28-gm-oss-f5.6-photopic | line 2, quantity entrancePupilSemiDiameter |
-| lv – ref | Largest difference of a pupil radius — `pupilRadius.maxAbs` | mm | — | 1.42e-14 | sony-fe-400mm-f28-gm-oss-f5.6-photopic | line 2, quantity entrancePupilSemiDiameter |
-| optiland – ref | Largest difference of a focal length, focal point, principal point or back focus — `firstOrder.maxAbs` | mm | ≤ 1.00e-9 | 3.87e-12 | sony-fe-400mm-f28-gm-oss-f5.6-photopic | line 0, quantity frontFocalZ |
-| optiland – ref | Largest difference of a pupil position, scaled by its distance from the image plane — `pupilZ.maxScaled` | mm | ≤ 1.00e-9 | 1.02e-12 | sony-fe-400mm-f28-gm-oss-f5.6-photopic | line 3, quantity entrancePupilZ |
-| optiland – ref | Largest difference of a pupil position — `pupilZ.maxAbs` | mm | — | 1.02e-12 | sony-fe-400mm-f28-gm-oss-f5.6-photopic | line 3, quantity entrancePupilZ |
-| optiland – ref | Largest difference of a pupil radius, scaled by its pupil's distance from the image — `pupilRadius.maxScaled` | mm | ≤ 1.00e-9 | 2.13e-14 | sony-fe-400mm-f28-gm-oss-f5.6-ref | line 0, quantity entrancePupilSemiDiameter |
-| optiland – ref | Largest difference of a pupil radius — `pupilRadius.maxAbs` | mm | — | 2.13e-14 | sony-fe-400mm-f28-gm-oss-f5.6-ref | line 0, quantity entrancePupilSemiDiameter |
+| lv – reference-tracer | Largest difference of a focal length, focal point, principal point or back focus — `firstOrder.maxAbs` | mm | ≤ 1.00e-9 | 2.05e-12 | sony-fe-400mm-f28-gm-oss-f5.6-photopic | line 4, quantity frontFocalZ |
+| lv – reference-tracer | Largest difference of a pupil position, scaled by its distance from the image plane — `pupilZ.maxScaled` | mm | ≤ 1.00e-9 | 3.41e-13 | sony-fe-400mm-f28-gm-oss-f5.6-photopic | line 3, quantity entrancePupilZ |
+| lv – reference-tracer | Largest difference of a pupil position — `pupilZ.maxAbs` | mm | — | 3.41e-13 | sony-fe-400mm-f28-gm-oss-f5.6-photopic | line 3, quantity entrancePupilZ |
+| lv – reference-tracer | Largest difference of a pupil radius, scaled by its pupil's distance from the image — `pupilRadius.maxScaled` | mm | ≤ 1.00e-9 | 1.42e-14 | sony-fe-400mm-f28-gm-oss-f5.6-photopic | line 2, quantity entrancePupilSemiDiameter |
+| lv – reference-tracer | Largest difference of a pupil radius — `pupilRadius.maxAbs` | mm | — | 1.42e-14 | sony-fe-400mm-f28-gm-oss-f5.6-photopic | line 2, quantity entrancePupilSemiDiameter |
+| optiland – reference-tracer | Largest difference of a focal length, focal point, principal point or back focus — `firstOrder.maxAbs` | mm | ≤ 1.00e-9 | 3.87e-12 | sony-fe-400mm-f28-gm-oss-f5.6-photopic | line 0, quantity frontFocalZ |
+| optiland – reference-tracer | Largest difference of a pupil position, scaled by its distance from the image plane — `pupilZ.maxScaled` | mm | ≤ 1.00e-9 | 1.02e-12 | sony-fe-400mm-f28-gm-oss-f5.6-photopic | line 3, quantity entrancePupilZ |
+| optiland – reference-tracer | Largest difference of a pupil position — `pupilZ.maxAbs` | mm | — | 1.02e-12 | sony-fe-400mm-f28-gm-oss-f5.6-photopic | line 3, quantity entrancePupilZ |
+| optiland – reference-tracer | Largest difference of a pupil radius, scaled by its pupil's distance from the image — `pupilRadius.maxScaled` | mm | ≤ 1.00e-9 | 2.13e-14 | sony-fe-400mm-f28-gm-oss-f5.6-ref | line 0, quantity entrancePupilSemiDiameter |
+| optiland – reference-tracer | Largest difference of a pupil radius — `pupilRadius.maxAbs` | mm | — | 2.13e-14 | sony-fe-400mm-f28-gm-oss-f5.6-ref | line 0, quantity entrancePupilSemiDiameter |
 
 By run, each pair with its verdict and the judged figure that is largest against its limit:
 
-| Run | Requests | lv – optiland | lv – ref | optiland – ref |
+| Run | Requests | lv – optiland | lv – reference-tracer | optiland – reference-tracer |
 |---|---|---|---|---|
 | canon-ef-135-f2l-usm-f5.6-ref | 1 | Pass: firstOrder.maxAbs 2.91e-13 mm | Pass: firstOrder.maxAbs 2.70e-13 mm | Pass: firstOrder.maxAbs 7.11e-14 mm |
 | canon-ef-135-f2l-usm-f5.6-photopic | 1 | Pass: firstOrder.maxAbs 2.42e-13 mm | Pass: firstOrder.maxAbs 1.14e-13 mm | Pass: firstOrder.maxAbs 1.85e-13 mm |
@@ -425,22 +425,22 @@ The worst of every figure over the suite:
 | lv – optiland | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
 | lv – optiland | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
 | lv – optiland | Rays both engines traced through — `rays.compared` | rays | — | 1153868 | — | — |
-| lv – ref | Largest distance between the two engines' ray hits on a surface — `hits.maxDistance` | mm | ≤ 1.00e-8 | 1.24e-12 | nikon-z-24-70f4s-f11-photopic-wide | field 2.42e1 deg, line 1, ray 548, surface 10 |
-| lv – ref | Largest difference of a component of a ray's exit direction — `direction.maxAbs` | (no unit) | ≤ 1.00e-9 | 1.50e-14 | nikon-z-24-70f4s-f11-photopic-wide | field 4.33e1 deg, line 4, ray 365 |
-| lv – ref | Largest distance between the two engines' ray landings on the image plane — `landing.maxDistance` | mm | ≤ 1.00e-8 | 7.63e-13 | nikon-z-24-70f4s-f5.6-ref-zoom0.5 | field 2.40e1 deg, line 0, ray 513 |
-| lv – ref | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
-| lv – ref | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
-| lv – ref | Rays both engines traced through — `rays.compared` | rays | — | 1153868 | — | — |
-| optiland – ref | Largest distance between the two engines' ray hits on a surface — `hits.maxDistance` | mm | ≤ 1.00e-8 | 1.24e-12 | nikon-z-24-70f4s-f11-photopic-wide | field 2.42e1 deg, line 1, ray 548, surface 10 |
-| optiland – ref | Largest difference of a component of a ray's exit direction — `direction.maxAbs` | (no unit) | ≤ 1.00e-9 | 1.43e-14 | nikon-z-24-70f4s-f8-photopic-wide | field 4.33e1 deg, line 3, ray 399 |
-| optiland – ref | Largest distance between the two engines' ray landings on the image plane — `landing.maxDistance` | mm | ≤ 1.00e-8 | 7.64e-13 | nikon-z-24-70f4s-f8-ref-zoom0.5 | field 2.40e1 deg, line 0, ray 576 |
-| optiland – ref | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
-| optiland – ref | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
-| optiland – ref | Rays both engines traced through — `rays.compared` | rays | — | 1153868 | — | — |
+| lv – reference-tracer | Largest distance between the two engines' ray hits on a surface — `hits.maxDistance` | mm | ≤ 1.00e-8 | 1.24e-12 | nikon-z-24-70f4s-f11-photopic-wide | field 2.42e1 deg, line 1, ray 548, surface 10 |
+| lv – reference-tracer | Largest difference of a component of a ray's exit direction — `direction.maxAbs` | (no unit) | ≤ 1.00e-9 | 1.50e-14 | nikon-z-24-70f4s-f11-photopic-wide | field 4.33e1 deg, line 4, ray 365 |
+| lv – reference-tracer | Largest distance between the two engines' ray landings on the image plane — `landing.maxDistance` | mm | ≤ 1.00e-8 | 7.63e-13 | nikon-z-24-70f4s-f5.6-ref-zoom0.5 | field 2.40e1 deg, line 0, ray 513 |
+| lv – reference-tracer | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
+| lv – reference-tracer | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
+| lv – reference-tracer | Rays both engines traced through — `rays.compared` | rays | — | 1153868 | — | — |
+| optiland – reference-tracer | Largest distance between the two engines' ray hits on a surface — `hits.maxDistance` | mm | ≤ 1.00e-8 | 1.24e-12 | nikon-z-24-70f4s-f11-photopic-wide | field 2.42e1 deg, line 1, ray 548, surface 10 |
+| optiland – reference-tracer | Largest difference of a component of a ray's exit direction — `direction.maxAbs` | (no unit) | ≤ 1.00e-9 | 1.43e-14 | nikon-z-24-70f4s-f8-photopic-wide | field 4.33e1 deg, line 3, ray 399 |
+| optiland – reference-tracer | Largest distance between the two engines' ray landings on the image plane — `landing.maxDistance` | mm | ≤ 1.00e-8 | 7.64e-13 | nikon-z-24-70f4s-f8-ref-zoom0.5 | field 2.40e1 deg, line 0, ray 576 |
+| optiland – reference-tracer | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
+| optiland – reference-tracer | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
+| optiland – reference-tracer | Rays both engines traced through — `rays.compared` | rays | — | 1153868 | — | — |
 
 By run, each pair with its verdict and the judged figure that is largest against its limit:
 
-| Run | Requests | lv – optiland | lv – ref | optiland – ref | Rays of lv: ok / blocked / failed | Rays of optiland: ok / blocked / failed | Rays of ref: ok / blocked / failed |
+| Run | Requests | lv – optiland | lv – reference-tracer | optiland – reference-tracer | Rays of lv: ok / blocked / failed | Rays of optiland: ok / blocked / failed | Rays of reference-tracer: ok / blocked / failed |
 |---|---|---|---|---|---|---|---|
 | canon-ef-135-f2l-usm-f5.6-ref | 3 | Pass: landing.maxDistance 1.21e-13 mm | Pass: landing.maxDistance 7.82e-14 mm | Pass: landing.maxDistance 1.17e-13 mm | 3009 / 66 / 0 | 3009 / 66 / 0 | 3009 / 66 / 0 |
 | canon-ef-135-f2l-usm-f5.6-photopic | 15 | Pass: hits.maxDistance 1.29e-13 mm | Pass: landing.maxDistance 9.00e-14 mm | Pass: landing.maxDistance 1.46e-13 mm | 15043 / 332 / 0 | 15043 / 332 / 0 | 15043 / 332 / 0 |
@@ -582,16 +582,16 @@ The worst of every figure over the suite:
 | lv – optiland | Largest difference of an optical path length to a surface — `opticalPath.maxAbs` | waves | ≤ 2.00e-5 | 1.94e-9 | nikon-z-24-70f4s-f5.6-photopic-wide | field 4.33e1 deg, line 1, ray 1007 |
 | lv – optiland | Largest difference of an optical path length to the image plane — `opticalPathToImage.maxAbs` | waves | ≤ 2.00e-5 | 2.12e-9 | sony-fe-20mm-f18-g-f5.6-photopic | field 4.75e1 deg, line 1, ray 142 |
 | lv – optiland | Largest difference of an optical path difference from the chief ray — `opd.maxAbs` | waves | ≤ 2.00e-5 | 2.25e-9 | sony-fe-400mm-f28-gm-oss-f11-best-photopic | field 3.15e0 deg, line 0, ray 301 |
-| lv – ref | Largest difference of an optical path length to a surface — `opticalPath.maxAbs` | waves | ≤ 2.00e-5 | 2.96e-9 | nikon-z-24-70f4s-f11-photopic-wide | field 4.33e1 deg, line 1, ray 365 |
-| lv – ref | Largest difference of an optical path length to the image plane — `opticalPathToImage.maxAbs` | waves | ≤ 2.00e-5 | 2.96e-9 | nikon-z-24-70f4s-f11-photopic-wide | field 4.33e1 deg, line 1, ray 365 |
-| lv – ref | Largest difference of an optical path difference from the chief ray — `opd.maxAbs` | waves | ≤ 2.00e-5 | 2.54e-9 | nikon-z-24-70f4s-f11-photopic-wide | field 2.42e1 deg, line 1, ray 806 |
-| optiland – ref | Largest difference of an optical path length to a surface — `opticalPath.maxAbs` | waves | ≤ 2.00e-5 | 3.02e-9 | nikon-z-24-70f4s-f8-photopic-wide | field 4.33e1 deg, line 1, ray 399 |
-| optiland – ref | Largest difference of an optical path length to the image plane — `opticalPathToImage.maxAbs` | waves | ≤ 2.00e-5 | 3.02e-9 | nikon-z-24-70f4s-f8-photopic-wide | field 4.33e1 deg, line 1, ray 399 |
-| optiland – ref | Largest difference of an optical path difference from the chief ray — `opd.maxAbs` | waves | ≤ 2.00e-5 | 2.60e-9 | nikon-z-24-70f4s-f11-photopic-wide | field 2.42e1 deg, line 1, ray 644 |
+| lv – reference-tracer | Largest difference of an optical path length to a surface — `opticalPath.maxAbs` | waves | ≤ 2.00e-5 | 2.96e-9 | nikon-z-24-70f4s-f11-photopic-wide | field 4.33e1 deg, line 1, ray 365 |
+| lv – reference-tracer | Largest difference of an optical path length to the image plane — `opticalPathToImage.maxAbs` | waves | ≤ 2.00e-5 | 2.96e-9 | nikon-z-24-70f4s-f11-photopic-wide | field 4.33e1 deg, line 1, ray 365 |
+| lv – reference-tracer | Largest difference of an optical path difference from the chief ray — `opd.maxAbs` | waves | ≤ 2.00e-5 | 2.54e-9 | nikon-z-24-70f4s-f11-photopic-wide | field 2.42e1 deg, line 1, ray 806 |
+| optiland – reference-tracer | Largest difference of an optical path length to a surface — `opticalPath.maxAbs` | waves | ≤ 2.00e-5 | 3.02e-9 | nikon-z-24-70f4s-f8-photopic-wide | field 4.33e1 deg, line 1, ray 399 |
+| optiland – reference-tracer | Largest difference of an optical path length to the image plane — `opticalPathToImage.maxAbs` | waves | ≤ 2.00e-5 | 3.02e-9 | nikon-z-24-70f4s-f8-photopic-wide | field 4.33e1 deg, line 1, ray 399 |
+| optiland – reference-tracer | Largest difference of an optical path difference from the chief ray — `opd.maxAbs` | waves | ≤ 2.00e-5 | 2.60e-9 | nikon-z-24-70f4s-f11-photopic-wide | field 2.42e1 deg, line 1, ray 644 |
 
 By run, each pair with its verdict and the judged figure that is largest against its limit:
 
-| Run | Requests | lv – optiland | lv – ref | optiland – ref |
+| Run | Requests | lv – optiland | lv – reference-tracer | optiland – reference-tracer |
 |---|---|---|---|---|
 | canon-ef-135-f2l-usm-f5.6-ref | 3 | Pass: opd.maxAbs 2.90e-10 waves | Pass: opd.maxAbs 2.90e-10 waves | Pass: opd.maxAbs 2.42e-10 waves |
 | canon-ef-135-f2l-usm-f5.6-photopic | 15 | Pass: opd.maxAbs 3.07e-10 waves | Pass: opd.maxAbs 3.34e-10 waves | Pass: opd.maxAbs 3.34e-10 waves |
@@ -734,18 +734,18 @@ The worst of every figure over the suite:
 | lv – optiland | Rays both engines traced through — `rays.compared` | rays | — | 1153868 | — | — |
 | lv – optiland | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
 | lv – optiland | Wavelengths compared — `lines.compared` | wavelengths | — | 5 | canon-ef-135-f2l-usm-f5.6-photopic | — |
-| lv – ref | Largest difference of an MTF value — `mtf.maxAbs` | (no unit) | ≤ 1.00e-7 | 1.48e-11 | nikon-z-24-70f4s-f5.6-best-ref-tele | cut tangential, field 1.66e1 deg, frequencyPerMm 92 |
-| lv – ref | Rays both engines traced through — `rays.compared` | rays | — | 1153868 | — | — |
-| lv – ref | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
-| lv – ref | Wavelengths compared — `lines.compared` | wavelengths | — | 5 | canon-ef-135-f2l-usm-f5.6-photopic | — |
-| optiland – ref | Largest difference of an MTF value — `mtf.maxAbs` | (no unit) | ≤ 1.00e-7 | 1.43e-11 | nikon-z-24-70f4s-f5.6-best-ref-tele | cut tangential, field 1.66e1 deg, frequencyPerMm 94 |
-| optiland – ref | Rays both engines traced through — `rays.compared` | rays | — | 1153868 | — | — |
-| optiland – ref | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
-| optiland – ref | Wavelengths compared — `lines.compared` | wavelengths | — | 5 | canon-ef-135-f2l-usm-f5.6-photopic | — |
+| lv – reference-tracer | Largest difference of an MTF value — `mtf.maxAbs` | (no unit) | ≤ 1.00e-7 | 1.48e-11 | nikon-z-24-70f4s-f5.6-best-ref-tele | cut tangential, field 1.66e1 deg, frequencyPerMm 92 |
+| lv – reference-tracer | Rays both engines traced through — `rays.compared` | rays | — | 1153868 | — | — |
+| lv – reference-tracer | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
+| lv – reference-tracer | Wavelengths compared — `lines.compared` | wavelengths | — | 5 | canon-ef-135-f2l-usm-f5.6-photopic | — |
+| optiland – reference-tracer | Largest difference of an MTF value — `mtf.maxAbs` | (no unit) | ≤ 1.00e-7 | 1.43e-11 | nikon-z-24-70f4s-f5.6-best-ref-tele | cut tangential, field 1.66e1 deg, frequencyPerMm 94 |
+| optiland – reference-tracer | Rays both engines traced through — `rays.compared` | rays | — | 1153868 | — | — |
+| optiland – reference-tracer | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
+| optiland – reference-tracer | Wavelengths compared — `lines.compared` | wavelengths | — | 5 | canon-ef-135-f2l-usm-f5.6-photopic | — |
 
 By run, each pair with its verdict and the judged figure that is largest against its limit:
 
-| Run | Requests | lv – optiland | lv – ref | optiland – ref |
+| Run | Requests | lv – optiland | lv – reference-tracer | optiland – reference-tracer |
 |---|---|---|---|---|
 | canon-ef-135-f2l-usm-f5.6-ref | 3 | Pass: mtf.maxAbs 8.29e-13 | Pass: mtf.maxAbs 6.43e-13 | Pass: mtf.maxAbs 9.10e-13 |
 | canon-ef-135-f2l-usm-f5.6-photopic | 3 | Pass: mtf.maxAbs 4.70e-13 | Pass: mtf.maxAbs 4.39e-13 | Pass: mtf.maxAbs 5.73e-13 |
@@ -891,24 +891,24 @@ The worst of every figure over the suite:
 | lv – optiland | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
 | lv – optiland | Rays both engines traced through — `rays.compared` | rays | — | 739734 | — | — |
 | lv – optiland | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
-| lv – ref | Largest difference of a ray's landing relative to the chief ray — `transverseError.maxAbs` | mm | ≤ 1.00e-8 | 6.52e-13 | nikon-z-24-70f4s-f5.6-photopic-tele | field 1.25e1 deg, line 4, ray 168 |
-| lv – ref | Largest difference of a spot centroid — `centroid.maxAbs` | mm | ≤ 1.00e-8 | 1.13e-13 | sony-fe-20mm-f18-g-f5.6-photopic | field 3.53e1 deg, line 4 |
-| lv – ref | Largest difference of a spot's RMS radius — `rmsRadius.maxAbs` | mm | ≤ 1.00e-8 | 8.45e-14 | sony-fe-20mm-f18-g-f11-best-photopic | field 3.53e1 deg, line 3 |
-| lv – ref | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
-| lv – ref | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
-| lv – ref | Rays both engines traced through — `rays.compared` | rays | — | 739734 | — | — |
-| lv – ref | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
-| optiland – ref | Largest difference of a ray's landing relative to the chief ray — `transverseError.maxAbs` | mm | ≤ 1.00e-8 | 6.87e-13 | nikon-z-24-70f4s-f5.6-photopic-tele | field 1.25e1 deg, line 1, ray 163 |
-| optiland – ref | Largest difference of a spot centroid — `centroid.maxAbs` | mm | ≤ 1.00e-8 | 1.20e-13 | sony-fe-20mm-f18-g-f5.6-best-photopic | field 3.53e1 deg, line 4 |
-| optiland – ref | Largest difference of a spot's RMS radius — `rmsRadius.maxAbs` | mm | ≤ 1.00e-8 | 8.36e-14 | sony-fe-20mm-f18-g-f11-best-photopic | field 3.53e1 deg, line 4 |
-| optiland – ref | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
-| optiland – ref | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
-| optiland – ref | Rays both engines traced through — `rays.compared` | rays | — | 739734 | — | — |
-| optiland – ref | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
+| lv – reference-tracer | Largest difference of a ray's landing relative to the chief ray — `transverseError.maxAbs` | mm | ≤ 1.00e-8 | 6.52e-13 | nikon-z-24-70f4s-f5.6-photopic-tele | field 1.25e1 deg, line 4, ray 168 |
+| lv – reference-tracer | Largest difference of a spot centroid — `centroid.maxAbs` | mm | ≤ 1.00e-8 | 1.13e-13 | sony-fe-20mm-f18-g-f5.6-photopic | field 3.53e1 deg, line 4 |
+| lv – reference-tracer | Largest difference of a spot's RMS radius — `rmsRadius.maxAbs` | mm | ≤ 1.00e-8 | 8.45e-14 | sony-fe-20mm-f18-g-f11-best-photopic | field 3.53e1 deg, line 3 |
+| lv – reference-tracer | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
+| lv – reference-tracer | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
+| lv – reference-tracer | Rays both engines traced through — `rays.compared` | rays | — | 739734 | — | — |
+| lv – reference-tracer | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
+| optiland – reference-tracer | Largest difference of a ray's landing relative to the chief ray — `transverseError.maxAbs` | mm | ≤ 1.00e-8 | 6.87e-13 | nikon-z-24-70f4s-f5.6-photopic-tele | field 1.25e1 deg, line 1, ray 163 |
+| optiland – reference-tracer | Largest difference of a spot centroid — `centroid.maxAbs` | mm | ≤ 1.00e-8 | 1.20e-13 | sony-fe-20mm-f18-g-f5.6-best-photopic | field 3.53e1 deg, line 4 |
+| optiland – reference-tracer | Largest difference of a spot's RMS radius — `rmsRadius.maxAbs` | mm | ≤ 1.00e-8 | 8.36e-14 | sony-fe-20mm-f18-g-f11-best-photopic | field 3.53e1 deg, line 4 |
+| optiland – reference-tracer | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
+| optiland – reference-tracer | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
+| optiland – reference-tracer | Rays both engines traced through — `rays.compared` | rays | — | 739734 | — | — |
+| optiland – reference-tracer | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
 
 By run, each pair with its verdict and the judged figure that is largest against its limit:
 
-| Run | Requests | lv – optiland | lv – ref | optiland – ref | Rays of lv: ok / blocked / failed | Rays of optiland: ok / blocked / failed | Rays of ref: ok / blocked / failed |
+| Run | Requests | lv – optiland | lv – reference-tracer | optiland – reference-tracer | Rays of lv: ok / blocked / failed | Rays of optiland: ok / blocked / failed | Rays of reference-tracer: ok / blocked / failed |
 |---|---|---|---|---|---|---|---|
 | canon-ef-135-f2l-usm-f5.6-ref | 10 | Pass: transverseError.maxAbs 8.88e-14 mm | Pass: transverseError.maxAbs 6.04e-14 mm | Pass: transverseError.maxAbs 6.48e-14 mm | 1944 / 0 / 0 | 1944 / 0 / 0 | 1944 / 0 / 0 |
 | canon-ef-135-f2l-usm-f5.6-photopic | 50 | Pass: transverseError.maxAbs 1.35e-13 mm | Pass: transverseError.maxAbs 7.82e-14 mm | Pass: transverseError.maxAbs 1.10e-13 mm | 9712 / 8 / 0 | 9712 / 8 / 0 | 9712 / 8 / 0 |
@@ -1056,28 +1056,28 @@ The worst of every figure over the suite:
 | lv – optiland | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
 | lv – optiland | Rays both engines traced through — `rays.compared` | rays | — | 22144 | — | — |
 | lv – optiland | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
-| lv – ref | Largest difference of an axial crossing, times the larger of the two engines' slopes — `intercept.maxScaled` | mm | ≤ 1.00e-8 | 2.61e-13 | nikon-z-24-70f4s-f8-photopic-tele | field 0 deg, line 3, ray 36 |
-| lv – ref | Largest difference of an axial crossing, along the axis — `intercept.maxAbs` | mm | — | 4.60e-12 | nikon-z-24-70f4s-f8-photopic-tele | field 0 deg, line 3, ray 36 |
-| lv – ref | Difference of the best focus, times the rays' RMS slope — `focus.maxScaled` | mm | ≤ 1.00e-8 | 7.47e-14 | nikon-z-24-70f4s-f8-ref-tele | field 0 deg, line 0 |
-| lv – ref | Difference of the best focus, along the axis — `focus.maxAbs` | mm | — | 1.42e-12 | nikon-z-24-70f4s-f8-photopic-tele | field 0 deg, line 4 |
-| lv – ref | Difference of the RMS spot size at best focus — `focusRms.maxAbs` | mm | ≤ 1.00e-8 | 3.49e-14 | nikon-z-24-70f4s-f8-ref-tele | field 0 deg, line 0 |
-| lv – ref | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
-| lv – ref | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
-| lv – ref | Rays both engines traced through — `rays.compared` | rays | — | 22144 | — | — |
-| lv – ref | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
-| optiland – ref | Largest difference of an axial crossing, times the larger of the two engines' slopes — `intercept.maxScaled` | mm | ≤ 1.00e-8 | 2.66e-13 | nikon-z-24-70f4s-open-photopic-tele | field 0 deg, line 3, ray 16 |
-| optiland – ref | Largest difference of an axial crossing, along the axis — `intercept.maxAbs` | mm | — | 4.75e-12 | nikon-z-24-70f4s-open-photopic-tele | field 0 deg, line 3, ray 16 |
-| optiland – ref | Difference of the best focus, times the rays' RMS slope — `focus.maxScaled` | mm | ≤ 1.00e-8 | 6.82e-14 | nikon-z-24-70f4s-f8-photopic-tele | field 0 deg, line 0 |
-| optiland – ref | Difference of the best focus, along the axis — `focus.maxAbs` | mm | — | 1.34e-12 | nikon-z-24-70f4s-f8-photopic-tele | field 0 deg, line 0 |
-| optiland – ref | Difference of the RMS spot size at best focus — `focusRms.maxAbs` | mm | ≤ 1.00e-8 | 3.51e-14 | nikon-z-24-70f4s-f8-photopic-tele | field 0 deg, line 4 |
-| optiland – ref | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
-| optiland – ref | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
-| optiland – ref | Rays both engines traced through — `rays.compared` | rays | — | 22144 | — | — |
-| optiland – ref | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
+| lv – reference-tracer | Largest difference of an axial crossing, times the larger of the two engines' slopes — `intercept.maxScaled` | mm | ≤ 1.00e-8 | 2.61e-13 | nikon-z-24-70f4s-f8-photopic-tele | field 0 deg, line 3, ray 36 |
+| lv – reference-tracer | Largest difference of an axial crossing, along the axis — `intercept.maxAbs` | mm | — | 4.60e-12 | nikon-z-24-70f4s-f8-photopic-tele | field 0 deg, line 3, ray 36 |
+| lv – reference-tracer | Difference of the best focus, times the rays' RMS slope — `focus.maxScaled` | mm | ≤ 1.00e-8 | 7.47e-14 | nikon-z-24-70f4s-f8-ref-tele | field 0 deg, line 0 |
+| lv – reference-tracer | Difference of the best focus, along the axis — `focus.maxAbs` | mm | — | 1.42e-12 | nikon-z-24-70f4s-f8-photopic-tele | field 0 deg, line 4 |
+| lv – reference-tracer | Difference of the RMS spot size at best focus — `focusRms.maxAbs` | mm | ≤ 1.00e-8 | 3.49e-14 | nikon-z-24-70f4s-f8-ref-tele | field 0 deg, line 0 |
+| lv – reference-tracer | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
+| lv – reference-tracer | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
+| lv – reference-tracer | Rays both engines traced through — `rays.compared` | rays | — | 22144 | — | — |
+| lv – reference-tracer | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
+| optiland – reference-tracer | Largest difference of an axial crossing, times the larger of the two engines' slopes — `intercept.maxScaled` | mm | ≤ 1.00e-8 | 2.66e-13 | nikon-z-24-70f4s-open-photopic-tele | field 0 deg, line 3, ray 16 |
+| optiland – reference-tracer | Largest difference of an axial crossing, along the axis — `intercept.maxAbs` | mm | — | 4.75e-12 | nikon-z-24-70f4s-open-photopic-tele | field 0 deg, line 3, ray 16 |
+| optiland – reference-tracer | Difference of the best focus, times the rays' RMS slope — `focus.maxScaled` | mm | ≤ 1.00e-8 | 6.82e-14 | nikon-z-24-70f4s-f8-photopic-tele | field 0 deg, line 0 |
+| optiland – reference-tracer | Difference of the best focus, along the axis — `focus.maxAbs` | mm | — | 1.34e-12 | nikon-z-24-70f4s-f8-photopic-tele | field 0 deg, line 0 |
+| optiland – reference-tracer | Difference of the RMS spot size at best focus — `focusRms.maxAbs` | mm | ≤ 1.00e-8 | 3.51e-14 | nikon-z-24-70f4s-f8-photopic-tele | field 0 deg, line 4 |
+| optiland – reference-tracer | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
+| optiland – reference-tracer | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
+| optiland – reference-tracer | Rays both engines traced through — `rays.compared` | rays | — | 22144 | — | — |
+| optiland – reference-tracer | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
 
 By run, each pair with its verdict and the judged figure that is largest against its limit:
 
-| Run | Requests | lv – optiland | lv – ref | optiland – ref | Rays of lv: ok / blocked / failed | Rays of optiland: ok / blocked / failed | Rays of ref: ok / blocked / failed |
+| Run | Requests | lv – optiland | lv – reference-tracer | optiland – reference-tracer | Rays of lv: ok / blocked / failed | Rays of optiland: ok / blocked / failed | Rays of reference-tracer: ok / blocked / failed |
 |---|---|---|---|---|---|---|---|
 | canon-ef-135-f2l-usm-f5.6-ref | 3 | Pass: intercept.maxScaled 3.55e-14 mm | Pass: intercept.maxScaled 3.20e-14 mm | Pass: intercept.maxScaled 3.57e-14 mm | 66 / 0 / 0 | 66 / 0 / 0 | 66 / 0 / 0 |
 | canon-ef-135-f2l-usm-f5.6-photopic | 10 | Pass: intercept.maxScaled 4.43e-14 mm | Pass: intercept.maxScaled 3.65e-14 mm | Pass: intercept.maxScaled 3.73e-14 mm | 280 / 0 / 0 | 280 / 0 / 0 | 280 / 0 / 0 |
@@ -1226,30 +1226,30 @@ The worst of every figure over the suite:
 | lv – optiland | Rays both engines traced through — `rays.compared` | rays | — | 57216 | — | — |
 | lv – optiland | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
 | lv – optiland | Largest difference of lateral colour — `lateralColour.maxAbs` | mm | ≤ 1.00e-8 | 2.56e-13 | sony-fe-400mm-f28-gm-oss-f5.6-photopic | line 2, ray 18 |
-| lv – ref | Largest difference, along x or y, of the two engines' landings of a chief or reference ray — `landing.maxAbs` | mm | ≤ 1.00e-8 | 3.48e-13 | sony-fe-20mm-f18-g-f5.6-best-photopic | line 1, ray 17 |
-| lv – ref | Largest difference of a ray's distance from its ideal image point — `distortion.maxScaled` | mm | ≤ 1.00e-8 | 3.69e-13 | sony-fe-20mm-f18-g-f5.6-best-photopic | line 1, ray 17 |
-| lv – ref | Largest difference of distortion — `distortion.maxAbs` | percent | — | 2.18e-12 | sigma-45mm-f28-dg-dn-contemporary-f5.6-best-photopic | line 0, ray 7 |
-| lv – ref | Largest difference of a chief ray's axial crossing, times its exit slope — `exitPupil.maxScaled` | mm | ≤ 1.00e-8 | 4.83e-13 | nikon-z-24-70f4s-f5.6-photopic-wide | line 1, ray 8 |
-| lv – ref | Largest difference of an exit pupil position — `exitPupil.maxAbs` | mm | — | 1.92e-12 | nikon-z-24-70f4s-f5.6-photopic-wide | line 1, ray 8 |
-| lv – ref | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
-| lv – ref | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
-| lv – ref | Rays both engines traced through — `rays.compared` | rays | — | 57216 | — | — |
-| lv – ref | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
-| lv – ref | Largest difference of lateral colour — `lateralColour.maxAbs` | mm | ≤ 1.00e-8 | 3.77e-13 | sony-fe-20mm-f18-g-f5.6-best-photopic | line 1, ray 17 |
-| optiland – ref | Largest difference, along x or y, of the two engines' landings of a chief or reference ray — `landing.maxAbs` | mm | ≤ 1.00e-8 | 3.66e-13 | sony-fe-20mm-f18-g-f11-best-photopic | line 1, ray 17 |
-| optiland – ref | Largest difference of a ray's distance from its ideal image point — `distortion.maxScaled` | mm | ≤ 1.00e-8 | 3.83e-13 | sony-fe-20mm-f18-g-f11-best-photopic | line 1, ray 17 |
-| optiland – ref | Largest difference of distortion — `distortion.maxAbs` | percent | — | 2.24e-12 | nikon-z-24-70f4s-open-best-photopic-wide | line 3, ray 11 |
-| optiland – ref | Largest difference of a chief ray's axial crossing, times its exit slope — `exitPupil.maxScaled` | mm | ≤ 1.00e-8 | 4.82e-13 | nikon-z-24-70f4s-f5.6-photopic-wide | line 3, ray 8 |
-| optiland – ref | Largest difference of an exit pupil position — `exitPupil.maxAbs` | mm | — | 1.96e-12 | nikon-z-24-70f4s-f5.6-photopic-wide | line 3, ray 8 |
-| optiland – ref | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
-| optiland – ref | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
-| optiland – ref | Rays both engines traced through — `rays.compared` | rays | — | 57216 | — | — |
-| optiland – ref | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
-| optiland – ref | Largest difference of lateral colour — `lateralColour.maxAbs` | mm | ≤ 1.00e-8 | 4.09e-13 | sony-fe-20mm-f18-g-f11-best-photopic | line 1, ray 17 |
+| lv – reference-tracer | Largest difference, along x or y, of the two engines' landings of a chief or reference ray — `landing.maxAbs` | mm | ≤ 1.00e-8 | 3.48e-13 | sony-fe-20mm-f18-g-f5.6-best-photopic | line 1, ray 17 |
+| lv – reference-tracer | Largest difference of a ray's distance from its ideal image point — `distortion.maxScaled` | mm | ≤ 1.00e-8 | 3.69e-13 | sony-fe-20mm-f18-g-f5.6-best-photopic | line 1, ray 17 |
+| lv – reference-tracer | Largest difference of distortion — `distortion.maxAbs` | percent | — | 2.18e-12 | sigma-45mm-f28-dg-dn-contemporary-f5.6-best-photopic | line 0, ray 7 |
+| lv – reference-tracer | Largest difference of a chief ray's axial crossing, times its exit slope — `exitPupil.maxScaled` | mm | ≤ 1.00e-8 | 4.83e-13 | nikon-z-24-70f4s-f5.6-photopic-wide | line 1, ray 8 |
+| lv – reference-tracer | Largest difference of an exit pupil position — `exitPupil.maxAbs` | mm | — | 1.92e-12 | nikon-z-24-70f4s-f5.6-photopic-wide | line 1, ray 8 |
+| lv – reference-tracer | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
+| lv – reference-tracer | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
+| lv – reference-tracer | Rays both engines traced through — `rays.compared` | rays | — | 57216 | — | — |
+| lv – reference-tracer | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
+| lv – reference-tracer | Largest difference of lateral colour — `lateralColour.maxAbs` | mm | ≤ 1.00e-8 | 3.77e-13 | sony-fe-20mm-f18-g-f5.6-best-photopic | line 1, ray 17 |
+| optiland – reference-tracer | Largest difference, along x or y, of the two engines' landings of a chief or reference ray — `landing.maxAbs` | mm | ≤ 1.00e-8 | 3.66e-13 | sony-fe-20mm-f18-g-f11-best-photopic | line 1, ray 17 |
+| optiland – reference-tracer | Largest difference of a ray's distance from its ideal image point — `distortion.maxScaled` | mm | ≤ 1.00e-8 | 3.83e-13 | sony-fe-20mm-f18-g-f11-best-photopic | line 1, ray 17 |
+| optiland – reference-tracer | Largest difference of distortion — `distortion.maxAbs` | percent | — | 2.24e-12 | nikon-z-24-70f4s-open-best-photopic-wide | line 3, ray 11 |
+| optiland – reference-tracer | Largest difference of a chief ray's axial crossing, times its exit slope — `exitPupil.maxScaled` | mm | ≤ 1.00e-8 | 4.82e-13 | nikon-z-24-70f4s-f5.6-photopic-wide | line 3, ray 8 |
+| optiland – reference-tracer | Largest difference of an exit pupil position — `exitPupil.maxAbs` | mm | — | 1.96e-12 | nikon-z-24-70f4s-f5.6-photopic-wide | line 3, ray 8 |
+| optiland – reference-tracer | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
+| optiland – reference-tracer | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
+| optiland – reference-tracer | Rays both engines traced through — `rays.compared` | rays | — | 57216 | — | — |
+| optiland – reference-tracer | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
+| optiland – reference-tracer | Largest difference of lateral colour — `lateralColour.maxAbs` | mm | ≤ 1.00e-8 | 4.09e-13 | sony-fe-20mm-f18-g-f11-best-photopic | line 1, ray 17 |
 
 By run, each pair with its verdict and the judged figure that is largest against its limit:
 
-| Run | Requests | lv – optiland | lv – ref | optiland – ref | Rays of lv: ok / blocked / failed | Rays of optiland: ok / blocked / failed | Rays of ref: ok / blocked / failed |
+| Run | Requests | lv – optiland | lv – reference-tracer | optiland – reference-tracer | Rays of lv: ok / blocked / failed | Rays of optiland: ok / blocked / failed | Rays of reference-tracer: ok / blocked / failed |
 |---|---|---|---|---|---|---|---|
 | canon-ef-135-f2l-usm-f5.6-ref | 4 | Pass: exitPupil.maxScaled 9.05e-14 mm | Pass: landing.maxAbs 7.82e-14 mm | Pass: exitPupil.maxScaled 8.70e-14 mm | 149 / 0 / 0 | 149 / 0 / 0 | 149 / 0 / 0 |
 | canon-ef-135-f2l-usm-f5.6-photopic | 4 | Pass: exitPupil.maxScaled 1.22e-13 mm | Pass: lateralColour.maxAbs 7.82e-14 mm | Pass: exitPupil.maxScaled 1.13e-13 mm | 149 / 0 / 0 | 149 / 0 / 0 | 149 / 0 / 0 |
@@ -1399,32 +1399,32 @@ The worst of every figure over the suite:
 | lv – optiland | Rays both engines traced through — `rays.compared` | rays | — | 689636 | — | — |
 | lv – optiland | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
 | lv – optiland | Fields compared — `fields.compared` | elements | — | 13056 | — | — |
-| lv – ref | Largest difference, along x or y, of the two engines' landings of a chief or reference ray — `landing.maxAbs` | mm | ≤ 1.00e-8 | 7.32e-13 | nikon-z-24-70f4s-f5.6-photopic-zoom0.5 | line 0, ray 1700 |
-| lv – ref | Largest difference of a tangential focus, times the fan's RMS slope — `tangentialFocus.maxScaled` | mm | ≤ 1.00e-8 | 1.10e-13 | sony-fe-400mm-f28-gm-oss-f5.6-best-ref | line 0, ray 84 |
-| lv – ref | Largest difference of a tangential focus, along the axis — `tangentialFocus.maxAbs` | mm | — | 3.98e-9 | sony-fe-400mm-f28-gm-oss-f5.6-best-ref | line 0, ray 84 |
-| lv – ref | Largest difference of a sagittal focus, times the fan's RMS slope — `sagittalFocus.maxScaled` | mm | ≤ 1.00e-8 | 8.92e-14 | nikon-z-24-70f4s-open-photopic-wide | line 1, ray 1750 |
-| lv – ref | Largest difference of a sagittal focus, along the axis — `sagittalFocus.maxAbs` | mm | — | 2.27e-12 | nikon-z-24-70f4s-open-best-ref-zoom0.5 | line 0, ray 24 |
-| lv – ref | Largest difference of astigmatism — `astigmatism.maxAbs` | mm | — | 3.98e-9 | sony-fe-400mm-f28-gm-oss-f5.6-best-ref | line 0, ray 84 |
-| lv – ref | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
-| lv – ref | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
-| lv – ref | Rays both engines traced through — `rays.compared` | rays | — | 689636 | — | — |
-| lv – ref | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
-| lv – ref | Fields compared — `fields.compared` | elements | — | 13056 | — | — |
-| optiland – ref | Largest difference, along x or y, of the two engines' landings of a chief or reference ray — `landing.maxAbs` | mm | ≤ 1.00e-8 | 7.30e-13 | nikon-z-24-70f4s-open-photopic-tele | line 3, ray 1037 |
-| optiland – ref | Largest difference of a tangential focus, times the fan's RMS slope — `tangentialFocus.maxScaled` | mm | ≤ 1.00e-8 | 1.33e-13 | sony-fe-400mm-f28-gm-oss-f5.6-best-photopic | line 1, ray 79 |
-| optiland – ref | Largest difference of a tangential focus, along the axis — `tangentialFocus.maxAbs` | mm | — | 4.87e-9 | sony-fe-400mm-f28-gm-oss-f5.6-best-photopic | line 1, ray 79 |
-| optiland – ref | Largest difference of a sagittal focus, times the fan's RMS slope — `sagittalFocus.maxScaled` | mm | ≤ 1.00e-8 | 8.98e-14 | nikon-z-24-70f4s-open-best-photopic-wide | line 1, ray 1750 |
-| optiland – ref | Largest difference of a sagittal focus, along the axis — `sagittalFocus.maxAbs` | mm | — | 2.32e-12 | nikon-z-24-70f4s-f11-best-photopic-zoom0.5 | line 1, ray 24 |
-| optiland – ref | Largest difference of astigmatism — `astigmatism.maxAbs` | mm | — | 4.87e-9 | sony-fe-400mm-f28-gm-oss-f5.6-best-photopic | line 1, ray 79 |
-| optiland – ref | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
-| optiland – ref | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
-| optiland – ref | Rays both engines traced through — `rays.compared` | rays | — | 689636 | — | — |
-| optiland – ref | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
-| optiland – ref | Fields compared — `fields.compared` | elements | — | 13056 | — | — |
+| lv – reference-tracer | Largest difference, along x or y, of the two engines' landings of a chief or reference ray — `landing.maxAbs` | mm | ≤ 1.00e-8 | 7.32e-13 | nikon-z-24-70f4s-f5.6-photopic-zoom0.5 | line 0, ray 1700 |
+| lv – reference-tracer | Largest difference of a tangential focus, times the fan's RMS slope — `tangentialFocus.maxScaled` | mm | ≤ 1.00e-8 | 1.10e-13 | sony-fe-400mm-f28-gm-oss-f5.6-best-ref | line 0, ray 84 |
+| lv – reference-tracer | Largest difference of a tangential focus, along the axis — `tangentialFocus.maxAbs` | mm | — | 3.98e-9 | sony-fe-400mm-f28-gm-oss-f5.6-best-ref | line 0, ray 84 |
+| lv – reference-tracer | Largest difference of a sagittal focus, times the fan's RMS slope — `sagittalFocus.maxScaled` | mm | ≤ 1.00e-8 | 8.92e-14 | nikon-z-24-70f4s-open-photopic-wide | line 1, ray 1750 |
+| lv – reference-tracer | Largest difference of a sagittal focus, along the axis — `sagittalFocus.maxAbs` | mm | — | 2.27e-12 | nikon-z-24-70f4s-open-best-ref-zoom0.5 | line 0, ray 24 |
+| lv – reference-tracer | Largest difference of astigmatism — `astigmatism.maxAbs` | mm | — | 3.98e-9 | sony-fe-400mm-f28-gm-oss-f5.6-best-ref | line 0, ray 84 |
+| lv – reference-tracer | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
+| lv – reference-tracer | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
+| lv – reference-tracer | Rays both engines traced through — `rays.compared` | rays | — | 689636 | — | — |
+| lv – reference-tracer | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
+| lv – reference-tracer | Fields compared — `fields.compared` | elements | — | 13056 | — | — |
+| optiland – reference-tracer | Largest difference, along x or y, of the two engines' landings of a chief or reference ray — `landing.maxAbs` | mm | ≤ 1.00e-8 | 7.30e-13 | nikon-z-24-70f4s-open-photopic-tele | line 3, ray 1037 |
+| optiland – reference-tracer | Largest difference of a tangential focus, times the fan's RMS slope — `tangentialFocus.maxScaled` | mm | ≤ 1.00e-8 | 1.33e-13 | sony-fe-400mm-f28-gm-oss-f5.6-best-photopic | line 1, ray 79 |
+| optiland – reference-tracer | Largest difference of a tangential focus, along the axis — `tangentialFocus.maxAbs` | mm | — | 4.87e-9 | sony-fe-400mm-f28-gm-oss-f5.6-best-photopic | line 1, ray 79 |
+| optiland – reference-tracer | Largest difference of a sagittal focus, times the fan's RMS slope — `sagittalFocus.maxScaled` | mm | ≤ 1.00e-8 | 8.98e-14 | nikon-z-24-70f4s-open-best-photopic-wide | line 1, ray 1750 |
+| optiland – reference-tracer | Largest difference of a sagittal focus, along the axis — `sagittalFocus.maxAbs` | mm | — | 2.32e-12 | nikon-z-24-70f4s-f11-best-photopic-zoom0.5 | line 1, ray 24 |
+| optiland – reference-tracer | Largest difference of astigmatism — `astigmatism.maxAbs` | mm | — | 4.87e-9 | sony-fe-400mm-f28-gm-oss-f5.6-best-photopic | line 1, ray 79 |
+| optiland – reference-tracer | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
+| optiland – reference-tracer | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
+| optiland – reference-tracer | Rays both engines traced through — `rays.compared` | rays | — | 689636 | — | — |
+| optiland – reference-tracer | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
+| optiland – reference-tracer | Fields compared — `fields.compared` | elements | — | 13056 | — | — |
 
 By run, each pair with its verdict and the judged figure that is largest against its limit:
 
-| Run | Requests | lv – optiland | lv – ref | optiland – ref | Rays of lv: ok / blocked / failed | Rays of optiland: ok / blocked / failed | Rays of ref: ok / blocked / failed |
+| Run | Requests | lv – optiland | lv – reference-tracer | optiland – reference-tracer | Rays of lv: ok / blocked / failed | Rays of optiland: ok / blocked / failed | Rays of reference-tracer: ok / blocked / failed |
 |---|---|---|---|---|---|---|---|
 | canon-ef-135-f2l-usm-f5.6-ref | 2 | Pass: landing.maxAbs 1.07e-13 mm | Pass: landing.maxAbs 9.95e-14 mm | Pass: landing.maxAbs 1.21e-13 mm | 1826 / 10 / 0 | 1826 / 10 / 0 | 1826 / 10 / 0 |
 | canon-ef-135-f2l-usm-f5.6-photopic | 10 | Pass: landing.maxAbs 1.07e-13 mm | Pass: landing.maxAbs 9.95e-14 mm | Pass: landing.maxAbs 1.14e-13 mm | 8998 / 182 / 0 | 8998 / 182 / 0 | 8998 / 182 / 0 |
@@ -1572,28 +1572,28 @@ The worst of every figure over the suite:
 | lv – optiland | Rays both engines traced through — `rays.compared` | rays | — | 7608388 | — | — |
 | lv – optiland | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
 | lv – optiland | Fields compared — `fields.compared` | elements | — | 3768 | — | — |
-| lv – ref | Largest difference of a field's flux into the image, relative to the axis — `illumination.maxAbs` | (no unit) | ≤ 1.00e-9 | 1.12e-13 | nikon-z-24-70f4s-f11-ref-tele | field 5.54e0 deg, line 0 |
-| lv – ref | Share of the axis's flux carried by rays one engine passes and the other stops — `transmission.maxAbs` | (no unit) | ≤ 0 | 0 | canon-ef-135-f2l-usm-f5.6-ref | field 0 deg, line 0 |
-| lv – ref | Share of the axis's flux carried by rays at a rim, or that failed, that one engine passes and the other does not (shown, not judged) — `transmission.rimBandOrFailed` | (no unit) | — | 0 | canon-ef-135-f2l-usm-f5.6-ref | field 0 deg, line 0 |
-| lv – ref | Largest difference, along x or y, of the two engines' landings of a chief or reference ray — `landing.maxAbs` | mm | ≤ 1.00e-8 | 1.95e-13 | nikon-z-24-70f4s-f5.6-photopic-zoom0.5 | field 2.40e1 deg, line 2, ray 2048 |
-| lv – ref | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
-| lv – ref | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
-| lv – ref | Rays both engines traced through — `rays.compared` | rays | — | 7608388 | — | — |
-| lv – ref | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
-| lv – ref | Fields compared — `fields.compared` | elements | — | 3768 | — | — |
-| optiland – ref | Largest difference of a field's flux into the image, relative to the axis — `illumination.maxAbs` | (no unit) | ≤ 1.00e-9 | 1.14e-13 | nikon-z-24-70f4s-f11-photopic-tele | field 8.32e0 deg, line 3 |
-| optiland – ref | Share of the axis's flux carried by rays one engine passes and the other stops — `transmission.maxAbs` | (no unit) | ≤ 0 | 0 | canon-ef-135-f2l-usm-f5.6-ref | field 0 deg, line 0 |
-| optiland – ref | Share of the axis's flux carried by rays at a rim, or that failed, that one engine passes and the other does not (shown, not judged) — `transmission.rimBandOrFailed` | (no unit) | — | 0 | canon-ef-135-f2l-usm-f5.6-ref | field 0 deg, line 0 |
-| optiland – ref | Largest difference, along x or y, of the two engines' landings of a chief or reference ray — `landing.maxAbs` | mm | ≤ 1.00e-8 | 2.17e-13 | nikon-z-24-70f4s-f5.6-photopic-zoom0.5 | field 2.40e1 deg, line 4, ray 2048 |
-| optiland – ref | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
-| optiland – ref | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
-| optiland – ref | Rays both engines traced through — `rays.compared` | rays | — | 7608388 | — | — |
-| optiland – ref | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
-| optiland – ref | Fields compared — `fields.compared` | elements | — | 3768 | — | — |
+| lv – reference-tracer | Largest difference of a field's flux into the image, relative to the axis — `illumination.maxAbs` | (no unit) | ≤ 1.00e-9 | 1.12e-13 | nikon-z-24-70f4s-f11-ref-tele | field 5.54e0 deg, line 0 |
+| lv – reference-tracer | Share of the axis's flux carried by rays one engine passes and the other stops — `transmission.maxAbs` | (no unit) | ≤ 0 | 0 | canon-ef-135-f2l-usm-f5.6-ref | field 0 deg, line 0 |
+| lv – reference-tracer | Share of the axis's flux carried by rays at a rim, or that failed, that one engine passes and the other does not (shown, not judged) — `transmission.rimBandOrFailed` | (no unit) | — | 0 | canon-ef-135-f2l-usm-f5.6-ref | field 0 deg, line 0 |
+| lv – reference-tracer | Largest difference, along x or y, of the two engines' landings of a chief or reference ray — `landing.maxAbs` | mm | ≤ 1.00e-8 | 1.95e-13 | nikon-z-24-70f4s-f5.6-photopic-zoom0.5 | field 2.40e1 deg, line 2, ray 2048 |
+| lv – reference-tracer | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
+| lv – reference-tracer | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
+| lv – reference-tracer | Rays both engines traced through — `rays.compared` | rays | — | 7608388 | — | — |
+| lv – reference-tracer | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
+| lv – reference-tracer | Fields compared — `fields.compared` | elements | — | 3768 | — | — |
+| optiland – reference-tracer | Largest difference of a field's flux into the image, relative to the axis — `illumination.maxAbs` | (no unit) | ≤ 1.00e-9 | 1.14e-13 | nikon-z-24-70f4s-f11-photopic-tele | field 8.32e0 deg, line 3 |
+| optiland – reference-tracer | Share of the axis's flux carried by rays one engine passes and the other stops — `transmission.maxAbs` | (no unit) | ≤ 0 | 0 | canon-ef-135-f2l-usm-f5.6-ref | field 0 deg, line 0 |
+| optiland – reference-tracer | Share of the axis's flux carried by rays at a rim, or that failed, that one engine passes and the other does not (shown, not judged) — `transmission.rimBandOrFailed` | (no unit) | — | 0 | canon-ef-135-f2l-usm-f5.6-ref | field 0 deg, line 0 |
+| optiland – reference-tracer | Largest difference, along x or y, of the two engines' landings of a chief or reference ray — `landing.maxAbs` | mm | ≤ 1.00e-8 | 2.17e-13 | nikon-z-24-70f4s-f5.6-photopic-zoom0.5 | field 2.40e1 deg, line 4, ray 2048 |
+| optiland – reference-tracer | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
+| optiland – reference-tracer | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
+| optiland – reference-tracer | Rays both engines traced through — `rays.compared` | rays | — | 7608388 | — | — |
+| optiland – reference-tracer | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
+| optiland – reference-tracer | Fields compared — `fields.compared` | elements | — | 3768 | — | — |
 
 By run, each pair with its verdict and the judged figure that is largest against its limit:
 
-| Run | Requests | lv – optiland | lv – ref | optiland – ref | Rays of lv: ok / blocked / failed | Rays of optiland: ok / blocked / failed | Rays of ref: ok / blocked / failed |
+| Run | Requests | lv – optiland | lv – reference-tracer | optiland – reference-tracer | Rays of lv: ok / blocked / failed | Rays of optiland: ok / blocked / failed | Rays of reference-tracer: ok / blocked / failed |
 |---|---|---|---|---|---|---|---|
 | canon-ef-135-f2l-usm-f5.6-ref | 1 | Pass: landing.maxAbs 3.55e-14 mm | Pass: landing.maxAbs 2.31e-14 mm | Pass: landing.maxAbs 3.91e-14 mm | 2049 / 0 / 0 | 2049 / 0 / 0 | 2049 / 0 / 0 |
 | canon-ef-135-f2l-usm-f5.6-photopic | 5 | Pass: landing.maxAbs 9.24e-14 mm | Pass: landing.maxAbs 5.33e-14 mm | Pass: landing.maxAbs 7.11e-14 mm | 10237 / 8 / 0 | 10237 / 8 / 0 | 10237 / 8 / 0 |
@@ -1762,7 +1762,7 @@ A pair is named by the ids of its two engines:
 |---|---|
 | `lv` | LensVisualizer itself, loaded from a local checkout, asked for each figure as its own tabs ask for it, and made to trace the very rays every engine is handed in the checks held to a limit. |
 | `optiland` | optiland, an open-source optical design library in Python, run by this tool in a worker process of its own. |
-| `ref` | The reference tracer: a small exact ray tracer written in this repository from the optics alone, never from LensVisualizer's or optiland's code. |
+| `reference-tracer` | The reference tracer: a small exact ray tracer written in this repository from the optics alone, never from LensVisualizer's or optiland's code. |
 
 ### Figures
 
@@ -1823,7 +1823,7 @@ contract version is that of the file format the baseline is written in.
 |---|---|---|---|
 | lv | 4669921bae7179c7eddd220fa367e696eae7acec3a5a788d0ca90da632d3eb6b | afad9cb89bd9a25fbfa5ee0ec335b1e315481414b7ba41da2f906c28856010c5 | commit 25f65d4b4213a21392cbae92680134906049b2ad |
 | optiland | bcfbf3916c1103b3b3b49a93117d3346a0bd6921ec35f01feb99bc1a2a6e39eb | 98f36151b0cdd2d3d3f82013841899de85309b22012967de64bbba662217fbcb | commit 4e893f53aee1312f2d091680b93dd2279711e197, distribution version 0.6.2.post117+g4e893f53, source hash 279af5c55d8ebe1610686b9dad3e6eeb22b1822037d59a0e5f148c2fb8937f38 |
-| ref | b7d0684b593261d14a1dfebb903774775bbe481a07ae2955689644dc0ffd919e | 2225e342b4fd8539480e933e59a3ca95a8ae2beeb24f45972b55fd4e4a59d357 | — |
+| reference-tracer | b7d0684b593261d14a1dfebb903774775bbe481a07ae2955689644dc0ffd919e | 2225e342b4fd8539480e933e59a3ca95a8ae2beeb24f45972b55fd4e4a59d357 | — |
 
 | Run | Lens state |
 |---|---|

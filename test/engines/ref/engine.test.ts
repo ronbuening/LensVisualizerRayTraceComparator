@@ -52,7 +52,10 @@ import { caseOf, sphere } from "./support.ts";
 
 /** The reference engine behind an adapter, as a run reaches it; closed when the test ends. */
 function refEngine(t: TestContext): RemoteEngineAdapter {
-  const adapter = new RemoteEngineAdapter({ id: "ref", transport: createInProcessTransport(createRefEngine()) });
+  const adapter = new RemoteEngineAdapter({
+    id: "reference-tracer",
+    transport: createInProcessTransport(createRefEngine()),
+  });
   t.after(() => adapter.close());
   return adapter;
 }
@@ -92,8 +95,8 @@ test("ref describes itself: its id, a fingerprint of its sources, its features a
   assert.deepEqual(validateKind("engine-descriptor", descriptor), []);
   assert.deepEqual(descriptor, refDescriptor());
   assert.deepEqual(descriptor.contract, { min: CONTRACT_VERSION, max: "1.5" });
-  assert.equal(descriptor.identity.id, "ref");
-  assert.equal(REF_ENGINE_ID, "ref");
+  assert.equal(descriptor.identity.id, "reference-tracer");
+  assert.equal(REF_ENGINE_ID, "reference-tracer");
   assert.equal(descriptor.identity.version, REF_ENGINE_VERSION);
   assert.match(descriptor.identity.fingerprint, /^[0-9a-f]{64}$/);
   assert.deepEqual(descriptor.capabilities.quantities, {
@@ -141,7 +144,7 @@ test("the fingerprint is a hash of the engine's own source files, by path and co
 
 test("ref conforms to the protocol; it offers no selftest.echo, so those checks are skipped", async () => {
   const report = await runConformance({
-    id: "ref",
+    id: "reference-tracer",
     createTransport: () => createInProcessTransport(createRefEngine()),
   });
   assert.equal(report.passed, true, JSON.stringify(report.checks.filter((check) => check.status === "fail")));
@@ -533,7 +536,7 @@ test("equal requests give byte-equal results, and a result says how it was compu
     assert.equal(canonicalJson(first), canonicalJson(second), quantity);
     assert.deepEqual(first.method, { name: method, params: {} });
     assert.deepEqual(first.diagnostics, { warnings: [], counts: { surfaces: 11, lines: 1 } });
-    assert.equal(first.engine.id, "ref");
+    assert.equal(first.engine.id, "reference-tracer");
     assert.equal(first.engine.fingerprint, refFingerprint().fingerprint);
     // Another instance of the engine gives the same bytes: it keeps no state.
     assert.equal(canonicalJson(await ask(refEngine(t), DOUBLE_GAUSS, quantity)), canonicalJson(first), quantity);

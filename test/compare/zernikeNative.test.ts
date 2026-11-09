@@ -192,7 +192,7 @@ test("policy 24: the limits of the landing and the fit's condition, and the band
   const pairOf = (b: ZernikeNativeData) =>
     comparePair(
       { engine: "optiland", fingerprint: "a", status: "ok", data: ZERNIKE_DATA_FRINGE as unknown as JsonObject },
-      { engine: "optiland-wave", fingerprint: "b", status: "ok", data: b as unknown as JsonObject },
+      { engine: "otf-of-optiland-wavefront", fingerprint: "b", status: "ok", data: b as unknown as JsonObject },
       POLICY,
       zernikeNativeComparator,
     );

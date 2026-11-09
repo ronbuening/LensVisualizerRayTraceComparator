@@ -49,12 +49,12 @@ test(
     const { manifest, comparisons, runsDir } = runAndCompare(t, {
       suite,
       name: "benchmark",
-      engines: "lv,ref",
+      engines: "lv,reference-tracer",
       rungs: "geometric-mtf-vs-optiland",
     });
 
     const first = manifest.jobs.filter((job) => job.step === undefined);
-    assert.deepEqual([...new Set(first.map((job) => job.engine))].sort(), ["lv", "optiland", "replay"]);
+    assert.deepEqual([...new Set(first.map((job) => job.engine))].sort(), ["lv", "optiland", "replay-of-lv-mtf"]);
     // A request a field: the three fields a run traces rays for, of three engines.
     assert.equal(first.length, 3 * FIELDS.length * RUNS.length);
     for (const job of first) assert.equal(job.status, "ok", `${job.run} ${job.engine}`);

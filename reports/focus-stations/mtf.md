@@ -23,8 +23,8 @@ How to read this, near the end, says what each label and column means.
 |---|---|---|---|
 | lv | LensVisualizer | 1 | clean checkout, 184 engine files |
 | optiland | optiland | 0.6.2.post117+g4e893f53 | backend numpy, checkout with uncommitted changes, JIT compilation on, Numba 0.65.1, NumPy 2.3.5, precision float64, Python 3.14.8, SciPy 1.16.3, 534 source files |
-| ref | Reference tracer | 1 | 13 source files |
-| replay | Replay of LensVisualizer's MTF | 1 | clean checkout, 184 engine files |
+| reference-tracer | Reference tracer | 1 | 13 source files |
+| replay-of-lv-mtf | Replay of LensVisualizer's MTF | 1 | clean checkout, 184 engine files |
 
 ## Runs with a problem
 
@@ -38,12 +38,12 @@ How to read this, near the end, says what each label and column means.
 | Check | Quantity | Runs | Requests | Pair | Runs by verdict | Requests by verdict |
 |---|---|---|---|---|---|---|
 | Geometric MTF of the same rays — `geometric-mtf` | `rays.trace` | 72 | 206 | lv – optiland | 72 Pass | 206 Pass |
-| Geometric MTF of the same rays — `geometric-mtf` | `rays.trace` | 72 | 206 | lv – ref | 72 Pass | 206 Pass |
-| Geometric MTF of the same rays — `geometric-mtf` | `rays.trace` | 72 | 206 | optiland – ref | 72 Pass | 206 Pass |
-| LensVisualizer's MTF sampling, replayed — `lv-mtf-replay` | `mtf.native` | 72 | 72 | lv – replay | 72 Pass | 72 Pass |
+| Geometric MTF of the same rays — `geometric-mtf` | `rays.trace` | 72 | 206 | lv – reference-tracer | 72 Pass | 206 Pass |
+| Geometric MTF of the same rays — `geometric-mtf` | `rays.trace` | 72 | 206 | optiland – reference-tracer | 72 Pass | 206 Pass |
+| LensVisualizer's MTF sampling, replayed — `lv-mtf-replay` | `mtf.native` | 72 | 72 | lv – replay-of-lv-mtf | 72 Pass | 72 Pass |
 | Wave MTF of the same rays — `wave-mtf` | `rays.trace` | 72 | 206 | lv – optiland | 72 Pass | 206 Pass |
-| Wave MTF of the same rays — `wave-mtf` | `rays.trace` | 72 | 206 | lv – ref | 72 Pass | 206 Pass |
-| Wave MTF of the same rays — `wave-mtf` | `rays.trace` | 72 | 206 | optiland – ref | 72 Pass | 206 Pass |
+| Wave MTF of the same rays — `wave-mtf` | `rays.trace` | 72 | 206 | lv – reference-tracer | 72 Pass | 206 Pass |
+| Wave MTF of the same rays — `wave-mtf` | `rays.trace` | 72 | 206 | optiland – reference-tracer | 72 Pass | 206 Pass |
 
 ## Support
 
@@ -54,12 +54,12 @@ In how many runs the jobs of an engine ended in each way. An engine that cannot 
 |---|---|---|
 | Geometric MTF of the same rays — `geometric-mtf` | lv | 72 answered |
 | Geometric MTF of the same rays — `geometric-mtf` | optiland | 72 answered |
-| Geometric MTF of the same rays — `geometric-mtf` | ref | 72 answered |
+| Geometric MTF of the same rays — `geometric-mtf` | reference-tracer | 72 answered |
 | LensVisualizer's MTF sampling, replayed — `lv-mtf-replay` | lv | 72 answered |
-| LensVisualizer's MTF sampling, replayed — `lv-mtf-replay` | replay | 72 answered |
+| LensVisualizer's MTF sampling, replayed — `lv-mtf-replay` | replay-of-lv-mtf | 72 answered |
 | Wave MTF of the same rays — `wave-mtf` | lv | 72 answered |
 | Wave MTF of the same rays — `wave-mtf` | optiland | 72 answered |
-| Wave MTF of the same rays — `wave-mtf` | ref | 72 answered |
+| Wave MTF of the same rays — `wave-mtf` | reference-tracer | 72 answered |
 
 ## Geometric MTF of the same rays — `geometric-mtf`
 
@@ -73,18 +73,18 @@ The worst of every figure over the suite:
 | lv – optiland | Rays both engines traced through — `rays.compared` | rays | — | 183473 | 206 of 206 | — | — |
 | lv – optiland | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | 206 of 206 | — | — |
 | lv – optiland | Wavelengths compared — `lines.compared` | wavelengths | — | 1 | 206 of 206 | certified-fujifilm-gf-110mm-f56-ts-macro-zoom0-focus100 | — |
-| lv – ref | Largest difference of an MTF value — `mtf.maxAbs` | (no unit) | ≤ 1.00e-7 | 1.37e-11 | 206 of 206 | certified-thypoch-ksana-21mm-f35-zoom0-focus1 | cut tangential, field 4.38e1 deg, frequencyPerMm 100 |
-| lv – ref | Rays both engines traced through — `rays.compared` | rays | — | 183473 | 206 of 206 | — | — |
-| lv – ref | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | 206 of 206 | — | — |
-| lv – ref | Wavelengths compared — `lines.compared` | wavelengths | — | 1 | 206 of 206 | certified-fujifilm-gf-110mm-f56-ts-macro-zoom0-focus100 | — |
-| optiland – ref | Largest difference of an MTF value — `mtf.maxAbs` | (no unit) | ≤ 1.00e-7 | 1.46e-11 | 206 of 206 | certified-thypoch-ksana-21mm-f35-zoom0-focus1 | cut tangential, field 4.38e1 deg, frequencyPerMm 100 |
-| optiland – ref | Rays both engines traced through — `rays.compared` | rays | — | 183473 | 206 of 206 | — | — |
-| optiland – ref | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | 206 of 206 | — | — |
-| optiland – ref | Wavelengths compared — `lines.compared` | wavelengths | — | 1 | 206 of 206 | certified-fujifilm-gf-110mm-f56-ts-macro-zoom0-focus100 | — |
+| lv – reference-tracer | Largest difference of an MTF value — `mtf.maxAbs` | (no unit) | ≤ 1.00e-7 | 1.37e-11 | 206 of 206 | certified-thypoch-ksana-21mm-f35-zoom0-focus1 | cut tangential, field 4.38e1 deg, frequencyPerMm 100 |
+| lv – reference-tracer | Rays both engines traced through — `rays.compared` | rays | — | 183473 | 206 of 206 | — | — |
+| lv – reference-tracer | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | 206 of 206 | — | — |
+| lv – reference-tracer | Wavelengths compared — `lines.compared` | wavelengths | — | 1 | 206 of 206 | certified-fujifilm-gf-110mm-f56-ts-macro-zoom0-focus100 | — |
+| optiland – reference-tracer | Largest difference of an MTF value — `mtf.maxAbs` | (no unit) | ≤ 1.00e-7 | 1.46e-11 | 206 of 206 | certified-thypoch-ksana-21mm-f35-zoom0-focus1 | cut tangential, field 4.38e1 deg, frequencyPerMm 100 |
+| optiland – reference-tracer | Rays both engines traced through — `rays.compared` | rays | — | 183473 | 206 of 206 | — | — |
+| optiland – reference-tracer | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | 206 of 206 | — | — |
+| optiland – reference-tracer | Wavelengths compared — `lines.compared` | wavelengths | — | 1 | 206 of 206 | certified-fujifilm-gf-110mm-f56-ts-macro-zoom0-focus100 | — |
 
 By run, each pair with its verdict and the judged figure that is largest against its limit, with the number of the run's requests it was measured in:
 
-| Run | Requests | lv – optiland | lv – ref | optiland – ref |
+| Run | Requests | lv – optiland | lv – reference-tracer | optiland – reference-tracer |
 |---|---|---|---|---|
 | certified-fujifilm-gf-110mm-f56-ts-macro-zoom0-focus100 | 3 | Pass: mtf.maxAbs 2.62e-12 (3 of 3) | Pass: mtf.maxAbs 1.30e-12 (3 of 3) | Pass: mtf.maxAbs 1.98e-12 (3 of 3) |
 | certified-fujifilm-gf80-f17-zoom0-focus1 | 3 | Pass: mtf.maxAbs 3.62e-12 (3 of 3) | Pass: mtf.maxAbs 3.02e-12 (3 of 3) | Pass: mtf.maxAbs 4.26e-12 (3 of 3) |
@@ -167,13 +167,13 @@ The worst of every figure over the suite:
 
 | Pair | Figure | Unit | Limit | Worst, or total | Requests measured | Run | Where |
 |---|---|---|---|---|---|---|---|
-| lv – replay | Largest difference of an MTF value — `mtf.maxAbs` | (no unit) | ≤ 1.00e-9 | 1.58e-14 | 72 of 72 | certified-sigma-24mm-f35-dg-dn-zoom0-focus1 | cut sagittal, field 7.50e-1 of the image height, frequencyPerMm 2 |
-| lv – replay | Sampling grids, ray counts and ray outcomes that differ — `sampling.mismatches` | elements | ≤ 0 | 0 | 72 of 72 | — | — |
-| lv – replay | Fields whose outcome differs — `fields.mismatches` | elements | ≤ 0 | 0 | 72 of 72 | — | — |
+| lv – replay-of-lv-mtf | Largest difference of an MTF value — `mtf.maxAbs` | (no unit) | ≤ 1.00e-9 | 1.58e-14 | 72 of 72 | certified-sigma-24mm-f35-dg-dn-zoom0-focus1 | cut sagittal, field 7.50e-1 of the image height, frequencyPerMm 2 |
+| lv – replay-of-lv-mtf | Sampling grids, ray counts and ray outcomes that differ — `sampling.mismatches` | elements | ≤ 0 | 0 | 72 of 72 | — | — |
+| lv – replay-of-lv-mtf | Fields whose outcome differs — `fields.mismatches` | elements | ≤ 0 | 0 | 72 of 72 | — | — |
 
 By run, each pair with its verdict and the judged figure that is largest against its limit, with the number of the run's requests it was measured in:
 
-| Run | Requests | lv – replay |
+| Run | Requests | lv – replay-of-lv-mtf |
 |---|---|---|
 | certified-fujifilm-gf-110mm-f56-ts-macro-zoom0-focus100 | 1 | Pass: mtf.maxAbs 4.88e-15 (1 of 1) |
 | certified-fujifilm-gf80-f17-zoom0-focus1 | 1 | Pass: mtf.maxAbs 1.09e-14 (1 of 1) |
@@ -264,26 +264,26 @@ The worst of every figure over the suite:
 | lv – optiland | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | 206 of 206 | — | — |
 | lv – optiland | Wavelengths compared — `lines.compared` | wavelengths | — | 1 | 206 of 206 | certified-fujifilm-gf-110mm-f56-ts-macro-zoom0-focus100 | — |
 | lv – optiland | Largest difference of a wave MTF value, on the finest lattice — `waveMtf.maxAbs` | (no unit) | ≤ 2.00e-8 | 7.89e-10 | 87 of 206 | certified-tamron-35-150mm-f2-28-di-iii-vxd-a058-zoom1-focus1 | cut tangential, field 0 deg, frequencyPerMm 100 |
-| lv – ref | Largest difference of a wave MTF value, in fields whose sampling did not settle (shown, not judged) — `waveMtf.flagged` | (no unit) | — | 1.00e-9 | 118 of 206 | certified-sigma-35mm-f12-dg-ii-art-zoom0-focus1 | cut tangential, field 3.26e1 deg, frequencyPerMm 70 |
-| lv – ref | Largest phase step between neighbouring cells of the lattice that carry light — `phaseStep.waves` | waves | — | 1.05e1 | 205 of 206 | certified-thypoch-simera-50mm-f14-zoom0-focus1 | field 1.05e1 deg, line 0, ray 1856 |
-| lv – ref | Largest move of a wave MTF value from the coarser lattice to the finer — `convergence.maxAbs` | (no unit) | — | 1.58e-1 | 205 of 206 | certified-thypoch-simera-50mm-f14-zoom0-focus1 | cut tangential, field 2.01e1 deg, frequencyPerMm 70 |
-| lv – ref | Cells across the finest lattice — `lattice.columns` | cells | — | 64 | 206 of 206 | certified-fujifilm-gf-110mm-f56-ts-macro-zoom0-focus100 | — |
-| lv – ref | Rays both engines traced through — `rays.compared` | rays | — | 734807 | 206 of 206 | — | — |
-| lv – ref | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | 206 of 206 | — | — |
-| lv – ref | Wavelengths compared — `lines.compared` | wavelengths | — | 1 | 206 of 206 | certified-fujifilm-gf-110mm-f56-ts-macro-zoom0-focus100 | — |
-| lv – ref | Largest difference of a wave MTF value, on the finest lattice — `waveMtf.maxAbs` | (no unit) | ≤ 2.00e-8 | 8.92e-10 | 87 of 206 | certified-samyang-af-14mm-f28-ef-zoom0-focus2 | cut tangential, field 0 deg, frequencyPerMm 90 |
-| optiland – ref | Largest difference of a wave MTF value, in fields whose sampling did not settle (shown, not judged) — `waveMtf.flagged` | (no unit) | — | 1.03e-9 | 118 of 206 | certified-sigma-35mm-f12-dg-ii-art-zoom0-focus1 | cut tangential, field 3.26e1 deg, frequencyPerMm 70 |
-| optiland – ref | Largest phase step between neighbouring cells of the lattice that carry light — `phaseStep.waves` | waves | — | 1.05e1 | 205 of 206 | certified-thypoch-simera-50mm-f14-zoom0-focus1 | field 1.05e1 deg, line 0, ray 1856 |
-| optiland – ref | Largest move of a wave MTF value from the coarser lattice to the finer — `convergence.maxAbs` | (no unit) | — | 1.58e-1 | 205 of 206 | certified-thypoch-simera-50mm-f14-zoom0-focus1 | cut tangential, field 2.01e1 deg, frequencyPerMm 70 |
-| optiland – ref | Cells across the finest lattice — `lattice.columns` | cells | — | 64 | 206 of 206 | certified-fujifilm-gf-110mm-f56-ts-macro-zoom0-focus100 | — |
-| optiland – ref | Rays both engines traced through — `rays.compared` | rays | — | 734807 | 206 of 206 | — | — |
-| optiland – ref | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | 206 of 206 | — | — |
-| optiland – ref | Wavelengths compared — `lines.compared` | wavelengths | — | 1 | 206 of 206 | certified-fujifilm-gf-110mm-f56-ts-macro-zoom0-focus100 | — |
-| optiland – ref | Largest difference of a wave MTF value, on the finest lattice — `waveMtf.maxAbs` | (no unit) | ≤ 2.00e-8 | 8.79e-10 | 87 of 206 | certified-samyang-af-14mm-f28-ef-zoom0-focus2 | cut sagittal, field 0 deg, frequencyPerMm 80 |
+| lv – reference-tracer | Largest difference of a wave MTF value, in fields whose sampling did not settle (shown, not judged) — `waveMtf.flagged` | (no unit) | — | 1.00e-9 | 118 of 206 | certified-sigma-35mm-f12-dg-ii-art-zoom0-focus1 | cut tangential, field 3.26e1 deg, frequencyPerMm 70 |
+| lv – reference-tracer | Largest phase step between neighbouring cells of the lattice that carry light — `phaseStep.waves` | waves | — | 1.05e1 | 205 of 206 | certified-thypoch-simera-50mm-f14-zoom0-focus1 | field 1.05e1 deg, line 0, ray 1856 |
+| lv – reference-tracer | Largest move of a wave MTF value from the coarser lattice to the finer — `convergence.maxAbs` | (no unit) | — | 1.58e-1 | 205 of 206 | certified-thypoch-simera-50mm-f14-zoom0-focus1 | cut tangential, field 2.01e1 deg, frequencyPerMm 70 |
+| lv – reference-tracer | Cells across the finest lattice — `lattice.columns` | cells | — | 64 | 206 of 206 | certified-fujifilm-gf-110mm-f56-ts-macro-zoom0-focus100 | — |
+| lv – reference-tracer | Rays both engines traced through — `rays.compared` | rays | — | 734807 | 206 of 206 | — | — |
+| lv – reference-tracer | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | 206 of 206 | — | — |
+| lv – reference-tracer | Wavelengths compared — `lines.compared` | wavelengths | — | 1 | 206 of 206 | certified-fujifilm-gf-110mm-f56-ts-macro-zoom0-focus100 | — |
+| lv – reference-tracer | Largest difference of a wave MTF value, on the finest lattice — `waveMtf.maxAbs` | (no unit) | ≤ 2.00e-8 | 8.92e-10 | 87 of 206 | certified-samyang-af-14mm-f28-ef-zoom0-focus2 | cut tangential, field 0 deg, frequencyPerMm 90 |
+| optiland – reference-tracer | Largest difference of a wave MTF value, in fields whose sampling did not settle (shown, not judged) — `waveMtf.flagged` | (no unit) | — | 1.03e-9 | 118 of 206 | certified-sigma-35mm-f12-dg-ii-art-zoom0-focus1 | cut tangential, field 3.26e1 deg, frequencyPerMm 70 |
+| optiland – reference-tracer | Largest phase step between neighbouring cells of the lattice that carry light — `phaseStep.waves` | waves | — | 1.05e1 | 205 of 206 | certified-thypoch-simera-50mm-f14-zoom0-focus1 | field 1.05e1 deg, line 0, ray 1856 |
+| optiland – reference-tracer | Largest move of a wave MTF value from the coarser lattice to the finer — `convergence.maxAbs` | (no unit) | — | 1.58e-1 | 205 of 206 | certified-thypoch-simera-50mm-f14-zoom0-focus1 | cut tangential, field 2.01e1 deg, frequencyPerMm 70 |
+| optiland – reference-tracer | Cells across the finest lattice — `lattice.columns` | cells | — | 64 | 206 of 206 | certified-fujifilm-gf-110mm-f56-ts-macro-zoom0-focus100 | — |
+| optiland – reference-tracer | Rays both engines traced through — `rays.compared` | rays | — | 734807 | 206 of 206 | — | — |
+| optiland – reference-tracer | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | 206 of 206 | — | — |
+| optiland – reference-tracer | Wavelengths compared — `lines.compared` | wavelengths | — | 1 | 206 of 206 | certified-fujifilm-gf-110mm-f56-ts-macro-zoom0-focus100 | — |
+| optiland – reference-tracer | Largest difference of a wave MTF value, on the finest lattice — `waveMtf.maxAbs` | (no unit) | ≤ 2.00e-8 | 8.79e-10 | 87 of 206 | certified-samyang-af-14mm-f28-ef-zoom0-focus2 | cut sagittal, field 0 deg, frequencyPerMm 80 |
 
 By run, each pair with its verdict and the judged figure that is largest against its limit, with the number of the run's requests it was measured in:
 
-| Run | Requests | lv – optiland | lv – ref | optiland – ref |
+| Run | Requests | lv – optiland | lv – reference-tracer | optiland – reference-tracer |
 |---|---|---|---|---|
 | certified-fujifilm-gf-110mm-f56-ts-macro-zoom0-focus100 | 3 | Pass: waveMtf.maxAbs 2.59e-11 (2 of 3) | Pass: waveMtf.maxAbs 4.57e-11 (2 of 3) | Pass: waveMtf.maxAbs 4.72e-11 (2 of 3) |
 | certified-fujifilm-gf80-f17-zoom0-focus1 | 3 | Pass: no judged figure | Pass: no judged figure | Pass: no judged figure |
@@ -412,8 +412,8 @@ A pair is named by the ids of its two engines:
 |---|---|
 | `lv` | LensVisualizer itself, loaded from a local checkout, asked for each figure as its own tabs ask for it, and made to trace the very rays every engine is handed in the checks held to a limit. |
 | `optiland` | optiland, an open-source optical design library in Python, run by this tool in a worker process of its own. |
-| `ref` | The reference tracer: a small exact ray tracer written in this repository from the optics alone, never from LensVisualizer's or optiland's code. |
-| `replay` | LensVisualizer's own MTF sampling, repeated step by step, with the geometric MTF summed by this tool. |
+| `reference-tracer` | The reference tracer: a small exact ray tracer written in this repository from the optics alone, never from LensVisualizer's or optiland's code. |
+| `replay-of-lv-mtf` | LensVisualizer's own MTF sampling, repeated step by step, with the geometric MTF summed by this tool. |
 
 ### Figures
 
@@ -467,8 +467,8 @@ contract version is that of the file format the baseline is written in.
 |---|---|---|---|
 | lv | 4669921bae7179c7eddd220fa367e696eae7acec3a5a788d0ca90da632d3eb6b | afad9cb89bd9a25fbfa5ee0ec335b1e315481414b7ba41da2f906c28856010c5 | commit 25f65d4b4213a21392cbae92680134906049b2ad |
 | optiland | bcfbf3916c1103b3b3b49a93117d3346a0bd6921ec35f01feb99bc1a2a6e39eb | 98f36151b0cdd2d3d3f82013841899de85309b22012967de64bbba662217fbcb | commit 4e893f53aee1312f2d091680b93dd2279711e197, distribution version 0.6.2.post117+g4e893f53, source hash 279af5c55d8ebe1610686b9dad3e6eeb22b1822037d59a0e5f148c2fb8937f38 |
-| ref | b7d0684b593261d14a1dfebb903774775bbe481a07ae2955689644dc0ffd919e | 2225e342b4fd8539480e933e59a3ca95a8ae2beeb24f45972b55fd4e4a59d357 | — |
-| replay | 4669921bae7179c7eddd220fa367e696eae7acec3a5a788d0ca90da632d3eb6b | 99024448fdb11f7eb293d0e54cf8281dc5272c57c468beeb30d66bb53ecf3409 | commit 25f65d4b4213a21392cbae92680134906049b2ad |
+| reference-tracer | b7d0684b593261d14a1dfebb903774775bbe481a07ae2955689644dc0ffd919e | 2225e342b4fd8539480e933e59a3ca95a8ae2beeb24f45972b55fd4e4a59d357 | — |
+| replay-of-lv-mtf | 4669921bae7179c7eddd220fa367e696eae7acec3a5a788d0ca90da632d3eb6b | 99024448fdb11f7eb293d0e54cf8281dc5272c57c468beeb30d66bb53ecf3409 | commit 25f65d4b4213a21392cbae92680134906049b2ad |
 
 | Run | Lens state |
 |---|---|

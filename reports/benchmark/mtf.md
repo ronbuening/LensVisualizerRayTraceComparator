@@ -23,35 +23,35 @@ How to read this, near the end, says what each label and column means.
 |---|---|---|---|
 | lv | LensVisualizer | 1 | clean checkout, 184 engine files |
 | optiland | optiland | 0.6.2.post117+g4e893f53 | backend numpy, checkout with uncommitted changes, JIT compilation on, Numba 0.65.1, NumPy 2.3.5, precision float64, Python 3.14.8, SciPy 1.16.3, 534 source files |
-| optiland-wave | OTF of optiland's wavefront | 0.6.2.post117+g4e893f53 | backend numpy, checkout with uncommitted changes, JIT compilation on, Numba 0.65.1, NumPy 2.3.5, precision float64, Python 3.14.8, SciPy 1.16.3, 534 source files |
-| ref | Reference tracer | 1 | 13 source files |
-| replay | Replay of LensVisualizer's MTF | 1 | clean checkout, 184 engine files |
-| wave | Wave MTF of LensVisualizer's rays | 1 | clean checkout, 184 engine files |
+| otf-of-optiland-wavefront | OTF of optiland's wavefront | 0.6.2.post117+g4e893f53 | backend numpy, checkout with uncommitted changes, JIT compilation on, Numba 0.65.1, NumPy 2.3.5, precision float64, Python 3.14.8, SciPy 1.16.3, 534 source files |
+| reference-tracer | Reference tracer | 1 | 13 source files |
+| replay-of-lv-mtf | Replay of LensVisualizer's MTF | 1 | clean checkout, 184 engine files |
+| wave-mtf-of-lv-rays | Wave MTF of LensVisualizer's rays | 1 | clean checkout, 184 engine files |
 
 ## Summary
 
 | Check | Quantity | Runs | Requests | Pair | Runs by verdict | Requests by verdict |
 |---|---|---|---|---|---|---|
 | Geometric MTF of the same rays — `geometric-mtf` | `rays.trace` | 96 | 288 | lv – optiland | 96 Pass | 288 Pass |
-| Geometric MTF of the same rays — `geometric-mtf` | `rays.trace` | 96 | 288 | lv – ref | 96 Pass | 288 Pass |
-| Geometric MTF of the same rays — `geometric-mtf` | `rays.trace` | 96 | 288 | optiland – ref | 96 Pass | 288 Pass |
-| LensVisualizer's MTF sampling, replayed — `lv-mtf-replay` | `mtf.native` | 96 | 96 | lv – replay | 96 Pass | 96 Pass |
+| Geometric MTF of the same rays — `geometric-mtf` | `rays.trace` | 96 | 288 | lv – reference-tracer | 96 Pass | 288 Pass |
+| Geometric MTF of the same rays — `geometric-mtf` | `rays.trace` | 96 | 288 | optiland – reference-tracer | 96 Pass | 288 Pass |
+| LensVisualizer's MTF sampling, replayed — `lv-mtf-replay` | `mtf.native` | 96 | 96 | lv – replay-of-lv-mtf | 96 Pass | 96 Pass |
 | MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | `mtf.native` | 96 | 96 | lv – optiland | 30 Side by side; 18 Side by side, worth a look; 48 Not computed | 30 Side by side; 18 Side by side, worth a look; 48 Not computed |
-| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | `mtf.native` | 96 | 96 | lv – wave | 95 Side by side; 1 Side by side, worth a look | 95 Side by side; 1 Side by side, worth a look |
-| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | `mtf.native` | 96 | 96 | optiland – wave | 36 Side by side; 12 Side by side, worth a look; 48 Not computed | 36 Side by side; 12 Side by side, worth a look; 48 Not computed |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | `mtf.native` | 96 | 96 | lv – wave-mtf-of-lv-rays | 95 Side by side; 1 Side by side, worth a look | 95 Side by side; 1 Side by side, worth a look |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | `mtf.native` | 96 | 96 | optiland – wave-mtf-of-lv-rays | 36 Side by side; 12 Side by side, worth a look; 48 Not computed | 36 Side by side; 12 Side by side, worth a look; 48 Not computed |
 | Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | `mtf.native` | 96 | 288 | lv – optiland | 86 Side by side; 10 Side by side, worth a look | 278 Side by side; 10 Side by side, worth a look |
-| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | `mtf.native` | 96 | 288 | lv – replay | 96 Side by side | 288 Side by side |
-| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | `mtf.native` | 96 | 288 | optiland – replay | 86 Side by side; 10 Side by side, worth a look | 278 Side by side; 10 Side by side, worth a look |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | `mtf.native` | 96 | 288 | lv – replay-of-lv-mtf | 96 Side by side | 288 Side by side |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | `mtf.native` | 96 | 288 | optiland – replay-of-lv-mtf | 86 Side by side; 10 Side by side, worth a look | 278 Side by side; 10 Side by side, worth a look |
 | Wave MTF of the same rays — `wave-mtf` | `rays.trace` | 96 | 288 | lv – optiland | 96 Pass | 288 Pass |
-| Wave MTF of the same rays — `wave-mtf` | `rays.trace` | 96 | 288 | lv – ref | 96 Pass | 288 Pass |
-| Wave MTF of the same rays — `wave-mtf` | `rays.trace` | 96 | 288 | optiland – ref | 96 Pass | 288 Pass |
-| MTF beside the wave estimate of LensVisualizer's rays — `mtf-vs-wave-estimate` | `mtf.native` | 96 | 96 | lv – wave | 95 Side by side; 1 Side by side, worth a look | 95 Side by side; 1 Side by side, worth a look |
+| Wave MTF of the same rays — `wave-mtf` | `rays.trace` | 96 | 288 | lv – reference-tracer | 96 Pass | 288 Pass |
+| Wave MTF of the same rays — `wave-mtf` | `rays.trace` | 96 | 288 | optiland – reference-tracer | 96 Pass | 288 Pass |
+| MTF beside the wave estimate of LensVisualizer's rays — `mtf-vs-wave-estimate` | `mtf.native` | 96 | 96 | lv – wave-mtf-of-lv-rays | 95 Side by side; 1 Side by side, worth a look | 95 Side by side; 1 Side by side, worth a look |
 | MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | `mtf.native` | 96 | 96 | lv – optiland | 30 Side by side; 18 Side by side, worth a look; 48 Not computed | 30 Side by side; 18 Side by side, worth a look; 48 Not computed |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | `mtf.native` | 96 | 96 | lv – optiland-wave | 92 Side by side; 4 Side by side, worth a look | 92 Side by side; 4 Side by side, worth a look |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | `mtf.native` | 96 | 96 | lv – wave | 95 Side by side; 1 Side by side, worth a look | 95 Side by side; 1 Side by side, worth a look |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | `mtf.native` | 96 | 96 | optiland – optiland-wave | 32 Side by side; 16 Side by side, worth a look; 48 Not computed | 32 Side by side; 16 Side by side, worth a look; 48 Not computed |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | `mtf.native` | 96 | 96 | optiland – wave | 36 Side by side; 12 Side by side, worth a look; 48 Not computed | 36 Side by side; 12 Side by side, worth a look; 48 Not computed |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | `mtf.native` | 96 | 96 | optiland-wave – wave | 96 Side by side | 96 Side by side |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | `mtf.native` | 96 | 96 | lv – otf-of-optiland-wavefront | 92 Side by side; 4 Side by side, worth a look | 92 Side by side; 4 Side by side, worth a look |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | `mtf.native` | 96 | 96 | lv – wave-mtf-of-lv-rays | 95 Side by side; 1 Side by side, worth a look | 95 Side by side; 1 Side by side, worth a look |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | `mtf.native` | 96 | 96 | optiland – otf-of-optiland-wavefront | 32 Side by side; 16 Side by side, worth a look; 48 Not computed | 32 Side by side; 16 Side by side, worth a look; 48 Not computed |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | `mtf.native` | 96 | 96 | optiland – wave-mtf-of-lv-rays | 36 Side by side; 12 Side by side, worth a look; 48 Not computed | 36 Side by side; 12 Side by side, worth a look; 48 Not computed |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | `mtf.native` | 96 | 96 | otf-of-optiland-wavefront – wave-mtf-of-lv-rays | 96 Side by side | 96 Side by side |
 
 ## Support
 
@@ -62,24 +62,24 @@ In how many runs the jobs of an engine ended in each way. An engine that cannot 
 |---|---|---|
 | Geometric MTF of the same rays — `geometric-mtf` | lv | 96 answered |
 | Geometric MTF of the same rays — `geometric-mtf` | optiland | 96 answered |
-| Geometric MTF of the same rays — `geometric-mtf` | ref | 96 answered |
+| Geometric MTF of the same rays — `geometric-mtf` | reference-tracer | 96 answered |
 | LensVisualizer's MTF sampling, replayed — `lv-mtf-replay` | lv | 96 answered |
-| LensVisualizer's MTF sampling, replayed — `lv-mtf-replay` | replay | 96 answered |
+| LensVisualizer's MTF sampling, replayed — `lv-mtf-replay` | replay-of-lv-mtf | 96 answered |
 | MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | lv | 96 answered |
 | MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | optiland | 48 answered, 48 not computed (feature lines.polychromatic) |
-| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | wave | 96 answered |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | wave-mtf-of-lv-rays | 96 answered |
 | Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | lv | 96 answered |
 | Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | optiland | 96 answered |
-| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | replay | 96 answered |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | replay-of-lv-mtf | 96 answered |
 | Wave MTF of the same rays — `wave-mtf` | lv | 96 answered |
 | Wave MTF of the same rays — `wave-mtf` | optiland | 96 answered |
-| Wave MTF of the same rays — `wave-mtf` | ref | 96 answered |
+| Wave MTF of the same rays — `wave-mtf` | reference-tracer | 96 answered |
 | MTF beside the wave estimate of LensVisualizer's rays — `mtf-vs-wave-estimate` | lv | 96 answered |
-| MTF beside the wave estimate of LensVisualizer's rays — `mtf-vs-wave-estimate` | wave | 96 answered |
+| MTF beside the wave estimate of LensVisualizer's rays — `mtf-vs-wave-estimate` | wave-mtf-of-lv-rays | 96 answered |
 | MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | lv | 96 answered |
 | MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | optiland | 48 answered, 48 not computed (feature lines.polychromatic) |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | optiland-wave | 96 answered |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | wave | 96 answered |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | otf-of-optiland-wavefront | 96 answered |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | wave-mtf-of-lv-rays | 96 answered |
 
 ## Geometric MTF of the same rays — `geometric-mtf`
 
@@ -93,18 +93,18 @@ The worst of every figure over the suite:
 | lv – optiland | Rays both engines traced through — `rays.compared` | rays | — | 809500 | 288 of 288 | — | — |
 | lv – optiland | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | 288 of 288 | — | — |
 | lv – optiland | Wavelengths compared — `lines.compared` | wavelengths | — | 5 | 288 of 288 | canon-ef-135-f2l-usm-photopic | — |
-| lv – ref | Largest difference of an MTF value — `mtf.maxAbs` | (no unit) | ≤ 1.00e-7 | 1.23e-11 | 288 of 288 | nikon-z-24-70f4s-tele-ref | cut tangential, field 1.66e1 deg, frequencyPerMm 100 |
-| lv – ref | Rays both engines traced through — `rays.compared` | rays | — | 809500 | 288 of 288 | — | — |
-| lv – ref | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | 288 of 288 | — | — |
-| lv – ref | Wavelengths compared — `lines.compared` | wavelengths | — | 5 | 288 of 288 | canon-ef-135-f2l-usm-photopic | — |
-| optiland – ref | Largest difference of an MTF value — `mtf.maxAbs` | (no unit) | ≤ 1.00e-7 | 1.18e-11 | 288 of 288 | nikon-z-24-70f4s-tele-best-ref | cut tangential, field 1.66e1 deg, frequencyPerMm 100 |
-| optiland – ref | Rays both engines traced through — `rays.compared` | rays | — | 809500 | 288 of 288 | — | — |
-| optiland – ref | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | 288 of 288 | — | — |
-| optiland – ref | Wavelengths compared — `lines.compared` | wavelengths | — | 5 | 288 of 288 | canon-ef-135-f2l-usm-photopic | — |
+| lv – reference-tracer | Largest difference of an MTF value — `mtf.maxAbs` | (no unit) | ≤ 1.00e-7 | 1.23e-11 | 288 of 288 | nikon-z-24-70f4s-tele-ref | cut tangential, field 1.66e1 deg, frequencyPerMm 100 |
+| lv – reference-tracer | Rays both engines traced through — `rays.compared` | rays | — | 809500 | 288 of 288 | — | — |
+| lv – reference-tracer | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | 288 of 288 | — | — |
+| lv – reference-tracer | Wavelengths compared — `lines.compared` | wavelengths | — | 5 | 288 of 288 | canon-ef-135-f2l-usm-photopic | — |
+| optiland – reference-tracer | Largest difference of an MTF value — `mtf.maxAbs` | (no unit) | ≤ 1.00e-7 | 1.18e-11 | 288 of 288 | nikon-z-24-70f4s-tele-best-ref | cut tangential, field 1.66e1 deg, frequencyPerMm 100 |
+| optiland – reference-tracer | Rays both engines traced through — `rays.compared` | rays | — | 809500 | 288 of 288 | — | — |
+| optiland – reference-tracer | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | 288 of 288 | — | — |
+| optiland – reference-tracer | Wavelengths compared — `lines.compared` | wavelengths | — | 5 | 288 of 288 | canon-ef-135-f2l-usm-photopic | — |
 
 By run, each pair with its verdict and the judged figure that is largest against its limit, with the number of the run's requests it was measured in:
 
-| Run | Requests | lv – optiland | lv – ref | optiland – ref |
+| Run | Requests | lv – optiland | lv – reference-tracer | optiland – reference-tracer |
 |---|---|---|---|---|
 | canon-ef-135-f2l-usm-ref | 3 | Pass: mtf.maxAbs 5.93e-13 (3 of 3) | Pass: mtf.maxAbs 1.72e-12 (3 of 3) | Pass: mtf.maxAbs 1.52e-12 (3 of 3) |
 | canon-ef-135-f2l-usm-photopic | 3 | Pass: mtf.maxAbs 1.40e-12 (3 of 3) | Pass: mtf.maxAbs 1.29e-12 (3 of 3) | Pass: mtf.maxAbs 8.69e-13 (3 of 3) |
@@ -211,13 +211,13 @@ The worst of every figure over the suite:
 
 | Pair | Figure | Unit | Limit | Worst, or total | Requests measured | Run | Where |
 |---|---|---|---|---|---|---|---|
-| lv – replay | Largest difference of an MTF value — `mtf.maxAbs` | (no unit) | ≤ 1.00e-9 | 1.30e-14 | 96 of 96 | fujifilm-fujinon-gf-63mm-f28-r-wr-ref | cut tangential, field 5.00e-1 of the image height, frequencyPerMm 4 |
-| lv – replay | Sampling grids, ray counts and ray outcomes that differ — `sampling.mismatches` | elements | ≤ 0 | 0 | 96 of 96 | — | — |
-| lv – replay | Fields whose outcome differs — `fields.mismatches` | elements | ≤ 0 | 0 | 96 of 96 | — | — |
+| lv – replay-of-lv-mtf | Largest difference of an MTF value — `mtf.maxAbs` | (no unit) | ≤ 1.00e-9 | 1.30e-14 | 96 of 96 | fujifilm-fujinon-gf-63mm-f28-r-wr-ref | cut tangential, field 5.00e-1 of the image height, frequencyPerMm 4 |
+| lv – replay-of-lv-mtf | Sampling grids, ray counts and ray outcomes that differ — `sampling.mismatches` | elements | ≤ 0 | 0 | 96 of 96 | — | — |
+| lv – replay-of-lv-mtf | Fields whose outcome differs — `fields.mismatches` | elements | ≤ 0 | 0 | 96 of 96 | — | — |
 
 By run, each pair with its verdict and the judged figure that is largest against its limit, with the number of the run's requests it was measured in:
 
-| Run | Requests | lv – replay |
+| Run | Requests | lv – replay-of-lv-mtf |
 |---|---|---|
 | canon-ef-135-f2l-usm-ref | 1 | Pass: mtf.maxAbs 5.33e-15 (1 of 1) |
 | canon-ef-135-f2l-usm-photopic | 1 | Pass: mtf.maxAbs 3.00e-15 (1 of 1) |
@@ -335,26 +335,26 @@ The worst of every figure over the suite:
 | lv – optiland | Fields whose two answers are of different inputs — `fields.data` | elements | — | 0 | 48 of 96 | — | — |
 | lv – optiland | Fields an engine has no answer for — `fields.unavailable` | elements | — | 10 | 48 of 96 | — | — |
 | lv – optiland | Largest MTF difference in fields whose sampling did not settle (in no review band) — `mtfFlagged.maxAbs` | (no unit) | — | 4.59e-1 | 2 of 96 | sony-fe-20mm-f18-g-ref | cut tangential, field 1 of the image height, frequencyPerMm 10 |
-| lv – wave | Largest distance between the two engines' chief-ray landings — `chiefLanding.maxAbs` | mm | — | 0 | 96 of 96 | canon-ef-135-f2l-usm-ref | field 0 of the image height |
-| lv – wave | Largest MTF difference on the axis — `mtfOnAxis.maxAbs` | (no unit) | review band 5.00e-3 | 5.42e-3 | 82 of 96 | nikon-z-24-70f4s-tele-best-ref | cut tangential, field 0 of the image height, frequencyPerMm 80 |
-| lv – wave | Largest MTF difference off the axis — `mtfOffAxis.maxAbs` | (no unit) | review band 1.00e-2 | 5.75e-3 | 75 of 96 | nikon-z-24-70f4s-tele-ref | cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 30 |
-| lv – wave | Largest MTF difference in fields whose sampling did not settle (in no review band) — `mtfFlagged.maxAbs` | (no unit) | — | 1.49e-2 | 42 of 96 | sigma-35mm-f14-dg-hsm-a-best-ref | cut tangential, field 1 of the image height, frequencyPerMm 30 |
-| lv – wave | Fields compared — `fields.compared` | elements | — | 211 | 96 of 96 | — | — |
-| lv – wave | Fields set aside because a sampling did not settle — `fields.flagged` | elements | — | 77 | 96 of 96 | — | — |
-| lv – wave | Fields set aside because an engine lost a rim ray — `fields.rimLost` | elements | — | 0 | 96 of 96 | — | — |
-| lv – wave | Fields whose two answers are of different inputs — `fields.data` | elements | — | 0 | 96 of 96 | — | — |
-| lv – wave | Fields an engine has no answer for — `fields.unavailable` | elements | — | 0 | 96 of 96 | — | — |
-| optiland – wave | Largest distance between the two engines' chief-ray landings — `chiefLanding.maxAbs` | mm | — | 1.52e-10 | 48 of 96 | nikon-z-mc-105f28-best-ref | field 1 of the image height |
-| optiland – wave | Largest MTF difference on the axis — `mtfOnAxis.maxAbs` | (no unit) | review band 5.00e-3 | 9.92e-3 | 42 of 96 | sony-fe-400mm-f28-gm-oss-ref | cut tangential, field 0 of the image height, frequencyPerMm 40 |
-| optiland – wave | Largest MTF difference off the axis — `mtfOffAxis.maxAbs` | (no unit) | review band 1.00e-2 | 4.03e-2 | 40 of 96 | sigma-105mm-f28-dg-dn-macro-art-ref | cut tangential, field 1 of the image height, frequencyPerMm 30 |
-| optiland – wave | Largest MTF difference on the axis, at the engine's first, coarser sampling — `mtfOnAxis.firstStepMaxAbs` | (no unit) | — | 1.02e-2 | 15 of 96 | sony-fe-400mm-f28-gm-oss-ref | cut tangential, field 0 of the image height, frequencyPerMm 40 |
-| optiland – wave | Largest MTF difference off the axis, at the engine's first, coarser sampling — `mtfOffAxis.firstStepMaxAbs` | (no unit) | — | 3.98e-2 | 12 of 96 | sigma-105mm-f28-dg-dn-macro-art-ref | cut tangential, field 1 of the image height, frequencyPerMm 30 |
-| optiland – wave | Largest MTF difference in fields whose sampling did not settle (in no review band) — `mtfFlagged.maxAbs` | (no unit) | — | 4.92e-1 | 19 of 96 | sony-fe-20mm-f18-g-best-ref | cut tangential, field 1 of the image height, frequencyPerMm 10 |
-| optiland – wave | Fields compared — `fields.compared` | elements | — | 107 | 48 of 96 | — | — |
-| optiland – wave | Fields set aside because a sampling did not settle — `fields.flagged` | elements | — | 27 | 48 of 96 | — | — |
-| optiland – wave | Fields set aside because an engine lost a rim ray — `fields.rimLost` | elements | — | 0 | 48 of 96 | — | — |
-| optiland – wave | Fields whose two answers are of different inputs — `fields.data` | elements | — | 0 | 48 of 96 | — | — |
-| optiland – wave | Fields an engine has no answer for — `fields.unavailable` | elements | — | 10 | 48 of 96 | — | — |
+| lv – wave-mtf-of-lv-rays | Largest distance between the two engines' chief-ray landings — `chiefLanding.maxAbs` | mm | — | 0 | 96 of 96 | canon-ef-135-f2l-usm-ref | field 0 of the image height |
+| lv – wave-mtf-of-lv-rays | Largest MTF difference on the axis — `mtfOnAxis.maxAbs` | (no unit) | review band 5.00e-3 | 5.42e-3 | 82 of 96 | nikon-z-24-70f4s-tele-best-ref | cut tangential, field 0 of the image height, frequencyPerMm 80 |
+| lv – wave-mtf-of-lv-rays | Largest MTF difference off the axis — `mtfOffAxis.maxAbs` | (no unit) | review band 1.00e-2 | 5.75e-3 | 75 of 96 | nikon-z-24-70f4s-tele-ref | cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 30 |
+| lv – wave-mtf-of-lv-rays | Largest MTF difference in fields whose sampling did not settle (in no review band) — `mtfFlagged.maxAbs` | (no unit) | — | 1.49e-2 | 42 of 96 | sigma-35mm-f14-dg-hsm-a-best-ref | cut tangential, field 1 of the image height, frequencyPerMm 30 |
+| lv – wave-mtf-of-lv-rays | Fields compared — `fields.compared` | elements | — | 211 | 96 of 96 | — | — |
+| lv – wave-mtf-of-lv-rays | Fields set aside because a sampling did not settle — `fields.flagged` | elements | — | 77 | 96 of 96 | — | — |
+| lv – wave-mtf-of-lv-rays | Fields set aside because an engine lost a rim ray — `fields.rimLost` | elements | — | 0 | 96 of 96 | — | — |
+| lv – wave-mtf-of-lv-rays | Fields whose two answers are of different inputs — `fields.data` | elements | — | 0 | 96 of 96 | — | — |
+| lv – wave-mtf-of-lv-rays | Fields an engine has no answer for — `fields.unavailable` | elements | — | 0 | 96 of 96 | — | — |
+| optiland – wave-mtf-of-lv-rays | Largest distance between the two engines' chief-ray landings — `chiefLanding.maxAbs` | mm | — | 1.52e-10 | 48 of 96 | nikon-z-mc-105f28-best-ref | field 1 of the image height |
+| optiland – wave-mtf-of-lv-rays | Largest MTF difference on the axis — `mtfOnAxis.maxAbs` | (no unit) | review band 5.00e-3 | 9.92e-3 | 42 of 96 | sony-fe-400mm-f28-gm-oss-ref | cut tangential, field 0 of the image height, frequencyPerMm 40 |
+| optiland – wave-mtf-of-lv-rays | Largest MTF difference off the axis — `mtfOffAxis.maxAbs` | (no unit) | review band 1.00e-2 | 4.03e-2 | 40 of 96 | sigma-105mm-f28-dg-dn-macro-art-ref | cut tangential, field 1 of the image height, frequencyPerMm 30 |
+| optiland – wave-mtf-of-lv-rays | Largest MTF difference on the axis, at the engine's first, coarser sampling — `mtfOnAxis.firstStepMaxAbs` | (no unit) | — | 1.02e-2 | 15 of 96 | sony-fe-400mm-f28-gm-oss-ref | cut tangential, field 0 of the image height, frequencyPerMm 40 |
+| optiland – wave-mtf-of-lv-rays | Largest MTF difference off the axis, at the engine's first, coarser sampling — `mtfOffAxis.firstStepMaxAbs` | (no unit) | — | 3.98e-2 | 12 of 96 | sigma-105mm-f28-dg-dn-macro-art-ref | cut tangential, field 1 of the image height, frequencyPerMm 30 |
+| optiland – wave-mtf-of-lv-rays | Largest MTF difference in fields whose sampling did not settle (in no review band) — `mtfFlagged.maxAbs` | (no unit) | — | 4.92e-1 | 19 of 96 | sony-fe-20mm-f18-g-best-ref | cut tangential, field 1 of the image height, frequencyPerMm 10 |
+| optiland – wave-mtf-of-lv-rays | Fields compared — `fields.compared` | elements | — | 107 | 48 of 96 | — | — |
+| optiland – wave-mtf-of-lv-rays | Fields set aside because a sampling did not settle — `fields.flagged` | elements | — | 27 | 48 of 96 | — | — |
+| optiland – wave-mtf-of-lv-rays | Fields set aside because an engine lost a rim ray — `fields.rimLost` | elements | — | 0 | 48 of 96 | — | — |
+| optiland – wave-mtf-of-lv-rays | Fields whose two answers are of different inputs — `fields.data` | elements | — | 0 | 48 of 96 | — | — |
+| optiland – wave-mtf-of-lv-rays | Fields an engine has no answer for — `fields.unavailable` | elements | — | 10 | 48 of 96 | — | — |
 
 The engines' own MTF, side by side. The difference of a row is lv − optiland.
 Each column is one engine's own estimate of the diffraction MTF, by its own method and its own sampling. No
@@ -371,12 +371,12 @@ Requests without a table, by what the two engines came to:
 
 A row is one field and cut of one run, at 10, 30, 50 cycles/mm. Under each engine is what it says of the
 field (`optiland` with the step its row is of, where it was asked again); the third estimate is this tool's
-(`wave`). The status is the worst of the row's frequencies; "All" is what the two engines came to over
+(`wave-mtf-of-lv-rays`). The status is the worst of the row's frequencies; "All" is what the two engines came to over
 every frequency of the request.
 
 Rows by status: 224 Side by side; 38 Side by side, worth a look; 6 Set aside; 20 Not computed.
 
-| Run | Field | Cut | lv | optiland | wave | Class | Status | All | lv 10 | optiland 10 | wave 10 | Δ 10 | lv 30 | optiland 30 | wave 30 | Δ 30 | lv 50 | optiland 50 | wave 50 | Δ 50 |
+| Run | Field | Cut | lv | optiland | wave-mtf-of-lv-rays | Class | Status | All | lv 10 | optiland 10 | wave-mtf-of-lv-rays 10 | Δ 10 | lv 30 | optiland 30 | wave-mtf-of-lv-rays 30 | Δ 30 | lv 50 | optiland 50 | wave-mtf-of-lv-rays 50 | Δ 50 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | canon-ef-135-f2l-usm-ref | 0 | sagittal | ok | ok (fft512) | ok | the methods differ: two-methods | Side by side | Side by side, worth a look | 0.9826 | 0.9830 | 0.9821 | -4.15e-4 | 0.9417 | 0.9430 | 0.9400 | -1.24e-3 | 0.8956 | 0.8978 | 0.8930 | -2.11e-3 |
 | canon-ef-135-f2l-usm-ref | 0 | tangential | ok | ok (fft512) | ok | the methods differ: two-methods | Side by side | Side by side, worth a look | 0.9826 | 0.9830 | 0.9821 | -4.15e-4 | 0.9417 | 0.9430 | 0.9400 | -1.24e-3 | 0.8956 | 0.8978 | 0.8930 | -2.11e-3 |
@@ -694,24 +694,24 @@ The worst of every figure over the suite:
 | lv – optiland | Largest MTF difference off the axis — `mtfOffAxis.maxAbs` | (no unit) | review band 1.00e-2 | 1.22e-2 | 192 of 288 | sony-fe-400mm-f28-gm-oss-best-ref | cut sagittal, field 1 of the image height, frequencyPerMm 100 |
 | lv – optiland | Largest MTF difference on the axis, at the engine's first, coarser sampling — `mtfOnAxis.firstStepMaxAbs` | (no unit) | — | 9.00e-3 | 5 of 288 | nikon-z-24-70f4s-tele-best-ref | cut tangential, field 0 of the image height, frequencyPerMm 100 |
 | lv – optiland | Largest MTF difference off the axis, at the engine's first, coarser sampling — `mtfOffAxis.firstStepMaxAbs` | (no unit) | — | 1.19e-2 | 1 of 288 | sony-fe-400mm-f28-gm-oss-best-ref | cut sagittal, field 1 of the image height, frequencyPerMm 100 |
-| lv – replay | Largest distance between the two engines' chief-ray landings — `chiefLanding.maxAbs` | mm | — | 0 | 288 of 288 | canon-ef-135-f2l-usm-ref | field 0 of the image height |
-| lv – replay | Largest MTF difference on the axis — `mtfOnAxis.maxAbs` | (no unit) | review band 5.00e-3 | 4.88e-15 | 96 of 288 | sony-fe-20mm-f18-g-ref | cut tangential, field 0 of the image height, frequencyPerMm 10 |
-| lv – replay | Fields compared — `fields.compared` | elements | — | 288 | 288 of 288 | — | — |
-| lv – replay | Fields set aside because a sampling did not settle — `fields.flagged` | elements | — | 0 | 288 of 288 | — | — |
-| lv – replay | Fields set aside because an engine lost a rim ray — `fields.rimLost` | elements | — | 0 | 288 of 288 | — | — |
-| lv – replay | Fields whose two answers are of different inputs — `fields.data` | elements | — | 0 | 288 of 288 | — | — |
-| lv – replay | Fields an engine has no answer for — `fields.unavailable` | elements | — | 0 | 288 of 288 | — | — |
-| lv – replay | Largest MTF difference off the axis — `mtfOffAxis.maxAbs` | (no unit) | review band 1.00e-2 | 6.99e-15 | 192 of 288 | sigma-45mm-f28-dg-dn-contemporary-f8-best-ref | cut sagittal, field 1 of the image height, frequencyPerMm 30 |
-| optiland – replay | Largest distance between the two engines' chief-ray landings — `chiefLanding.maxAbs` | mm | — | 1.52e-10 | 288 of 288 | nikon-z-mc-105f28-best-ref | field 1 of the image height |
-| optiland – replay | Largest MTF difference on the axis — `mtfOnAxis.maxAbs` | (no unit) | review band 5.00e-3 | 8.84e-3 | 96 of 288 | nikon-z-24-70f4s-tele-best-ref | cut tangential, field 0 of the image height, frequencyPerMm 100 |
-| optiland – replay | Fields compared — `fields.compared` | elements | — | 288 | 288 of 288 | — | — |
-| optiland – replay | Fields set aside because a sampling did not settle — `fields.flagged` | elements | — | 0 | 288 of 288 | — | — |
-| optiland – replay | Fields set aside because an engine lost a rim ray — `fields.rimLost` | elements | — | 0 | 288 of 288 | — | — |
-| optiland – replay | Fields whose two answers are of different inputs — `fields.data` | elements | — | 0 | 288 of 288 | — | — |
-| optiland – replay | Fields an engine has no answer for — `fields.unavailable` | elements | — | 0 | 288 of 288 | — | — |
-| optiland – replay | Largest MTF difference off the axis — `mtfOffAxis.maxAbs` | (no unit) | review band 1.00e-2 | 1.22e-2 | 192 of 288 | sony-fe-400mm-f28-gm-oss-best-ref | cut sagittal, field 1 of the image height, frequencyPerMm 100 |
-| optiland – replay | Largest MTF difference on the axis, at the engine's first, coarser sampling — `mtfOnAxis.firstStepMaxAbs` | (no unit) | — | 9.00e-3 | 5 of 288 | nikon-z-24-70f4s-tele-best-ref | cut tangential, field 0 of the image height, frequencyPerMm 100 |
-| optiland – replay | Largest MTF difference off the axis, at the engine's first, coarser sampling — `mtfOffAxis.firstStepMaxAbs` | (no unit) | — | 1.19e-2 | 1 of 288 | sony-fe-400mm-f28-gm-oss-best-ref | cut sagittal, field 1 of the image height, frequencyPerMm 100 |
+| lv – replay-of-lv-mtf | Largest distance between the two engines' chief-ray landings — `chiefLanding.maxAbs` | mm | — | 0 | 288 of 288 | canon-ef-135-f2l-usm-ref | field 0 of the image height |
+| lv – replay-of-lv-mtf | Largest MTF difference on the axis — `mtfOnAxis.maxAbs` | (no unit) | review band 5.00e-3 | 4.88e-15 | 96 of 288 | sony-fe-20mm-f18-g-ref | cut tangential, field 0 of the image height, frequencyPerMm 10 |
+| lv – replay-of-lv-mtf | Fields compared — `fields.compared` | elements | — | 288 | 288 of 288 | — | — |
+| lv – replay-of-lv-mtf | Fields set aside because a sampling did not settle — `fields.flagged` | elements | — | 0 | 288 of 288 | — | — |
+| lv – replay-of-lv-mtf | Fields set aside because an engine lost a rim ray — `fields.rimLost` | elements | — | 0 | 288 of 288 | — | — |
+| lv – replay-of-lv-mtf | Fields whose two answers are of different inputs — `fields.data` | elements | — | 0 | 288 of 288 | — | — |
+| lv – replay-of-lv-mtf | Fields an engine has no answer for — `fields.unavailable` | elements | — | 0 | 288 of 288 | — | — |
+| lv – replay-of-lv-mtf | Largest MTF difference off the axis — `mtfOffAxis.maxAbs` | (no unit) | review band 1.00e-2 | 6.99e-15 | 192 of 288 | sigma-45mm-f28-dg-dn-contemporary-f8-best-ref | cut sagittal, field 1 of the image height, frequencyPerMm 30 |
+| optiland – replay-of-lv-mtf | Largest distance between the two engines' chief-ray landings — `chiefLanding.maxAbs` | mm | — | 1.52e-10 | 288 of 288 | nikon-z-mc-105f28-best-ref | field 1 of the image height |
+| optiland – replay-of-lv-mtf | Largest MTF difference on the axis — `mtfOnAxis.maxAbs` | (no unit) | review band 5.00e-3 | 8.84e-3 | 96 of 288 | nikon-z-24-70f4s-tele-best-ref | cut tangential, field 0 of the image height, frequencyPerMm 100 |
+| optiland – replay-of-lv-mtf | Fields compared — `fields.compared` | elements | — | 288 | 288 of 288 | — | — |
+| optiland – replay-of-lv-mtf | Fields set aside because a sampling did not settle — `fields.flagged` | elements | — | 0 | 288 of 288 | — | — |
+| optiland – replay-of-lv-mtf | Fields set aside because an engine lost a rim ray — `fields.rimLost` | elements | — | 0 | 288 of 288 | — | — |
+| optiland – replay-of-lv-mtf | Fields whose two answers are of different inputs — `fields.data` | elements | — | 0 | 288 of 288 | — | — |
+| optiland – replay-of-lv-mtf | Fields an engine has no answer for — `fields.unavailable` | elements | — | 0 | 288 of 288 | — | — |
+| optiland – replay-of-lv-mtf | Largest MTF difference off the axis — `mtfOffAxis.maxAbs` | (no unit) | review band 1.00e-2 | 1.22e-2 | 192 of 288 | sony-fe-400mm-f28-gm-oss-best-ref | cut sagittal, field 1 of the image height, frequencyPerMm 100 |
+| optiland – replay-of-lv-mtf | Largest MTF difference on the axis, at the engine's first, coarser sampling — `mtfOnAxis.firstStepMaxAbs` | (no unit) | — | 9.00e-3 | 5 of 288 | nikon-z-24-70f4s-tele-best-ref | cut tangential, field 0 of the image height, frequencyPerMm 100 |
+| optiland – replay-of-lv-mtf | Largest MTF difference off the axis, at the engine's first, coarser sampling — `mtfOffAxis.firstStepMaxAbs` | (no unit) | — | 1.19e-2 | 1 of 288 | sony-fe-400mm-f28-gm-oss-best-ref | cut sagittal, field 1 of the image height, frequencyPerMm 100 |
 
 The engines' own geometric MTF, side by side. The difference of a row is lv − optiland.
 Each column is one engine's own estimate of the geometric MTF, of its own rays through its own sampling of the
@@ -734,12 +734,12 @@ as complex numbers with their weights before the modulus is taken, is this tool'
 
 A row is one field and cut of one run, at 10, 30, 50 cycles/mm. Under each engine is what it says of the
 field (`optiland` with the step its row is of, where it was asked again); the third estimate is this tool's
-(`replay`). The status is the worst of the row's frequencies; "All" is what the two engines came to over
+(`replay-of-lv-mtf`). The status is the worst of the row's frequencies; "All" is what the two engines came to over
 every frequency of the request.
 
 Rows by status: 576 Side by side.
 
-| Run | Field | Cut | lv | optiland | replay | Class | Status | All | lv 10 | optiland 10 | replay 10 | Δ 10 | lv 30 | optiland 30 | replay 30 | Δ 30 | lv 50 | optiland 50 | replay 50 | Δ 50 |
+| Run | Field | Cut | lv | optiland | replay-of-lv-mtf | Class | Status | All | lv 10 | optiland 10 | replay-of-lv-mtf 10 | Δ 10 | lv 30 | optiland 30 | replay-of-lv-mtf 30 | Δ 30 | lv 50 | optiland 50 | replay-of-lv-mtf 50 | Δ 50 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | canon-ef-135-f2l-usm-ref | 0 | sagittal | ok | ok | ok | the methods differ: two-methods | Side by side | Side by side | 0.9988 | 0.9988 | 0.9988 | 9.79e-6 | 0.9891 | 0.9890 | 0.9891 | 8.73e-5 | 0.9700 | 0.9698 | 0.9700 | 2.38e-4 |
 | canon-ef-135-f2l-usm-ref | 0 | tangential | ok | ok | ok | the methods differ: two-methods | Side by side | Side by side | 0.9988 | 0.9988 | 0.9988 | 9.79e-6 | 0.9891 | 0.9890 | 0.9891 | 8.73e-5 | 0.9700 | 0.9698 | 0.9700 | 2.38e-4 |
@@ -1341,26 +1341,26 @@ The worst of every figure over the suite:
 | lv – optiland | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | 288 of 288 | — | — |
 | lv – optiland | Wavelengths compared — `lines.compared` | wavelengths | — | 5 | 288 of 288 | canon-ef-135-f2l-usm-photopic | — |
 | lv – optiland | Largest difference of a wave MTF value, in fields whose sampling did not settle (shown, not judged) — `waveMtf.flagged` | (no unit) | — | 4.02e-10 | 77 of 288 | nikkor-z50f12-best-ref | cut sagittal, field 2.29e1 deg, frequencyPerMm 60 |
-| lv – ref | Largest difference of a wave MTF value, on the finest lattice — `waveMtf.maxAbs` | (no unit) | ≤ 2.00e-8 | 1.02e-9 | 211 of 288 | nikon-z-24-70f4s-wide-f8-ref | cut tangential, field 4.33e1 deg, frequencyPerMm 50 |
-| lv – ref | Largest phase step between neighbouring cells of the lattice that carry light — `phaseStep.waves` | waves | — | 2.52e1 | 288 of 288 | sigma-35mm-f14-dg-hsm-a-photopic | field 3.19e1 deg, line 2, ray 987 |
-| lv – ref | Largest move of a wave MTF value from the coarser lattice to the finer — `convergence.maxAbs` | (no unit) | — | 6.32e-2 | 288 of 288 | fujifilm-fujinon-gf-63mm-f28-r-wr-best-ref | cut sagittal, field 2.44e1 deg, frequencyPerMm 70 |
-| lv – ref | Cells across the finest lattice — `lattice.columns` | cells | — | 64 | 288 of 288 | canon-ef-135-f2l-usm-ref | — |
-| lv – ref | Rays both engines traced through — `rays.compared` | rays | — | 3240172 | 288 of 288 | — | — |
-| lv – ref | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | 288 of 288 | — | — |
-| lv – ref | Wavelengths compared — `lines.compared` | wavelengths | — | 5 | 288 of 288 | canon-ef-135-f2l-usm-photopic | — |
-| lv – ref | Largest difference of a wave MTF value, in fields whose sampling did not settle (shown, not judged) — `waveMtf.flagged` | (no unit) | — | 1.17e-9 | 77 of 288 | nikon-z-24-70f4s-wide-best-ref | cut tangential, field 4.33e1 deg, frequencyPerMm 50 |
-| optiland – ref | Largest difference of a wave MTF value, on the finest lattice — `waveMtf.maxAbs` | (no unit) | ≤ 2.00e-8 | 1.03e-9 | 211 of 288 | nikon-z-24-70f4s-wide-f8-ref | cut tangential, field 4.33e1 deg, frequencyPerMm 50 |
-| optiland – ref | Largest phase step between neighbouring cells of the lattice that carry light — `phaseStep.waves` | waves | — | 2.52e1 | 288 of 288 | sigma-35mm-f14-dg-hsm-a-photopic | field 3.19e1 deg, line 2, ray 987 |
-| optiland – ref | Largest move of a wave MTF value from the coarser lattice to the finer — `convergence.maxAbs` | (no unit) | — | 6.32e-2 | 288 of 288 | fujifilm-fujinon-gf-63mm-f28-r-wr-best-ref | cut sagittal, field 2.44e1 deg, frequencyPerMm 70 |
-| optiland – ref | Cells across the finest lattice — `lattice.columns` | cells | — | 64 | 288 of 288 | canon-ef-135-f2l-usm-ref | — |
-| optiland – ref | Rays both engines traced through — `rays.compared` | rays | — | 3240172 | 288 of 288 | — | — |
-| optiland – ref | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | 288 of 288 | — | — |
-| optiland – ref | Wavelengths compared — `lines.compared` | wavelengths | — | 5 | 288 of 288 | canon-ef-135-f2l-usm-photopic | — |
-| optiland – ref | Largest difference of a wave MTF value, in fields whose sampling did not settle (shown, not judged) — `waveMtf.flagged` | (no unit) | — | 1.16e-9 | 77 of 288 | nikon-z-24-70f4s-wide-best-ref | cut tangential, field 4.33e1 deg, frequencyPerMm 50 |
+| lv – reference-tracer | Largest difference of a wave MTF value, on the finest lattice — `waveMtf.maxAbs` | (no unit) | ≤ 2.00e-8 | 1.02e-9 | 211 of 288 | nikon-z-24-70f4s-wide-f8-ref | cut tangential, field 4.33e1 deg, frequencyPerMm 50 |
+| lv – reference-tracer | Largest phase step between neighbouring cells of the lattice that carry light — `phaseStep.waves` | waves | — | 2.52e1 | 288 of 288 | sigma-35mm-f14-dg-hsm-a-photopic | field 3.19e1 deg, line 2, ray 987 |
+| lv – reference-tracer | Largest move of a wave MTF value from the coarser lattice to the finer — `convergence.maxAbs` | (no unit) | — | 6.32e-2 | 288 of 288 | fujifilm-fujinon-gf-63mm-f28-r-wr-best-ref | cut sagittal, field 2.44e1 deg, frequencyPerMm 70 |
+| lv – reference-tracer | Cells across the finest lattice — `lattice.columns` | cells | — | 64 | 288 of 288 | canon-ef-135-f2l-usm-ref | — |
+| lv – reference-tracer | Rays both engines traced through — `rays.compared` | rays | — | 3240172 | 288 of 288 | — | — |
+| lv – reference-tracer | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | 288 of 288 | — | — |
+| lv – reference-tracer | Wavelengths compared — `lines.compared` | wavelengths | — | 5 | 288 of 288 | canon-ef-135-f2l-usm-photopic | — |
+| lv – reference-tracer | Largest difference of a wave MTF value, in fields whose sampling did not settle (shown, not judged) — `waveMtf.flagged` | (no unit) | — | 1.17e-9 | 77 of 288 | nikon-z-24-70f4s-wide-best-ref | cut tangential, field 4.33e1 deg, frequencyPerMm 50 |
+| optiland – reference-tracer | Largest difference of a wave MTF value, on the finest lattice — `waveMtf.maxAbs` | (no unit) | ≤ 2.00e-8 | 1.03e-9 | 211 of 288 | nikon-z-24-70f4s-wide-f8-ref | cut tangential, field 4.33e1 deg, frequencyPerMm 50 |
+| optiland – reference-tracer | Largest phase step between neighbouring cells of the lattice that carry light — `phaseStep.waves` | waves | — | 2.52e1 | 288 of 288 | sigma-35mm-f14-dg-hsm-a-photopic | field 3.19e1 deg, line 2, ray 987 |
+| optiland – reference-tracer | Largest move of a wave MTF value from the coarser lattice to the finer — `convergence.maxAbs` | (no unit) | — | 6.32e-2 | 288 of 288 | fujifilm-fujinon-gf-63mm-f28-r-wr-best-ref | cut sagittal, field 2.44e1 deg, frequencyPerMm 70 |
+| optiland – reference-tracer | Cells across the finest lattice — `lattice.columns` | cells | — | 64 | 288 of 288 | canon-ef-135-f2l-usm-ref | — |
+| optiland – reference-tracer | Rays both engines traced through — `rays.compared` | rays | — | 3240172 | 288 of 288 | — | — |
+| optiland – reference-tracer | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | 288 of 288 | — | — |
+| optiland – reference-tracer | Wavelengths compared — `lines.compared` | wavelengths | — | 5 | 288 of 288 | canon-ef-135-f2l-usm-photopic | — |
+| optiland – reference-tracer | Largest difference of a wave MTF value, in fields whose sampling did not settle (shown, not judged) — `waveMtf.flagged` | (no unit) | — | 1.16e-9 | 77 of 288 | nikon-z-24-70f4s-wide-best-ref | cut tangential, field 4.33e1 deg, frequencyPerMm 50 |
 
 By run, each pair with its verdict and the judged figure that is largest against its limit, with the number of the run's requests it was measured in:
 
-| Run | Requests | lv – optiland | lv – ref | optiland – ref |
+| Run | Requests | lv – optiland | lv – reference-tracer | optiland – reference-tracer |
 |---|---|---|---|---|
 | canon-ef-135-f2l-usm-ref | 3 | Pass: waveMtf.maxAbs 5.07e-12 (2 of 3) | Pass: waveMtf.maxAbs 6.68e-12 (2 of 3) | Pass: waveMtf.maxAbs 5.45e-12 (2 of 3) |
 | canon-ef-135-f2l-usm-photopic | 3 | Pass: waveMtf.maxAbs 3.18e-12 (1 of 3) | Pass: waveMtf.maxAbs 4.94e-12 (1 of 3) | Pass: waveMtf.maxAbs 3.46e-12 (1 of 3) |
@@ -1467,16 +1467,16 @@ The worst of every figure over the suite:
 
 | Pair | Figure | Unit | Limit | Worst, or total | Requests measured | Run | Where |
 |---|---|---|---|---|---|---|---|
-| lv – wave | Largest MTF difference on the axis — `mtfOnAxis.maxAbs` | (no unit) | review band 5.00e-3 | 5.42e-3 | 82 of 96 | nikon-z-24-70f4s-tele-best-ref | cut tangential, field 0 of the image height, frequencyPerMm 80 |
-| lv – wave | Largest MTF difference off the axis — `mtfOffAxis.maxAbs` | (no unit) | review band 1.00e-2 | 5.75e-3 | 75 of 96 | nikon-z-24-70f4s-tele-ref | cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 30 |
-| lv – wave | Largest MTF difference in fields whose sampling did not settle (in no review band) — `mtfFlagged.maxAbs` | (no unit) | — | 1.49e-2 | 42 of 96 | sigma-35mm-f14-dg-hsm-a-best-ref | cut tangential, field 1 of the image height, frequencyPerMm 30 |
-| lv – wave | Fields compared — `fields.compared` | elements | — | 211 | 96 of 96 | — | — |
-| lv – wave | Fields set aside because a sampling did not settle — `fields.flagged` | elements | — | 77 | 96 of 96 | — | — |
-| lv – wave | Fields an engine has no answer for — `fields.unavailable` | elements | — | 0 | 96 of 96 | — | — |
+| lv – wave-mtf-of-lv-rays | Largest MTF difference on the axis — `mtfOnAxis.maxAbs` | (no unit) | review band 5.00e-3 | 5.42e-3 | 82 of 96 | nikon-z-24-70f4s-tele-best-ref | cut tangential, field 0 of the image height, frequencyPerMm 80 |
+| lv – wave-mtf-of-lv-rays | Largest MTF difference off the axis — `mtfOffAxis.maxAbs` | (no unit) | review band 1.00e-2 | 5.75e-3 | 75 of 96 | nikon-z-24-70f4s-tele-ref | cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 30 |
+| lv – wave-mtf-of-lv-rays | Largest MTF difference in fields whose sampling did not settle (in no review band) — `mtfFlagged.maxAbs` | (no unit) | — | 1.49e-2 | 42 of 96 | sigma-35mm-f14-dg-hsm-a-best-ref | cut tangential, field 1 of the image height, frequencyPerMm 30 |
+| lv – wave-mtf-of-lv-rays | Fields compared — `fields.compared` | elements | — | 211 | 96 of 96 | — | — |
+| lv – wave-mtf-of-lv-rays | Fields set aside because a sampling did not settle — `fields.flagged` | elements | — | 77 | 96 of 96 | — | — |
+| lv – wave-mtf-of-lv-rays | Fields an engine has no answer for — `fields.unavailable` | elements | — | 0 | 96 of 96 | — | — |
 
 By run, each pair with its verdict and the judged figure that is largest against its limit, with the number of the run's requests it was measured in:
 
-| Run | Requests | lv – wave |
+| Run | Requests | lv – wave-mtf-of-lv-rays |
 |---|---|---|
 | canon-ef-135-f2l-usm-ref | 1 | Side by side: no judged figure |
 | canon-ef-135-f2l-usm-photopic | 1 | Side by side: no judged figure |
@@ -1592,55 +1592,55 @@ The worst of every figure over the suite:
 | lv – optiland | Fields whose two answers are of different inputs — `fields.data` | elements | — | 0 | 48 of 96 | — | — |
 | lv – optiland | Fields an engine has no answer for — `fields.unavailable` | elements | — | 10 | 48 of 96 | — | — |
 | lv – optiland | Largest MTF difference in fields whose sampling did not settle (in no review band) — `mtfFlagged.maxAbs` | (no unit) | — | 4.91e-1 | 3 of 96 | sony-fe-20mm-f18-g-best-ref | cut tangential, field 1 of the image height, frequencyPerMm 10 |
-| lv – optiland-wave | Largest distance between the two engines' chief-ray landings — `chiefLanding.maxAbs` | mm | — | 1.52e-10 | 96 of 96 | nikon-z-mc-105f28-best-ref | field 1 of the image height |
-| lv – optiland-wave | Largest MTF difference on the axis — `mtfOnAxis.maxAbs` | (no unit) | review band 5.00e-3 | 6.94e-3 | 96 of 96 | nikon-z-135f18-plena-ref | cut tangential, field 0 of the image height, frequencyPerMm 100 |
-| lv – optiland-wave | Largest MTF difference off the axis — `mtfOffAxis.maxAbs` | (no unit) | review band 1.00e-2 | 7.41e-3 | 91 of 96 | nikon-z-24-70f4s-tele-photopic | cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 30 |
-| lv – optiland-wave | Fields compared — `fields.compared` | elements | — | 267 | 96 of 96 | — | — |
-| lv – optiland-wave | Fields set aside because a sampling did not settle — `fields.flagged` | elements | — | 21 | 96 of 96 | — | — |
-| lv – optiland-wave | Fields set aside because an engine lost a rim ray — `fields.rimLost` | elements | — | 0 | 96 of 96 | — | — |
-| lv – optiland-wave | Fields whose two answers are of different inputs — `fields.data` | elements | — | 0 | 96 of 96 | — | — |
-| lv – optiland-wave | Fields an engine has no answer for — `fields.unavailable` | elements | — | 0 | 96 of 96 | — | — |
-| lv – optiland-wave | Largest MTF difference in fields whose sampling did not settle (in no review band) — `mtfFlagged.maxAbs` | (no unit) | — | 7.96e-3 | 16 of 96 | nikkor-z50f12-photopic | cut tangential, field 1 of the image height, frequencyPerMm 20 |
-| lv – wave | Largest distance between the two engines' chief-ray landings — `chiefLanding.maxAbs` | mm | — | 0 | 96 of 96 | canon-ef-135-f2l-usm-ref | field 0 of the image height |
-| lv – wave | Largest MTF difference on the axis — `mtfOnAxis.maxAbs` | (no unit) | review band 5.00e-3 | 5.42e-3 | 82 of 96 | nikon-z-24-70f4s-tele-best-ref | cut tangential, field 0 of the image height, frequencyPerMm 80 |
-| lv – wave | Largest MTF difference off the axis — `mtfOffAxis.maxAbs` | (no unit) | review band 1.00e-2 | 5.75e-3 | 75 of 96 | nikon-z-24-70f4s-tele-ref | cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 30 |
-| lv – wave | Largest MTF difference in fields whose sampling did not settle (in no review band) — `mtfFlagged.maxAbs` | (no unit) | — | 1.49e-2 | 42 of 96 | sigma-35mm-f14-dg-hsm-a-best-ref | cut tangential, field 1 of the image height, frequencyPerMm 30 |
-| lv – wave | Fields compared — `fields.compared` | elements | — | 211 | 96 of 96 | — | — |
-| lv – wave | Fields set aside because a sampling did not settle — `fields.flagged` | elements | — | 77 | 96 of 96 | — | — |
-| lv – wave | Fields set aside because an engine lost a rim ray — `fields.rimLost` | elements | — | 0 | 96 of 96 | — | — |
-| lv – wave | Fields whose two answers are of different inputs — `fields.data` | elements | — | 0 | 96 of 96 | — | — |
-| lv – wave | Fields an engine has no answer for — `fields.unavailable` | elements | — | 0 | 96 of 96 | — | — |
-| optiland – optiland-wave | Largest distance between the two engines' chief-ray landings — `chiefLanding.maxAbs` | mm | — | 0 | 48 of 96 | canon-ef-135-f2l-usm-ref | field 0 of the image height |
-| optiland – optiland-wave | Largest MTF difference on the axis — `mtfOnAxis.maxAbs` | (no unit) | review band 5.00e-3 | 2.11e-2 | 47 of 96 | sony-fe-20mm-f18-g-ref | cut tangential, field 0 of the image height, frequencyPerMm 30 |
-| optiland – optiland-wave | Largest MTF difference off the axis — `mtfOffAxis.maxAbs` | (no unit) | review band 1.00e-2 | 2.75e-1 | 43 of 96 | nikon-z-24-70f4s-tele-ref | cut tangential, field 1 of the image height, frequencyPerMm 50 |
-| optiland – optiland-wave | Fields compared — `fields.compared` | elements | — | 126 | 48 of 96 | — | — |
-| optiland – optiland-wave | Fields set aside because a sampling did not settle — `fields.flagged` | elements | — | 8 | 48 of 96 | — | — |
-| optiland – optiland-wave | Fields set aside because an engine lost a rim ray — `fields.rimLost` | elements | — | 0 | 48 of 96 | — | — |
-| optiland – optiland-wave | Fields whose two answers are of different inputs — `fields.data` | elements | — | 0 | 48 of 96 | — | — |
-| optiland – optiland-wave | Fields an engine has no answer for — `fields.unavailable` | elements | — | 10 | 48 of 96 | — | — |
-| optiland – optiland-wave | Largest MTF difference in fields whose sampling did not settle (in no review band) — `mtfFlagged.maxAbs` | (no unit) | — | 4.90e-1 | 5 of 96 | sony-fe-20mm-f18-g-best-ref | cut tangential, field 1 of the image height, frequencyPerMm 10 |
-| optiland – wave | Largest distance between the two engines' chief-ray landings — `chiefLanding.maxAbs` | mm | — | 1.52e-10 | 48 of 96 | nikon-z-mc-105f28-best-ref | field 1 of the image height |
-| optiland – wave | Largest MTF difference on the axis — `mtfOnAxis.maxAbs` | (no unit) | review band 5.00e-3 | 1.02e-2 | 42 of 96 | sony-fe-400mm-f28-gm-oss-ref | cut tangential, field 0 of the image height, frequencyPerMm 40 |
-| optiland – wave | Largest MTF difference off the axis — `mtfOffAxis.maxAbs` | (no unit) | review band 1.00e-2 | 3.98e-2 | 40 of 96 | sigma-105mm-f28-dg-dn-macro-art-ref | cut tangential, field 1 of the image height, frequencyPerMm 30 |
-| optiland – wave | Largest MTF difference in fields whose sampling did not settle (in no review band) — `mtfFlagged.maxAbs` | (no unit) | — | 4.91e-1 | 19 of 96 | sony-fe-20mm-f18-g-best-ref | cut tangential, field 1 of the image height, frequencyPerMm 10 |
-| optiland – wave | Fields compared — `fields.compared` | elements | — | 107 | 48 of 96 | — | — |
-| optiland – wave | Fields set aside because a sampling did not settle — `fields.flagged` | elements | — | 27 | 48 of 96 | — | — |
-| optiland – wave | Fields set aside because an engine lost a rim ray — `fields.rimLost` | elements | — | 0 | 48 of 96 | — | — |
-| optiland – wave | Fields whose two answers are of different inputs — `fields.data` | elements | — | 0 | 48 of 96 | — | — |
-| optiland – wave | Fields an engine has no answer for — `fields.unavailable` | elements | — | 10 | 48 of 96 | — | — |
-| optiland-wave – wave | Largest distance between the two engines' chief-ray landings — `chiefLanding.maxAbs` | mm | — | 1.52e-10 | 96 of 96 | nikon-z-mc-105f28-best-ref | field 1 of the image height |
-| optiland-wave – wave | Largest MTF difference on the axis — `mtfOnAxis.maxAbs` | (no unit) | review band 5.00e-3 | 3.24e-3 | 82 of 96 | sigma-105mm-f28-dg-dn-macro-art-photopic | cut sagittal, field 0 of the image height, frequencyPerMm 100 |
-| optiland-wave – wave | Largest MTF difference off the axis — `mtfOffAxis.maxAbs` | (no unit) | review band 1.00e-2 | 4.32e-3 | 75 of 96 | sony-fe-20mm-f18-g-f8-ref | cut tangential, field 1 of the image height, frequencyPerMm 90 |
-| optiland-wave – wave | Largest MTF difference in fields whose sampling did not settle (in no review band) — `mtfFlagged.maxAbs` | (no unit) | — | 1.36e-2 | 42 of 96 | sigma-35mm-f14-dg-hsm-a-best-ref | cut tangential, field 1 of the image height, frequencyPerMm 30 |
-| optiland-wave – wave | Fields compared — `fields.compared` | elements | — | 211 | 96 of 96 | — | — |
-| optiland-wave – wave | Fields set aside because a sampling did not settle — `fields.flagged` | elements | — | 77 | 96 of 96 | — | — |
-| optiland-wave – wave | Fields set aside because an engine lost a rim ray — `fields.rimLost` | elements | — | 0 | 96 of 96 | — | — |
-| optiland-wave – wave | Fields whose two answers are of different inputs — `fields.data` | elements | — | 0 | 96 of 96 | — | — |
-| optiland-wave – wave | Fields an engine has no answer for — `fields.unavailable` | elements | — | 0 | 96 of 96 | — | — |
+| lv – otf-of-optiland-wavefront | Largest distance between the two engines' chief-ray landings — `chiefLanding.maxAbs` | mm | — | 1.52e-10 | 96 of 96 | nikon-z-mc-105f28-best-ref | field 1 of the image height |
+| lv – otf-of-optiland-wavefront | Largest MTF difference on the axis — `mtfOnAxis.maxAbs` | (no unit) | review band 5.00e-3 | 6.94e-3 | 96 of 96 | nikon-z-135f18-plena-ref | cut tangential, field 0 of the image height, frequencyPerMm 100 |
+| lv – otf-of-optiland-wavefront | Largest MTF difference off the axis — `mtfOffAxis.maxAbs` | (no unit) | review band 1.00e-2 | 7.41e-3 | 91 of 96 | nikon-z-24-70f4s-tele-photopic | cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 30 |
+| lv – otf-of-optiland-wavefront | Fields compared — `fields.compared` | elements | — | 267 | 96 of 96 | — | — |
+| lv – otf-of-optiland-wavefront | Fields set aside because a sampling did not settle — `fields.flagged` | elements | — | 21 | 96 of 96 | — | — |
+| lv – otf-of-optiland-wavefront | Fields set aside because an engine lost a rim ray — `fields.rimLost` | elements | — | 0 | 96 of 96 | — | — |
+| lv – otf-of-optiland-wavefront | Fields whose two answers are of different inputs — `fields.data` | elements | — | 0 | 96 of 96 | — | — |
+| lv – otf-of-optiland-wavefront | Fields an engine has no answer for — `fields.unavailable` | elements | — | 0 | 96 of 96 | — | — |
+| lv – otf-of-optiland-wavefront | Largest MTF difference in fields whose sampling did not settle (in no review band) — `mtfFlagged.maxAbs` | (no unit) | — | 7.96e-3 | 16 of 96 | nikkor-z50f12-photopic | cut tangential, field 1 of the image height, frequencyPerMm 20 |
+| lv – wave-mtf-of-lv-rays | Largest distance between the two engines' chief-ray landings — `chiefLanding.maxAbs` | mm | — | 0 | 96 of 96 | canon-ef-135-f2l-usm-ref | field 0 of the image height |
+| lv – wave-mtf-of-lv-rays | Largest MTF difference on the axis — `mtfOnAxis.maxAbs` | (no unit) | review band 5.00e-3 | 5.42e-3 | 82 of 96 | nikon-z-24-70f4s-tele-best-ref | cut tangential, field 0 of the image height, frequencyPerMm 80 |
+| lv – wave-mtf-of-lv-rays | Largest MTF difference off the axis — `mtfOffAxis.maxAbs` | (no unit) | review band 1.00e-2 | 5.75e-3 | 75 of 96 | nikon-z-24-70f4s-tele-ref | cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 30 |
+| lv – wave-mtf-of-lv-rays | Largest MTF difference in fields whose sampling did not settle (in no review band) — `mtfFlagged.maxAbs` | (no unit) | — | 1.49e-2 | 42 of 96 | sigma-35mm-f14-dg-hsm-a-best-ref | cut tangential, field 1 of the image height, frequencyPerMm 30 |
+| lv – wave-mtf-of-lv-rays | Fields compared — `fields.compared` | elements | — | 211 | 96 of 96 | — | — |
+| lv – wave-mtf-of-lv-rays | Fields set aside because a sampling did not settle — `fields.flagged` | elements | — | 77 | 96 of 96 | — | — |
+| lv – wave-mtf-of-lv-rays | Fields set aside because an engine lost a rim ray — `fields.rimLost` | elements | — | 0 | 96 of 96 | — | — |
+| lv – wave-mtf-of-lv-rays | Fields whose two answers are of different inputs — `fields.data` | elements | — | 0 | 96 of 96 | — | — |
+| lv – wave-mtf-of-lv-rays | Fields an engine has no answer for — `fields.unavailable` | elements | — | 0 | 96 of 96 | — | — |
+| optiland – otf-of-optiland-wavefront | Largest distance between the two engines' chief-ray landings — `chiefLanding.maxAbs` | mm | — | 0 | 48 of 96 | canon-ef-135-f2l-usm-ref | field 0 of the image height |
+| optiland – otf-of-optiland-wavefront | Largest MTF difference on the axis — `mtfOnAxis.maxAbs` | (no unit) | review band 5.00e-3 | 2.11e-2 | 47 of 96 | sony-fe-20mm-f18-g-ref | cut tangential, field 0 of the image height, frequencyPerMm 30 |
+| optiland – otf-of-optiland-wavefront | Largest MTF difference off the axis — `mtfOffAxis.maxAbs` | (no unit) | review band 1.00e-2 | 2.75e-1 | 43 of 96 | nikon-z-24-70f4s-tele-ref | cut tangential, field 1 of the image height, frequencyPerMm 50 |
+| optiland – otf-of-optiland-wavefront | Fields compared — `fields.compared` | elements | — | 126 | 48 of 96 | — | — |
+| optiland – otf-of-optiland-wavefront | Fields set aside because a sampling did not settle — `fields.flagged` | elements | — | 8 | 48 of 96 | — | — |
+| optiland – otf-of-optiland-wavefront | Fields set aside because an engine lost a rim ray — `fields.rimLost` | elements | — | 0 | 48 of 96 | — | — |
+| optiland – otf-of-optiland-wavefront | Fields whose two answers are of different inputs — `fields.data` | elements | — | 0 | 48 of 96 | — | — |
+| optiland – otf-of-optiland-wavefront | Fields an engine has no answer for — `fields.unavailable` | elements | — | 10 | 48 of 96 | — | — |
+| optiland – otf-of-optiland-wavefront | Largest MTF difference in fields whose sampling did not settle (in no review band) — `mtfFlagged.maxAbs` | (no unit) | — | 4.90e-1 | 5 of 96 | sony-fe-20mm-f18-g-best-ref | cut tangential, field 1 of the image height, frequencyPerMm 10 |
+| optiland – wave-mtf-of-lv-rays | Largest distance between the two engines' chief-ray landings — `chiefLanding.maxAbs` | mm | — | 1.52e-10 | 48 of 96 | nikon-z-mc-105f28-best-ref | field 1 of the image height |
+| optiland – wave-mtf-of-lv-rays | Largest MTF difference on the axis — `mtfOnAxis.maxAbs` | (no unit) | review band 5.00e-3 | 1.02e-2 | 42 of 96 | sony-fe-400mm-f28-gm-oss-ref | cut tangential, field 0 of the image height, frequencyPerMm 40 |
+| optiland – wave-mtf-of-lv-rays | Largest MTF difference off the axis — `mtfOffAxis.maxAbs` | (no unit) | review band 1.00e-2 | 3.98e-2 | 40 of 96 | sigma-105mm-f28-dg-dn-macro-art-ref | cut tangential, field 1 of the image height, frequencyPerMm 30 |
+| optiland – wave-mtf-of-lv-rays | Largest MTF difference in fields whose sampling did not settle (in no review band) — `mtfFlagged.maxAbs` | (no unit) | — | 4.91e-1 | 19 of 96 | sony-fe-20mm-f18-g-best-ref | cut tangential, field 1 of the image height, frequencyPerMm 10 |
+| optiland – wave-mtf-of-lv-rays | Fields compared — `fields.compared` | elements | — | 107 | 48 of 96 | — | — |
+| optiland – wave-mtf-of-lv-rays | Fields set aside because a sampling did not settle — `fields.flagged` | elements | — | 27 | 48 of 96 | — | — |
+| optiland – wave-mtf-of-lv-rays | Fields set aside because an engine lost a rim ray — `fields.rimLost` | elements | — | 0 | 48 of 96 | — | — |
+| optiland – wave-mtf-of-lv-rays | Fields whose two answers are of different inputs — `fields.data` | elements | — | 0 | 48 of 96 | — | — |
+| optiland – wave-mtf-of-lv-rays | Fields an engine has no answer for — `fields.unavailable` | elements | — | 10 | 48 of 96 | — | — |
+| otf-of-optiland-wavefront – wave-mtf-of-lv-rays | Largest distance between the two engines' chief-ray landings — `chiefLanding.maxAbs` | mm | — | 1.52e-10 | 96 of 96 | nikon-z-mc-105f28-best-ref | field 1 of the image height |
+| otf-of-optiland-wavefront – wave-mtf-of-lv-rays | Largest MTF difference on the axis — `mtfOnAxis.maxAbs` | (no unit) | review band 5.00e-3 | 3.24e-3 | 82 of 96 | sigma-105mm-f28-dg-dn-macro-art-photopic | cut sagittal, field 0 of the image height, frequencyPerMm 100 |
+| otf-of-optiland-wavefront – wave-mtf-of-lv-rays | Largest MTF difference off the axis — `mtfOffAxis.maxAbs` | (no unit) | review band 1.00e-2 | 4.32e-3 | 75 of 96 | sony-fe-20mm-f18-g-f8-ref | cut tangential, field 1 of the image height, frequencyPerMm 90 |
+| otf-of-optiland-wavefront – wave-mtf-of-lv-rays | Largest MTF difference in fields whose sampling did not settle (in no review band) — `mtfFlagged.maxAbs` | (no unit) | — | 1.36e-2 | 42 of 96 | sigma-35mm-f14-dg-hsm-a-best-ref | cut tangential, field 1 of the image height, frequencyPerMm 30 |
+| otf-of-optiland-wavefront – wave-mtf-of-lv-rays | Fields compared — `fields.compared` | elements | — | 211 | 96 of 96 | — | — |
+| otf-of-optiland-wavefront – wave-mtf-of-lv-rays | Fields set aside because a sampling did not settle — `fields.flagged` | elements | — | 77 | 96 of 96 | — | — |
+| otf-of-optiland-wavefront – wave-mtf-of-lv-rays | Fields set aside because an engine lost a rim ray — `fields.rimLost` | elements | — | 0 | 96 of 96 | — | — |
+| otf-of-optiland-wavefront – wave-mtf-of-lv-rays | Fields whose two answers are of different inputs — `fields.data` | elements | — | 0 | 96 of 96 | — | — |
+| otf-of-optiland-wavefront – wave-mtf-of-lv-rays | Fields an engine has no answer for — `fields.unavailable` | elements | — | 0 | 96 of 96 | — | — |
 
 By run, each pair with its verdict and the judged figure that is largest against its limit, with the number of the run's requests it was measured in:
 
-| Run | Requests | lv – optiland | lv – optiland-wave | lv – wave | optiland – optiland-wave | optiland – wave | optiland-wave – wave |
+| Run | Requests | lv – optiland | lv – otf-of-optiland-wavefront | lv – wave-mtf-of-lv-rays | optiland – otf-of-optiland-wavefront | optiland – wave-mtf-of-lv-rays | otf-of-optiland-wavefront – wave-mtf-of-lv-rays |
 |---|---|---|---|---|---|---|---|
 | canon-ef-135-f2l-usm-ref | 1 | Side by side, worth a look: no judged figure | Side by side: no judged figure | Side by side: no judged figure | Side by side, worth a look: no judged figure | Side by side, worth a look: no judged figure | Side by side: no judged figure |
 | canon-ef-135-f2l-usm-photopic | 1 | Not computed: no judged figure | Side by side: no judged figure | Side by side: no judged figure | Not computed: no judged figure | Not computed: no judged figure | Side by side: no judged figure |
@@ -1741,10 +1741,11 @@ By run, each pair with its verdict and the judged figure that is largest against
 
 #### canon-ef-135-f2l-usm-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -1753,16 +1754,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 0.5 | 4.629 | ok | ok | ok | ok | 1.42e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 1 | 9.170 | ok | unconverged | ok | ok | 1.85e-12 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | the methods differ | two-methods |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9826 | 0.9821 | 0.9830 | 0.9820 | 6.15e-4 | Side by side | the methods differ | 1.02e-4 | Side by side | the methods differ | 1.05e-3 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.9417 | 0.9400 | 0.9430 | 0.9397 | 1.99e-3 | Side by side | the methods differ | 2.95e-4 | Side by side | the methods differ | 3.30e-3 | Side by side | the methods differ |
@@ -1788,10 +1789,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### canon-ef-135-f2l-usm-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -1800,16 +1802,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 4.629 | ok | unconverged | — | ok | 2.31e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 9.170 | ok | unconverged | — | ok | 1.78e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -1819,7 +1821,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9467 | 0.9465 | — | 0.9465 | 1.35e-4 | Side by side | the methods differ | -2.85e-5 | Side by side | the methods differ | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.6916 | 0.6915 | — | 0.6922 | -5.87e-4 | Side by side | the methods differ | -7.73e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
@@ -1845,10 +1847,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### fujifilm-fujinon-gf-63mm-f28-r-wr-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -1857,16 +1860,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 0.5 | 12.519 | ok | unconverged | ok | ok | 3.91e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | the methods differ | two-methods |
 | 1 | 24.433 | ok | unconverged | ok | unconverged | 8.53e-14 | not converged | unconverged: a sampling did not settle; the difference is shown apart, in no review band | not converged | unconverged | not converged | unconverged |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9468 | 0.9467 | 0.9460 | 0.9467 | 1.29e-4 | Side by side | the methods differ | 4.56e-5 | Side by side | the methods differ | -7.26e-4 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.6830 | 0.6825 | 0.6794 | 0.6814 | 1.68e-3 | Side by side | the methods differ | 1.11e-3 | Side by side | the methods differ | -2.00e-3 | Side by side | the methods differ |
@@ -1892,10 +1895,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### fujifilm-fujinon-gf-63mm-f28-r-wr-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -1904,16 +1908,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 12.519 | ok | unconverged | — | ok | 1.07e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 24.433 | ok | unconverged | — | unconverged | 0 | not converged | unconverged: a sampling did not settle; the difference is shown apart, in no review band | not converged | unconverged | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -1923,7 +1927,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9467 | 0.9466 | — | 0.9466 | 7.15e-5 | Side by side | the methods differ | 7.22e-6 | Side by side | the methods differ | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.6829 | 0.6822 | — | 0.6815 | 1.47e-3 | Side by side | the methods differ | 7.04e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
@@ -1949,10 +1953,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### sigma-35mm-f14-dg-hsm-a-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -1961,16 +1966,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 0.5 | 17.190 | ok | unconverged | no curve | ok | 2.13e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | not computed by one engine | no-curve |
 | 1 | 31.948 | ok | unconverged | no curve | unconverged | 5.83e-13 | not converged | unconverged: a sampling did not settle; the difference is shown apart, in no review band | not converged | unconverged | not computed by one engine | no-curve |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9868 | 0.9865 | 0.9871 | 0.9864 | 3.43e-4 | Side by side | the methods differ | 4.44e-5 | Side by side | the methods differ | 6.35e-4 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.9502 | 0.9491 | 0.9516 | 0.9490 | 1.16e-3 | Side by side | the methods differ | 1.28e-4 | Side by side | the methods differ | 2.57e-3 | Side by side | the methods differ |
@@ -1996,10 +2001,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### sigma-35mm-f14-dg-hsm-a-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -2008,16 +2014,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | unconverged | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 17.190 | ok | unconverged | — | unconverged | 2.49e-14 | not converged | unconverged: a sampling did not settle; the difference is shown apart, in no review band | not converged | unconverged | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 31.948 | ok | unconverged | — | unconverged | 2.84e-14 | not converged | unconverged: a sampling did not settle; the difference is shown apart, in no review band | not converged | unconverged | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -2027,7 +2033,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9395 | 0.9395 | — | 0.9396 | -7.44e-5 | Side by side | the methods differ | -1.06e-4 | Set aside | not converged | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.6311 | 0.6311 | — | 0.6322 | -1.10e-3 | Side by side | the methods differ | -1.10e-3 | Set aside | not converged | — | Not computed | not computed by one engine |
@@ -2053,10 +2059,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### nikkor-z50f12-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -2065,16 +2072,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | unconverged | unconverged | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | not converged | unconverged |
 | 0.5 | 11.924 | ok | unconverged | unconverged | ok | 4.71e-13 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | not converged | unconverged |
 | 1 | 22.852 | ok | unconverged | no curve | unconverged | 7.46e-14 | not converged | unconverged: a sampling did not settle; the difference is shown apart, in no review band | not converged | unconverged | not computed by one engine | no-curve |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.8192 | 0.8195 | 0.8301 | 0.8201 | -8.94e-4 | Side by side | the methods differ | -5.67e-4 | Set aside | not converged | 1.00e-2 | Set aside | not converged |
 | 0 | sagittal | 30 | 0.1877 | 0.1881 | 0.2058 | 0.1898 | -2.12e-3 | Side by side | the methods differ | -1.75e-3 | Set aside | not converged | 1.60e-2 | Set aside | not converged |
@@ -2100,10 +2107,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### nikkor-z50f12-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -2112,16 +2120,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | unconverged | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 11.924 | ok | unconverged | — | unconverged | 5.33e-15 | not converged | unconverged: a sampling did not settle; the difference is shown apart, in no review band | not converged | unconverged | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 22.852 | ok | unconverged | — | unconverged | 7.11e-14 | not converged | unconverged: a sampling did not settle; the difference is shown apart, in no review band | not converged | unconverged | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -2131,7 +2139,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.7884 | 0.7889 | — | 0.7894 | -1.05e-3 | Side by side | the methods differ | -5.48e-4 | Set aside | not converged | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.1384 | 0.1385 | — | 0.1394 | -9.71e-4 | Side by side | the methods differ | -9.44e-4 | Set aside | not converged | — | Not computed | not computed by one engine |
@@ -2157,10 +2165,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### sony-fe-20mm-f18-g-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -2169,16 +2178,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side, worth a look; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side, worth a look; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | unconverged | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | the methods differ | two-methods |
 | 0.5 | 28.763 | ok | unconverged | unconverged | ok | 9.94e-11 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | not converged | unconverged |
 | 1 | 47.512 | ok | unconverged | unconverged | unconverged | 4.26e-14 | not converged | unconverged: a sampling did not settle; the difference is shown apart, in no review band | not converged | unconverged | not converged | unconverged |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9240 | 0.9245 | 0.9321 | 0.9251 | -1.08e-3 | Side by side | the methods differ | -5.55e-4 | Set aside | not converged | 7.06e-3 | Side by side, worth a look | the methods differ |
 | 0 | sagittal | 30 | 0.6291 | 0.6304 | 0.6553 | 0.6343 | -5.15e-3 | Side by side, worth a look | the methods differ | -3.93e-3 | Set aside | not converged | 2.11e-2 | Side by side, worth a look | the methods differ |
@@ -2204,10 +2213,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### sony-fe-20mm-f18-g-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -2216,16 +2226,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | unconverged | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 28.763 | ok | unconverged | — | unconverged | 1.60e-14 | not converged | unconverged: a sampling did not settle; the difference is shown apart, in no review band | not converged | unconverged | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 47.512 | ok | unconverged | — | unconverged | 2.84e-14 | not converged | unconverged: a sampling did not settle; the difference is shown apart, in no review band | not converged | unconverged | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -2235,7 +2245,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9157 | 0.9164 | — | 0.9169 | -1.25e-3 | Side by side | the methods differ | -5.57e-4 | Set aside | not converged | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.5877 | 0.5890 | — | 0.5926 | -4.91e-3 | Side by side | the methods differ | -3.64e-3 | Set aside | not converged | — | Not computed | not computed by one engine |
@@ -2261,10 +2271,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### sony-fe-400mm-f28-gm-oss-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -2273,16 +2284,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 0.5 | 1.591 | ok | ok | ok | ok | 2.31e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 1 | 3.148 | ok | ok | ok | ok | 8.66e-12 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9312 | 0.9310 | 0.9329 | 0.9310 | 1.95e-4 | Side by side | the methods differ | -4.55e-5 | Side by side | the methods differ | 1.88e-3 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.6094 | 0.6093 | 0.6186 | 0.6102 | -7.05e-4 | Side by side | the methods differ | -8.65e-4 | Side by side | the methods differ | 8.48e-3 | Side by side, worth a look | the methods differ |
@@ -2308,10 +2319,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### sony-fe-400mm-f28-gm-oss-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -2320,16 +2332,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 1.591 | ok | ok | — | ok | 5.86e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 3.148 | ok | ok | — | ok | 8.17e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -2339,7 +2351,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9412 | 0.9410 | — | 0.9410 | 2.06e-4 | Side by side | the methods differ | -2.95e-5 | Side by side | the methods differ | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.6727 | 0.6725 | — | 0.6732 | -4.99e-4 | Side by side | the methods differ | -7.17e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
@@ -2365,10 +2377,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### sigma-105mm-f28-dg-dn-macro-art-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -2377,16 +2390,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 0.5 | 5.938 | ok | ok | ok | ok | 4.92e-13 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 1 | 11.651 | ok | ok | ok | ok | 1.78e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9714 | 0.9712 | 0.9728 | 0.9712 | 2.70e-4 | Side by side | the methods differ | 8.16e-5 | Side by side | the methods differ | 1.58e-3 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.9029 | 0.9027 | 0.9078 | 0.9034 | -4.26e-4 | Side by side | the methods differ | -6.56e-4 | Side by side | the methods differ | 4.41e-3 | Side by side | the methods differ |
@@ -2412,10 +2425,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### sigma-105mm-f28-dg-dn-macro-art-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -2424,16 +2438,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 5.938 | ok | unconverged | — | ok | 5.33e-15 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 11.650 | ok | ok | — | ok | 8.17e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -2443,7 +2457,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9687 | 0.9686 | — | 0.9685 | 1.37e-4 | Side by side | the methods differ | 1.47e-5 | Side by side | the methods differ | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.8811 | 0.8814 | — | 0.8823 | -1.24e-3 | Side by side | the methods differ | -9.51e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
@@ -2469,10 +2483,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### nikon-z-24-70f4s-wide-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -2481,16 +2496,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | unconverged | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | the methods differ | two-methods |
 | 0.5 | 24.232 | ok | ok | ok | ok | 8.61e-12 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 1 | 43.275 | ok | unconverged | ok | ok | 7.11e-15 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | the methods differ | two-methods |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9223 | 0.9223 | 0.9241 | 0.9225 | -2.65e-4 | Side by side | the methods differ | -2.15e-4 | Set aside | not converged | 1.55e-3 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.6439 | 0.6442 | 0.6511 | 0.6467 | -2.78e-3 | Side by side | the methods differ | -2.48e-3 | Set aside | not converged | 4.44e-3 | Side by side | the methods differ |
@@ -2516,10 +2531,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### nikon-z-24-70f4s-wide-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -2528,16 +2544,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | unconverged | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 24.232 | ok | ok | — | ok | 8.88e-15 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 43.275 | ok | unconverged | — | ok | 5.33e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -2547,7 +2563,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9309 | 0.9310 | — | 0.9311 | -1.92e-4 | Side by side | the methods differ | -1.56e-4 | Set aside | not converged | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.6827 | 0.6829 | — | 0.6849 | -2.24e-3 | Side by side | the methods differ | -2.05e-3 | Set aside | not converged | — | Not computed | not computed by one engine |
@@ -2573,10 +2589,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### nikon-z-24-70f4s-tele-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -2585,16 +2602,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 0.5 | 8.914 | ok | ok | ok | ok | 8.88e-15 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 1 | 16.633 | ok | unconverged | ok | ok | 1.00e-11 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | the methods differ | two-methods |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9660 | 0.9654 | 0.9673 | 0.9657 | 3.08e-4 | Side by side | the methods differ | -2.97e-4 | Side by side | the methods differ | 1.68e-3 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.8910 | 0.8895 | 0.8940 | 0.8899 | 1.11e-3 | Side by side | the methods differ | -4.80e-4 | Side by side | the methods differ | 4.06e-3 | Side by side | the methods differ |
@@ -2620,10 +2637,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### nikon-z-24-70f4s-tele-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -2632,16 +2650,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 8.914 | ok | unconverged | — | ok | 8.88e-15 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 16.631 | ok | unconverged | — | ok | 2.13e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -2651,7 +2669,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9672 | 0.9665 | — | 0.9668 | 4.71e-4 | Side by side | the methods differ | -2.26e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.8913 | 0.8893 | — | 0.8895 | 1.75e-3 | Side by side | the methods differ | -1.84e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
@@ -2677,10 +2695,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### nikon-z-mc-105f28-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -2689,16 +2708,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 0.5 | 6.022 | ok | ok | ok | ok | 1.95e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 1 | 11.999 | ok | unconverged | ok | ok | 1.17e-10 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | the methods differ | two-methods |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9632 | 0.9630 | 0.9636 | 0.9628 | 4.49e-4 | Side by side | the methods differ | 2.26e-4 | Side by side | the methods differ | 8.21e-4 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.8135 | 0.8129 | 0.8160 | 0.8121 | 1.41e-3 | Side by side | the methods differ | 8.16e-4 | Side by side | the methods differ | 3.96e-3 | Side by side | the methods differ |
@@ -2724,10 +2743,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### nikon-z-mc-105f28-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -2736,16 +2756,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 6.022 | ok | ok | — | ok | 2.49e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 11.999 | ok | unconverged | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -2755,7 +2775,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9627 | 0.9625 | — | 0.9622 | 4.29e-4 | Side by side | the methods differ | 2.34e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.8027 | 0.8020 | — | 0.8011 | 1.53e-3 | Side by side | the methods differ | 8.76e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
@@ -2781,10 +2801,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### nikon-z-135f18-plena-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -2793,16 +2814,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side, worth a look; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side, worth a look; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | unconverged | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | the methods differ | two-methods |
 | 0.5 | 4.659 | ok | ok | ok | ok | 1.95e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 1 | 9.159 | ok | unconverged | ok | ok | 1.71e-13 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | the methods differ | two-methods |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9744 | 0.9740 | 0.9766 | 0.9740 | 3.69e-4 | Side by side | the methods differ | -5.70e-6 | Set aside | not converged | 2.59e-3 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.8847 | 0.8841 | 0.8952 | 0.8850 | -3.25e-4 | Side by side | the methods differ | -9.14e-4 | Set aside | not converged | 1.01e-2 | Side by side, worth a look | the methods differ |
@@ -2828,10 +2849,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### nikon-z-135f18-plena-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -2840,16 +2862,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 4.659 | ok | ok | — | ok | 1.24e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 9.159 | ok | unconverged | — | ok | 1.42e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -2859,7 +2881,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9779 | 0.9775 | — | 0.9775 | 4.09e-4 | Side by side | the methods differ | 3.76e-5 | Side by side | the methods differ | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.9042 | 0.9035 | — | 0.9041 | 1.85e-4 | Side by side | the methods differ | -5.77e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
@@ -2885,10 +2907,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### sigma-45mm-f28-dg-dn-contemporary-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -2897,16 +2920,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | unconverged | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | the methods differ | two-methods |
 | 0.5 | 13.797 | ok | ok | ok | ok | 1.42e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 1 | 25.567 | ok | unconverged | no curve | ok | 3.55e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | not computed by one engine | no-curve |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9222 | 0.9217 | 0.9233 | 0.9233 | -1.07e-3 | Side by side | the methods differ | -1.58e-3 | Set aside | not converged | 3.38e-5 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.7307 | 0.7285 | 0.7346 | 0.7341 | -3.43e-3 | Side by side | the methods differ | -5.65e-3 | Set aside | not converged | 5.05e-4 | Side by side | the methods differ |
@@ -2932,10 +2955,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### sigma-45mm-f28-dg-dn-contemporary-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -2944,16 +2968,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | unconverged | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 13.797 | ok | unconverged | — | ok | 7.11e-15 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 25.567 | ok | unconverged | — | ok | 3.55e-15 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -2963,7 +2987,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9073 | 0.9068 | — | 0.9086 | -1.24e-3 | Side by side | the methods differ | -1.78e-3 | Set aside | not converged | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.6840 | 0.6825 | — | 0.6868 | -2.77e-3 | Side by side | the methods differ | -4.25e-3 | Set aside | not converged | — | Not computed | not computed by one engine |
@@ -2989,10 +3013,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### canon-ef-135-f2l-usm-best-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -3001,16 +3026,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 0.5 | 4.629 | ok | ok | ok | ok | 1.24e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 1 | 9.170 | ok | unconverged | ok | ok | 1.91e-12 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | the methods differ | two-methods |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9831 | 0.9826 | 0.9835 | 0.9825 | 5.92e-4 | Side by side | the methods differ | 1.05e-4 | Side by side | the methods differ | 9.86e-4 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.9459 | 0.9444 | 0.9469 | 0.9441 | 1.81e-3 | Side by side | the methods differ | 2.94e-4 | Side by side | the methods differ | 2.80e-3 | Side by side | the methods differ |
@@ -3036,10 +3061,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### canon-ef-135-f2l-usm-best-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -3048,16 +3074,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | unconverged | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 4.629 | ok | unconverged | — | ok | 1.95e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 9.170 | ok | unconverged | — | ok | 1.42e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -3067,7 +3093,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9492 | 0.9490 | — | 0.9490 | 1.72e-4 | Side by side | the methods differ | -1.82e-5 | Set aside | not converged | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.7546 | 0.7551 | — | 0.7554 | -8.91e-4 | Side by side | the methods differ | -3.17e-4 | Set aside | not converged | — | Not computed | not computed by one engine |
@@ -3093,10 +3119,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### canon-ef-135-f2l-usm-f8-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -3105,16 +3132,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 0.5 | 4.629 | ok | ok | ok | ok | 1.60e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 1 | 9.170 | ok | ok | ok | ok | 1.85e-12 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9404 | 0.9400 | 0.9402 | 0.9398 | 6.55e-4 | Side by side | the methods differ | 2.19e-4 | Side by side | the methods differ | 4.11e-4 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.8213 | 0.8200 | 0.8206 | 0.8199 | 1.37e-3 | Side by side | the methods differ | 1.01e-4 | Side by side | the methods differ | 6.60e-4 | Side by side | the methods differ |
@@ -3140,10 +3167,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### canon-ef-135-f2l-usm-f8-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -3152,16 +3180,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 4.629 | ok | ok | — | ok | 5.33e-15 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 9.170 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -3171,7 +3199,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9410 | 0.9406 | — | 0.9404 | 6.01e-4 | Side by side | the methods differ | 1.99e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.8144 | 0.8134 | — | 0.8133 | 1.13e-3 | Side by side | the methods differ | 6.20e-5 | Side by side | the methods differ | — | Not computed | not computed by one engine |
@@ -3197,10 +3225,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### canon-ef-135-f2l-usm-f8-best-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -3209,16 +3238,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 0.5 | 4.629 | ok | ok | ok | ok | 1.60e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 1 | 9.170 | ok | ok | ok | ok | 1.77e-12 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9405 | 0.9400 | 0.9402 | 0.9398 | 6.53e-4 | Side by side | the methods differ | 2.17e-4 | Side by side | the methods differ | 4.08e-4 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.8216 | 0.8203 | 0.8209 | 0.8202 | 1.37e-3 | Side by side | the methods differ | 9.59e-5 | Side by side | the methods differ | 6.53e-4 | Side by side | the methods differ |
@@ -3244,10 +3273,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### canon-ef-135-f2l-usm-f8-best-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -3256,16 +3286,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 4.629 | ok | ok | — | ok | 1.78e-15 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 9.170 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -3275,7 +3305,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9418 | 0.9414 | — | 0.9412 | 6.03e-4 | Side by side | the methods differ | 1.93e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.8203 | 0.8192 | — | 0.8191 | 1.17e-3 | Side by side | the methods differ | 6.65e-5 | Side by side | the methods differ | — | Not computed | not computed by one engine |
@@ -3301,10 +3331,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### fujifilm-fujinon-gf-63mm-f28-r-wr-best-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -3313,16 +3344,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 0.5 | 12.519 | ok | unconverged | ok | ok | 2.33e-13 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | the methods differ | two-methods |
 | 1 | 24.433 | ok | unconverged | ok | unconverged | 1.14e-13 | not converged | unconverged: a sampling did not settle; the difference is shown apart, in no review band | not converged | unconverged | not converged | unconverged |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9727 | 0.9729 | 0.9729 | 0.9732 | -4.80e-4 | Side by side | the methods differ | -2.61e-4 | Side by side | the methods differ | -2.41e-4 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.9038 | 0.9048 | 0.9052 | 0.9057 | -1.91e-3 | Side by side | the methods differ | -8.66e-4 | Side by side | the methods differ | -5.09e-4 | Side by side | the methods differ |
@@ -3348,10 +3379,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### fujifilm-fujinon-gf-63mm-f28-r-wr-best-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -3360,16 +3392,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 12.519 | ok | unconverged | — | ok | 2.13e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 24.433 | ok | unconverged | — | unconverged | 6.75e-14 | not converged | unconverged: a sampling did not settle; the difference is shown apart, in no review band | not converged | unconverged | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -3379,7 +3411,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9693 | 0.9696 | — | 0.9699 | -5.53e-4 | Side by side | the methods differ | -3.03e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.8786 | 0.8796 | — | 0.8807 | -2.06e-3 | Side by side | the methods differ | -1.10e-3 | Side by side | the methods differ | — | Not computed | not computed by one engine |
@@ -3405,10 +3437,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### fujifilm-fujinon-gf-63mm-f28-r-wr-f8-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -3417,16 +3450,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 0.5 | 12.519 | ok | ok | ok | ok | 1.60e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 1 | 24.433 | ok | ok | ok | ok | 7.82e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9402 | 0.9399 | 0.9398 | 0.9396 | 5.78e-4 | Side by side | the methods differ | 2.53e-4 | Side by side | the methods differ | 1.79e-4 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.8194 | 0.8185 | 0.8185 | 0.8183 | 1.11e-3 | Side by side | the methods differ | 1.80e-4 | Side by side | the methods differ | 1.89e-4 | Side by side | the methods differ |
@@ -3452,10 +3485,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### fujifilm-fujinon-gf-63mm-f28-r-wr-f8-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -3464,16 +3498,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 12.519 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 24.433 | ok | ok | — | ok | 2.84e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -3483,7 +3517,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9426 | 0.9423 | — | 0.9421 | 5.39e-4 | Side by side | the methods differ | 2.38e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.8247 | 0.8239 | — | 0.8237 | 1.07e-3 | Side by side | the methods differ | 1.90e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
@@ -3509,10 +3543,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### fujifilm-fujinon-gf-63mm-f28-r-wr-f8-best-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -3521,16 +3556,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 0.5 | 12.519 | ok | ok | ok | ok | 9.41e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 1 | 24.433 | ok | ok | ok | ok | 9.24e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9408 | 0.9404 | 0.9403 | 0.9402 | 5.85e-4 | Side by side | the methods differ | 2.43e-4 | Side by side | the methods differ | 1.62e-4 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.8220 | 0.8210 | 0.8209 | 0.8208 | 1.20e-3 | Side by side | the methods differ | 1.69e-4 | Side by side | the methods differ | 1.37e-4 | Side by side | the methods differ |
@@ -3556,10 +3591,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### fujifilm-fujinon-gf-63mm-f28-r-wr-f8-best-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -3568,16 +3604,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 12.519 | ok | ok | — | ok | 1.42e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 24.433 | ok | ok | — | ok | 4.26e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -3587,7 +3623,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9433 | 0.9430 | — | 0.9428 | 5.48e-4 | Side by side | the methods differ | 2.29e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.8283 | 0.8274 | — | 0.8272 | 1.15e-3 | Side by side | the methods differ | 1.93e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
@@ -3613,10 +3649,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### sigma-35mm-f14-dg-hsm-a-best-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -3625,16 +3662,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 0.5 | 17.190 | ok | unconverged | no curve | ok | 3.20e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | not computed by one engine | no-curve |
 | 1 | 31.948 | ok | unconverged | no curve | unconverged | 6.47e-13 | not converged | unconverged: a sampling did not settle; the difference is shown apart, in no review band | not converged | unconverged | not computed by one engine | no-curve |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9884 | 0.9881 | 0.9887 | 0.9881 | 3.28e-4 | Side by side | the methods differ | 4.62e-5 | Side by side | the methods differ | 5.79e-4 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.9644 | 0.9635 | 0.9651 | 0.9634 | 9.60e-4 | Side by side | the methods differ | 1.13e-4 | Side by side | the methods differ | 1.71e-3 | Side by side | the methods differ |
@@ -3660,10 +3697,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### sigma-35mm-f14-dg-hsm-a-best-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -3672,16 +3710,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | unconverged | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 17.190 | ok | unconverged | — | unconverged | 5.68e-14 | not converged | unconverged: a sampling did not settle; the difference is shown apart, in no review band | not converged | unconverged | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 31.948 | ok | unconverged | — | unconverged | 3.20e-14 | not converged | unconverged: a sampling did not settle; the difference is shown apart, in no review band | not converged | unconverged | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -3691,7 +3729,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9564 | 0.9566 | — | 0.9567 | -2.42e-4 | Side by side | the methods differ | -5.97e-5 | Set aside | not converged | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.7684 | 0.7695 | — | 0.7700 | -1.65e-3 | Side by side | the methods differ | -5.02e-4 | Set aside | not converged | — | Not computed | not computed by one engine |
@@ -3717,10 +3755,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### sigma-35mm-f14-dg-hsm-a-f8-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -3729,16 +3768,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 0.5 | 17.190 | ok | ok | ok | ok | 1.78e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 1 | 31.948 | ok | ok | ok | ok | 5.93e-13 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9406 | 0.9402 | 0.9403 | 0.9400 | 6.16e-4 | Side by side | the methods differ | 2.12e-4 | Side by side | the methods differ | 3.12e-4 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.8218 | 0.8206 | 0.8210 | 0.8206 | 1.28e-3 | Side by side | the methods differ | 8.48e-5 | Side by side | the methods differ | 4.48e-4 | Side by side | the methods differ |
@@ -3764,10 +3803,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### sigma-35mm-f14-dg-hsm-a-f8-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -3776,16 +3816,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 17.190 | ok | ok | — | ok | 7.11e-15 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 31.948 | ok | ok | — | ok | 3.91e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -3795,7 +3835,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9426 | 0.9422 | — | 0.9420 | 5.84e-4 | Side by side | the methods differ | 2.03e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.8245 | 0.8234 | — | 0.8233 | 1.19e-3 | Side by side | the methods differ | 1.10e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
@@ -3821,10 +3861,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### sigma-35mm-f14-dg-hsm-a-f8-best-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -3833,16 +3874,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 0.5 | 17.190 | ok | ok | ok | ok | 1.42e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 1 | 31.948 | ok | ok | ok | ok | 5.90e-13 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9406 | 0.9402 | 0.9403 | 0.9400 | 6.17e-4 | Side by side | the methods differ | 2.13e-4 | Side by side | the methods differ | 3.13e-4 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.8218 | 0.8207 | 0.8210 | 0.8206 | 1.28e-3 | Side by side | the methods differ | 8.68e-5 | Side by side | the methods differ | 4.50e-4 | Side by side | the methods differ |
@@ -3868,10 +3909,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### sigma-35mm-f14-dg-hsm-a-f8-best-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -3880,16 +3922,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 17.190 | ok | ok | — | ok | 2.31e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 31.948 | ok | ok | — | ok | 3.91e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -3899,7 +3941,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9429 | 0.9425 | — | 0.9423 | 5.78e-4 | Side by side | the methods differ | 1.95e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.8263 | 0.8252 | — | 0.8251 | 1.18e-3 | Side by side | the methods differ | 9.12e-5 | Side by side | the methods differ | — | Not computed | not computed by one engine |
@@ -3925,10 +3967,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### nikkor-z50f12-best-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -3937,16 +3980,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side, worth a look; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side, worth a look; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 0.5 | 11.924 | ok | unconverged | ok | ok | 3.27e-11 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | the methods differ | two-methods |
 | 1 | 22.852 | ok | unconverged | no curve | unconverged | 4.62e-14 | not converged | unconverged: a sampling did not settle; the difference is shown apart, in no review band | not converged | unconverged | not computed by one engine | no-curve |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9823 | 0.9820 | 0.9823 | 0.9819 | 4.06e-4 | Side by side | the methods differ | 9.34e-5 | Side by side | the methods differ | 4.27e-4 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.9036 | 0.9024 | 0.9030 | 0.9021 | 1.49e-3 | Side by side | the methods differ | 3.11e-4 | Side by side | the methods differ | 8.70e-4 | Side by side | the methods differ |
@@ -3972,10 +4015,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### nikkor-z50f12-best-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -3984,16 +4028,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 11.924 | ok | unconverged | — | ok | 5.33e-15 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 22.852 | ok | unconverged | — | unconverged | 4.62e-14 | not converged | unconverged: a sampling did not settle; the difference is shown apart, in no review band | not converged | unconverged | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -4003,7 +4047,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9756 | 0.9755 | — | 0.9754 | 2.53e-4 | Side by side | the methods differ | 8.60e-5 | Side by side | the methods differ | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.8540 | 0.8540 | — | 0.8540 | -3.80e-5 | Side by side | the methods differ | -1.69e-6 | Side by side | the methods differ | — | Not computed | not computed by one engine |
@@ -4029,10 +4073,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### nikkor-z50f12-f8-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -4041,16 +4086,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 0.5 | 11.924 | ok | ok | ok | ok | 4.88e-13 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 1 | 22.852 | ok | ok | ok | ok | 1.78e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9406 | 0.9402 | 0.9403 | 0.9400 | 6.12e-4 | Side by side | the methods differ | 2.16e-4 | Side by side | the methods differ | 2.93e-4 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.8219 | 0.8207 | 0.8211 | 0.8206 | 1.27e-3 | Side by side | the methods differ | 9.41e-5 | Side by side | the methods differ | 4.09e-4 | Side by side | the methods differ |
@@ -4076,10 +4121,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### nikkor-z50f12-f8-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -4088,16 +4134,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 11.924 | ok | ok | — | ok | 1.78e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 22.852 | ok | ok | — | ok | 7.46e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -4107,7 +4153,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9424 | 0.9421 | — | 0.9419 | 5.78e-4 | Side by side | the methods differ | 2.08e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.8230 | 0.8220 | — | 0.8219 | 1.17e-3 | Side by side | the methods differ | 1.17e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
@@ -4133,10 +4179,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### nikkor-z50f12-f8-best-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -4145,16 +4192,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 0.5 | 11.924 | ok | ok | ok | ok | 1.40e-13 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 1 | 22.852 | ok | ok | ok | ok | 2.13e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9406 | 0.9402 | 0.9403 | 0.9400 | 6.11e-4 | Side by side | the methods differ | 2.15e-4 | Side by side | the methods differ | 2.92e-4 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.8219 | 0.8207 | 0.8211 | 0.8206 | 1.26e-3 | Side by side | the methods differ | 9.18e-5 | Side by side | the methods differ | 4.07e-4 | Side by side | the methods differ |
@@ -4180,10 +4227,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### nikkor-z50f12-f8-best-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -4192,16 +4240,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 11.924 | ok | ok | — | ok | 1.95e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 22.852 | ok | ok | — | ok | 5.33e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -4211,7 +4259,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9428 | 0.9425 | — | 0.9423 | 5.70e-4 | Side by side | the methods differ | 1.96e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.8257 | 0.8247 | — | 0.8246 | 1.16e-3 | Side by side | the methods differ | 9.27e-5 | Side by side | the methods differ | — | Not computed | not computed by one engine |
@@ -4237,10 +4285,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### sony-fe-20mm-f18-g-best-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -4249,16 +4298,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 0.5 | 28.763 | ok | unconverged | unconverged | ok | 5.96e-11 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | not converged | unconverged |
 | 1 | 47.512 | ok | unconverged | unconverged | unconverged | 3.91e-14 | not converged | unconverged: a sampling did not settle; the difference is shown apart, in no review band | not converged | unconverged | not converged | unconverged |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9716 | 0.9716 | 0.9735 | 0.9715 | 4.63e-5 | Side by side | the methods differ | 6.23e-5 | Side by side | the methods differ | 1.96e-3 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.8654 | 0.8655 | 0.8726 | 0.8668 | -1.42e-3 | Side by side | the methods differ | -1.24e-3 | Side by side | the methods differ | 5.78e-3 | Side by side, worth a look | the methods differ |
@@ -4284,10 +4333,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### sony-fe-20mm-f18-g-best-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -4296,16 +4346,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 28.763 | ok | unconverged | — | unconverged | 1.60e-14 | not converged | unconverged: a sampling did not settle; the difference is shown apart, in no review band | not converged | unconverged | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 47.512 | ok | unconverged | — | unconverged | 3.20e-14 | not converged | unconverged: a sampling did not settle; the difference is shown apart, in no review band | not converged | unconverged | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -4315,7 +4365,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9715 | 0.9716 | — | 0.9715 | -1.92e-5 | Side by side | the methods differ | 9.36e-5 | Side by side | the methods differ | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.8630 | 0.8632 | — | 0.8644 | -1.40e-3 | Side by side | the methods differ | -1.21e-3 | Side by side | the methods differ | — | Not computed | not computed by one engine |
@@ -4341,10 +4391,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### sony-fe-20mm-f18-g-f8-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -4353,16 +4404,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 0.5 | 28.763 | ok | ok | ok | ok | 9.94e-11 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 1 | 47.512 | ok | ok | no curve | ok | 1.78e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | no-curve |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9405 | 0.9400 | 0.9402 | 0.9398 | 6.53e-4 | Side by side | the methods differ | 2.18e-4 | Side by side | the methods differ | 4.04e-4 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.8216 | 0.8203 | 0.8209 | 0.8202 | 1.36e-3 | Side by side | the methods differ | 9.87e-5 | Side by side | the methods differ | 6.43e-4 | Side by side | the methods differ |
@@ -4388,10 +4439,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### sony-fe-20mm-f18-g-f8-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -4400,16 +4452,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 28.763 | ok | ok | — | ok | 1.07e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 47.512 | ok | ok | — | ok | 4.62e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -4419,7 +4471,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9429 | 0.9425 | — | 0.9423 | 6.26e-4 | Side by side | the methods differ | 2.09e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.8271 | 0.8259 | — | 0.8258 | 1.31e-3 | Side by side | the methods differ | 1.29e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
@@ -4445,10 +4497,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### sony-fe-20mm-f18-g-f8-best-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -4457,16 +4510,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 0.5 | 28.763 | ok | ok | ok | ok | 9.90e-11 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 1 | 47.512 | ok | ok | no curve | ok | 7.11e-15 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | no-curve |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9405 | 0.9400 | 0.9402 | 0.9398 | 6.52e-4 | Side by side | the methods differ | 2.18e-4 | Side by side | the methods differ | 4.03e-4 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.8216 | 0.8203 | 0.8209 | 0.8202 | 1.36e-3 | Side by side | the methods differ | 9.74e-5 | Side by side | the methods differ | 6.42e-4 | Side by side | the methods differ |
@@ -4492,10 +4545,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### sony-fe-20mm-f18-g-f8-best-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -4504,16 +4558,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 28.763 | ok | ok | — | ok | 1.78e-15 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 47.512 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -4523,7 +4577,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9431 | 0.9427 | — | 0.9425 | 6.17e-4 | Side by side | the methods differ | 1.98e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.8281 | 0.8270 | — | 0.8269 | 1.29e-3 | Side by side | the methods differ | 1.01e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
@@ -4549,10 +4603,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### sony-fe-400mm-f28-gm-oss-best-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -4561,16 +4616,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 0.5 | 1.591 | ok | ok | ok | ok | 2.84e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 1 | 3.148 | ok | unconverged | ok | ok | 1.53e-11 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | the methods differ | two-methods |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9775 | 0.9771 | 0.9778 | 0.9770 | 5.62e-4 | Side by side | the methods differ | 1.19e-4 | Side by side | the methods differ | 8.57e-4 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.9322 | 0.9310 | 0.9330 | 0.9307 | 1.47e-3 | Side by side | the methods differ | 3.06e-4 | Side by side | the methods differ | 2.33e-3 | Side by side | the methods differ |
@@ -4596,10 +4651,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### sony-fe-400mm-f28-gm-oss-best-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -4608,16 +4664,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 1.591 | ok | ok | — | ok | 5.15e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 3.148 | ok | ok | — | ok | 8.17e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -4627,7 +4683,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9768 | 0.9764 | — | 0.9763 | 5.31e-4 | Side by side | the methods differ | 1.08e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.9209 | 0.9198 | — | 0.9195 | 1.33e-3 | Side by side | the methods differ | 2.45e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
@@ -4653,10 +4709,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### sony-fe-400mm-f28-gm-oss-f8-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -4665,16 +4722,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 0.5 | 1.591 | ok | ok | ok | ok | 2.84e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 1 | 3.148 | ok | ok | ok | ok | 8.69e-12 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9356 | 0.9352 | 0.9355 | 0.9350 | 5.79e-4 | Side by side | the methods differ | 1.60e-4 | Side by side | the methods differ | 4.35e-4 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.7912 | 0.7902 | 0.7910 | 0.7904 | 8.42e-4 | Side by side | the methods differ | -1.49e-4 | Side by side | the methods differ | 6.74e-4 | Side by side | the methods differ |
@@ -4700,10 +4757,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### sony-fe-400mm-f28-gm-oss-f8-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -4712,16 +4770,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 1.591 | ok | ok | — | ok | 7.99e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 3.148 | ok | ok | — | ok | 1.78e-13 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -4731,7 +4789,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9396 | 0.9392 | — | 0.9390 | 5.67e-4 | Side by side | the methods differ | 1.53e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.8064 | 0.8053 | — | 0.8054 | 9.30e-4 | Side by side | the methods differ | -9.03e-5 | Side by side | the methods differ | — | Not computed | not computed by one engine |
@@ -4757,10 +4815,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### sony-fe-400mm-f28-gm-oss-f8-best-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -4769,16 +4828,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 0.5 | 1.591 | ok | ok | ok | ok | 3.20e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 1 | 3.148 | ok | ok | ok | ok | 1.34e-11 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9404 | 0.9400 | 0.9402 | 0.9397 | 6.75e-4 | Side by side | the methods differ | 2.19e-4 | Side by side | the methods differ | 4.64e-4 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.8214 | 0.8201 | 0.8208 | 0.8200 | 1.42e-3 | Side by side | the methods differ | 1.01e-4 | Side by side | the methods differ | 7.72e-4 | Side by side | the methods differ |
@@ -4804,10 +4863,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### sony-fe-400mm-f28-gm-oss-f8-best-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -4816,16 +4876,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 1.591 | ok | ok | — | ok | 6.75e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 3.148 | ok | ok | — | ok | 1.78e-13 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -4835,7 +4895,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9431 | 0.9426 | — | 0.9424 | 6.40e-4 | Side by side | the methods differ | 1.99e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.8283 | 0.8271 | — | 0.8270 | 1.35e-3 | Side by side | the methods differ | 1.06e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
@@ -4861,10 +4921,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### sigma-105mm-f28-dg-dn-macro-art-best-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -4873,16 +4934,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 0.5 | 5.938 | ok | ok | ok | ok | 3.98e-13 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 1 | 11.651 | ok | ok | ok | ok | 2.13e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9739 | 0.9737 | 0.9748 | 0.9735 | 4.03e-4 | Side by side | the methods differ | 1.79e-4 | Side by side | the methods differ | 1.31e-3 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.9119 | 0.9115 | 0.9148 | 0.9114 | 4.80e-4 | Side by side | the methods differ | 1.74e-4 | Side by side | the methods differ | 3.48e-3 | Side by side | the methods differ |
@@ -4908,10 +4969,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### sigma-105mm-f28-dg-dn-macro-art-best-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -4920,16 +4982,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 5.938 | ok | ok | — | ok | 5.33e-15 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 11.650 | ok | ok | — | ok | 8.17e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -4939,7 +5001,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9733 | 0.9732 | — | 0.9730 | 2.79e-4 | Side by side | the methods differ | 1.51e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.9023 | 0.9029 | — | 0.9028 | -4.46e-4 | Side by side | the methods differ | 6.57e-5 | Side by side | the methods differ | — | Not computed | not computed by one engine |
@@ -4965,10 +5027,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### sigma-105mm-f28-dg-dn-macro-art-f8-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -4977,16 +5040,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 0.5 | 5.938 | ok | ok | ok | ok | 4.92e-13 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 1 | 11.651 | ok | ok | ok | ok | 2.84e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9403 | 0.9398 | 0.9401 | 0.9396 | 7.01e-4 | Side by side | the methods differ | 2.13e-4 | Side by side | the methods differ | 5.49e-4 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.8211 | 0.8197 | 0.8205 | 0.8196 | 1.48e-3 | Side by side | the methods differ | 8.44e-5 | Side by side | the methods differ | 9.50e-4 | Side by side | the methods differ |
@@ -5012,10 +5075,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### sigma-105mm-f28-dg-dn-macro-art-f8-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -5024,16 +5088,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 5.938 | ok | ok | — | ok | 5.33e-15 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 11.650 | ok | ok | — | ok | 4.26e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -5043,7 +5107,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9430 | 0.9425 | — | 0.9423 | 6.72e-4 | Side by side | the methods differ | 1.96e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.8278 | 0.8265 | — | 0.8264 | 1.42e-3 | Side by side | the methods differ | 9.70e-5 | Side by side | the methods differ | — | Not computed | not computed by one engine |
@@ -5069,10 +5133,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### sigma-105mm-f28-dg-dn-macro-art-f8-best-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -5081,16 +5146,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 0.5 | 5.938 | ok | ok | ok | ok | 5.13e-13 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 1 | 11.651 | ok | ok | ok | ok | 2.84e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9403 | 0.9398 | 0.9401 | 0.9396 | 7.04e-4 | Side by side | the methods differ | 2.16e-4 | Side by side | the methods differ | 5.52e-4 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.8211 | 0.8197 | 0.8206 | 0.8196 | 1.49e-3 | Side by side | the methods differ | 9.32e-5 | Side by side | the methods differ | 9.58e-4 | Side by side | the methods differ |
@@ -5116,10 +5181,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### sigma-105mm-f28-dg-dn-macro-art-f8-best-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -5128,16 +5194,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 5.938 | ok | ok | — | ok | 7.11e-15 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 11.650 | ok | ok | — | ok | 4.26e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -5147,7 +5213,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9430 | 0.9425 | — | 0.9423 | 6.68e-4 | Side by side | the methods differ | 1.92e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.8281 | 0.8267 | — | 0.8267 | 1.41e-3 | Side by side | the methods differ | 8.55e-5 | Side by side | the methods differ | — | Not computed | not computed by one engine |
@@ -5173,10 +5239,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### nikon-z-24-70f4s-wide-best-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -5185,16 +5252,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side, worth a look; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side, worth a look; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 0.5 | 24.232 | ok | ok | ok | ok | 5.90e-11 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 1 | 43.275 | ok | unconverged | ok | ok | 7.11e-15 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | the methods differ | two-methods |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9648 | 0.9647 | 0.9650 | 0.9645 | 3.88e-4 | Side by side | the methods differ | 2.31e-4 | Side by side | the methods differ | 5.50e-4 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.8739 | 0.8734 | 0.8742 | 0.8728 | 1.09e-3 | Side by side | the methods differ | 5.41e-4 | Side by side | the methods differ | 1.38e-3 | Side by side | the methods differ |
@@ -5220,10 +5287,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### nikon-z-24-70f4s-wide-best-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -5232,16 +5300,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 24.232 | ok | ok | — | ok | 8.88e-15 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 43.275 | ok | unconverged | — | ok | 5.33e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -5251,7 +5319,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9663 | 0.9662 | — | 0.9659 | 3.57e-4 | Side by side | the methods differ | 2.10e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.8785 | 0.8780 | — | 0.8776 | 8.98e-4 | Side by side | the methods differ | 4.48e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
@@ -5277,10 +5345,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### nikon-z-24-70f4s-wide-f8-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -5289,16 +5358,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 0.5 | 24.232 | ok | ok | ok | ok | 8.63e-12 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 1 | 43.275 | ok | ok | ok | ok | 2.84e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9399 | 0.9395 | 0.9396 | 0.9392 | 6.91e-4 | Side by side | the methods differ | 3.15e-4 | Side by side | the methods differ | 4.12e-4 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.8184 | 0.8173 | 0.8177 | 0.8170 | 1.36e-3 | Side by side | the methods differ | 3.09e-4 | Side by side | the methods differ | 6.97e-4 | Side by side | the methods differ |
@@ -5324,10 +5393,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### nikon-z-24-70f4s-wide-f8-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -5336,16 +5406,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 24.232 | ok | ok | — | ok | 7.11e-15 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 43.275 | ok | ok | — | ok | 4.26e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -5355,7 +5425,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9430 | 0.9426 | — | 0.9423 | 6.58e-4 | Side by side | the methods differ | 2.90e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.8279 | 0.8268 | — | 0.8265 | 1.36e-3 | Side by side | the methods differ | 3.10e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
@@ -5381,10 +5451,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### nikon-z-24-70f4s-wide-f8-best-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -5393,16 +5464,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 0.5 | 24.232 | ok | ok | ok | ok | 2.19e-11 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 1 | 43.275 | ok | ok | ok | ok | 2.84e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9405 | 0.9401 | 0.9402 | 0.9398 | 6.92e-4 | Side by side | the methods differ | 2.94e-4 | Side by side | the methods differ | 3.80e-4 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.8214 | 0.8202 | 0.8205 | 0.8199 | 1.45e-3 | Side by side | the methods differ | 2.74e-4 | Side by side | the methods differ | 6.02e-4 | Side by side | the methods differ |
@@ -5428,10 +5499,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### nikon-z-24-70f4s-wide-f8-best-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -5440,16 +5512,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 24.232 | ok | ok | — | ok | 7.11e-15 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 43.275 | ok | ok | — | ok | 4.26e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -5459,7 +5531,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9434 | 0.9430 | — | 0.9427 | 6.58e-4 | Side by side | the methods differ | 2.74e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.8299 | 0.8288 | — | 0.8285 | 1.41e-3 | Side by side | the methods differ | 2.87e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
@@ -5485,10 +5557,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### nikon-z-24-70f4s-tele-best-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -5497,16 +5570,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 0.5 | 8.914 | ok | ok | ok | ok | 8.88e-15 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 1 | 16.633 | ok | unconverged | ok | ok | 8.30e-12 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | the methods differ | two-methods |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9678 | 0.9669 | 0.9688 | 0.9672 | 6.85e-4 | Side by side | the methods differ | -2.38e-4 | Side by side | the methods differ | 1.68e-3 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.9030 | 0.9000 | 0.9044 | 0.9003 | 2.67e-3 | Side by side | the methods differ | -2.82e-4 | Side by side | the methods differ | 4.11e-3 | Side by side | the methods differ |
@@ -5532,10 +5605,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### nikon-z-24-70f4s-tele-best-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -5544,16 +5618,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 8.914 | ok | unconverged | — | ok | 8.88e-15 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 16.631 | ok | unconverged | — | ok | 1.78e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -5563,7 +5637,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9688 | 0.9678 | — | 0.9680 | 7.53e-4 | Side by side | the methods differ | -1.83e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.9024 | 0.8996 | — | 0.8997 | 2.74e-3 | Side by side | the methods differ | -8.24e-5 | Side by side | the methods differ | — | Not computed | not computed by one engine |
@@ -5589,10 +5663,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### nikon-z-24-70f4s-tele-f8-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -5601,16 +5676,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 0.5 | 8.914 | ok | ok | ok | ok | 1.07e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 1 | 16.633 | ok | ok | ok | ok | 1.00e-11 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9395 | 0.9390 | 0.9394 | 0.9388 | 6.93e-4 | Side by side | the methods differ | 1.76e-4 | Side by side | the methods differ | 6.45e-4 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.8172 | 0.8158 | 0.8170 | 0.8159 | 1.35e-3 | Side by side | the methods differ | -4.37e-5 | Side by side | the methods differ | 1.12e-3 | Side by side | the methods differ |
@@ -5636,10 +5711,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### nikon-z-24-70f4s-tele-f8-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -5648,16 +5724,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 8.914 | ok | ok | — | ok | 1.78e-15 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 16.631 | ok | ok | — | ok | 3.20e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -5667,7 +5743,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9418 | 0.9413 | — | 0.9411 | 6.56e-4 | Side by side | the methods differ | 1.52e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.8220 | 0.8207 | — | 0.8208 | 1.25e-3 | Side by side | the methods differ | -6.91e-5 | Side by side | the methods differ | — | Not computed | not computed by one engine |
@@ -5693,10 +5769,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### nikon-z-24-70f4s-tele-f8-best-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -5705,16 +5782,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 0.5 | 8.914 | ok | ok | ok | ok | 1.07e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 1 | 16.633 | ok | ok | ok | ok | 7.92e-12 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9401 | 0.9396 | 0.9400 | 0.9394 | 7.30e-4 | Side by side | the methods differ | 1.99e-4 | Side by side | the methods differ | 6.57e-4 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.8204 | 0.8189 | 0.8201 | 0.8189 | 1.54e-3 | Side by side | the methods differ | 4.31e-5 | Side by side | the methods differ | 1.16e-3 | Side by side | the methods differ |
@@ -5740,10 +5817,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### nikon-z-24-70f4s-tele-f8-best-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -5752,16 +5830,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 8.914 | ok | ok | — | ok | 3.55e-15 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 16.631 | ok | ok | — | ok | 3.20e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -5771,7 +5849,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9429 | 0.9424 | — | 0.9422 | 7.05e-4 | Side by side | the methods differ | 1.82e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.8284 | 0.8270 | — | 0.8269 | 1.49e-3 | Side by side | the methods differ | 5.07e-5 | Side by side | the methods differ | — | Not computed | not computed by one engine |
@@ -5797,10 +5875,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### nikon-z-mc-105f28-best-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -5809,16 +5888,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 0.5 | 6.022 | ok | ok | ok | ok | 1.24e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 1 | 11.999 | ok | unconverged | ok | ok | 1.52e-10 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | the methods differ | two-methods |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9768 | 0.9766 | 0.9771 | 0.9765 | 3.75e-4 | Side by side | the methods differ | 1.65e-4 | Side by side | the methods differ | 6.93e-4 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.9274 | 0.9268 | 0.9283 | 0.9264 | 1.01e-3 | Side by side | the methods differ | 3.91e-4 | Side by side | the methods differ | 1.89e-3 | Side by side | the methods differ |
@@ -5844,10 +5923,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### nikon-z-mc-105f28-best-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -5856,16 +5936,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 6.022 | ok | ok | — | ok | 3.55e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 11.999 | ok | unconverged | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -5875,7 +5955,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9756 | 0.9756 | — | 0.9755 | 1.25e-4 | Side by side | the methods differ | 1.22e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.9167 | 0.9172 | — | 0.9171 | -4.36e-4 | Side by side | the methods differ | 1.04e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
@@ -5901,10 +5981,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### nikon-z-mc-105f28-f8-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -5913,16 +5994,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 0.5 | 6.022 | ok | ok | ok | ok | 1.95e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 1 | 11.999 | ok | ok | ok | ok | 1.17e-10 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9402 | 0.9398 | 0.9400 | 0.9396 | 6.09e-4 | Side by side | the methods differ | 1.77e-4 | Side by side | the methods differ | 3.76e-4 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.8203 | 0.8190 | 0.8196 | 0.8190 | 1.22e-3 | Side by side | the methods differ | -1.07e-5 | Side by side | the methods differ | 5.72e-4 | Side by side | the methods differ |
@@ -5948,10 +6029,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### nikon-z-mc-105f28-f8-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -5960,16 +6042,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 6.022 | ok | ok | — | ok | 5.33e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 11.999 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -5979,7 +6061,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9420 | 0.9416 | — | 0.9414 | 5.58e-4 | Side by side | the methods differ | 1.53e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.8213 | 0.8202 | — | 0.8202 | 1.07e-3 | Side by side | the methods differ | -4.31e-5 | Side by side | the methods differ | — | Not computed | not computed by one engine |
@@ -6005,10 +6087,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### nikon-z-mc-105f28-f8-best-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -6017,16 +6100,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 0.5 | 6.022 | ok | ok | ok | ok | 1.78e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 1 | 11.999 | ok | ok | ok | ok | 1.31e-10 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9405 | 0.9400 | 0.9402 | 0.9398 | 6.28e-4 | Side by side | the methods differ | 1.90e-4 | Side by side | the methods differ | 3.87e-4 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.8214 | 0.8202 | 0.8207 | 0.8201 | 1.31e-3 | Side by side | the methods differ | 3.52e-5 | Side by side | the methods differ | 6.03e-4 | Side by side | the methods differ |
@@ -6052,10 +6135,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### nikon-z-mc-105f28-f8-best-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -6064,16 +6148,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 6.022 | ok | ok | — | ok | 6.22e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 11.999 | ok | ok | — | ok | 3.55e-15 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -6083,7 +6167,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9430 | 0.9425 | — | 0.9424 | 6.00e-4 | Side by side | the methods differ | 1.79e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.8274 | 0.8262 | — | 0.8261 | 1.26e-3 | Side by side | the methods differ | 5.92e-5 | Side by side | the methods differ | — | Not computed | not computed by one engine |
@@ -6109,10 +6193,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### nikon-z-135f18-plena-best-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -6121,16 +6206,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 0.5 | 4.659 | ok | ok | ok | ok | 2.13e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 1 | 9.159 | ok | unconverged | ok | ok | 1.10e-13 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | the methods differ | two-methods |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9797 | 0.9792 | 0.9807 | 0.9791 | 6.31e-4 | Side by side | the methods differ | 9.60e-5 | Side by side | the methods differ | 1.62e-3 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.9145 | 0.9135 | 0.9184 | 0.9134 | 1.01e-3 | Side by side | the methods differ | 3.62e-5 | Side by side | the methods differ | 4.93e-3 | Side by side | the methods differ |
@@ -6156,10 +6241,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### nikon-z-135f18-plena-best-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -6168,16 +6254,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 4.659 | ok | ok | — | ok | 1.24e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 9.159 | ok | unconverged | — | ok | 1.42e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -6187,7 +6273,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9804 | 0.9799 | — | 0.9798 | 5.96e-4 | Side by side | the methods differ | 9.80e-5 | Side by side | the methods differ | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.9167 | 0.9158 | — | 0.9158 | 8.43e-4 | Side by side | the methods differ | 4.46e-6 | Side by side | the methods differ | — | Not computed | not computed by one engine |
@@ -6213,10 +6299,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### nikon-z-135f18-plena-f8-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -6225,16 +6312,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 0.5 | 4.659 | ok | ok | ok | ok | 1.07e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 1 | 9.159 | ok | ok | ok | ok | 1.39e-13 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9404 | 0.9400 | 0.9402 | 0.9397 | 6.61e-4 | Side by side | the methods differ | 2.08e-4 | Side by side | the methods differ | 4.47e-4 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.8214 | 0.8201 | 0.8207 | 0.8200 | 1.38e-3 | Side by side | the methods differ | 7.25e-5 | Side by side | the methods differ | 7.31e-4 | Side by side | the methods differ |
@@ -6260,10 +6347,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### nikon-z-135f18-plena-f8-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -6272,16 +6360,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 4.659 | ok | ok | — | ok | 8.88e-15 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 9.159 | ok | ok | — | ok | 2.49e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -6291,7 +6379,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9434 | 0.9430 | — | 0.9428 | 6.30e-4 | Side by side | the methods differ | 1.90e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.8303 | 0.8290 | — | 0.8289 | 1.34e-3 | Side by side | the methods differ | 8.97e-5 | Side by side | the methods differ | — | Not computed | not computed by one engine |
@@ -6317,10 +6405,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### nikon-z-135f18-plena-f8-best-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -6329,16 +6418,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 0.5 | 4.659 | ok | ok | ok | ok | 1.24e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 1 | 9.159 | ok | ok | ok | ok | 1.49e-13 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9404 | 0.9400 | 0.9402 | 0.9398 | 6.63e-4 | Side by side | the methods differ | 2.10e-4 | Side by side | the methods differ | 4.49e-4 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.8214 | 0.8201 | 0.8208 | 0.8200 | 1.39e-3 | Side by side | the methods differ | 7.91e-5 | Side by side | the methods differ | 7.37e-4 | Side by side | the methods differ |
@@ -6364,10 +6453,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### nikon-z-135f18-plena-f8-best-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -6376,16 +6466,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 4.659 | ok | ok | — | ok | 8.88e-15 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 9.159 | ok | ok | — | ok | 2.84e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -6395,7 +6485,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9434 | 0.9430 | — | 0.9428 | 6.31e-4 | Side by side | the methods differ | 1.92e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.8303 | 0.8290 | — | 0.8289 | 1.35e-3 | Side by side | the methods differ | 9.40e-5 | Side by side | the methods differ | — | Not computed | not computed by one engine |
@@ -6421,10 +6511,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### sigma-45mm-f28-dg-dn-contemporary-best-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -6433,16 +6524,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | unconverged | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | the methods differ | two-methods |
 | 0.5 | 13.797 | ok | ok | ok | ok | 3.55e-15 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 1 | 25.567 | ok | unconverged | no curve | ok | 1.07e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | not computed by one engine | no-curve |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9450 | 0.9447 | 0.9457 | 0.9457 | -6.86e-4 | Side by side | the methods differ | -1.00e-3 | Set aside | not converged | 1.95e-5 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.8070 | 0.8051 | 0.8107 | 0.8102 | -3.21e-3 | Side by side | the methods differ | -5.14e-3 | Set aside | not converged | 4.62e-4 | Side by side | the methods differ |
@@ -6468,10 +6559,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### sigma-45mm-f28-dg-dn-contemporary-best-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -6480,16 +6572,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | unconverged | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 13.797 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 25.567 | ok | unconverged | — | ok | 3.55e-15 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | not converged | unconverged | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -6499,7 +6591,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9376 | 0.9373 | — | 0.9384 | -7.85e-4 | Side by side | the methods differ | -1.12e-3 | Set aside | not converged | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.7729 | 0.7713 | — | 0.7757 | -2.86e-3 | Side by side | the methods differ | -4.39e-3 | Set aside | not converged | — | Not computed | not computed by one engine |
@@ -6525,10 +6617,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### sigma-45mm-f28-dg-dn-contemporary-f8-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -6537,16 +6630,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 0.5 | 13.797 | ok | ok | ok | ok | 7.11e-15 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 1 | 25.567 | ok | ok | ok | ok | 7.11e-15 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9391 | 0.9388 | 0.9388 | 0.9385 | 5.89e-4 | Side by side | the methods differ | 2.41e-4 | Side by side | the methods differ | 2.48e-4 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.8130 | 0.8121 | 0.8123 | 0.8120 | 1.08e-3 | Side by side | the methods differ | 1.56e-4 | Side by side | the methods differ | 3.60e-4 | Side by side | the methods differ |
@@ -6572,10 +6665,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### sigma-45mm-f28-dg-dn-contemporary-f8-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -6584,16 +6678,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 13.797 | ok | ok | — | ok | 3.55e-15 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 25.567 | ok | ok | — | ok | 7.11e-15 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -6603,7 +6697,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9415 | 0.9412 | — | 0.9409 | 5.52e-4 | Side by side | the methods differ | 2.27e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.8180 | 0.8171 | — | 0.8170 | 1.02e-3 | Side by side | the methods differ | 1.59e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
@@ -6629,10 +6723,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### sigma-45mm-f28-dg-dn-contemporary-f8-best-ref
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -6641,16 +6736,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-7 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 0.5 | 13.797 | ok | ok | ok | ok | 1.24e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 1 | 25.567 | ok | ok | ok | ok | 7.11e-15 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9407 | 0.9403 | 0.9403 | 0.9401 | 5.84e-4 | Side by side | the methods differ | 2.16e-4 | Side by side | the methods differ | 2.09e-4 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.8218 | 0.8207 | 0.8208 | 0.8206 | 1.23e-3 | Side by side | the methods differ | 1.27e-4 | Side by side | the methods differ | 2.34e-4 | Side by side | the methods differ |
@@ -6676,10 +6771,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### sigma-45mm-f28-dg-dn-contemporary-f8-best-photopic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -6688,16 +6784,16 @@ choices of each method.
 Review bands: 5.00e-3 on the axis, 1.00e-2 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 13.797 | ok | ok | — | ok | 1.07e-14 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 25.567 | ok | ok | — | ok | 7.11e-15 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -6707,7 +6803,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.9434 | 0.9430 | — | 0.9428 | 5.51e-4 | Side by side | the methods differ | 2.03e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.8289 | 0.8279 | — | 0.8277 | 1.18e-3 | Side by side | the methods differ | 1.51e-4 | Side by side | the methods differ | — | Not computed | not computed by one engine |
@@ -6750,108 +6846,108 @@ sorting limit tells two image points apart; nothing here is a failure.
 | Check | Run | Field | Pair | Figures above their review band or sorting limit |
 |---|---|---|---|---|
 | MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | canon-ef-135-f2l-usm-ref | — | lv – optiland | mtfOnAxis.maxAbs 5.07e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 100 |
-| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | canon-ef-135-f2l-usm-ref | — | optiland – wave | mtfOnAxis.maxAbs 6.64e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | canon-ef-135-f2l-usm-ref | — | optiland – wave-mtf-of-lv-rays | mtfOnAxis.maxAbs 6.64e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
 | MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | canon-ef-135-f2l-usm-ref | — | lv – optiland | mtfOnAxis.maxAbs 5.21e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 100 |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | canon-ef-135-f2l-usm-ref | — | optiland – optiland-wave | mtfOnAxis.maxAbs 6.78e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 90 |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | canon-ef-135-f2l-usm-ref | — | optiland – wave | mtfOnAxis.maxAbs 6.79e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | canon-ef-135-f2l-usm-ref | — | optiland – otf-of-optiland-wavefront | mtfOnAxis.maxAbs 6.78e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 90 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | canon-ef-135-f2l-usm-ref | — | optiland – wave-mtf-of-lv-rays | mtfOnAxis.maxAbs 6.79e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
 | MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | fujifilm-fujinon-gf-63mm-f28-r-wr-ref | — | lv – optiland | mtfOnAxis.maxAbs 5.75e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 50; mtfOffAxis.maxAbs 2.64e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 60 |
 | MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | fujifilm-fujinon-gf-63mm-f28-r-wr-ref | — | lv – optiland | mtfOnAxis.maxAbs 5.40e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 50; mtfOffAxis.maxAbs 2.63e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 60 |
 | MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | sigma-35mm-f14-dg-hsm-a-ref | — | lv – optiland | mtfOnAxis.maxAbs 6.59e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 100 |
-| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | sigma-35mm-f14-dg-hsm-a-ref | — | optiland – wave | mtfOnAxis.maxAbs 9.40e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | sigma-35mm-f14-dg-hsm-a-ref | — | optiland – wave-mtf-of-lv-rays | mtfOnAxis.maxAbs 9.40e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
 | MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sigma-35mm-f14-dg-hsm-a-ref | — | lv – optiland | mtfOnAxis.maxAbs 6.83e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 100 |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sigma-35mm-f14-dg-hsm-a-ref | — | optiland – optiland-wave | mtfOnAxis.maxAbs 9.72e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 100 |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sigma-35mm-f14-dg-hsm-a-ref | — | optiland – wave | mtfOnAxis.maxAbs 9.63e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sigma-35mm-f14-dg-hsm-a-ref | — | optiland – otf-of-optiland-wavefront | mtfOnAxis.maxAbs 9.72e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 100 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sigma-35mm-f14-dg-hsm-a-ref | — | optiland – wave-mtf-of-lv-rays | mtfOnAxis.maxAbs 9.63e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
 | MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | sony-fe-20mm-f18-g-ref | — | lv – optiland | mtfOnAxis.maxAbs 2.58e-2 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 30; mtfOffAxis.maxAbs 2.63e-2 (review band 1.00e-2) at cut tangential, field 5.00e-1 of the image height, frequencyPerMm 30 |
 | MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sony-fe-20mm-f18-g-ref | — | lv – optiland | mtfOnAxis.maxAbs 2.62e-2 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 30 |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sony-fe-20mm-f18-g-ref | — | lv – optiland-wave | mtfOnAxis.maxAbs 5.15e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 30 |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sony-fe-20mm-f18-g-ref | — | optiland – optiland-wave | mtfOnAxis.maxAbs 2.11e-2 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 30 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sony-fe-20mm-f18-g-ref | — | lv – otf-of-optiland-wavefront | mtfOnAxis.maxAbs 5.15e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 30 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sony-fe-20mm-f18-g-ref | — | optiland – otf-of-optiland-wavefront | mtfOnAxis.maxAbs 2.11e-2 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 30 |
 | MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | sony-fe-400mm-f28-gm-oss-ref | — | lv – optiland | mtfOnAxis.maxAbs 1.01e-2 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 40; mtfOffAxis.maxAbs 1.01e-2 (review band 1.00e-2) at cut sagittal, field 1 of the image height, frequencyPerMm 80 |
-| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | sony-fe-400mm-f28-gm-oss-ref | — | optiland – wave | mtfOnAxis.maxAbs 9.92e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 40; mtfOffAxis.maxAbs 1.10e-2 (review band 1.00e-2) at cut sagittal, field 1 of the image height, frequencyPerMm 80 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | sony-fe-400mm-f28-gm-oss-ref | — | optiland – wave-mtf-of-lv-rays | mtfOnAxis.maxAbs 9.92e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 40; mtfOffAxis.maxAbs 1.10e-2 (review band 1.00e-2) at cut sagittal, field 1 of the image height, frequencyPerMm 80 |
 | MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sony-fe-400mm-f28-gm-oss-ref | — | lv – optiland | mtfOnAxis.maxAbs 1.04e-2 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 40; mtfOffAxis.maxAbs 1.01e-2 (review band 1.00e-2) at cut sagittal, field 1 of the image height, frequencyPerMm 80 |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sony-fe-400mm-f28-gm-oss-ref | — | optiland – optiland-wave | mtfOnAxis.maxAbs 8.93e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 40; mtfOffAxis.maxAbs 1.05e-2 (review band 1.00e-2) at cut sagittal, field 1 of the image height, frequencyPerMm 80 |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sony-fe-400mm-f28-gm-oss-ref | — | optiland – wave | mtfOnAxis.maxAbs 1.02e-2 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 40; mtfOffAxis.maxAbs 1.11e-2 (review band 1.00e-2) at cut sagittal, field 1 of the image height, frequencyPerMm 80 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sony-fe-400mm-f28-gm-oss-ref | — | optiland – otf-of-optiland-wavefront | mtfOnAxis.maxAbs 8.93e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 40; mtfOffAxis.maxAbs 1.05e-2 (review band 1.00e-2) at cut sagittal, field 1 of the image height, frequencyPerMm 80 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sony-fe-400mm-f28-gm-oss-ref | — | optiland – wave-mtf-of-lv-rays | mtfOnAxis.maxAbs 1.02e-2 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 40; mtfOffAxis.maxAbs 1.11e-2 (review band 1.00e-2) at cut sagittal, field 1 of the image height, frequencyPerMm 80 |
 | MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | sigma-105mm-f28-dg-dn-macro-art-ref | — | lv – optiland | mtfOnAxis.maxAbs 8.58e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100; mtfOffAxis.maxAbs 4.00e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 30 |
-| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | sigma-105mm-f28-dg-dn-macro-art-ref | — | optiland – wave | mtfOnAxis.maxAbs 8.42e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100; mtfOffAxis.maxAbs 4.03e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 30 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | sigma-105mm-f28-dg-dn-macro-art-ref | — | optiland – wave-mtf-of-lv-rays | mtfOnAxis.maxAbs 8.42e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100; mtfOffAxis.maxAbs 4.03e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 30 |
 | MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sigma-105mm-f28-dg-dn-macro-art-ref | — | lv – optiland | mtfOnAxis.maxAbs 8.73e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100; mtfOffAxis.maxAbs 3.95e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 30 |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sigma-105mm-f28-dg-dn-macro-art-ref | — | optiland – optiland-wave | mtfOnAxis.maxAbs 5.91e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 90; mtfOffAxis.maxAbs 4.12e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 30 |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sigma-105mm-f28-dg-dn-macro-art-ref | — | optiland – wave | mtfOnAxis.maxAbs 8.57e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100; mtfOffAxis.maxAbs 3.98e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 30 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sigma-105mm-f28-dg-dn-macro-art-ref | — | optiland – otf-of-optiland-wavefront | mtfOnAxis.maxAbs 5.91e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 90; mtfOffAxis.maxAbs 4.12e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 30 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sigma-105mm-f28-dg-dn-macro-art-ref | — | optiland – wave-mtf-of-lv-rays | mtfOnAxis.maxAbs 8.57e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100; mtfOffAxis.maxAbs 3.98e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 30 |
 | MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | nikon-z-24-70f4s-wide-ref | — | lv – optiland | mtfOnAxis.maxAbs 7.49e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 40; mtfOffAxis.maxAbs 7.49e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 20 |
 | MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-24-70f4s-wide-ref | — | lv – optiland | mtfOnAxis.maxAbs 7.78e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 40; mtfOffAxis.maxAbs 7.49e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 20 |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-24-70f4s-wide-ref | — | optiland – optiland-wave | mtfOffAxis.maxAbs 7.12e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 20 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-24-70f4s-wide-ref | — | optiland – otf-of-optiland-wavefront | mtfOffAxis.maxAbs 7.12e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 20 |
 | MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | nikon-z-24-70f4s-tele-ref | — | lv – optiland | mtfOffAxis.maxAbs 2.75e-1 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 50 |
-| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | nikon-z-24-70f4s-tele-ref | — | optiland – wave | mtfOnAxis.maxAbs 6.68e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 80; mtfOffAxis.maxAbs 1.03e-2 (review band 1.00e-2) at cut tangential, field 5.00e-1 of the image height, frequencyPerMm 100 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | nikon-z-24-70f4s-tele-ref | — | optiland – wave-mtf-of-lv-rays | mtfOnAxis.maxAbs 6.68e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 80; mtfOffAxis.maxAbs 1.03e-2 (review band 1.00e-2) at cut tangential, field 5.00e-1 of the image height, frequencyPerMm 100 |
 | MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-24-70f4s-tele-ref | — | lv – optiland | mtfOffAxis.maxAbs 2.75e-1 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 50 |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-24-70f4s-tele-ref | — | optiland – optiland-wave | mtfOnAxis.maxAbs 5.83e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 70; mtfOffAxis.maxAbs 2.75e-1 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 50 |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-24-70f4s-tele-ref | — | optiland – wave | mtfOnAxis.maxAbs 6.87e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 80; mtfOffAxis.maxAbs 1.05e-2 (review band 1.00e-2) at cut tangential, field 5.00e-1 of the image height, frequencyPerMm 100 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-24-70f4s-tele-ref | — | optiland – otf-of-optiland-wavefront | mtfOnAxis.maxAbs 5.83e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 70; mtfOffAxis.maxAbs 2.75e-1 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 50 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-24-70f4s-tele-ref | — | optiland – wave-mtf-of-lv-rays | mtfOnAxis.maxAbs 6.87e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 80; mtfOffAxis.maxAbs 1.05e-2 (review band 1.00e-2) at cut tangential, field 5.00e-1 of the image height, frequencyPerMm 100 |
 | Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | nikon-z-24-70f4s-tele-photopic | 0 | lv – optiland | mtfOnAxis.maxAbs 8.65e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
-| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | nikon-z-24-70f4s-tele-photopic | 0 | optiland – replay | mtfOnAxis.maxAbs 8.65e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | nikon-z-24-70f4s-tele-photopic | 0 | optiland – replay-of-lv-mtf | mtfOnAxis.maxAbs 8.65e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
 | MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | nikon-z-mc-105f28-ref | — | lv – optiland | mtfOnAxis.maxAbs 5.45e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 70 |
-| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | nikon-z-mc-105f28-ref | — | optiland – wave | mtfOnAxis.maxAbs 5.44e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 60 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | nikon-z-mc-105f28-ref | — | optiland – wave-mtf-of-lv-rays | mtfOnAxis.maxAbs 5.44e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 60 |
 | Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | nikon-z-mc-105f28-ref | 0 | lv – optiland | mtfOnAxis.maxAbs 5.66e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
-| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | nikon-z-mc-105f28-ref | 0 | optiland – replay | mtfOnAxis.maxAbs 5.66e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | nikon-z-mc-105f28-ref | 0 | optiland – replay-of-lv-mtf | mtfOnAxis.maxAbs 5.66e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
 | MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-mc-105f28-ref | — | lv – optiland | mtfOnAxis.maxAbs 5.68e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 70 |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-mc-105f28-ref | — | optiland – optiland-wave | mtfOnAxis.maxAbs 6.24e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 60 |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-mc-105f28-ref | — | optiland – wave | mtfOnAxis.maxAbs 5.70e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 60 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-mc-105f28-ref | — | optiland – otf-of-optiland-wavefront | mtfOnAxis.maxAbs 6.24e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 60 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-mc-105f28-ref | — | optiland – wave-mtf-of-lv-rays | mtfOnAxis.maxAbs 5.70e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 60 |
 | Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | nikon-z-mc-105f28-photopic | 0 | lv – optiland | mtfOnAxis.maxAbs 6.38e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
-| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | nikon-z-mc-105f28-photopic | 0 | optiland – replay | mtfOnAxis.maxAbs 6.38e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | nikon-z-mc-105f28-photopic | 0 | optiland – replay-of-lv-mtf | mtfOnAxis.maxAbs 6.38e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
 | MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | nikon-z-135f18-plena-ref | — | lv – optiland | mtfOnAxis.maxAbs 1.80e-2 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 70; mtfOffAxis.maxAbs 3.06e-2 (review band 1.00e-2) at cut sagittal, field 1 of the image height, frequencyPerMm 30 |
-| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | nikon-z-135f18-plena-ref | — | optiland – wave | mtfOffAxis.maxAbs 1.93e-2 (review band 1.00e-2) at cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 40 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | nikon-z-135f18-plena-ref | — | optiland – wave-mtf-of-lv-rays | mtfOffAxis.maxAbs 1.93e-2 (review band 1.00e-2) at cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 40 |
 | MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-135f18-plena-ref | — | lv – optiland | mtfOnAxis.maxAbs 1.83e-2 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 70; mtfOffAxis.maxAbs 3.08e-2 (review band 1.00e-2) at cut sagittal, field 1 of the image height, frequencyPerMm 30 |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-135f18-plena-ref | — | lv – optiland-wave | mtfOnAxis.maxAbs 6.94e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-135f18-plena-ref | — | optiland – optiland-wave | mtfOnAxis.maxAbs 1.44e-2 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 60; mtfOffAxis.maxAbs 2.65e-2 (review band 1.00e-2) at cut sagittal, field 1 of the image height, frequencyPerMm 100 |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-135f18-plena-ref | — | optiland – wave | mtfOffAxis.maxAbs 1.94e-2 (review band 1.00e-2) at cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 50 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-135f18-plena-ref | — | lv – otf-of-optiland-wavefront | mtfOnAxis.maxAbs 6.94e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-135f18-plena-ref | — | optiland – otf-of-optiland-wavefront | mtfOnAxis.maxAbs 1.44e-2 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 60; mtfOffAxis.maxAbs 2.65e-2 (review band 1.00e-2) at cut sagittal, field 1 of the image height, frequencyPerMm 100 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-135f18-plena-ref | — | optiland – wave-mtf-of-lv-rays | mtfOffAxis.maxAbs 1.94e-2 (review band 1.00e-2) at cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 50 |
 | MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | canon-ef-135-f2l-usm-best-ref | — | lv – optiland | mtfOffAxis.maxAbs 1.03e-2 (review band 1.00e-2) at cut tangential, field 5.00e-1 of the image height, frequencyPerMm 70 |
-| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | canon-ef-135-f2l-usm-best-ref | — | optiland – wave | mtfOnAxis.maxAbs 5.22e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | canon-ef-135-f2l-usm-best-ref | — | optiland – wave-mtf-of-lv-rays | mtfOnAxis.maxAbs 5.22e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
 | MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | canon-ef-135-f2l-usm-best-ref | — | lv – optiland | mtfOffAxis.maxAbs 1.02e-2 (review band 1.00e-2) at cut tangential, field 5.00e-1 of the image height, frequencyPerMm 70 |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | canon-ef-135-f2l-usm-best-ref | — | optiland – optiland-wave | mtfOnAxis.maxAbs 5.79e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 100 |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | canon-ef-135-f2l-usm-best-ref | — | optiland – wave | mtfOnAxis.maxAbs 5.31e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | canon-ef-135-f2l-usm-best-ref | — | optiland – otf-of-optiland-wavefront | mtfOnAxis.maxAbs 5.79e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 100 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | canon-ef-135-f2l-usm-best-ref | — | optiland – wave-mtf-of-lv-rays | mtfOnAxis.maxAbs 5.31e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
 | MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | fujifilm-fujinon-gf-63mm-f28-r-wr-best-ref | — | lv – optiland | mtfOffAxis.maxAbs 3.06e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 60 |
 | MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | fujifilm-fujinon-gf-63mm-f28-r-wr-best-ref | — | lv – optiland | mtfOffAxis.maxAbs 3.07e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 60 |
 | MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | nikkor-z50f12-best-ref | — | lv – optiland | mtfOffAxis.maxAbs 6.02e-2 (review band 1.00e-2) at cut tangential, field 5.00e-1 of the image height, frequencyPerMm 100 |
 | MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikkor-z50f12-best-ref | — | lv – optiland | mtfOffAxis.maxAbs 6.02e-2 (review band 1.00e-2) at cut tangential, field 5.00e-1 of the image height, frequencyPerMm 100 |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikkor-z50f12-best-ref | — | lv – optiland-wave | mtfOnAxis.maxAbs 5.80e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 80 |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikkor-z50f12-best-ref | — | optiland – optiland-wave | mtfOffAxis.maxAbs 5.99e-2 (review band 1.00e-2) at cut tangential, field 5.00e-1 of the image height, frequencyPerMm 100 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikkor-z50f12-best-ref | — | lv – otf-of-optiland-wavefront | mtfOnAxis.maxAbs 5.80e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 80 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikkor-z50f12-best-ref | — | optiland – otf-of-optiland-wavefront | mtfOffAxis.maxAbs 5.99e-2 (review band 1.00e-2) at cut tangential, field 5.00e-1 of the image height, frequencyPerMm 100 |
 | MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | sony-fe-20mm-f18-g-best-ref | — | lv – optiland | mtfOnAxis.maxAbs 9.48e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 60; mtfOffAxis.maxAbs 4.91e-1 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 10 |
-| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | sony-fe-20mm-f18-g-best-ref | — | optiland – wave | mtfOnAxis.maxAbs 8.41e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 60 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | sony-fe-20mm-f18-g-best-ref | — | optiland – wave-mtf-of-lv-rays | mtfOnAxis.maxAbs 8.41e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 60 |
 | MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sony-fe-20mm-f18-g-best-ref | — | lv – optiland | mtfOnAxis.maxAbs 9.67e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 60 |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sony-fe-20mm-f18-g-best-ref | — | optiland – optiland-wave | mtfOnAxis.maxAbs 6.45e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 50 |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sony-fe-20mm-f18-g-best-ref | — | optiland – wave | mtfOnAxis.maxAbs 8.60e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 60 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sony-fe-20mm-f18-g-best-ref | — | optiland – otf-of-optiland-wavefront | mtfOnAxis.maxAbs 6.45e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 50 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sony-fe-20mm-f18-g-best-ref | — | optiland – wave-mtf-of-lv-rays | mtfOnAxis.maxAbs 8.60e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 60 |
 | Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | sony-fe-400mm-f28-gm-oss-best-ref | 1 | lv – optiland | mtfOffAxis.maxAbs 1.22e-2 (review band 1.00e-2) at cut sagittal, field 1 of the image height, frequencyPerMm 100 |
-| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | sony-fe-400mm-f28-gm-oss-best-ref | 1 | optiland – replay | mtfOffAxis.maxAbs 1.22e-2 (review band 1.00e-2) at cut sagittal, field 1 of the image height, frequencyPerMm 100 |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | sony-fe-400mm-f28-gm-oss-best-ref | 1 | optiland – replay-of-lv-mtf | mtfOffAxis.maxAbs 1.22e-2 (review band 1.00e-2) at cut sagittal, field 1 of the image height, frequencyPerMm 100 |
 | MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | sigma-105mm-f28-dg-dn-macro-art-best-ref | — | lv – optiland | mtfOffAxis.maxAbs 3.73e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 30 |
-| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | sigma-105mm-f28-dg-dn-macro-art-best-ref | — | optiland – wave | mtfOnAxis.maxAbs 5.47e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100; mtfOffAxis.maxAbs 3.76e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 30 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | sigma-105mm-f28-dg-dn-macro-art-best-ref | — | optiland – wave-mtf-of-lv-rays | mtfOnAxis.maxAbs 5.47e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100; mtfOffAxis.maxAbs 3.76e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 30 |
 | MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sigma-105mm-f28-dg-dn-macro-art-best-ref | — | lv – optiland | mtfOnAxis.maxAbs 5.05e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 60; mtfOffAxis.maxAbs 3.69e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 30 |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sigma-105mm-f28-dg-dn-macro-art-best-ref | — | optiland – optiland-wave | mtfOnAxis.maxAbs 6.19e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 100; mtfOffAxis.maxAbs 3.83e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 30 |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sigma-105mm-f28-dg-dn-macro-art-best-ref | — | optiland – wave | mtfOnAxis.maxAbs 5.54e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100; mtfOffAxis.maxAbs 3.71e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 30 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sigma-105mm-f28-dg-dn-macro-art-best-ref | — | optiland – otf-of-optiland-wavefront | mtfOnAxis.maxAbs 6.19e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 100; mtfOffAxis.maxAbs 3.83e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 30 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sigma-105mm-f28-dg-dn-macro-art-best-ref | — | optiland – wave-mtf-of-lv-rays | mtfOnAxis.maxAbs 5.54e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100; mtfOffAxis.maxAbs 3.71e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 30 |
 | MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | nikon-z-24-70f4s-wide-best-ref | — | lv – optiland | mtfOffAxis.maxAbs 6.44e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 70 |
 | Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | nikon-z-24-70f4s-wide-best-ref | 0 | lv – optiland | mtfOnAxis.maxAbs 7.43e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 100 |
-| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | nikon-z-24-70f4s-wide-best-ref | 0 | optiland – replay | mtfOnAxis.maxAbs 7.43e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 100 |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | nikon-z-24-70f4s-wide-best-ref | 0 | optiland – replay-of-lv-mtf | mtfOnAxis.maxAbs 7.43e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 100 |
 | MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-24-70f4s-wide-best-ref | — | lv – optiland | mtfOffAxis.maxAbs 6.45e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 70 |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-24-70f4s-wide-best-ref | — | lv – optiland-wave | mtfOnAxis.maxAbs 5.16e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 80 |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-24-70f4s-wide-best-ref | — | optiland – optiland-wave | mtfOffAxis.maxAbs 6.45e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 80 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-24-70f4s-wide-best-ref | — | lv – otf-of-optiland-wavefront | mtfOnAxis.maxAbs 5.16e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 80 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-24-70f4s-wide-best-ref | — | optiland – otf-of-optiland-wavefront | mtfOffAxis.maxAbs 6.45e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 80 |
 | Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | nikon-z-24-70f4s-wide-best-photopic | 0 | lv – optiland | mtfOnAxis.maxAbs 6.17e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 100 |
-| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | nikon-z-24-70f4s-wide-best-photopic | 0 | optiland – replay | mtfOnAxis.maxAbs 6.17e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 100 |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | nikon-z-24-70f4s-wide-best-photopic | 0 | optiland – replay-of-lv-mtf | mtfOnAxis.maxAbs 6.17e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 100 |
 | MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | nikon-z-24-70f4s-tele-best-ref | — | lv – optiland | mtfOffAxis.maxAbs 2.67e-1 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 50 |
-| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | nikon-z-24-70f4s-tele-best-ref | — | lv – wave | mtfOnAxis.maxAbs 5.42e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 80 |
-| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | nikon-z-24-70f4s-tele-best-ref | — | optiland – wave | mtfOnAxis.maxAbs 6.27e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 80 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | nikon-z-24-70f4s-tele-best-ref | — | lv – wave-mtf-of-lv-rays | mtfOnAxis.maxAbs 5.42e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 80 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | nikon-z-24-70f4s-tele-best-ref | — | optiland – wave-mtf-of-lv-rays | mtfOnAxis.maxAbs 6.27e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 80 |
 | Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | nikon-z-24-70f4s-tele-best-ref | 0 | lv – optiland | mtfOnAxis.maxAbs 8.84e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
-| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | nikon-z-24-70f4s-tele-best-ref | 0 | optiland – replay | mtfOnAxis.maxAbs 8.84e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
-| MTF beside the wave estimate of LensVisualizer's rays — `mtf-vs-wave-estimate` | nikon-z-24-70f4s-tele-best-ref | — | lv – wave | mtfOnAxis.maxAbs 5.42e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 80 |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | nikon-z-24-70f4s-tele-best-ref | 0 | optiland – replay-of-lv-mtf | mtfOnAxis.maxAbs 8.84e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
+| MTF beside the wave estimate of LensVisualizer's rays — `mtf-vs-wave-estimate` | nikon-z-24-70f4s-tele-best-ref | — | lv – wave-mtf-of-lv-rays | mtfOnAxis.maxAbs 5.42e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 80 |
 | MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-24-70f4s-tele-best-ref | — | lv – optiland | mtfOffAxis.maxAbs 2.67e-1 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 50 |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-24-70f4s-tele-best-ref | — | lv – wave | mtfOnAxis.maxAbs 5.42e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 80 |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-24-70f4s-tele-best-ref | — | optiland – optiland-wave | mtfOnAxis.maxAbs 5.74e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 80; mtfOffAxis.maxAbs 2.66e-1 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 50 |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-24-70f4s-tele-best-ref | — | optiland – wave | mtfOnAxis.maxAbs 6.43e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 80 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-24-70f4s-tele-best-ref | — | lv – wave-mtf-of-lv-rays | mtfOnAxis.maxAbs 5.42e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 80 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-24-70f4s-tele-best-ref | — | optiland – otf-of-optiland-wavefront | mtfOnAxis.maxAbs 5.74e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 80; mtfOffAxis.maxAbs 2.66e-1 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 50 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-24-70f4s-tele-best-ref | — | optiland – wave-mtf-of-lv-rays | mtfOnAxis.maxAbs 6.43e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 80 |
 | Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | nikon-z-mc-105f28-best-ref | 0 | lv – optiland | mtfOnAxis.maxAbs 7.48e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
-| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | nikon-z-mc-105f28-best-ref | 0 | optiland – replay | mtfOnAxis.maxAbs 7.48e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | nikon-z-mc-105f28-best-ref | 0 | optiland – replay-of-lv-mtf | mtfOnAxis.maxAbs 7.48e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
 | MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | nikon-z-135f18-plena-best-ref | — | lv – optiland | mtfOnAxis.maxAbs 7.33e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 80; mtfOffAxis.maxAbs 2.71e-2 (review band 1.00e-2) at cut sagittal, field 1 of the image height, frequencyPerMm 40 |
-| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | nikon-z-135f18-plena-best-ref | — | optiland – wave | mtfOnAxis.maxAbs 7.50e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 70; mtfOffAxis.maxAbs 1.29e-2 (review band 1.00e-2) at cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 60 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | nikon-z-135f18-plena-best-ref | — | optiland – wave-mtf-of-lv-rays | mtfOnAxis.maxAbs 7.50e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 70; mtfOffAxis.maxAbs 1.29e-2 (review band 1.00e-2) at cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 60 |
 | Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | nikon-z-135f18-plena-best-ref | 0 | lv – optiland | mtfOnAxis.maxAbs 6.96e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
-| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | nikon-z-135f18-plena-best-ref | 0 | optiland – replay | mtfOnAxis.maxAbs 6.96e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | nikon-z-135f18-plena-best-ref | 0 | optiland – replay-of-lv-mtf | mtfOnAxis.maxAbs 6.96e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
 | MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-135f18-plena-best-ref | — | lv – optiland | mtfOnAxis.maxAbs 7.52e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 80; mtfOffAxis.maxAbs 2.72e-2 (review band 1.00e-2) at cut sagittal, field 1 of the image height, frequencyPerMm 40 |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-135f18-plena-best-ref | — | optiland – optiland-wave | mtfOnAxis.maxAbs 7.51e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 70; mtfOffAxis.maxAbs 2.16e-2 (review band 1.00e-2) at cut sagittal, field 1 of the image height, frequencyPerMm 40 |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-135f18-plena-best-ref | — | optiland – wave | mtfOnAxis.maxAbs 7.68e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 70; mtfOffAxis.maxAbs 1.31e-2 (review band 1.00e-2) at cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 60 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-135f18-plena-best-ref | — | optiland – otf-of-optiland-wavefront | mtfOnAxis.maxAbs 7.51e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 70; mtfOffAxis.maxAbs 2.16e-2 (review band 1.00e-2) at cut sagittal, field 1 of the image height, frequencyPerMm 40 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-135f18-plena-best-ref | — | optiland – wave-mtf-of-lv-rays | mtfOnAxis.maxAbs 7.68e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 70; mtfOffAxis.maxAbs 1.31e-2 (review band 1.00e-2) at cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 60 |
 | Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | nikon-z-135f18-plena-best-photopic | 0 | lv – optiland | mtfOnAxis.maxAbs 6.21e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
-| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | nikon-z-135f18-plena-best-photopic | 0 | optiland – replay | mtfOnAxis.maxAbs 6.21e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | nikon-z-135f18-plena-best-photopic | 0 | optiland – replay-of-lv-mtf | mtfOnAxis.maxAbs 6.21e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
 
 ## Not covered
 
@@ -6906,10 +7002,10 @@ A pair is named by the ids of its two engines:
 |---|---|
 | `lv` | LensVisualizer itself, loaded from a local checkout, asked for each figure as its own tabs ask for it, and made to trace the very rays every engine is handed in the checks held to a limit. |
 | `optiland` | optiland, an open-source optical design library in Python, run by this tool in a worker process of its own. |
-| `optiland-wave` | This tool's OTF and Zernike fit of the raw wavefront samples that optiland computes. |
-| `ref` | The reference tracer: a small exact ray tracer written in this repository from the optics alone, never from LensVisualizer's or optiland's code. |
-| `replay` | LensVisualizer's own MTF sampling, repeated step by step, with the geometric MTF summed by this tool. |
-| `wave` | This tool's wave-optics MTF estimate, computed from the rays LensVisualizer launches and traces. |
+| `otf-of-optiland-wavefront` | This tool's OTF and Zernike fit of the raw wavefront samples that optiland computes. |
+| `reference-tracer` | The reference tracer: a small exact ray tracer written in this repository from the optics alone, never from LensVisualizer's or optiland's code. |
+| `replay-of-lv-mtf` | LensVisualizer's own MTF sampling, repeated step by step, with the geometric MTF summed by this tool. |
+| `wave-mtf-of-lv-rays` | This tool's wave-optics MTF estimate, computed from the rays LensVisualizer launches and traces. |
 
 ### Figures
 
@@ -6996,10 +7092,10 @@ contract version is that of the file format the baseline is written in.
 |---|---|---|---|
 | lv | 4669921bae7179c7eddd220fa367e696eae7acec3a5a788d0ca90da632d3eb6b | afad9cb89bd9a25fbfa5ee0ec335b1e315481414b7ba41da2f906c28856010c5 | commit 25f65d4b4213a21392cbae92680134906049b2ad |
 | optiland | bcfbf3916c1103b3b3b49a93117d3346a0bd6921ec35f01feb99bc1a2a6e39eb | 98f36151b0cdd2d3d3f82013841899de85309b22012967de64bbba662217fbcb | commit 4e893f53aee1312f2d091680b93dd2279711e197, distribution version 0.6.2.post117+g4e893f53, source hash 279af5c55d8ebe1610686b9dad3e6eeb22b1822037d59a0e5f148c2fb8937f38 |
-| optiland-wave | bcfbf3916c1103b3b3b49a93117d3346a0bd6921ec35f01feb99bc1a2a6e39eb | f6e596a0a856e4c27449919d31e73b446c909add6809cbfdfbdf8ae6718b818f | commit 4e893f53aee1312f2d091680b93dd2279711e197, distribution version 0.6.2.post117+g4e893f53, source hash 279af5c55d8ebe1610686b9dad3e6eeb22b1822037d59a0e5f148c2fb8937f38 |
-| ref | b7d0684b593261d14a1dfebb903774775bbe481a07ae2955689644dc0ffd919e | 2225e342b4fd8539480e933e59a3ca95a8ae2beeb24f45972b55fd4e4a59d357 | — |
-| replay | 4669921bae7179c7eddd220fa367e696eae7acec3a5a788d0ca90da632d3eb6b | 99024448fdb11f7eb293d0e54cf8281dc5272c57c468beeb30d66bb53ecf3409 | commit 25f65d4b4213a21392cbae92680134906049b2ad |
-| wave | 4669921bae7179c7eddd220fa367e696eae7acec3a5a788d0ca90da632d3eb6b | 956fcaf5a64e0a0873c6514edd117b9d5002f92623e4f05f6c06faa409926182 | commit 25f65d4b4213a21392cbae92680134906049b2ad |
+| otf-of-optiland-wavefront | bcfbf3916c1103b3b3b49a93117d3346a0bd6921ec35f01feb99bc1a2a6e39eb | f6e596a0a856e4c27449919d31e73b446c909add6809cbfdfbdf8ae6718b818f | commit 4e893f53aee1312f2d091680b93dd2279711e197, distribution version 0.6.2.post117+g4e893f53, source hash 279af5c55d8ebe1610686b9dad3e6eeb22b1822037d59a0e5f148c2fb8937f38 |
+| reference-tracer | b7d0684b593261d14a1dfebb903774775bbe481a07ae2955689644dc0ffd919e | 2225e342b4fd8539480e933e59a3ca95a8ae2beeb24f45972b55fd4e4a59d357 | — |
+| replay-of-lv-mtf | 4669921bae7179c7eddd220fa367e696eae7acec3a5a788d0ca90da632d3eb6b | 99024448fdb11f7eb293d0e54cf8281dc5272c57c468beeb30d66bb53ecf3409 | commit 25f65d4b4213a21392cbae92680134906049b2ad |
+| wave-mtf-of-lv-rays | 4669921bae7179c7eddd220fa367e696eae7acec3a5a788d0ca90da632d3eb6b | 956fcaf5a64e0a0873c6514edd117b9d5002f92623e4f05f6c06faa409926182 | commit 25f65d4b4213a21392cbae92680134906049b2ad |
 
 | Run | Lens state |
 |---|---|

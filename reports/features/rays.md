@@ -19,42 +19,42 @@ engines are still those of the baseline. How to read this, near the end, says wh
 |---|---|---|---|
 | lv | LensVisualizer | 1 | clean checkout, 184 engine files |
 | optiland | optiland | 0.6.2.post117+g4e893f53 | backend numpy, checkout with uncommitted changes, JIT compilation on, Numba 0.65.1, NumPy 2.3.5, precision float64, Python 3.14.8, SciPy 1.16.3, 534 source files |
-| ref | Reference tracer | 1 | 13 source files |
+| reference-tracer | Reference tracer | 1 | 13 source files |
 
 ## Summary
 
 | Check | Quantity | Runs | Requests | Pair | Runs by verdict | Requests by verdict |
 |---|---|---|---|---|---|---|
 | Built system — `built-system` | `system.describe` | 18 | 18 | lv – optiland | 18 Pass | 18 Pass |
-| Built system — `built-system` | `system.describe` | 18 | 18 | lv – ref | 18 Pass | 18 Pass |
-| Built system — `built-system` | `system.describe` | 18 | 18 | optiland – ref | 18 Pass | 18 Pass |
+| Built system — `built-system` | `system.describe` | 18 | 18 | lv – reference-tracer | 18 Pass | 18 Pass |
+| Built system — `built-system` | `system.describe` | 18 | 18 | optiland – reference-tracer | 18 Pass | 18 Pass |
 | First-order data — `first-order` | `paraxial.first-order` | 18 | 18 | lv – optiland | 18 Pass | 18 Pass |
-| First-order data — `first-order` | `paraxial.first-order` | 18 | 18 | lv – ref | 18 Pass | 18 Pass |
-| First-order data — `first-order` | `paraxial.first-order` | 18 | 18 | optiland – ref | 18 Pass | 18 Pass |
+| First-order data — `first-order` | `paraxial.first-order` | 18 | 18 | lv – reference-tracer | 18 Pass | 18 Pass |
+| First-order data — `first-order` | `paraxial.first-order` | 18 | 18 | optiland – reference-tracer | 18 Pass | 18 Pass |
 | Ray trace — `ray-trace` | `rays.trace` | 18 | 162 | lv – optiland | 18 Pass | 162 Pass |
-| Ray trace — `ray-trace` | `rays.trace` | 18 | 162 | lv – ref | 18 Pass | 162 Pass |
-| Ray trace — `ray-trace` | `rays.trace` | 18 | 162 | optiland – ref | 18 Pass | 162 Pass |
+| Ray trace — `ray-trace` | `rays.trace` | 18 | 162 | lv – reference-tracer | 18 Pass | 162 Pass |
+| Ray trace — `ray-trace` | `rays.trace` | 18 | 162 | optiland – reference-tracer | 18 Pass | 162 Pass |
 | Optical path — `optical-path` | `rays.trace` | 18 | 162 | lv – optiland | 18 Pass | 162 Pass |
-| Optical path — `optical-path` | `rays.trace` | 18 | 162 | lv – ref | 18 Pass | 162 Pass |
-| Optical path — `optical-path` | `rays.trace` | 18 | 162 | optiland – ref | 18 Pass | 162 Pass |
+| Optical path — `optical-path` | `rays.trace` | 18 | 162 | lv – reference-tracer | 18 Pass | 162 Pass |
+| Optical path — `optical-path` | `rays.trace` | 18 | 162 | optiland – reference-tracer | 18 Pass | 162 Pass |
 | Geometric MTF of the same rays — `geometric-mtf` | `rays.trace` | 18 | 54 | lv – optiland | 18 Pass | 54 Pass |
-| Geometric MTF of the same rays — `geometric-mtf` | `rays.trace` | 18 | 54 | lv – ref | 18 Pass | 54 Pass |
-| Geometric MTF of the same rays — `geometric-mtf` | `rays.trace` | 18 | 54 | optiland – ref | 18 Pass | 54 Pass |
+| Geometric MTF of the same rays — `geometric-mtf` | `rays.trace` | 18 | 54 | lv – reference-tracer | 18 Pass | 54 Pass |
+| Geometric MTF of the same rays — `geometric-mtf` | `rays.trace` | 18 | 54 | optiland – reference-tracer | 18 Pass | 54 Pass |
 | Spot and fan rays — `spot-rays` | `rays.trace` | 18 | 540 | lv – optiland | 18 Pass | 540 Pass |
-| Spot and fan rays — `spot-rays` | `rays.trace` | 18 | 540 | lv – ref | 18 Pass | 540 Pass |
-| Spot and fan rays — `spot-rays` | `rays.trace` | 18 | 540 | optiland – ref | 18 Pass | 540 Pass |
+| Spot and fan rays — `spot-rays` | `rays.trace` | 18 | 540 | lv – reference-tracer | 18 Pass | 540 Pass |
+| Spot and fan rays — `spot-rays` | `rays.trace` | 18 | 540 | optiland – reference-tracer | 18 Pass | 540 Pass |
 | Spherical aberration and axial colour rays — `axial-rays` | `rays.trace` | 18 | 117 | lv – optiland | 18 Pass | 117 Pass |
-| Spherical aberration and axial colour rays — `axial-rays` | `rays.trace` | 18 | 117 | lv – ref | 18 Pass | 117 Pass |
-| Spherical aberration and axial colour rays — `axial-rays` | `rays.trace` | 18 | 117 | optiland – ref | 18 Pass | 117 Pass |
+| Spherical aberration and axial colour rays — `axial-rays` | `rays.trace` | 18 | 117 | lv – reference-tracer | 18 Pass | 117 Pass |
+| Spherical aberration and axial colour rays — `axial-rays` | `rays.trace` | 18 | 117 | optiland – reference-tracer | 18 Pass | 117 Pass |
 | Chief rays (distortion, pupils, lateral colour) — `chief-rays` | `rays.trace` | 18 | 72 | lv – optiland | 18 Pass | 72 Pass |
-| Chief rays (distortion, pupils, lateral colour) — `chief-rays` | `rays.trace` | 18 | 72 | lv – ref | 18 Pass | 72 Pass |
-| Chief rays (distortion, pupils, lateral colour) — `chief-rays` | `rays.trace` | 18 | 72 | optiland – ref | 18 Pass | 72 Pass |
+| Chief rays (distortion, pupils, lateral colour) — `chief-rays` | `rays.trace` | 18 | 72 | lv – reference-tracer | 18 Pass | 72 Pass |
+| Chief rays (distortion, pupils, lateral colour) — `chief-rays` | `rays.trace` | 18 | 72 | optiland – reference-tracer | 18 Pass | 72 Pass |
 | Field-curve rays — `field-curve-rays` | `rays.trace` | 18 | 108 | lv – optiland | 18 Pass | 108 Pass |
-| Field-curve rays — `field-curve-rays` | `rays.trace` | 18 | 108 | lv – ref | 18 Pass | 108 Pass |
-| Field-curve rays — `field-curve-rays` | `rays.trace` | 18 | 108 | optiland – ref | 18 Pass | 108 Pass |
+| Field-curve rays — `field-curve-rays` | `rays.trace` | 18 | 108 | lv – reference-tracer | 18 Pass | 108 Pass |
+| Field-curve rays — `field-curve-rays` | `rays.trace` | 18 | 108 | optiland – reference-tracer | 18 Pass | 108 Pass |
 | Vignetting rays — `vignetting-rays` | `rays.trace` | 18 | 54 | lv – optiland | 18 Pass | 54 Pass |
-| Vignetting rays — `vignetting-rays` | `rays.trace` | 18 | 54 | lv – ref | 18 Pass | 54 Pass |
-| Vignetting rays — `vignetting-rays` | `rays.trace` | 18 | 54 | optiland – ref | 18 Pass | 54 Pass |
+| Vignetting rays — `vignetting-rays` | `rays.trace` | 18 | 54 | lv – reference-tracer | 18 Pass | 54 Pass |
+| Vignetting rays — `vignetting-rays` | `rays.trace` | 18 | 54 | optiland – reference-tracer | 18 Pass | 54 Pass |
 
 ## Support
 
@@ -65,34 +65,34 @@ In how many runs the jobs of an engine ended in each way. An engine that cannot 
 |---|---|---|
 | Built system — `built-system` | lv | 18 answered |
 | Built system — `built-system` | optiland | 18 answered |
-| Built system — `built-system` | ref | 18 answered |
+| Built system — `built-system` | reference-tracer | 18 answered |
 | First-order data — `first-order` | lv | 18 answered |
 | First-order data — `first-order` | optiland | 18 answered |
-| First-order data — `first-order` | ref | 18 answered |
+| First-order data — `first-order` | reference-tracer | 18 answered |
 | Ray trace — `ray-trace` | lv | 18 answered |
 | Ray trace — `ray-trace` | optiland | 18 answered |
-| Ray trace — `ray-trace` | ref | 18 answered |
+| Ray trace — `ray-trace` | reference-tracer | 18 answered |
 | Optical path — `optical-path` | lv | 18 answered |
 | Optical path — `optical-path` | optiland | 18 answered |
-| Optical path — `optical-path` | ref | 18 answered |
+| Optical path — `optical-path` | reference-tracer | 18 answered |
 | Geometric MTF of the same rays — `geometric-mtf` | lv | 18 answered |
 | Geometric MTF of the same rays — `geometric-mtf` | optiland | 18 answered |
-| Geometric MTF of the same rays — `geometric-mtf` | ref | 18 answered |
+| Geometric MTF of the same rays — `geometric-mtf` | reference-tracer | 18 answered |
 | Spot and fan rays — `spot-rays` | lv | 18 answered |
 | Spot and fan rays — `spot-rays` | optiland | 18 answered |
-| Spot and fan rays — `spot-rays` | ref | 18 answered |
+| Spot and fan rays — `spot-rays` | reference-tracer | 18 answered |
 | Spherical aberration and axial colour rays — `axial-rays` | lv | 18 answered |
 | Spherical aberration and axial colour rays — `axial-rays` | optiland | 18 answered |
-| Spherical aberration and axial colour rays — `axial-rays` | ref | 18 answered |
+| Spherical aberration and axial colour rays — `axial-rays` | reference-tracer | 18 answered |
 | Chief rays (distortion, pupils, lateral colour) — `chief-rays` | lv | 18 answered |
 | Chief rays (distortion, pupils, lateral colour) — `chief-rays` | optiland | 18 answered |
-| Chief rays (distortion, pupils, lateral colour) — `chief-rays` | ref | 18 answered |
+| Chief rays (distortion, pupils, lateral colour) — `chief-rays` | reference-tracer | 18 answered |
 | Field-curve rays — `field-curve-rays` | lv | 18 answered |
 | Field-curve rays — `field-curve-rays` | optiland | 18 answered |
-| Field-curve rays — `field-curve-rays` | ref | 18 answered |
+| Field-curve rays — `field-curve-rays` | reference-tracer | 18 answered |
 | Vignetting rays — `vignetting-rays` | lv | 18 answered |
 | Vignetting rays — `vignetting-rays` | optiland | 18 answered |
-| Vignetting rays — `vignetting-rays` | ref | 18 answered |
+| Vignetting rays — `vignetting-rays` | reference-tracer | 18 answered |
 
 ## Built system — `built-system`
 
@@ -108,22 +108,22 @@ The worst of every figure over the suite:
 | lv – optiland | Refractive indices that differ — `index.mismatches` | elements | ≤ 0 | 0 | — | — |
 | lv – optiland | Largest sag difference at the sampled heights, over the size of a rounding there — `sag.maxScaled` | (no unit) | ≤ 1.00e-12 | 3.34e-16 | odd-asphere-ref | sample 5, surface 3 |
 | lv – optiland | Largest sag difference at the sampled heights — `sag.maxAbs` | mm | — | 4.44e-15 | stop-inside-element-ref | sample 8, surface 6 |
-| lv – ref | Surfaces whose count or place differs — `layout.mismatches` | elements | ≤ 0 | 0 | — | — |
-| lv – ref | Surfaces whose curvature, conic or asphere terms differ — `shape.mismatches` | elements | ≤ 0 | 0 | — | — |
-| lv – ref | Stops and clear apertures that differ — `aperture.mismatches` | elements | ≤ 0 | 0 | — | — |
-| lv – ref | Refractive indices that differ — `index.mismatches` | elements | ≤ 0 | 0 | — | — |
-| lv – ref | Largest sag difference at the sampled heights, over the size of a rounding there — `sag.maxScaled` | (no unit) | ≤ 1.00e-12 | 2.69e-16 | odd-asphere-ref | sample 8, surface 1 |
-| lv – ref | Largest sag difference at the sampled heights — `sag.maxAbs` | mm | — | 3.55e-15 | zero-asphere-ref | sample 8, surface 1 |
-| optiland – ref | Surfaces whose count or place differs — `layout.mismatches` | elements | ≤ 0 | 0 | — | — |
-| optiland – ref | Surfaces whose curvature, conic or asphere terms differ — `shape.mismatches` | elements | ≤ 0 | 0 | — | — |
-| optiland – ref | Stops and clear apertures that differ — `aperture.mismatches` | elements | ≤ 0 | 0 | — | — |
-| optiland – ref | Refractive indices that differ — `index.mismatches` | elements | ≤ 0 | 0 | — | — |
-| optiland – ref | Largest sag difference at the sampled heights, over the size of a rounding there — `sag.maxScaled` | (no unit) | ≤ 1.00e-12 | 3.33e-16 | asphere-a20-ref | sample 6, surface 5 |
-| optiland – ref | Largest sag difference at the sampled heights — `sag.maxAbs` | mm | — | 4.44e-15 | stop-inside-element-ref | sample 8, surface 6 |
+| lv – reference-tracer | Surfaces whose count or place differs — `layout.mismatches` | elements | ≤ 0 | 0 | — | — |
+| lv – reference-tracer | Surfaces whose curvature, conic or asphere terms differ — `shape.mismatches` | elements | ≤ 0 | 0 | — | — |
+| lv – reference-tracer | Stops and clear apertures that differ — `aperture.mismatches` | elements | ≤ 0 | 0 | — | — |
+| lv – reference-tracer | Refractive indices that differ — `index.mismatches` | elements | ≤ 0 | 0 | — | — |
+| lv – reference-tracer | Largest sag difference at the sampled heights, over the size of a rounding there — `sag.maxScaled` | (no unit) | ≤ 1.00e-12 | 2.69e-16 | odd-asphere-ref | sample 8, surface 1 |
+| lv – reference-tracer | Largest sag difference at the sampled heights — `sag.maxAbs` | mm | — | 3.55e-15 | zero-asphere-ref | sample 8, surface 1 |
+| optiland – reference-tracer | Surfaces whose count or place differs — `layout.mismatches` | elements | ≤ 0 | 0 | — | — |
+| optiland – reference-tracer | Surfaces whose curvature, conic or asphere terms differ — `shape.mismatches` | elements | ≤ 0 | 0 | — | — |
+| optiland – reference-tracer | Stops and clear apertures that differ — `aperture.mismatches` | elements | ≤ 0 | 0 | — | — |
+| optiland – reference-tracer | Refractive indices that differ — `index.mismatches` | elements | ≤ 0 | 0 | — | — |
+| optiland – reference-tracer | Largest sag difference at the sampled heights, over the size of a rounding there — `sag.maxScaled` | (no unit) | ≤ 1.00e-12 | 3.33e-16 | asphere-a20-ref | sample 6, surface 5 |
+| optiland – reference-tracer | Largest sag difference at the sampled heights — `sag.maxAbs` | mm | — | 4.44e-15 | stop-inside-element-ref | sample 8, surface 6 |
 
 By run, each pair with its verdict and the judged figure that is largest against its limit:
 
-| Run | Requests | lv – optiland | lv – ref | optiland – ref |
+| Run | Requests | lv – optiland | lv – reference-tracer | optiland – reference-tracer |
 |---|---|---|---|---|
 | odd-asphere-ref | 1 | Pass: sag.maxScaled 3.34e-16 | Pass: sag.maxScaled 2.69e-16 | Pass: sag.maxScaled 2.69e-16 |
 | odd-asphere-photopic | 1 | Pass: sag.maxScaled 3.34e-16 | Pass: sag.maxScaled 2.69e-16 | Pass: sag.maxScaled 2.69e-16 |
@@ -157,20 +157,20 @@ The worst of every figure over the suite:
 | lv – optiland | Largest difference of a pupil position — `pupilZ.maxAbs` | mm | — | 1.14e-13 | fixed-iris-zoom-photopic-tele | line 2, quantity exitPupilZ |
 | lv – optiland | Largest difference of a pupil radius, scaled by its pupil's distance from the image — `pupilRadius.maxScaled` | mm | ≤ 1.00e-9 | 1.07e-14 | rear-plate-rim-ref | line 0, quantity exitPupilSemiDiameter |
 | lv – optiland | Largest difference of a pupil radius — `pupilRadius.maxAbs` | mm | — | 1.07e-14 | rear-plate-rim-ref | line 0, quantity exitPupilSemiDiameter |
-| lv – ref | Largest difference of a focal length, focal point, principal point or back focus — `firstOrder.maxAbs` | mm | ≤ 1.00e-9 | 5.33e-14 | odd-asphere-photopic | line 3, quantity frontFocalZ |
-| lv – ref | Largest difference of a pupil position, scaled by its distance from the image plane — `pupilZ.maxScaled` | mm | ≤ 1.00e-9 | 8.53e-14 | fixed-iris-zoom-photopic-tele | line 3, quantity exitPupilZ |
-| lv – ref | Largest difference of a pupil position — `pupilZ.maxAbs` | mm | — | 8.53e-14 | fixed-iris-zoom-photopic-tele | line 3, quantity exitPupilZ |
-| lv – ref | Largest difference of a pupil radius, scaled by its pupil's distance from the image — `pupilRadius.maxScaled` | mm | ≤ 1.00e-9 | 7.11e-15 | e-line-photopic | line 3, quantity entrancePupilSemiDiameter |
-| lv – ref | Largest difference of a pupil radius — `pupilRadius.maxAbs` | mm | — | 7.11e-15 | e-line-photopic | line 3, quantity entrancePupilSemiDiameter |
-| optiland – ref | Largest difference of a focal length, focal point, principal point or back focus — `firstOrder.maxAbs` | mm | ≤ 1.00e-9 | 4.97e-14 | odd-asphere-photopic | line 1, quantity frontPrincipalZ |
-| optiland – ref | Largest difference of a pupil position, scaled by its distance from the image plane — `pupilZ.maxScaled` | mm | ≤ 1.00e-9 | 9.95e-14 | fixed-iris-zoom-photopic-tele | line 2, quantity exitPupilZ |
-| optiland – ref | Largest difference of a pupil position — `pupilZ.maxAbs` | mm | — | 9.95e-14 | fixed-iris-zoom-photopic-tele | line 2, quantity exitPupilZ |
-| optiland – ref | Largest difference of a pupil radius, scaled by its pupil's distance from the image — `pupilRadius.maxScaled` | mm | ≤ 1.00e-9 | 8.88e-15 | rear-plate-rim-ref | line 0, quantity exitPupilSemiDiameter |
-| optiland – ref | Largest difference of a pupil radius — `pupilRadius.maxAbs` | mm | — | 8.88e-15 | rear-plate-rim-ref | line 0, quantity exitPupilSemiDiameter |
+| lv – reference-tracer | Largest difference of a focal length, focal point, principal point or back focus — `firstOrder.maxAbs` | mm | ≤ 1.00e-9 | 5.33e-14 | odd-asphere-photopic | line 3, quantity frontFocalZ |
+| lv – reference-tracer | Largest difference of a pupil position, scaled by its distance from the image plane — `pupilZ.maxScaled` | mm | ≤ 1.00e-9 | 8.53e-14 | fixed-iris-zoom-photopic-tele | line 3, quantity exitPupilZ |
+| lv – reference-tracer | Largest difference of a pupil position — `pupilZ.maxAbs` | mm | — | 8.53e-14 | fixed-iris-zoom-photopic-tele | line 3, quantity exitPupilZ |
+| lv – reference-tracer | Largest difference of a pupil radius, scaled by its pupil's distance from the image — `pupilRadius.maxScaled` | mm | ≤ 1.00e-9 | 7.11e-15 | e-line-photopic | line 3, quantity entrancePupilSemiDiameter |
+| lv – reference-tracer | Largest difference of a pupil radius — `pupilRadius.maxAbs` | mm | — | 7.11e-15 | e-line-photopic | line 3, quantity entrancePupilSemiDiameter |
+| optiland – reference-tracer | Largest difference of a focal length, focal point, principal point or back focus — `firstOrder.maxAbs` | mm | ≤ 1.00e-9 | 4.97e-14 | odd-asphere-photopic | line 1, quantity frontPrincipalZ |
+| optiland – reference-tracer | Largest difference of a pupil position, scaled by its distance from the image plane — `pupilZ.maxScaled` | mm | ≤ 1.00e-9 | 9.95e-14 | fixed-iris-zoom-photopic-tele | line 2, quantity exitPupilZ |
+| optiland – reference-tracer | Largest difference of a pupil position — `pupilZ.maxAbs` | mm | — | 9.95e-14 | fixed-iris-zoom-photopic-tele | line 2, quantity exitPupilZ |
+| optiland – reference-tracer | Largest difference of a pupil radius, scaled by its pupil's distance from the image — `pupilRadius.maxScaled` | mm | ≤ 1.00e-9 | 8.88e-15 | rear-plate-rim-ref | line 0, quantity exitPupilSemiDiameter |
+| optiland – reference-tracer | Largest difference of a pupil radius — `pupilRadius.maxAbs` | mm | — | 8.88e-15 | rear-plate-rim-ref | line 0, quantity exitPupilSemiDiameter |
 
 By run, each pair with its verdict and the judged figure that is largest against its limit:
 
-| Run | Requests | lv – optiland | lv – ref | optiland – ref |
+| Run | Requests | lv – optiland | lv – reference-tracer | optiland – reference-tracer |
 |---|---|---|---|---|
 | odd-asphere-ref | 1 | Pass: pupilZ.maxScaled 3.20e-14 mm | Pass: firstOrder.maxAbs 3.55e-14 mm | Pass: pupilZ.maxScaled 4.62e-14 mm |
 | odd-asphere-photopic | 1 | Pass: firstOrder.maxAbs 6.04e-14 mm | Pass: firstOrder.maxAbs 5.33e-14 mm | Pass: firstOrder.maxAbs 4.97e-14 mm |
@@ -205,22 +205,22 @@ The worst of every figure over the suite:
 | lv – optiland | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
 | lv – optiland | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
 | lv – optiland | Rays both engines traced through — `rays.compared` | rays | — | 142434 | — | — |
-| lv – ref | Largest distance between the two engines' ray hits on a surface — `hits.maxDistance` | mm | ≤ 1.00e-8 | 1.23e-12 | asphere-a20-ref | field 4.06e1 deg, line 0, ray 911, surface 13 |
-| lv – ref | Largest difference of a component of a ray's exit direction — `direction.maxAbs` | (no unit) | ≤ 1.00e-9 | 1.20e-14 | asphere-a20-photopic | field 4.06e1 deg, line 0, ray 877 |
-| lv – ref | Largest distance between the two engines' ray landings on the image plane — `landing.maxDistance` | mm | ≤ 1.00e-8 | 4.37e-13 | asphere-a20-photopic | field 4.06e1 deg, line 0, ray 877 |
-| lv – ref | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
-| lv – ref | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
-| lv – ref | Rays both engines traced through — `rays.compared` | rays | — | 142434 | — | — |
-| optiland – ref | Largest distance between the two engines' ray hits on a surface — `hits.maxDistance` | mm | ≤ 1.00e-8 | 1.24e-12 | asphere-a20-ref | field 4.06e1 deg, line 0, ray 911, surface 13 |
-| optiland – ref | Largest difference of a component of a ray's exit direction — `direction.maxAbs` | (no unit) | ≤ 1.00e-9 | 1.19e-14 | asphere-a20-ref | field 4.06e1 deg, line 0, ray 877 |
-| optiland – ref | Largest distance between the two engines' ray landings on the image plane — `landing.maxDistance` | mm | ≤ 1.00e-8 | 4.85e-13 | asphere-a20-photopic | field 4.06e1 deg, line 2, ray 878 |
-| optiland – ref | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
-| optiland – ref | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
-| optiland – ref | Rays both engines traced through — `rays.compared` | rays | — | 142434 | — | — |
+| lv – reference-tracer | Largest distance between the two engines' ray hits on a surface — `hits.maxDistance` | mm | ≤ 1.00e-8 | 1.23e-12 | asphere-a20-ref | field 4.06e1 deg, line 0, ray 911, surface 13 |
+| lv – reference-tracer | Largest difference of a component of a ray's exit direction — `direction.maxAbs` | (no unit) | ≤ 1.00e-9 | 1.20e-14 | asphere-a20-photopic | field 4.06e1 deg, line 0, ray 877 |
+| lv – reference-tracer | Largest distance between the two engines' ray landings on the image plane — `landing.maxDistance` | mm | ≤ 1.00e-8 | 4.37e-13 | asphere-a20-photopic | field 4.06e1 deg, line 0, ray 877 |
+| lv – reference-tracer | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
+| lv – reference-tracer | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
+| lv – reference-tracer | Rays both engines traced through — `rays.compared` | rays | — | 142434 | — | — |
+| optiland – reference-tracer | Largest distance between the two engines' ray hits on a surface — `hits.maxDistance` | mm | ≤ 1.00e-8 | 1.24e-12 | asphere-a20-ref | field 4.06e1 deg, line 0, ray 911, surface 13 |
+| optiland – reference-tracer | Largest difference of a component of a ray's exit direction — `direction.maxAbs` | (no unit) | ≤ 1.00e-9 | 1.19e-14 | asphere-a20-ref | field 4.06e1 deg, line 0, ray 877 |
+| optiland – reference-tracer | Largest distance between the two engines' ray landings on the image plane — `landing.maxDistance` | mm | ≤ 1.00e-8 | 4.85e-13 | asphere-a20-photopic | field 4.06e1 deg, line 2, ray 878 |
+| optiland – reference-tracer | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
+| optiland – reference-tracer | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
+| optiland – reference-tracer | Rays both engines traced through — `rays.compared` | rays | — | 142434 | — | — |
 
 By run, each pair with its verdict and the judged figure that is largest against its limit:
 
-| Run | Requests | lv – optiland | lv – ref | optiland – ref | Rays of lv: ok / blocked / failed | Rays of optiland: ok / blocked / failed | Rays of ref: ok / blocked / failed |
+| Run | Requests | lv – optiland | lv – reference-tracer | optiland – reference-tracer | Rays of lv: ok / blocked / failed | Rays of optiland: ok / blocked / failed | Rays of reference-tracer: ok / blocked / failed |
 |---|---|---|---|---|---|---|---|
 | odd-asphere-ref | 3 | Pass: direction.maxAbs 5.66e-15 | Pass: hits.maxDistance 8.72e-13 mm | Pass: hits.maxDistance 8.72e-13 mm | 2425 / 650 / 0 | 2425 / 650 / 0 | 2425 / 650 / 0 |
 | odd-asphere-photopic | 15 | Pass: hits.maxDistance 7.03e-13 mm | Pass: hits.maxDistance 1.00e-12 mm | Pass: hits.maxDistance 1.00e-12 mm | 12177 / 3198 / 0 | 12177 / 3198 / 0 | 12177 / 3198 / 0 |
@@ -252,16 +252,16 @@ The worst of every figure over the suite:
 | lv – optiland | Largest difference of an optical path length to a surface — `opticalPath.maxAbs` | waves | ≤ 2.00e-5 | 1.28e-9 | flat-base-asphere-photopic | field 0 deg, line 0, ray 107 |
 | lv – optiland | Largest difference of an optical path length to the image plane — `opticalPathToImage.maxAbs` | waves | ≤ 2.00e-5 | 1.28e-9 | asphere-a20-photopic | field 2.42e1 deg, line 2, ray 811 |
 | lv – optiland | Largest difference of an optical path difference from the chief ray — `opd.maxAbs` | waves | ≤ 2.00e-5 | 1.31e-9 | asphere-a20-photopic | field 2.42e1 deg, line 2, ray 811 |
-| lv – ref | Largest difference of an optical path length to a surface — `opticalPath.maxAbs` | waves | ≤ 2.00e-5 | 3.24e-9 | fixed-iris-zoom-photopic-wide | field 0 deg, line 1, ray 235 |
-| lv – ref | Largest difference of an optical path length to the image plane — `opticalPathToImage.maxAbs` | waves | ≤ 2.00e-5 | 3.08e-9 | asphere-a20-photopic | field 2.42e1 deg, line 1, ray 815 |
-| lv – ref | Largest difference of an optical path difference from the chief ray — `opd.maxAbs` | waves | ≤ 2.00e-5 | 3.11e-9 | asphere-a20-photopic | field 2.42e1 deg, line 1, ray 815 |
-| optiland – ref | Largest difference of an optical path length to a surface — `opticalPath.maxAbs` | waves | ≤ 2.00e-5 | 3.17e-9 | fixed-iris-zoom-photopic-wide | field 0 deg, line 1, ray 235 |
-| optiland – ref | Largest difference of an optical path length to the image plane — `opticalPathToImage.maxAbs` | waves | ≤ 2.00e-5 | 3.11e-9 | asphere-a20-photopic | field 2.42e1 deg, line 1, ray 815 |
-| optiland – ref | Largest difference of an optical path difference from the chief ray — `opd.maxAbs` | waves | ≤ 2.00e-5 | 3.08e-9 | asphere-a20-photopic | field 2.42e1 deg, line 1, ray 815 |
+| lv – reference-tracer | Largest difference of an optical path length to a surface — `opticalPath.maxAbs` | waves | ≤ 2.00e-5 | 3.24e-9 | fixed-iris-zoom-photopic-wide | field 0 deg, line 1, ray 235 |
+| lv – reference-tracer | Largest difference of an optical path length to the image plane — `opticalPathToImage.maxAbs` | waves | ≤ 2.00e-5 | 3.08e-9 | asphere-a20-photopic | field 2.42e1 deg, line 1, ray 815 |
+| lv – reference-tracer | Largest difference of an optical path difference from the chief ray — `opd.maxAbs` | waves | ≤ 2.00e-5 | 3.11e-9 | asphere-a20-photopic | field 2.42e1 deg, line 1, ray 815 |
+| optiland – reference-tracer | Largest difference of an optical path length to a surface — `opticalPath.maxAbs` | waves | ≤ 2.00e-5 | 3.17e-9 | fixed-iris-zoom-photopic-wide | field 0 deg, line 1, ray 235 |
+| optiland – reference-tracer | Largest difference of an optical path length to the image plane — `opticalPathToImage.maxAbs` | waves | ≤ 2.00e-5 | 3.11e-9 | asphere-a20-photopic | field 2.42e1 deg, line 1, ray 815 |
+| optiland – reference-tracer | Largest difference of an optical path difference from the chief ray — `opd.maxAbs` | waves | ≤ 2.00e-5 | 3.08e-9 | asphere-a20-photopic | field 2.42e1 deg, line 1, ray 815 |
 
 By run, each pair with its verdict and the judged figure that is largest against its limit:
 
-| Run | Requests | lv – optiland | lv – ref | optiland – ref |
+| Run | Requests | lv – optiland | lv – reference-tracer | optiland – reference-tracer |
 |---|---|---|---|---|
 | odd-asphere-ref | 3 | Pass: opd.maxAbs 2.42e-10 waves | Pass: opd.maxAbs 1.11e-9 waves | Pass: opticalPath.maxAbs 1.02e-9 waves |
 | odd-asphere-photopic | 15 | Pass: opticalPathToImage.maxAbs 9.47e-10 waves | Pass: opticalPath.maxAbs 1.57e-9 waves | Pass: opticalPath.maxAbs 1.69e-9 waves |
@@ -294,18 +294,18 @@ The worst of every figure over the suite:
 | lv – optiland | Rays both engines traced through — `rays.compared` | rays | — | 142434 | — | — |
 | lv – optiland | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
 | lv – optiland | Wavelengths compared — `lines.compared` | wavelengths | — | 5 | odd-asphere-photopic | — |
-| lv – ref | Largest difference of an MTF value — `mtf.maxAbs` | (no unit) | ≤ 1.00e-7 | 6.91e-12 | flat-base-asphere-ref | cut sagittal, field 0 deg, frequencyPerMm 100 |
-| lv – ref | Rays both engines traced through — `rays.compared` | rays | — | 142434 | — | — |
-| lv – ref | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
-| lv – ref | Wavelengths compared — `lines.compared` | wavelengths | — | 5 | odd-asphere-photopic | — |
-| optiland – ref | Largest difference of an MTF value — `mtf.maxAbs` | (no unit) | ≤ 1.00e-7 | 7.22e-12 | flat-base-asphere-ref | cut tangential, field 0 deg, frequencyPerMm 100 |
-| optiland – ref | Rays both engines traced through — `rays.compared` | rays | — | 142434 | — | — |
-| optiland – ref | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
-| optiland – ref | Wavelengths compared — `lines.compared` | wavelengths | — | 5 | odd-asphere-photopic | — |
+| lv – reference-tracer | Largest difference of an MTF value — `mtf.maxAbs` | (no unit) | ≤ 1.00e-7 | 6.91e-12 | flat-base-asphere-ref | cut sagittal, field 0 deg, frequencyPerMm 100 |
+| lv – reference-tracer | Rays both engines traced through — `rays.compared` | rays | — | 142434 | — | — |
+| lv – reference-tracer | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
+| lv – reference-tracer | Wavelengths compared — `lines.compared` | wavelengths | — | 5 | odd-asphere-photopic | — |
+| optiland – reference-tracer | Largest difference of an MTF value — `mtf.maxAbs` | (no unit) | ≤ 1.00e-7 | 7.22e-12 | flat-base-asphere-ref | cut tangential, field 0 deg, frequencyPerMm 100 |
+| optiland – reference-tracer | Rays both engines traced through — `rays.compared` | rays | — | 142434 | — | — |
+| optiland – reference-tracer | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
+| optiland – reference-tracer | Wavelengths compared — `lines.compared` | wavelengths | — | 5 | odd-asphere-photopic | — |
 
 By run, each pair with its verdict and the judged figure that is largest against its limit:
 
-| Run | Requests | lv – optiland | lv – ref | optiland – ref |
+| Run | Requests | lv – optiland | lv – reference-tracer | optiland – reference-tracer |
 |---|---|---|---|---|
 | odd-asphere-ref | 3 | Pass: mtf.maxAbs 4.03e-13 | Pass: mtf.maxAbs 1.38e-12 | Pass: mtf.maxAbs 1.75e-12 |
 | odd-asphere-photopic | 3 | Pass: mtf.maxAbs 5.54e-13 | Pass: mtf.maxAbs 7.99e-13 | Pass: mtf.maxAbs 9.57e-13 |
@@ -341,24 +341,24 @@ The worst of every figure over the suite:
 | lv – optiland | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
 | lv – optiland | Rays both engines traced through — `rays.compared` | rays | — | 97680 | — | — |
 | lv – optiland | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
-| lv – ref | Largest difference of a ray's landing relative to the chief ray — `transverseError.maxAbs` | mm | ≤ 1.00e-8 | 6.19e-13 | rear-plate-rim-photopic | field 8.24e0 deg, line 1, ray 275 |
-| lv – ref | Largest difference of a spot centroid — `centroid.maxAbs` | mm | ≤ 1.00e-8 | 3.52e-13 | asphere-a20-photopic | field 3.05e1 deg, line 3 |
-| lv – ref | Largest difference of a spot's RMS radius — `rmsRadius.maxAbs` | mm | ≤ 1.00e-8 | 5.14e-14 | asphere-a20-ref | field 2.44e1 deg, line 0 |
-| lv – ref | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
-| lv – ref | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
-| lv – ref | Rays both engines traced through — `rays.compared` | rays | — | 97680 | — | — |
-| lv – ref | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
-| optiland – ref | Largest difference of a ray's landing relative to the chief ray — `transverseError.maxAbs` | mm | ≤ 1.00e-8 | 6.31e-13 | rear-plate-rim-photopic | field 8.24e0 deg, line 1, ray 275 |
-| optiland – ref | Largest difference of a spot centroid — `centroid.maxAbs` | mm | ≤ 1.00e-8 | 3.64e-13 | asphere-a20-photopic | field 3.05e1 deg, line 3 |
-| optiland – ref | Largest difference of a spot's RMS radius — `rmsRadius.maxAbs` | mm | ≤ 1.00e-8 | 5.65e-14 | asphere-a20-ref | field 2.44e1 deg, line 0 |
-| optiland – ref | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
-| optiland – ref | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
-| optiland – ref | Rays both engines traced through — `rays.compared` | rays | — | 97680 | — | — |
-| optiland – ref | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
+| lv – reference-tracer | Largest difference of a ray's landing relative to the chief ray — `transverseError.maxAbs` | mm | ≤ 1.00e-8 | 6.19e-13 | rear-plate-rim-photopic | field 8.24e0 deg, line 1, ray 275 |
+| lv – reference-tracer | Largest difference of a spot centroid — `centroid.maxAbs` | mm | ≤ 1.00e-8 | 3.52e-13 | asphere-a20-photopic | field 3.05e1 deg, line 3 |
+| lv – reference-tracer | Largest difference of a spot's RMS radius — `rmsRadius.maxAbs` | mm | ≤ 1.00e-8 | 5.14e-14 | asphere-a20-ref | field 2.44e1 deg, line 0 |
+| lv – reference-tracer | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
+| lv – reference-tracer | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
+| lv – reference-tracer | Rays both engines traced through — `rays.compared` | rays | — | 97680 | — | — |
+| lv – reference-tracer | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
+| optiland – reference-tracer | Largest difference of a ray's landing relative to the chief ray — `transverseError.maxAbs` | mm | ≤ 1.00e-8 | 6.31e-13 | rear-plate-rim-photopic | field 8.24e0 deg, line 1, ray 275 |
+| optiland – reference-tracer | Largest difference of a spot centroid — `centroid.maxAbs` | mm | ≤ 1.00e-8 | 3.64e-13 | asphere-a20-photopic | field 3.05e1 deg, line 3 |
+| optiland – reference-tracer | Largest difference of a spot's RMS radius — `rmsRadius.maxAbs` | mm | ≤ 1.00e-8 | 5.65e-14 | asphere-a20-ref | field 2.44e1 deg, line 0 |
+| optiland – reference-tracer | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
+| optiland – reference-tracer | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
+| optiland – reference-tracer | Rays both engines traced through — `rays.compared` | rays | — | 97680 | — | — |
+| optiland – reference-tracer | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
 
 By run, each pair with its verdict and the judged figure that is largest against its limit:
 
-| Run | Requests | lv – optiland | lv – ref | optiland – ref | Rays of lv: ok / blocked / failed | Rays of optiland: ok / blocked / failed | Rays of ref: ok / blocked / failed |
+| Run | Requests | lv – optiland | lv – reference-tracer | optiland – reference-tracer | Rays of lv: ok / blocked / failed | Rays of optiland: ok / blocked / failed | Rays of reference-tracer: ok / blocked / failed |
 |---|---|---|---|---|---|---|---|
 | odd-asphere-ref | 10 | Pass: transverseError.maxAbs 1.40e-13 mm | Pass: transverseError.maxAbs 2.08e-13 mm | Pass: transverseError.maxAbs 2.22e-13 mm | 1657 / 287 / 0 | 1657 / 287 / 0 | 1657 / 287 / 0 |
 | odd-asphere-photopic | 50 | Pass: transverseError.maxAbs 1.54e-13 mm | Pass: transverseError.maxAbs 2.36e-13 mm | Pass: transverseError.maxAbs 2.43e-13 mm | 8283 / 1437 / 0 | 8283 / 1437 / 0 | 8283 / 1437 / 0 |
@@ -396,28 +396,28 @@ The worst of every figure over the suite:
 | lv – optiland | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
 | lv – optiland | Rays both engines traced through — `rays.compared` | rays | — | 3114 | — | — |
 | lv – optiland | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
-| lv – ref | Largest difference of an axial crossing, times the larger of the two engines' slopes — `intercept.maxScaled` | mm | ≤ 1.00e-8 | 1.87e-13 | rear-plate-rim-photopic | field 0 deg, line 3, ray 24 |
-| lv – ref | Largest difference of an axial crossing, along the axis — `intercept.maxAbs` | mm | — | 5.99e-12 | fixed-iris-zoom-photopic-tele | field 0 deg, line 3, ray 12 |
-| lv – ref | Difference of the best focus, times the rays' RMS slope — `focus.maxScaled` | mm | ≤ 1.00e-8 | 3.83e-14 | odd-asphere-photopic | field 0 deg, line 1 |
-| lv – ref | Difference of the best focus, along the axis — `focus.maxAbs` | mm | — | 2.70e-13 | odd-asphere-photopic | field 0 deg, line 1 |
-| lv – ref | Difference of the RMS spot size at best focus — `focusRms.maxAbs` | mm | ≤ 1.00e-8 | 4.94e-14 | flat-base-asphere-photopic | field 0 deg, line 2 |
-| lv – ref | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
-| lv – ref | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
-| lv – ref | Rays both engines traced through — `rays.compared` | rays | — | 3114 | — | — |
-| lv – ref | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
-| optiland – ref | Largest difference of an axial crossing, times the larger of the two engines' slopes — `intercept.maxScaled` | mm | ≤ 1.00e-8 | 1.98e-13 | odd-asphere-photopic | field 0 deg, line 1, ray 42 |
-| optiland – ref | Largest difference of an axial crossing, along the axis — `intercept.maxAbs` | mm | — | 5.89e-12 | fixed-iris-zoom-photopic-tele | field 0 deg, line 3, ray 12 |
-| optiland – ref | Difference of the best focus, times the rays' RMS slope — `focus.maxScaled` | mm | ≤ 1.00e-8 | 5.47e-14 | rear-plate-rim-ref | field 0 deg, line 0 |
-| optiland – ref | Difference of the best focus, along the axis — `focus.maxAbs` | mm | — | 2.27e-13 | rear-plate-rim-ref | field 0 deg, line 0 |
-| optiland – ref | Difference of the RMS spot size at best focus — `focusRms.maxAbs` | mm | ≤ 1.00e-8 | 5.47e-14 | odd-asphere-photopic | field 0 deg, line 1 |
-| optiland – ref | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
-| optiland – ref | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
-| optiland – ref | Rays both engines traced through — `rays.compared` | rays | — | 3114 | — | — |
-| optiland – ref | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
+| lv – reference-tracer | Largest difference of an axial crossing, times the larger of the two engines' slopes — `intercept.maxScaled` | mm | ≤ 1.00e-8 | 1.87e-13 | rear-plate-rim-photopic | field 0 deg, line 3, ray 24 |
+| lv – reference-tracer | Largest difference of an axial crossing, along the axis — `intercept.maxAbs` | mm | — | 5.99e-12 | fixed-iris-zoom-photopic-tele | field 0 deg, line 3, ray 12 |
+| lv – reference-tracer | Difference of the best focus, times the rays' RMS slope — `focus.maxScaled` | mm | ≤ 1.00e-8 | 3.83e-14 | odd-asphere-photopic | field 0 deg, line 1 |
+| lv – reference-tracer | Difference of the best focus, along the axis — `focus.maxAbs` | mm | — | 2.70e-13 | odd-asphere-photopic | field 0 deg, line 1 |
+| lv – reference-tracer | Difference of the RMS spot size at best focus — `focusRms.maxAbs` | mm | ≤ 1.00e-8 | 4.94e-14 | flat-base-asphere-photopic | field 0 deg, line 2 |
+| lv – reference-tracer | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
+| lv – reference-tracer | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
+| lv – reference-tracer | Rays both engines traced through — `rays.compared` | rays | — | 3114 | — | — |
+| lv – reference-tracer | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
+| optiland – reference-tracer | Largest difference of an axial crossing, times the larger of the two engines' slopes — `intercept.maxScaled` | mm | ≤ 1.00e-8 | 1.98e-13 | odd-asphere-photopic | field 0 deg, line 1, ray 42 |
+| optiland – reference-tracer | Largest difference of an axial crossing, along the axis — `intercept.maxAbs` | mm | — | 5.89e-12 | fixed-iris-zoom-photopic-tele | field 0 deg, line 3, ray 12 |
+| optiland – reference-tracer | Difference of the best focus, times the rays' RMS slope — `focus.maxScaled` | mm | ≤ 1.00e-8 | 5.47e-14 | rear-plate-rim-ref | field 0 deg, line 0 |
+| optiland – reference-tracer | Difference of the best focus, along the axis — `focus.maxAbs` | mm | — | 2.27e-13 | rear-plate-rim-ref | field 0 deg, line 0 |
+| optiland – reference-tracer | Difference of the RMS spot size at best focus — `focusRms.maxAbs` | mm | ≤ 1.00e-8 | 5.47e-14 | odd-asphere-photopic | field 0 deg, line 1 |
+| optiland – reference-tracer | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
+| optiland – reference-tracer | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
+| optiland – reference-tracer | Rays both engines traced through — `rays.compared` | rays | — | 3114 | — | — |
+| optiland – reference-tracer | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
 
 By run, each pair with its verdict and the judged figure that is largest against its limit:
 
-| Run | Requests | lv – optiland | lv – ref | optiland – ref | Rays of lv: ok / blocked / failed | Rays of optiland: ok / blocked / failed | Rays of ref: ok / blocked / failed |
+| Run | Requests | lv – optiland | lv – reference-tracer | optiland – reference-tracer | Rays of lv: ok / blocked / failed | Rays of optiland: ok / blocked / failed | Rays of reference-tracer: ok / blocked / failed |
 |---|---|---|---|---|---|---|---|
 | odd-asphere-ref | 3 | Pass: intercept.maxScaled 4.81e-14 mm | Pass: intercept.maxScaled 1.10e-13 mm | Pass: intercept.maxScaled 1.17e-13 mm | 66 / 0 / 0 | 66 / 0 / 0 | 66 / 0 / 0 |
 | odd-asphere-photopic | 10 | Pass: intercept.maxScaled 6.07e-14 mm | Pass: intercept.maxScaled 1.86e-13 mm | Pass: intercept.maxScaled 1.98e-13 mm | 280 / 0 / 0 | 280 / 0 / 0 | 280 / 0 / 0 |
@@ -456,30 +456,30 @@ The worst of every figure over the suite:
 | lv – optiland | Rays both engines traced through — `rays.compared` | rays | — | 7996 | — | — |
 | lv – optiland | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
 | lv – optiland | Largest difference of lateral colour — `lateralColour.maxAbs` | mm | ≤ 1.00e-8 | 1.10e-13 | flat-base-asphere-photopic | line 3, ray 30 |
-| lv – ref | Largest difference, along x or y, of the two engines' landings of a chief or reference ray — `landing.maxAbs` | mm | ≤ 1.00e-8 | 4.01e-13 | asphere-a20-photopic | line 2, ray 12 |
-| lv – ref | Largest difference of a ray's distance from its ideal image point — `distortion.maxScaled` | mm | ≤ 1.00e-8 | 3.81e-13 | fixed-iris-zoom-photopic-tele | line 1, ray 20 |
-| lv – ref | Largest difference of distortion — `distortion.maxAbs` | percent | — | 5.22e-12 | fixed-iris-zoom-photopic-tele | line 1, ray 20 |
-| lv – ref | Largest difference of a chief ray's axial crossing, times its exit slope — `exitPupil.maxScaled` | mm | ≤ 1.00e-8 | 5.77e-13 | fixed-iris-zoom-photopic-tele | line 2, ray 12 |
-| lv – ref | Largest difference of an exit pupil position — `exitPupil.maxAbs` | mm | — | 6.85e-12 | fixed-iris-zoom-photopic-tele | line 1, ray 6 |
-| lv – ref | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
-| lv – ref | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
-| lv – ref | Rays both engines traced through — `rays.compared` | rays | — | 7996 | — | — |
-| lv – ref | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
-| lv – ref | Largest difference of lateral colour — `lateralColour.maxAbs` | mm | ≤ 1.00e-8 | 1.31e-13 | fixed-iris-zoom-photopic-wide | line 3, ray 8 |
-| optiland – ref | Largest difference, along x or y, of the two engines' landings of a chief or reference ray — `landing.maxAbs` | mm | ≤ 1.00e-8 | 4.09e-13 | asphere-a20-photopic | line 2, ray 12 |
-| optiland – ref | Largest difference of a ray's distance from its ideal image point — `distortion.maxScaled` | mm | ≤ 1.00e-8 | 3.79e-13 | fixed-iris-zoom-photopic-tele | line 1, ray 20 |
-| optiland – ref | Largest difference of distortion — `distortion.maxAbs` | percent | — | 5.19e-12 | fixed-iris-zoom-photopic-tele | line 1, ray 20 |
-| optiland – ref | Largest difference of a chief ray's axial crossing, times its exit slope — `exitPupil.maxScaled` | mm | ≤ 1.00e-8 | 5.97e-13 | fixed-iris-zoom-photopic-tele | line 2, ray 12 |
-| optiland – ref | Largest difference of an exit pupil position — `exitPupil.maxAbs` | mm | — | 7.08e-12 | fixed-iris-zoom-photopic-tele | line 1, ray 6 |
-| optiland – ref | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
-| optiland – ref | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
-| optiland – ref | Rays both engines traced through — `rays.compared` | rays | — | 7996 | — | — |
-| optiland – ref | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
-| optiland – ref | Largest difference of lateral colour — `lateralColour.maxAbs` | mm | ≤ 1.00e-8 | 1.32e-13 | fixed-iris-zoom-photopic-wide | line 3, ray 8 |
+| lv – reference-tracer | Largest difference, along x or y, of the two engines' landings of a chief or reference ray — `landing.maxAbs` | mm | ≤ 1.00e-8 | 4.01e-13 | asphere-a20-photopic | line 2, ray 12 |
+| lv – reference-tracer | Largest difference of a ray's distance from its ideal image point — `distortion.maxScaled` | mm | ≤ 1.00e-8 | 3.81e-13 | fixed-iris-zoom-photopic-tele | line 1, ray 20 |
+| lv – reference-tracer | Largest difference of distortion — `distortion.maxAbs` | percent | — | 5.22e-12 | fixed-iris-zoom-photopic-tele | line 1, ray 20 |
+| lv – reference-tracer | Largest difference of a chief ray's axial crossing, times its exit slope — `exitPupil.maxScaled` | mm | ≤ 1.00e-8 | 5.77e-13 | fixed-iris-zoom-photopic-tele | line 2, ray 12 |
+| lv – reference-tracer | Largest difference of an exit pupil position — `exitPupil.maxAbs` | mm | — | 6.85e-12 | fixed-iris-zoom-photopic-tele | line 1, ray 6 |
+| lv – reference-tracer | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
+| lv – reference-tracer | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
+| lv – reference-tracer | Rays both engines traced through — `rays.compared` | rays | — | 7996 | — | — |
+| lv – reference-tracer | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
+| lv – reference-tracer | Largest difference of lateral colour — `lateralColour.maxAbs` | mm | ≤ 1.00e-8 | 1.31e-13 | fixed-iris-zoom-photopic-wide | line 3, ray 8 |
+| optiland – reference-tracer | Largest difference, along x or y, of the two engines' landings of a chief or reference ray — `landing.maxAbs` | mm | ≤ 1.00e-8 | 4.09e-13 | asphere-a20-photopic | line 2, ray 12 |
+| optiland – reference-tracer | Largest difference of a ray's distance from its ideal image point — `distortion.maxScaled` | mm | ≤ 1.00e-8 | 3.79e-13 | fixed-iris-zoom-photopic-tele | line 1, ray 20 |
+| optiland – reference-tracer | Largest difference of distortion — `distortion.maxAbs` | percent | — | 5.19e-12 | fixed-iris-zoom-photopic-tele | line 1, ray 20 |
+| optiland – reference-tracer | Largest difference of a chief ray's axial crossing, times its exit slope — `exitPupil.maxScaled` | mm | ≤ 1.00e-8 | 5.97e-13 | fixed-iris-zoom-photopic-tele | line 2, ray 12 |
+| optiland – reference-tracer | Largest difference of an exit pupil position — `exitPupil.maxAbs` | mm | — | 7.08e-12 | fixed-iris-zoom-photopic-tele | line 1, ray 6 |
+| optiland – reference-tracer | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
+| optiland – reference-tracer | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
+| optiland – reference-tracer | Rays both engines traced through — `rays.compared` | rays | — | 7996 | — | — |
+| optiland – reference-tracer | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
+| optiland – reference-tracer | Largest difference of lateral colour — `lateralColour.maxAbs` | mm | ≤ 1.00e-8 | 1.32e-13 | fixed-iris-zoom-photopic-wide | line 3, ray 8 |
 
 By run, each pair with its verdict and the judged figure that is largest against its limit:
 
-| Run | Requests | lv – optiland | lv – ref | optiland – ref | Rays of lv: ok / blocked / failed | Rays of optiland: ok / blocked / failed | Rays of ref: ok / blocked / failed |
+| Run | Requests | lv – optiland | lv – reference-tracer | optiland – reference-tracer | Rays of lv: ok / blocked / failed | Rays of optiland: ok / blocked / failed | Rays of reference-tracer: ok / blocked / failed |
 |---|---|---|---|---|---|---|---|
 | odd-asphere-ref | 4 | Pass: landing.maxAbs 3.55e-14 mm | Pass: landing.maxAbs 1.48e-13 mm | Pass: landing.maxAbs 1.43e-13 mm | 149 / 0 / 0 | 149 / 0 / 0 | 149 / 0 / 0 |
 | odd-asphere-photopic | 4 | Pass: lateralColour.maxAbs 7.46e-14 mm | Pass: landing.maxAbs 1.53e-13 mm | Pass: landing.maxAbs 1.54e-13 mm | 149 / 0 / 0 | 149 / 0 / 0 | 149 / 0 / 0 |
@@ -519,32 +519,32 @@ The worst of every figure over the suite:
 | lv – optiland | Rays both engines traced through — `rays.compared` | rays | — | 91258 | — | — |
 | lv – optiland | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
 | lv – optiland | Fields compared — `fields.compared` | elements | — | 1830 | — | — |
-| lv – ref | Largest difference, along x or y, of the two engines' landings of a chief or reference ray — `landing.maxAbs` | mm | ≤ 1.00e-8 | 6.76e-13 | fixed-iris-zoom-ref-tele | line 0, ray 1552 |
-| lv – ref | Largest difference of a tangential focus, times the fan's RMS slope — `tangentialFocus.maxScaled` | mm | ≤ 1.00e-8 | 1.24e-13 | asphere-a20-photopic | line 2, ray 1750 |
-| lv – ref | Largest difference of a tangential focus, along the axis — `tangentialFocus.maxAbs` | mm | — | 2.72e-10 | odd-asphere-photopic | line 1, ray 24 |
-| lv – ref | Largest difference of a sagittal focus, times the fan's RMS slope — `sagittalFocus.maxScaled` | mm | ≤ 1.00e-8 | 1.22e-13 | asphere-a20-photopic | line 0, ray 1338 |
-| lv – ref | Largest difference of a sagittal focus, along the axis — `sagittalFocus.maxAbs` | mm | — | 3.68e-12 | fixed-iris-zoom-photopic-tele | line 1, ray 79 |
-| lv – ref | Largest difference of astigmatism — `astigmatism.maxAbs` | mm | — | 2.73e-10 | odd-asphere-photopic | line 1, ray 24 |
-| lv – ref | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
-| lv – ref | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
-| lv – ref | Rays both engines traced through — `rays.compared` | rays | — | 91258 | — | — |
-| lv – ref | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
-| lv – ref | Fields compared — `fields.compared` | elements | — | 1830 | — | — |
-| optiland – ref | Largest difference, along x or y, of the two engines' landings of a chief or reference ray — `landing.maxAbs` | mm | ≤ 1.00e-8 | 6.75e-13 | fixed-iris-zoom-photopic-tele | line 3, ray 1552 |
-| optiland – ref | Largest difference of a tangential focus, times the fan's RMS slope — `tangentialFocus.maxScaled` | mm | ≤ 1.00e-8 | 1.13e-13 | asphere-a20-photopic | line 2, ray 1750 |
-| optiland – ref | Largest difference of a tangential focus, along the axis — `tangentialFocus.maxAbs` | mm | — | 2.79e-10 | flat-base-asphere-photopic | line 2, ray 84 |
-| optiland – ref | Largest difference of a sagittal focus, times the fan's RMS slope — `sagittalFocus.maxScaled` | mm | ≤ 1.00e-8 | 1.19e-13 | asphere-a20-photopic | line 4, ray 1338 |
-| optiland – ref | Largest difference of a sagittal focus, along the axis — `sagittalFocus.maxAbs` | mm | — | 3.56e-12 | fixed-iris-zoom-photopic-tele | line 3, ray 79 |
-| optiland – ref | Largest difference of astigmatism — `astigmatism.maxAbs` | mm | — | 2.79e-10 | flat-base-asphere-photopic | line 2, ray 84 |
-| optiland – ref | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
-| optiland – ref | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
-| optiland – ref | Rays both engines traced through — `rays.compared` | rays | — | 91258 | — | — |
-| optiland – ref | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
-| optiland – ref | Fields compared — `fields.compared` | elements | — | 1830 | — | — |
+| lv – reference-tracer | Largest difference, along x or y, of the two engines' landings of a chief or reference ray — `landing.maxAbs` | mm | ≤ 1.00e-8 | 6.76e-13 | fixed-iris-zoom-ref-tele | line 0, ray 1552 |
+| lv – reference-tracer | Largest difference of a tangential focus, times the fan's RMS slope — `tangentialFocus.maxScaled` | mm | ≤ 1.00e-8 | 1.24e-13 | asphere-a20-photopic | line 2, ray 1750 |
+| lv – reference-tracer | Largest difference of a tangential focus, along the axis — `tangentialFocus.maxAbs` | mm | — | 2.72e-10 | odd-asphere-photopic | line 1, ray 24 |
+| lv – reference-tracer | Largest difference of a sagittal focus, times the fan's RMS slope — `sagittalFocus.maxScaled` | mm | ≤ 1.00e-8 | 1.22e-13 | asphere-a20-photopic | line 0, ray 1338 |
+| lv – reference-tracer | Largest difference of a sagittal focus, along the axis — `sagittalFocus.maxAbs` | mm | — | 3.68e-12 | fixed-iris-zoom-photopic-tele | line 1, ray 79 |
+| lv – reference-tracer | Largest difference of astigmatism — `astigmatism.maxAbs` | mm | — | 2.73e-10 | odd-asphere-photopic | line 1, ray 24 |
+| lv – reference-tracer | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
+| lv – reference-tracer | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
+| lv – reference-tracer | Rays both engines traced through — `rays.compared` | rays | — | 91258 | — | — |
+| lv – reference-tracer | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
+| lv – reference-tracer | Fields compared — `fields.compared` | elements | — | 1830 | — | — |
+| optiland – reference-tracer | Largest difference, along x or y, of the two engines' landings of a chief or reference ray — `landing.maxAbs` | mm | ≤ 1.00e-8 | 6.75e-13 | fixed-iris-zoom-photopic-tele | line 3, ray 1552 |
+| optiland – reference-tracer | Largest difference of a tangential focus, times the fan's RMS slope — `tangentialFocus.maxScaled` | mm | ≤ 1.00e-8 | 1.13e-13 | asphere-a20-photopic | line 2, ray 1750 |
+| optiland – reference-tracer | Largest difference of a tangential focus, along the axis — `tangentialFocus.maxAbs` | mm | — | 2.79e-10 | flat-base-asphere-photopic | line 2, ray 84 |
+| optiland – reference-tracer | Largest difference of a sagittal focus, times the fan's RMS slope — `sagittalFocus.maxScaled` | mm | ≤ 1.00e-8 | 1.19e-13 | asphere-a20-photopic | line 4, ray 1338 |
+| optiland – reference-tracer | Largest difference of a sagittal focus, along the axis — `sagittalFocus.maxAbs` | mm | — | 3.56e-12 | fixed-iris-zoom-photopic-tele | line 3, ray 79 |
+| optiland – reference-tracer | Largest difference of astigmatism — `astigmatism.maxAbs` | mm | — | 2.79e-10 | flat-base-asphere-photopic | line 2, ray 84 |
+| optiland – reference-tracer | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
+| optiland – reference-tracer | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
+| optiland – reference-tracer | Rays both engines traced through — `rays.compared` | rays | — | 91258 | — | — |
+| optiland – reference-tracer | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
+| optiland – reference-tracer | Fields compared — `fields.compared` | elements | — | 1830 | — | — |
 
 By run, each pair with its verdict and the judged figure that is largest against its limit:
 
-| Run | Requests | lv – optiland | lv – ref | optiland – ref | Rays of lv: ok / blocked / failed | Rays of optiland: ok / blocked / failed | Rays of ref: ok / blocked / failed |
+| Run | Requests | lv – optiland | lv – reference-tracer | optiland – reference-tracer | Rays of lv: ok / blocked / failed | Rays of optiland: ok / blocked / failed | Rays of reference-tracer: ok / blocked / failed |
 |---|---|---|---|---|---|---|---|
 | odd-asphere-ref | 2 | Pass: landing.maxAbs 9.24e-14 mm | Pass: landing.maxAbs 3.02e-13 mm | Pass: landing.maxAbs 3.23e-13 mm | 1585 / 251 / 0 | 1585 / 251 / 0 | 1585 / 251 / 0 |
 | odd-asphere-photopic | 10 | Pass: landing.maxAbs 1.94e-13 mm | Pass: landing.maxAbs 3.62e-13 mm | Pass: landing.maxAbs 3.87e-13 mm | 7895 / 1285 / 0 | 7895 / 1285 / 0 | 7895 / 1285 / 0 |
@@ -582,28 +582,28 @@ The worst of every figure over the suite:
 | lv – optiland | Rays both engines traced through — `rays.compared` | rays | — | 1294662 | — | — |
 | lv – optiland | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
 | lv – optiland | Fields compared — `fields.compared` | elements | — | 690 | — | — |
-| lv – ref | Largest difference of a field's flux into the image, relative to the axis — `illumination.maxAbs` | (no unit) | ≤ 1.00e-9 | 3.13e-14 | fixed-iris-zoom-photopic-wide | field 2.24e1 deg, line 4 |
-| lv – ref | Share of the axis's flux carried by rays one engine passes and the other stops — `transmission.maxAbs` | (no unit) | ≤ 0 | 0 | odd-asphere-ref | field 0 deg, line 0 |
-| lv – ref | Share of the axis's flux carried by rays at a rim, or that failed, that one engine passes and the other does not (shown, not judged) — `transmission.rimBandOrFailed` | (no unit) | — | 0 | odd-asphere-ref | field 0 deg, line 0 |
-| lv – ref | Largest difference, along x or y, of the two engines' landings of a chief or reference ray — `landing.maxAbs` | mm | ≤ 1.00e-8 | 1.35e-13 | rear-plate-rim-photopic | field 3.00e1 deg, line 4, ray 2048 |
-| lv – ref | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
-| lv – ref | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
-| lv – ref | Rays both engines traced through — `rays.compared` | rays | — | 1294662 | — | — |
-| lv – ref | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
-| lv – ref | Fields compared — `fields.compared` | elements | — | 690 | — | — |
-| optiland – ref | Largest difference of a field's flux into the image, relative to the axis — `illumination.maxAbs` | (no unit) | ≤ 1.00e-9 | 3.38e-14 | fixed-iris-zoom-photopic-wide | field 2.24e1 deg, line 4 |
-| optiland – ref | Share of the axis's flux carried by rays one engine passes and the other stops — `transmission.maxAbs` | (no unit) | ≤ 0 | 0 | odd-asphere-ref | field 0 deg, line 0 |
-| optiland – ref | Share of the axis's flux carried by rays at a rim, or that failed, that one engine passes and the other does not (shown, not judged) — `transmission.rimBandOrFailed` | (no unit) | — | 0 | odd-asphere-ref | field 0 deg, line 0 |
-| optiland – ref | Largest difference, along x or y, of the two engines' landings of a chief or reference ray — `landing.maxAbs` | mm | ≤ 1.00e-8 | 1.35e-13 | rear-plate-rim-ref | field 3.00e1 deg, line 0, ray 2048 |
-| optiland – ref | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
-| optiland – ref | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
-| optiland – ref | Rays both engines traced through — `rays.compared` | rays | — | 1294662 | — | — |
-| optiland – ref | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
-| optiland – ref | Fields compared — `fields.compared` | elements | — | 690 | — | — |
+| lv – reference-tracer | Largest difference of a field's flux into the image, relative to the axis — `illumination.maxAbs` | (no unit) | ≤ 1.00e-9 | 3.13e-14 | fixed-iris-zoom-photopic-wide | field 2.24e1 deg, line 4 |
+| lv – reference-tracer | Share of the axis's flux carried by rays one engine passes and the other stops — `transmission.maxAbs` | (no unit) | ≤ 0 | 0 | odd-asphere-ref | field 0 deg, line 0 |
+| lv – reference-tracer | Share of the axis's flux carried by rays at a rim, or that failed, that one engine passes and the other does not (shown, not judged) — `transmission.rimBandOrFailed` | (no unit) | — | 0 | odd-asphere-ref | field 0 deg, line 0 |
+| lv – reference-tracer | Largest difference, along x or y, of the two engines' landings of a chief or reference ray — `landing.maxAbs` | mm | ≤ 1.00e-8 | 1.35e-13 | rear-plate-rim-photopic | field 3.00e1 deg, line 4, ray 2048 |
+| lv – reference-tracer | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
+| lv – reference-tracer | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
+| lv – reference-tracer | Rays both engines traced through — `rays.compared` | rays | — | 1294662 | — | — |
+| lv – reference-tracer | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
+| lv – reference-tracer | Fields compared — `fields.compared` | elements | — | 690 | — | — |
+| optiland – reference-tracer | Largest difference of a field's flux into the image, relative to the axis — `illumination.maxAbs` | (no unit) | ≤ 1.00e-9 | 3.38e-14 | fixed-iris-zoom-photopic-wide | field 2.24e1 deg, line 4 |
+| optiland – reference-tracer | Share of the axis's flux carried by rays one engine passes and the other stops — `transmission.maxAbs` | (no unit) | ≤ 0 | 0 | odd-asphere-ref | field 0 deg, line 0 |
+| optiland – reference-tracer | Share of the axis's flux carried by rays at a rim, or that failed, that one engine passes and the other does not (shown, not judged) — `transmission.rimBandOrFailed` | (no unit) | — | 0 | odd-asphere-ref | field 0 deg, line 0 |
+| optiland – reference-tracer | Largest difference, along x or y, of the two engines' landings of a chief or reference ray — `landing.maxAbs` | mm | ≤ 1.00e-8 | 1.35e-13 | rear-plate-rim-ref | field 3.00e1 deg, line 0, ray 2048 |
+| optiland – reference-tracer | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
+| optiland – reference-tracer | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
+| optiland – reference-tracer | Rays both engines traced through — `rays.compared` | rays | — | 1294662 | — | — |
+| optiland – reference-tracer | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
+| optiland – reference-tracer | Fields compared — `fields.compared` | elements | — | 690 | — | — |
 
 By run, each pair with its verdict and the judged figure that is largest against its limit:
 
-| Run | Requests | lv – optiland | lv – ref | optiland – ref | Rays of lv: ok / blocked / failed | Rays of optiland: ok / blocked / failed | Rays of ref: ok / blocked / failed |
+| Run | Requests | lv – optiland | lv – reference-tracer | optiland – reference-tracer | Rays of lv: ok / blocked / failed | Rays of optiland: ok / blocked / failed | Rays of reference-tracer: ok / blocked / failed |
 |---|---|---|---|---|---|---|---|
 | odd-asphere-ref | 1 | Pass: landing.maxAbs 3.20e-14 mm | Pass: landing.maxAbs 2.66e-14 mm | Pass: landing.maxAbs 3.55e-14 mm | 2049 / 0 / 0 | 2049 / 0 / 0 | 2049 / 0 / 0 |
 | odd-asphere-photopic | 5 | Pass: landing.maxAbs 4.62e-14 mm | Pass: landing.maxAbs 3.91e-14 mm | Pass: landing.maxAbs 6.39e-14 mm | 10157 / 88 / 0 | 10157 / 88 / 0 | 10157 / 88 / 0 |
@@ -662,7 +662,7 @@ A pair is named by the ids of its two engines:
 |---|---|
 | `lv` | LensVisualizer itself, loaded from a local checkout, asked for each figure as its own tabs ask for it, and made to trace the very rays every engine is handed in the checks held to a limit. |
 | `optiland` | optiland, an open-source optical design library in Python, run by this tool in a worker process of its own. |
-| `ref` | The reference tracer: a small exact ray tracer written in this repository from the optics alone, never from LensVisualizer's or optiland's code. |
+| `reference-tracer` | The reference tracer: a small exact ray tracer written in this repository from the optics alone, never from LensVisualizer's or optiland's code. |
 
 ### Figures
 
@@ -720,7 +720,7 @@ contract version is that of the file format the baseline is written in.
 |---|---|---|---|
 | lv | 4669921bae7179c7eddd220fa367e696eae7acec3a5a788d0ca90da632d3eb6b | afad9cb89bd9a25fbfa5ee0ec335b1e315481414b7ba41da2f906c28856010c5 | commit 25f65d4b4213a21392cbae92680134906049b2ad |
 | optiland | bcfbf3916c1103b3b3b49a93117d3346a0bd6921ec35f01feb99bc1a2a6e39eb | 98f36151b0cdd2d3d3f82013841899de85309b22012967de64bbba662217fbcb | commit 4e893f53aee1312f2d091680b93dd2279711e197, distribution version 0.6.2.post117+g4e893f53, source hash 279af5c55d8ebe1610686b9dad3e6eeb22b1822037d59a0e5f148c2fb8937f38 |
-| ref | b7d0684b593261d14a1dfebb903774775bbe481a07ae2955689644dc0ffd919e | 2225e342b4fd8539480e933e59a3ca95a8ae2beeb24f45972b55fd4e4a59d357 | — |
+| reference-tracer | b7d0684b593261d14a1dfebb903774775bbe481a07ae2955689644dc0ffd919e | 2225e342b4fd8539480e933e59a3ca95a8ae2beeb24f45972b55fd4e4a59d357 | — |
 
 | Run | Lens state |
 |---|---|

@@ -1,9 +1,9 @@
 // Rungs R10a and R10b from end to end on engines that know no LensVisualizer: a suite is run, compared and reported,
 // and each report is a golden file. In R10a the reference engine traces a curvature set of two fields (each a parabasal
-// pair in each section beside its chief ray) through a small lens at two lines, and two stand-ins answer as it does with
-// one landing moved and one ray stopped; in R10b two stand-ins named `lv` and `optiland` answer `curvature.native`, the
-// first as LensVisualizer's field curves state them and the second as optiland's worker does. Every number is
-// synthetic.
+// pair in each section beside its chief ray) through a small lens at two lines, and two stand-ins answer as it does
+// with one landing moved and one ray stopped; in R10b two stand-ins named `lv` and `optiland` answer
+// `curvature.native`, the first as LensVisualizer's field curves state them and the second as optiland's worker does.
+// Every number is synthetic.
 import { join } from "node:path";
 
 import { compareManifest } from "../../src/compare/manifest.ts";
@@ -135,7 +135,10 @@ export const R10A_FIXTURE_RUNG: RungDefinition = {
 /** The reference engine, under the id it is made with, answering as `change` changes its trace. */
 function refLike(change?: (data: RaysTraceData, request: QuantityRequest) => RaysTraceData): EngineMaker {
   return async (id) => {
-    const adapter = new RemoteEngineAdapter({ id: "ref", transport: createInProcessTransport(createRefEngine()) });
+    const adapter = new RemoteEngineAdapter({
+      id: "reference-tracer",
+      transport: createInProcessTransport(createRefEngine()),
+    });
     const described = await adapter.describe();
     const descriptor: EngineDescriptor = { ...described, identity: { ...described.identity, id } };
     return {
@@ -154,14 +157,14 @@ function refLike(change?: (data: RaysTraceData, request: QuantityRequest) => Ray
 }
 
 /**
- * The engines of R10a: `ref`; `moved`, which lands ray 6 of the second line (a tangential ray of the 5 degree field)
- * 2^-25 mm (2.98e-8 mm) further along y, beyond the gate as a landing and, by half of it, as a tangential focus; and
- * `stopped`, which stops ray 3 of the first line (a sagittal ray of the axis) at the first surface.
+ * The engines of R10a: `reference-tracer`; `moved`, which lands ray 6 of the second line (a tangential ray of the 5
+ * degree field) 2^-25 mm (2.98e-8 mm) further along y, beyond the gate as a landing and, by half of it, as a tangential
+ * focus; and `stopped`, which stops ray 3 of the first line (a sagittal ray of the axis) at the first surface.
  */
 function r10aEngines(): { readonly [engine: string]: EngineMaker } {
   const lineOf = (request: QuantityRequest): number => (request.spec as { line: number }).line;
   return {
-    ref: refLike(),
+    "reference-tracer": refLike(),
     moved: refLike((data, request) =>
       lineOf(request) === 1
         ? changed(data, (arrays) => {
@@ -181,7 +184,7 @@ export function r10aCycle(runsDir: string): Promise<R10Cycle> {
     runsDir,
     R10A_GOLDEN,
     R10A_FIXTURE_RUNG,
-    [{ name: "lens", opticalCase: CURVATURE_LENS, referenceEngine: "ref" }],
+    [{ name: "lens", opticalCase: CURVATURE_LENS, referenceEngine: "reference-tracer" }],
     r10aEngines(),
     R10A_POLICY,
   );

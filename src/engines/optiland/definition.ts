@@ -45,10 +45,14 @@ export const OPTILAND_CACHE_NAME = "optiland";
  */
 export const OPTILAND_TIMEOUTS: Partial<EngineTimeouts> = Object.freeze({ helloMs: 180_000 });
 
-/** What to do about an interpreter that is not there, said the same way wherever it is said. */
+/**
+ * What to do about an interpreter that is not there, in the words of the remedy the vocabulary gives the codes
+ * `not-configured` and `spawn-failed` (`src/vocabulary/codes.ts`, held to it by a test), so that a command that
+ * prints both this message and that remedy prints the remedy once (`codeLines` leaves out what the message said).
+ */
 export const OPTILAND_SETTING_HINT =
-  `set engines.optiland.python in ${LOCAL_CONFIG_FILE} (or LVRTC_OPTILAND_PYTHON) to an interpreter that can ` +
-  "import optiland, as lvrtc.local.example.json shows";
+  `Set engines.optiland.python in ${LOCAL_CONFIG_FILE} (or LVRTC_OPTILAND_PYTHON) to a Python interpreter that can ` +
+  "import optiland.";
 
 /**
  * The variables of the worker that keep it from writing into the optiland checkout or its environment, with the
@@ -117,11 +121,11 @@ export function optilandDefinition(
   const { cacheDir, engines } = loaded.config;
   const python = engines.optiland.python;
   if (python === null) {
-    const detail = `no interpreter is configured for it: ${OPTILAND_SETTING_HINT}`;
+    const detail = `no interpreter is configured for it. ${OPTILAND_SETTING_HINT}`;
     throw new EngineUnavailableError(OPTILAND_ENGINE_ID, "not-configured", detail);
   }
   if (!interpreterFound(python, probe)) {
-    const detail = `its interpreter ${python} does not exist: ${OPTILAND_SETTING_HINT}`;
+    const detail = `its interpreter ${python} does not exist. ${OPTILAND_SETTING_HINT}`;
     throw new EngineUnavailableError(OPTILAND_ENGINE_ID, "spawn-failed", detail);
   }
   return {

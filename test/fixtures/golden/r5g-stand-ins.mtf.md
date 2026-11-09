@@ -23,15 +23,15 @@ How to read this, near the end, says what each label and column means.
 |---|---|---|---|
 | lv | LensVisualizer | 1 | bias 0, failMode none, offersQuantities true |
 | optiland | optiland | 1 | bias 0, failMode none, offersQuantities true |
-| replay | Replay of LensVisualizer's MTF | 1 | bias 0, failMode none, offersQuantities true |
+| replay-of-lv-mtf | Replay of LensVisualizer's MTF | 1 | bias 0, failMode none, offersQuantities true |
 
 ## Summary
 
 | Check | Quantity | Runs | Requests | Pair | Runs by verdict | Requests by verdict |
 |---|---|---|---|---|---|---|
 | Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | `mtf.native` | 3 | 3 | lv – optiland | 1 Side by side; 2 Side by side, worth a look | 1 Side by side; 2 Side by side, worth a look |
-| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | `mtf.native` | 3 | 3 | lv – replay | 3 Side by side | 3 Side by side |
-| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | `mtf.native` | 3 | 3 | optiland – replay | 1 Side by side; 2 Side by side, worth a look | 1 Side by side; 2 Side by side, worth a look |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | `mtf.native` | 3 | 3 | lv – replay-of-lv-mtf | 3 Side by side | 3 Side by side |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | `mtf.native` | 3 | 3 | optiland – replay-of-lv-mtf | 1 Side by side; 2 Side by side, worth a look | 1 Side by side; 2 Side by side, worth a look |
 
 ## Support
 
@@ -42,7 +42,7 @@ In how many runs the jobs of an engine ended in each way. An engine that cannot 
 |---|---|---|
 | Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | lv | 3 answered |
 | Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | optiland | 3 answered |
-| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | replay | 3 answered |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | replay-of-lv-mtf | 3 answered |
 
 ## Geometric MTF beside optiland's — `geometric-mtf-vs-optiland`
 
@@ -62,24 +62,24 @@ The worst of every figure over the suite:
 | lv – optiland | Fields an engine has no answer for — `fields.unavailable` | elements | — | 1 | 3 of 3 | — | — |
 | lv – optiland | Largest MTF difference on the axis, at the engine's first, coarser sampling — `mtfOnAxis.firstStepMaxAbs` | (no unit) | — | 3.91e-3 | 1 of 3 | beyond | cut sagittal, field 0 of the image height, frequencyPerMm 50 |
 | lv – optiland | Largest MTF difference in fields whose sampling did not settle (in no review band) — `mtfFlagged.maxAbs` | (no unit) | — | 6.25e-2 | 1 of 3 | beyond | cut tangential, field 1 of the image height, frequencyPerMm 70 |
-| lv – replay | Largest distance between the two engines' chief-ray landings — `chiefLanding.maxAbs` | mm | — | 0 | 3 of 3 | edge | field 0 of the image height |
-| lv – replay | Largest MTF difference on the axis — `mtfOnAxis.maxAbs` | (no unit) | review band 3.91e-3 | 0 | 3 of 3 | edge | cut sagittal, field 0 of the image height, frequencyPerMm 10 |
-| lv – replay | Largest MTF difference off the axis — `mtfOffAxis.maxAbs` | (no unit) | review band 7.81e-3 | 0 | 3 of 3 | edge | cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 10 |
-| lv – replay | Fields compared — `fields.compared` | elements | — | 9 | 3 of 3 | — | — |
-| lv – replay | Fields set aside because a sampling did not settle — `fields.flagged` | elements | — | 0 | 3 of 3 | — | — |
-| lv – replay | Fields set aside because an engine lost a rim ray — `fields.rimLost` | elements | — | 0 | 3 of 3 | — | — |
-| lv – replay | Fields whose two answers are of different inputs — `fields.data` | elements | — | 0 | 3 of 3 | — | — |
-| lv – replay | Fields an engine has no answer for — `fields.unavailable` | elements | — | 0 | 3 of 3 | — | — |
-| optiland – replay | Largest distance between the two engines' chief-ray landings — `chiefLanding.maxAbs` | mm | — | 1.95e-3 | 3 of 3 | beyond | field 5.00e-1 of the image height |
-| optiland – replay | Largest MTF difference on the axis — `mtfOnAxis.maxAbs` | (no unit) | review band 3.91e-3 | 3.91e-3 | 3 of 3 | beyond | cut sagittal, field 0 of the image height, frequencyPerMm 50 |
-| optiland – replay | Largest MTF difference off the axis — `mtfOffAxis.maxAbs` | (no unit) | review band 7.81e-3 | 1.56e-2 | 2 of 3 | polychromatic | cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 30 |
-| optiland – replay | Fields compared — `fields.compared` | elements | — | 6 | 3 of 3 | — | — |
-| optiland – replay | Fields set aside because a sampling did not settle — `fields.flagged` | elements | — | 1 | 3 of 3 | — | — |
-| optiland – replay | Fields set aside because an engine lost a rim ray — `fields.rimLost` | elements | — | 0 | 3 of 3 | — | — |
-| optiland – replay | Fields whose two answers are of different inputs — `fields.data` | elements | — | 1 | 3 of 3 | — | — |
-| optiland – replay | Fields an engine has no answer for — `fields.unavailable` | elements | — | 1 | 3 of 3 | — | — |
-| optiland – replay | Largest MTF difference on the axis, at the engine's first, coarser sampling — `mtfOnAxis.firstStepMaxAbs` | (no unit) | — | 3.91e-3 | 1 of 3 | beyond | cut sagittal, field 0 of the image height, frequencyPerMm 50 |
-| optiland – replay | Largest MTF difference in fields whose sampling did not settle (in no review band) — `mtfFlagged.maxAbs` | (no unit) | — | 6.25e-2 | 1 of 3 | beyond | cut tangential, field 1 of the image height, frequencyPerMm 70 |
+| lv – replay-of-lv-mtf | Largest distance between the two engines' chief-ray landings — `chiefLanding.maxAbs` | mm | — | 0 | 3 of 3 | edge | field 0 of the image height |
+| lv – replay-of-lv-mtf | Largest MTF difference on the axis — `mtfOnAxis.maxAbs` | (no unit) | review band 3.91e-3 | 0 | 3 of 3 | edge | cut sagittal, field 0 of the image height, frequencyPerMm 10 |
+| lv – replay-of-lv-mtf | Largest MTF difference off the axis — `mtfOffAxis.maxAbs` | (no unit) | review band 7.81e-3 | 0 | 3 of 3 | edge | cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 10 |
+| lv – replay-of-lv-mtf | Fields compared — `fields.compared` | elements | — | 9 | 3 of 3 | — | — |
+| lv – replay-of-lv-mtf | Fields set aside because a sampling did not settle — `fields.flagged` | elements | — | 0 | 3 of 3 | — | — |
+| lv – replay-of-lv-mtf | Fields set aside because an engine lost a rim ray — `fields.rimLost` | elements | — | 0 | 3 of 3 | — | — |
+| lv – replay-of-lv-mtf | Fields whose two answers are of different inputs — `fields.data` | elements | — | 0 | 3 of 3 | — | — |
+| lv – replay-of-lv-mtf | Fields an engine has no answer for — `fields.unavailable` | elements | — | 0 | 3 of 3 | — | — |
+| optiland – replay-of-lv-mtf | Largest distance between the two engines' chief-ray landings — `chiefLanding.maxAbs` | mm | — | 1.95e-3 | 3 of 3 | beyond | field 5.00e-1 of the image height |
+| optiland – replay-of-lv-mtf | Largest MTF difference on the axis — `mtfOnAxis.maxAbs` | (no unit) | review band 3.91e-3 | 3.91e-3 | 3 of 3 | beyond | cut sagittal, field 0 of the image height, frequencyPerMm 50 |
+| optiland – replay-of-lv-mtf | Largest MTF difference off the axis — `mtfOffAxis.maxAbs` | (no unit) | review band 7.81e-3 | 1.56e-2 | 2 of 3 | polychromatic | cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 30 |
+| optiland – replay-of-lv-mtf | Fields compared — `fields.compared` | elements | — | 6 | 3 of 3 | — | — |
+| optiland – replay-of-lv-mtf | Fields set aside because a sampling did not settle — `fields.flagged` | elements | — | 1 | 3 of 3 | — | — |
+| optiland – replay-of-lv-mtf | Fields set aside because an engine lost a rim ray — `fields.rimLost` | elements | — | 0 | 3 of 3 | — | — |
+| optiland – replay-of-lv-mtf | Fields whose two answers are of different inputs — `fields.data` | elements | — | 1 | 3 of 3 | — | — |
+| optiland – replay-of-lv-mtf | Fields an engine has no answer for — `fields.unavailable` | elements | — | 1 | 3 of 3 | — | — |
+| optiland – replay-of-lv-mtf | Largest MTF difference on the axis, at the engine's first, coarser sampling — `mtfOnAxis.firstStepMaxAbs` | (no unit) | — | 3.91e-3 | 1 of 3 | beyond | cut sagittal, field 0 of the image height, frequencyPerMm 50 |
+| optiland – replay-of-lv-mtf | Largest MTF difference in fields whose sampling did not settle (in no review band) — `mtfFlagged.maxAbs` | (no unit) | — | 6.25e-2 | 1 of 3 | beyond | cut tangential, field 1 of the image height, frequencyPerMm 70 |
 
 The engines' own geometric MTF, side by side. The difference of a row is lv − optiland.
 Each column is one engine's own estimate of the geometric MTF, of its own rays through its own sampling of the
@@ -102,12 +102,12 @@ as complex numbers with their weights before the modulus is taken, is this tool'
 
 A row is one field and cut of one run, at 10, 30, 50 cycles/mm. Under each engine is what it says of the
 field (`optiland` with the step its row is of, where it was asked again); the third estimate is this tool's
-(`replay`). The status is the worst of the row's frequencies; "All" is what the two engines came to over
+(`replay-of-lv-mtf`). The status is the worst of the row's frequencies; "All" is what the two engines came to over
 every frequency of the request.
 
 Rows by status: 10 Side by side; 2 Side by side, worth a look; 4 Set aside; 2 Not computed.
 
-| Run | Field | Cut | lv | optiland | replay | Class | Status | All | lv 10 | optiland 10 | replay 10 | Δ 10 | lv 30 | optiland 30 | replay 30 | Δ 30 | lv 50 | optiland 50 | replay 50 | Δ 50 |
+| Run | Field | Cut | lv | optiland | replay-of-lv-mtf | Class | Status | All | lv 10 | optiland 10 | replay-of-lv-mtf 10 | Δ 10 | lv 30 | optiland 30 | replay-of-lv-mtf 30 | Δ 30 | lv 50 | optiland 50 | replay-of-lv-mtf 50 | Δ 50 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | edge | 0 | sagittal | ok | ok | ok | the methods differ: two-methods | Side by side | Side by side | 0.8750 | 0.8711 | 0.8750 | 3.91e-3 | 0.7500 | 0.7500 | 0.7500 | 0 | 0.5000 | 0.5000 | 0.5000 | 0 |
 | edge | 0 | tangential | ok | ok | ok | the methods differ: two-methods | Side by side | Side by side | 0.8750 | 0.8750 | 0.8750 | 0 | 0.7500 | 0.7500 | 0.7500 | 0 | 0.5000 | 0.5000 | 0.5000 | 0 |
@@ -156,9 +156,9 @@ sorting limit tells two image points apart; nothing here is a failure.
 | Check | Run | Field | Pair | Figures above their review band or sorting limit |
 |---|---|---|---|---|
 | Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | beyond | — | lv – optiland | chiefLanding.maxAbs 1.95e-3 (sorting limit 9.77e-4) at field 5.00e-1 of the image height; mtfOnAxis.maxAbs 3.91e-3 (review band 3.91e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 50 |
-| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | beyond | — | optiland – replay | chiefLanding.maxAbs 1.95e-3 (sorting limit 9.77e-4) at field 5.00e-1 of the image height; mtfOnAxis.maxAbs 3.91e-3 (review band 3.91e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 50 |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | beyond | — | optiland – replay-of-lv-mtf | chiefLanding.maxAbs 1.95e-3 (sorting limit 9.77e-4) at field 5.00e-1 of the image height; mtfOnAxis.maxAbs 3.91e-3 (review band 3.91e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 50 |
 | Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | polychromatic | — | lv – optiland | mtfOffAxis.maxAbs 1.56e-2 (review band 7.81e-3) at cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 30 |
-| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | polychromatic | — | optiland – replay | mtfOffAxis.maxAbs 1.56e-2 (review band 7.81e-3) at cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 30 |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | polychromatic | — | optiland – replay-of-lv-mtf | mtfOffAxis.maxAbs 1.56e-2 (review band 7.81e-3) at cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 30 |
 
 ## Not covered
 
@@ -205,7 +205,7 @@ A pair is named by the ids of its two engines:
 |---|---|
 | `lv` | LensVisualizer itself, loaded from a local checkout, asked for each figure as its own tabs ask for it, and made to trace the very rays every engine is handed in the checks held to a limit. |
 | `optiland` | optiland, an open-source optical design library in Python, run by this tool in a worker process of its own. |
-| `replay` | LensVisualizer's own MTF sampling, repeated step by step, with the geometric MTF summed by this tool. |
+| `replay-of-lv-mtf` | LensVisualizer's own MTF sampling, repeated step by step, with the geometric MTF summed by this tool. |
 
 ### Figures
 
@@ -269,7 +269,7 @@ contract version is that of the file format the baseline is written in.
 | Identifier | Value |
 |---|---|
 | Suite file | 0b893087636f1fc875c66610f77a58553ae02d065d110fb089f1d7f81db029e9 |
-| Baseline file | 930e31d1f2215791b1a7d547d729ea152aa43ea048f2664b92ac071099e4a796 |
+| Baseline file | 69f0d1f6b4d1cfbe6b0e064b423cf17b6750b26bd3de5ae8640bb13ae449e5c4 |
 | Limits file | 366eeb007dfd32760617cec0f4c81f8391f64ecc2fd7a977d44f0073791034d6 |
 | Contract version of the baseline file | 1.1 |
 
@@ -277,7 +277,7 @@ contract version is that of the file format the baseline is written in.
 |---|---|---|---|
 | lv | e446589a9d2d1f032334b5e798670d49c6268734494645c2a0f45c4a5bc007a2 | — | — |
 | optiland | 5b42de3b00b5524489ff7d64c6f9c2d9fd6d53eb0f33fb98439c766aa9b33d31 | — | — |
-| replay | 529061c7703d71616ecacf2563d68b74164d3efc60b9b25f22068518c4322fd9 | — | — |
+| replay-of-lv-mtf | 3425387646473bbf88d9c0bafc74a9879926834022d6156fc113ca1db7568666 | — | — |
 
 | Run | Lens state |
 |---|---|

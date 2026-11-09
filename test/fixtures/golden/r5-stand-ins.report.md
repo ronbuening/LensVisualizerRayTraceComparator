@@ -16,7 +16,7 @@
 |---|---|---|---|
 | lv | available | 1 | e446589a9d2d1f032334b5e798670d49c6268734494645c2a0f45c4a5bc007a2 |
 | optiland | available | 1 | 5b42de3b00b5524489ff7d64c6f9c2d9fd6d53eb0f33fb98439c766aa9b33d31 |
-| wave | available | 1 | a348558d728efd5c7b52a212b84aac868d7c2d5b1839c2f4a564dcd7f81d4f16 |
+| wave-mtf-of-lv-rays | available | 1 | f726f40bc7f30ada0156f055e3ecc24b6c8a629d916291e451c6ad946abeeb7c |
 
 ### Runs
 
@@ -42,7 +42,7 @@ No pair is Fail or Error, of 15 compared.
 
 ## Support matrix
 
-| Run | Check | lv | optiland | wave |
+| Run | Check | lv | optiland | wave-mtf-of-lv-rays |
 |---|---|---|---|---|
 | edge | mtf-vs-optiland-fft | ok | ok | ok |
 | beyond | mtf-vs-optiland-fft | ok | ok | ok |
@@ -61,15 +61,15 @@ Reference vs each, against `lv`:
 | Engine | chiefLanding.maxAbs (band 9.77e-4 mm) | mtfOffAxis.maxAbs (band 7.81e-3) | mtfOnAxis.maxAbs (band 3.91e-3) | mtfRimLost.maxAbs | fields.compared [elements] | fields.flagged [elements] | fields.rimLost [elements] | fields.data [elements] | fields.unavailable [elements] | mtfFlagged.maxAbs | Verdict | Note |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | optiland | 0 at field 0 | 7.81e-3 at cut tangential, field 5.00e-1, frequencyPerMm 30 | 3.91e-3 at cut sagittal, field 0, frequencyPerMm 10 | 1.25e-1 at cut sagittal, field 1, frequencyPerMm 50 | 2 | 0 | 1 | 0 | 0 | — | RECORDED | field 1: method, rim-rays-lost (scalar-fft-mtf lost 1 rim rays) |
-| wave | 0 at field 0 | 0 at cut sagittal, field 5.00e-1, frequencyPerMm 10 | 0 at cut sagittal, field 0, frequencyPerMm 10 | — | 2 | 1 | 0 | 0 | 0 | 0 at cut sagittal, field 1, frequencyPerMm 10 | RECORDED | field 1: numerical, unconverged (hopkins-autocorrelation: unconverged (undersampled)) |
+| wave-mtf-of-lv-rays | 0 at field 0 | 0 at cut sagittal, field 5.00e-1, frequencyPerMm 10 | 0 at cut sagittal, field 0, frequencyPerMm 10 | — | 2 | 1 | 0 | 0 | 0 | 0 at cut sagittal, field 1, frequencyPerMm 10 | RECORDED | field 1: numerical, unconverged (hopkins-autocorrelation: unconverged (undersampled)) |
 
 Pairwise, the verdict of each two engines and the metric nearest to or furthest past its limit:
 
-| Engine | lv | optiland | wave |
+| Engine | lv | optiland | wave-mtf-of-lv-rays |
 |---|---|---|---|
 | lv | — | RECORDED (mtfOffAxis.maxAbs 7.81e-3 at cut tangential, field 5.00e-1, frequencyPerMm 30) | RECORDED (chiefLanding.maxAbs 0 at field 0) |
 | optiland | RECORDED (mtfOffAxis.maxAbs 7.81e-3 at cut tangential, field 5.00e-1, frequencyPerMm 30) | — | RECORDED (mtfOffAxis.maxAbs 7.81e-3 at cut tangential, field 5.00e-1, frequencyPerMm 30) |
-| wave | RECORDED (chiefLanding.maxAbs 0 at field 0) | RECORDED (mtfOffAxis.maxAbs 7.81e-3 at cut tangential, field 5.00e-1, frequencyPerMm 30) | — |
+| wave-mtf-of-lv-rays | RECORDED (chiefLanding.maxAbs 0 at field 0) | RECORDED (mtfOffAxis.maxAbs 7.81e-3 at cut tangential, field 5.00e-1, frequencyPerMm 30) | — |
 
 The engines' own MTF, side by side. The difference of a row is lv − optiland.
 Each column is one engine's own estimate of the diffraction MTF, by its own method and its own sampling. No
@@ -81,13 +81,13 @@ are of two fields.
 Over every frequency of the request `lv` against `optiland` comes to Side by side; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | optiland | wave | Chief rays apart [mm] | Rim rays lost | Rim rays from chief ray [mm] | Class | Reason |
+| Field | Angle [deg] | lv | optiland | wave-mtf-of-lv-rays | Chief rays apart [mm] | Rim rays lost | Rim rays from chief ray [mm] | Class | Reason |
 |---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | 0 | 0 | — | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band |
 | 0.5 | 4.000 | ok | ok | ok | 0 | 0 | — | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band |
 | 1 | 8.000 | ok | ok | unconverged | 0 | 1 | 4.50e0 | the methods differ | rim-rays-lost: an engine calibrated a frequency axis with a rim ray that was lost; the difference is shown apart, in no review band |
 
-| Field | Cut | Cycles/mm | lv | optiland | wave | lv − optiland | Status | Class |
+| Field | Cut | Cycles/mm | lv | optiland | wave-mtf-of-lv-rays | lv − optiland | Status | Class |
 |---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.8750 | 0.8711 | 0.8750 | 3.91e-3 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.7500 | 0.7500 | 0.7500 | 0 | Side by side | the methods differ |
@@ -115,7 +115,7 @@ Recorded values, as each engine reports them. They are listed and never judged:
 
 The MTF values at every frequency of the request are in `report.json`.
 
-| Value | lv | optiland | wave |
+| Value | lv | optiland | wave-mtf-of-lv-rays |
 |---|---|---|---|
 | field[0] | 0 | 0 | 0 |
 | field[1] | 5.00000000e-1 | 5.00000000e-1 | 5.00000000e-1 |
@@ -151,15 +151,15 @@ Reference vs each, against `lv`:
 | Engine | chiefLanding.maxAbs (band 9.77e-4 mm) | mtfOffAxis.maxAbs (band 7.81e-3) | mtfOffAxis.firstStepMaxAbs | mtfOnAxis.maxAbs (band 3.91e-3) | mtfOnAxis.firstStepMaxAbs | fields.compared [elements] | fields.flagged [elements] | fields.rimLost [elements] | fields.data [elements] | fields.unavailable [elements] | mtfFlagged.maxAbs | Verdict | Note |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | optiland | 1.95e-3 at field 5.00e-1 | 1.95e-3 at cut tangential, field 1, frequencyPerMm 70 | 0 at cut sagittal, field 1, frequencyPerMm 10 | 3.91e-3 at cut sagittal, field 0, frequencyPerMm 50 | 3.91e-3 at cut sagittal, field 0, frequencyPerMm 50 | 2 | 0 | 0 | 1 | 0 | — | ATTENTION | chiefLanding.maxAbs 1.95e-3 is outside its attention band 9.77e-4 at field 5.00e-1; mtfOnAxis.maxAbs 3.91e-3 is outside its attention band 3.91e-3 at cut sagittal, field 0, frequencyPerMm 50; judged with scalar-fft-mtf at its step fft512; the figures of the first answers are beside them; field 0.5: data, chief-landing-apart (the chief rays land 1.95e-3 mm apart) |
-| wave | 0 at field 0 | 0 at cut sagittal, field 5.00e-1, frequencyPerMm 10 | — | 0 at cut sagittal, field 0, frequencyPerMm 10 | — | 2 | 1 | 0 | 0 | 0 | 0 at cut sagittal, field 1, frequencyPerMm 10 | RECORDED | field 1: numerical, unconverged (hopkins-autocorrelation: unconverged (undersampled)) |
+| wave-mtf-of-lv-rays | 0 at field 0 | 0 at cut sagittal, field 5.00e-1, frequencyPerMm 10 | — | 0 at cut sagittal, field 0, frequencyPerMm 10 | — | 2 | 1 | 0 | 0 | 0 | 0 at cut sagittal, field 1, frequencyPerMm 10 | RECORDED | field 1: numerical, unconverged (hopkins-autocorrelation: unconverged (undersampled)) |
 
 Pairwise, the verdict of each two engines and the metric nearest to or furthest past its limit:
 
-| Engine | lv | optiland | wave |
+| Engine | lv | optiland | wave-mtf-of-lv-rays |
 |---|---|---|---|
 | lv | — | ATTENTION (chiefLanding.maxAbs 1.95e-3 at field 5.00e-1) | RECORDED (chiefLanding.maxAbs 0 at field 0) |
 | optiland | ATTENTION (chiefLanding.maxAbs 1.95e-3 at field 5.00e-1) | — | ATTENTION (chiefLanding.maxAbs 1.95e-3 at field 5.00e-1) |
-| wave | RECORDED (chiefLanding.maxAbs 0 at field 0) | ATTENTION (chiefLanding.maxAbs 1.95e-3 at field 5.00e-1) | — |
+| wave-mtf-of-lv-rays | RECORDED (chiefLanding.maxAbs 0 at field 0) | ATTENTION (chiefLanding.maxAbs 1.95e-3 at field 5.00e-1) | — |
 
 The engines' own MTF, side by side. The difference of a row is lv − optiland fft512.
 Each column is one engine's own estimate of the diffraction MTF, by its own method and its own sampling. No
@@ -171,13 +171,13 @@ are of two fields.
 Over every frequency of the request `lv` against `optiland` comes to Side by side, worth a look; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | optiland | optiland fft512 | wave | Chief rays apart [mm] | Rim rays lost | Rim rays from chief ray [mm] | Class | Reason |
+| Field | Angle [deg] | lv | optiland | optiland fft512 | wave-mtf-of-lv-rays | Chief rays apart [mm] | Rim rays lost | Rim rays from chief ray [mm] | Class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | 0 | — | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band |
 | 0.5 | 4.000 | ok | ok | ok | ok | 1.95e-3 | 0 | — | the inputs differ | chief-landing-apart: the chief rays land further apart than the limit: two image points; no difference is shown |
 | 1 | 8.000 | ok | ok | ok | unconverged | 0 | 0 | — | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band |
 
-| Field | Cut | Cycles/mm | lv | optiland | optiland fft512 | wave | lv − optiland fft512 | Status | Class |
+| Field | Cut | Cycles/mm | lv | optiland | optiland fft512 | wave-mtf-of-lv-rays | lv − optiland fft512 | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.8750 | 0.8750 | 0.8750 | 0.8750 | 0 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.7500 | 0.7500 | 0.7500 | 0.7500 | 0 | Side by side | the methods differ |
@@ -205,7 +205,7 @@ Recorded values, as each engine reports them. They are listed and never judged:
 
 The MTF values at every frequency of the request are in `report.json`.
 
-| Value | lv | optiland | wave |
+| Value | lv | optiland | wave-mtf-of-lv-rays |
 |---|---|---|---|
 | field[0] | 0 | 0 | 0 |
 | field[1] | 5.00000000e-1 | 5.00000000e-1 | 5.00000000e-1 |
@@ -257,15 +257,15 @@ Reference vs each, against `lv`:
 | Engine | chiefLanding.maxAbs (band 9.77e-4 mm) | mtfOffAxis.maxAbs (band 7.81e-3) | mtfOnAxis.maxAbs (band 3.91e-3) | mtfFlagged.maxAbs | fields.compared [elements] | fields.flagged [elements] | fields.rimLost [elements] | fields.data [elements] | fields.unavailable [elements] | Verdict | Note |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | optiland | — | — | — | — | — | — | — | — | — | UNSUPPORTED | optiland is unsupported (feature lines.polychromatic) |
-| wave | 0 at field 0 | 0 at cut sagittal, field 5.00e-1, frequencyPerMm 10 | 0 at cut sagittal, field 0, frequencyPerMm 10 | 0 at cut sagittal, field 1, frequencyPerMm 10 | 2 | 1 | 0 | 0 | 0 | RECORDED | field 1: numerical, unconverged (hopkins-autocorrelation: unconverged (undersampled)) |
+| wave-mtf-of-lv-rays | 0 at field 0 | 0 at cut sagittal, field 5.00e-1, frequencyPerMm 10 | 0 at cut sagittal, field 0, frequencyPerMm 10 | 0 at cut sagittal, field 1, frequencyPerMm 10 | 2 | 1 | 0 | 0 | 0 | RECORDED | field 1: numerical, unconverged (hopkins-autocorrelation: unconverged (undersampled)) |
 
 Pairwise, the verdict of each two engines and the metric nearest to or furthest past its limit:
 
-| Engine | lv | optiland | wave |
+| Engine | lv | optiland | wave-mtf-of-lv-rays |
 |---|---|---|---|
 | lv | — | UNSUPPORTED | RECORDED (chiefLanding.maxAbs 0 at field 0) |
 | optiland | UNSUPPORTED | — | UNSUPPORTED |
-| wave | RECORDED (chiefLanding.maxAbs 0 at field 0) | UNSUPPORTED | — |
+| wave-mtf-of-lv-rays | RECORDED (chiefLanding.maxAbs 0 at field 0) | UNSUPPORTED | — |
 
 The engines' own MTF, side by side. The difference of a row is lv − optiland.
 Each column is one engine's own estimate of the diffraction MTF, by its own method and its own sampling. No
@@ -276,13 +276,13 @@ are of two fields.
 
 `lv` against `optiland` is Not computed: optiland is unsupported (feature lines.polychromatic).
 
-| Field | Angle [deg] | lv | optiland | wave | Chief rays apart [mm] | Rim rays lost | Rim rays from chief ray [mm] | Class | Reason |
+| Field | Angle [deg] | lv | optiland | wave-mtf-of-lv-rays | Chief rays apart [mm] | Rim rays lost | Rim rays from chief ray [mm] | Class | Reason |
 |---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | — | ok | — | — | — | — | — |
 | 0.5 | 4.000 | ok | — | ok | — | — | — | — | — |
 | 1 | 8.000 | ok | — | unconverged | — | — | — | — | — |
 
-| Field | Cut | Cycles/mm | lv | optiland | wave | lv − optiland | Status | Class |
+| Field | Cut | Cycles/mm | lv | optiland | wave-mtf-of-lv-rays | lv − optiland | Status | Class |
 |---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.8750 | — | 0.8750 | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.7500 | — | 0.7500 | — | Not computed | not computed by one engine |
@@ -310,7 +310,7 @@ Recorded values, as each engine reports them. They are listed and never judged:
 
 The MTF values at every frequency of the request are in `report.json`.
 
-| Value | lv | optiland | wave |
+| Value | lv | optiland | wave-mtf-of-lv-rays |
 |---|---|---|---|
 | field[0] | 0 | — | 0 |
 | field[1] | 5.00000000e-1 | — | 5.00000000e-1 |

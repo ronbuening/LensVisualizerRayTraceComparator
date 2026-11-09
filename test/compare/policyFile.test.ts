@@ -174,7 +174,7 @@ test("r5 is recorded, of two methods: the plan's bands on and off the axis, and 
   for (const name of Object.keys(r5.metrics)) assert.ok(reported.includes(name), name);
   // The rung is of three engines, asks the one request of R6b, and is run only where it is named.
   assert.deepEqual([r5Rung.quantity, r5Rung.needsRecipe, r5Rung.onlyWhereNamed], ["mtf.native", true, true]);
-  assert.deepEqual(r5Rung.engines, ["lv", "optiland", "wave"]);
+  assert.deepEqual(r5Rung.engines, ["lv", "optiland", "wave-mtf-of-lv-rays"]);
 });
 
 test("every rung has a policy entry and every entry a rung, with its quantity, a comparator and its metrics", () => {

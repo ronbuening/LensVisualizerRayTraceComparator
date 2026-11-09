@@ -1,8 +1,9 @@
-// The engine `ref-seidel`: the reference engine's model of a case and the comparator's own third-order sums of it
-// (`seidel.ts`), written from the optics alone. It is an engine of its own, beside `ref`, so that the sums are in no
-// file of `ref`'s fingerprint (src/engines/ref) or of the import closure of `ref`'s module, which the rays baselines
-// hold: it imports `ref`'s model, paraxial kernel and fingerprint, and `ref` imports nothing of it. Its fingerprint is
-// of both directories' sources, its adapter revision the import closure of this module.
+// The engine `reference-seidel` (`ref-seidel` before Stage 9.8): the reference engine's model of a case and the
+// comparator's own third-order sums of it (`seidel.ts`), written from the optics alone. It is an engine of its own,
+// beside `reference-tracer`, so that the sums are in no file of `reference-tracer`'s fingerprint (src/engines/ref) or
+// of the import closure of `reference-tracer`'s module, which the rays baselines hold: it imports `reference-tracer`'s
+// model, paraxial kernel and fingerprint, and `reference-tracer` imports nothing of it. Its fingerprint is of both
+// directories' sources, its adapter revision the import closure of this module.
 import type { OpticalCase } from "../../contract/case.ts";
 import { engineStamp } from "../../contract/engine.ts";
 import type { EngineDescriptor } from "../../contract/engine.ts";
@@ -27,7 +28,7 @@ import { answerSeidel } from "./seidel.ts";
 import { fileURLToPath } from "node:url";
 
 /** The id of the engine. */
-export const REF_SEIDEL_ENGINE_ID = "ref-seidel";
+export const REF_SEIDEL_ENGINE_ID = "reference-seidel";
 
 /** The version of the engine, for people. Results are keyed by its fingerprint, never by this. */
 export const REF_SEIDEL_ENGINE_VERSION = "1";

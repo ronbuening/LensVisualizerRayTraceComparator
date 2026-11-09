@@ -104,7 +104,7 @@ test("a recorded line is LensVisualizer beside its counterpart, with the policy'
   assert.ok(lines.length >= 7, `${lines.length} lines`);
   for (const line of lines) {
     assert.equal(line.a, "lv");
-    assert.ok(["optiland", "flux"].includes(line.b), line.b);
+    assert.ok(["optiland", "flux-of-lv-rays"].includes(line.b), line.b);
     assert.equal(line.detail, null, "no details on the cards' page");
     for (const metric of line.metrics) {
       assert.ok(metric.band === null || metric.limit === null, `${metric.name}: a band or a limit, never both`);
@@ -114,7 +114,7 @@ test("a recorded line is LensVisualizer beside its counterpart, with the policy'
     }
   }
   const vignetting = view.cards.find((card) => card.tab === "vignetting")?.recorded[0];
-  assert.equal(vignetting?.b, "flux");
+  assert.equal(vignetting?.b, "flux-of-lv-rays");
   assert.deepEqual(
     lines.filter((line) => line.rung === "chief-vs-optiland").map((line) => line.label),
     ["distortion", "lateral-colour", "pupils"].filter((label) => lines.some((line) => line.label === label)),
@@ -146,8 +146,8 @@ test("a tab's page has its card alone, with the details of each recorded line; a
 
 test("a card's badge names the counterparts of its own checks: the vignetting card's is flux, never optiland", () => {
   const counterparts = (tab: string) => COMPARE_TABS.find((each) => each.tab === tab)?.counterparts;
-  assert.deepEqual(counterparts("vignetting"), ["flux"]);
-  assert.deepEqual(counterparts("mtf"), ["optiland", "optiland-wave"]);
+  assert.deepEqual(counterparts("vignetting"), ["flux-of-lv-rays"]);
+  assert.deepEqual(counterparts("mtf"), ["optiland", "otf-of-optiland-wavefront"]);
   assert.deepEqual(counterparts("chief"), ["optiland"]);
   assert.deepEqual(counterparts("foundation"), []);
   const { shared } = compareGoldenQueries(views);
@@ -158,11 +158,11 @@ test("a card's badge names the counterparts of its own checks: the vignetting ca
     const title = escapeHtml(COMPARE_TABS.find((each) => each.tab === tab)?.title ?? tab);
     return html.split("\n").find((line) => line.startsWith(`<h2>${title} <span class="badges">`)) ?? "";
   };
-  const flux = `beside <span title="flux">${escapeHtml(engineName("flux"))}</span>`;
+  const flux = `beside <span title="flux-of-lv-rays">${escapeHtml(engineName("flux-of-lv-rays"))}</span>`;
   assert.ok(heading("vignetting").includes(flux), heading("vignetting"));
   assert.ok(!heading("vignetting").includes("optiland"), heading("vignetting"));
   assert.ok(heading("chief").includes("beside <code>optiland</code>"), heading("chief"));
-  assert.ok(heading("mtf").includes(escapeHtml(engineName("optiland-wave"))), heading("mtf"));
+  assert.ok(heading("mtf").includes(escapeHtml(engineName("otf-of-optiland-wavefront"))), heading("mtf"));
   // A card with no counterpart names none.
   assert.ok(heading("foundation") !== "" && !heading("foundation").includes("beside"), heading("foundation"));
 });

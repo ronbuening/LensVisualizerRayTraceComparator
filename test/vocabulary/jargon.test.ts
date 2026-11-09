@@ -67,21 +67,21 @@ const README: Allowlist = {};
  * Every committed `reports/**\/*.md`, by its path under reports/. The catalog's statistics list each classified
  * failure with the command that reproduces it, as `docs/known-failures.json` stores it: `--rungs`, the older spelling
  * of `--checks`, until the catalog is refreshed. The catalog snapshot's reports name its checks by the ids it was
- * written with (`r2`), until the end-of-project catalog refresh.
+ * written with (`r2`) and its engines by theirs (`ref`), until the end-of-project catalog refresh.
  */
 const REPORTS: Allowlist = {
-  "catalog.md": ["rung", "old check id"],
-  "catalog/mtf.md": ["old check id"],
-  "catalog/rays.md": ["old check id"],
+  "catalog.md": ["rung", "old check id", "old engine id"],
+  "catalog/mtf.md": ["old check id", "old engine id"],
+  "catalog/rays.md": ["old check id", "old engine id"],
 };
 
 /**
  * Every golden `test/fixtures/golden/**\/*.md`, by its path under the golden directory. The catalog's stand-in keeps
- * its reproducer commands and its check ids as the committed one does, and a blocked pair's reason is the
+ * its reproducer commands and its check and engine ids as the committed one does, and a blocked pair's reason is the
  * comparison's own, as `comparisons.json` stores it ("not judged: rung built-system failed ...").
  */
 const GOLDENS: Allowlist = {
-  "catalog.md": ["rung", "old check id"],
+  "catalog.md": ["rung", "old check id", "old engine id"],
   "hand-built.report.md": ["rung"],
 };
 
@@ -322,11 +322,13 @@ test("what the commands print uses no more of the tool's own words than its allo
 /**
  * The dashboard's pages, by kind of page: every page of a kind read together. What remains is not the dashboard's own
  * words: a chart's tooltip names the source of each limit it draws, a JSON pointer into the limits file, whose member
- * is `rungs`. Beside the pages the wording test reads, a lens page (bare, and with its golden's curves) and a job page
- * of run control are read.
+ * is `rungs`. The checks page shows each check's old id beside its id, and the help page each engine's. Beside the
+ * pages the wording test reads, a lens page (bare, and with its golden's curves) and a job page of run control are
+ * read.
  */
 const DASHBOARD: Allowlist = {
   checks: ["old check id"],
+  help: ["old engine id"],
   section: ["rung"],
   "compare tab": ["rung"],
   lens: ["rung"],
@@ -404,4 +406,32 @@ test("every page of the dashboard uses no more of the tool's own words than its 
   }
   for (const kind of ["lens", "job"]) assert.ok(texts.has(kind), kind);
   ratchet("dashboard", texts, DASHBOARD);
+});
+
+test("an engine's old id is found only where it can be nothing but an id", () => {
+  const found = (text: string): boolean => jargonTerms(text).includes("old engine id");
+  for (const text of [
+    "the pair lv – ref",
+    "| lv / ref | 0.25 |",
+    "ref – optiland",
+    "the engine `wave`",
+    "`replay` and `flux`",
+    "asked of ref-seidel and optiland",
+    "the column optiland-wave",
+  ])
+    assert.ok(found(text), text);
+  for (const text of [
+    "nikkor-z50f12-ref",
+    "best-ref and best-photopic",
+    "the reference tracer",
+    "the wave MTF of the rays and their flux into the image",
+    "a replay of LensVisualizer's sampling",
+    "otf-of-optiland-wavefront",
+    "lv – reference-tracer",
+    "lv / wave-mtf-of-lv-rays",
+    "waveMtf.maxAbs",
+    "the method replay-geometric",
+    "flux-of-lv-rays",
+  ])
+    assert.ok(!found(text), text);
 });

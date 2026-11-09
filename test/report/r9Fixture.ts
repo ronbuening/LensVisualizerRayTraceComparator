@@ -131,7 +131,10 @@ export const R9A_FIXTURE_RUNG: RungDefinition = {
 /** The reference engine, under the id it is made with, answering as `change` changes its trace. */
 function refLike(change?: (data: RaysTraceData, request: QuantityRequest) => RaysTraceData): EngineMaker {
   return async (id) => {
-    const adapter = new RemoteEngineAdapter({ id: "ref", transport: createInProcessTransport(createRefEngine()) });
+    const adapter = new RemoteEngineAdapter({
+      id: "reference-tracer",
+      transport: createInProcessTransport(createRefEngine()),
+    });
     const described = await adapter.describe();
     const descriptor: EngineDescriptor = { ...described, identity: { ...described.identity, id } };
     return {
@@ -150,14 +153,14 @@ function refLike(change?: (data: RaysTraceData, request: QuantityRequest) => Ray
 }
 
 /**
- * The engines of R9a: `ref`; `moved`, which lands ray 2 of the second line 2^-26 mm (1.49e-8 mm) further along y,
- * beyond the gate as a landing, as a lateral colour and as a distortion; and `stopped`, which stops ray 3 of the first
- * line at the first surface.
+ * The engines of R9a: `reference-tracer`; `moved`, which lands ray 2 of the second line 2^-26 mm (1.49e-8 mm) further
+ * along y, beyond the gate as a landing, as a lateral colour and as a distortion; and `stopped`, which stops ray 3 of
+ * the first line at the first surface.
  */
 function r9aEngines(): { readonly [engine: string]: EngineMaker } {
   const lineOf = (request: QuantityRequest): number => (request.spec as { line: number }).line;
   return {
-    ref: refLike(),
+    "reference-tracer": refLike(),
     moved: refLike((data, request) =>
       lineOf(request) === 1
         ? changed(data, (arrays) => {
@@ -177,7 +180,7 @@ export function r9aCycle(runsDir: string): Promise<R9Cycle> {
     runsDir,
     R9A_GOLDEN,
     R9A_FIXTURE_RUNG,
-    [{ name: "lens", opticalCase: CHIEF_LENS, referenceEngine: "ref" }],
+    [{ name: "lens", opticalCase: CHIEF_LENS, referenceEngine: "reference-tracer" }],
     r9aEngines(),
     R9A_POLICY,
   );

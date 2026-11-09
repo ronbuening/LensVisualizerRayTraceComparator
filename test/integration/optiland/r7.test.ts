@@ -58,7 +58,7 @@ test(
     const { manifest, comparisons, runsDir } = runAndCompare(t, {
       suite,
       name: "benchmark",
-      engines: "lv,ref,optiland",
+      engines: "lv,reference-tracer,optiland",
       rungs: "spot-rays,spot-vs-optiland",
     });
 

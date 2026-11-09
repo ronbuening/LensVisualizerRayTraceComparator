@@ -29,7 +29,7 @@ const suite = {
   kind: "suite",
   name: "folded-confirmation",
   defaults: {
-    engines: ["lv", "ref", "optiland"],
+    engines: ["lv", "reference-tracer", "optiland"],
     rungs: ["built-system", "first-order", "ray-trace", "optical-path"],
     fields: { kind: "angles-deg", values: [0, 0.25] },
     sampling: { bundleGrid: 4 },
@@ -52,7 +52,7 @@ test("a traced post-path mirror hit refuses the whole run before lv, ref or opti
   const source = createLvCaseSource(lv);
   const loaded = await loadSuiteValue(suite, "test", { rootDir: lv, sources: { lv: source } });
   assert.ok(loaded.runs[0].opticalCase, "raw export still describes the declared path");
-  const watched = watchedRegistry({ lv: fakeEngine(), ref: fakeEngine(), optiland: fakeEngine() });
+  const watched = watchedRegistry({ lv: fakeEngine(), "reference-tracer": fakeEngine(), optiland: fakeEngine() });
   const result = await runSuite({
     suite: loaded,
     sources: { lv: source },
@@ -78,7 +78,7 @@ test("confirmed runs name the exact coarse/fine sets, keep identity, and retain 
     "test",
     { rootDir: lv, sources: { lv: source } },
   );
-  const watched = watchedRegistry({ lv: fakeEngine(), ref: fakeEngine(), optiland: fakeEngine() });
+  const watched = watchedRegistry({ lv: fakeEngine(), "reference-tracer": fakeEngine(), optiland: fakeEngine() });
   const input = { suite: loaded, sources: { lv: source }, registry: watched.registry, runsDir: tempDir(t) };
   const plan = await planJobs({ ...input, rungs: ["built-system", "ray-trace", "wave-mtf"] });
   for (const run of plan.runs) {
@@ -158,7 +158,7 @@ test("a sequential case passes run preparation untouched: the same case, no conf
   );
   const before = loaded.runs[0].opticalCase;
   assert.ok(before);
-  const watched = watchedRegistry({ lv: fakeEngine(), ref: fakeEngine(), optiland: fakeEngine() });
+  const watched = watchedRegistry({ lv: fakeEngine(), "reference-tracer": fakeEngine(), optiland: fakeEngine() });
   const plan = await planJobs({
     suite: loaded,
     sources: { lv: source },

@@ -93,7 +93,7 @@ function checkSaid(
       run: `run-${index}`,
       rung: "ray-trace",
       a: "lv",
-      b: "ref",
+      b: "reference-tracer",
       stale: [],
       moved: [],
       ...record,

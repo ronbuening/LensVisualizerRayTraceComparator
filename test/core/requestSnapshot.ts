@@ -31,14 +31,14 @@ export const SNAPSHOT_FILE: string = fileURLToPath(new URL("../fixtures/request-
 
 /** Every engine a check of today is asked of, by the id it has today. */
 export const SNAPSHOT_ENGINES: readonly string[] = Object.freeze([
-  "flux",
+  "flux-of-lv-rays",
   "lv",
   "optiland",
-  "optiland-wave",
-  "ref",
-  "ref-seidel",
-  "replay",
-  "wave",
+  "otf-of-optiland-wavefront",
+  "reference-seidel",
+  "reference-tracer",
+  "replay-of-lv-mtf",
+  "wave-mtf-of-lv-rays",
 ]);
 
 /**
@@ -57,7 +57,7 @@ export const SNAPSHOT_SUITE = Object.freeze({
   kind: "suite",
   name: "request-snapshot",
   defaults: {
-    engines: ["lv", "optiland", "ref"],
+    engines: ["lv", "optiland", "reference-tracer"],
     fields: { kind: "image-height-fractions", values: [0, 0.7] },
     sampling: { bundleGrid: 4 },
   },

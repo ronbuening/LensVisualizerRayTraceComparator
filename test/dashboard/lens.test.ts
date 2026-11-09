@@ -9,7 +9,7 @@ import { join } from "node:path";
 import { after, before, test } from "node:test";
 
 import { REPO_ROOT } from "../../src/core/config.ts";
-import { LEGACY_CHECK_IDS } from "../../src/core/legacyIds.ts";
+import { LEGACY_CHECK_IDS, LEGACY_ENGINE_IDS } from "../../src/core/legacyIds.ts";
 import { canonicalJson } from "../../src/core/numeric/canonicalJson.ts";
 import { renderIndex, renderLens, renderRun } from "../../src/dashboard/html.ts";
 import { MAX_LENS_CURVES, lensSelection } from "../../src/dashboard/lens.ts";
@@ -127,11 +127,11 @@ test("a lens page lists each run with its condition, read from its case file and
   assert.deepEqual(
     view.runs.map((run) => run.requests.map((request) => [request.rung, request.engines])),
     [
-      [["mtf-vs-optiland-fft", ["lv", "optiland", "wave"]]],
-      [["mtf-vs-optiland-fft", ["lv", "optiland", "optiland#fft512", "wave"]]],
+      [["mtf-vs-optiland-fft", ["lv", "optiland", "wave-mtf-of-lv-rays"]]],
+      [["mtf-vs-optiland-fft", ["lv", "optiland", "optiland#fft512", "wave-mtf-of-lv-rays"]]],
       [
         ["mtf-vs-optiland-fft", ["lv", "optiland"]],
-        ["geometric-mtf-vs-optiland", ["lv", "optiland", "replay"]],
+        ["geometric-mtf-vs-optiland", ["lv", "optiland", "replay-of-lv-mtf"]],
       ],
     ],
   );
@@ -145,24 +145,35 @@ test("a lens page lists each run with its condition, read from its case file and
   );
 });
 
-test("an address written before the rename of the check ids chooses what it chose then, quietly", () => {
+test("an address written before the rename of the check and engine ids chooses what it chose then, quietly", () => {
   const views = viewsOf();
   const today = lensGoldenQuery(views);
-  // Every check and the reference curve's check by the ids they had before the rename.
+  // Every check and engine, and the reference curve's check and engine, by the ids they had before the renames.
   const back = Object.fromEntries(Object.entries(LEGACY_CHECK_IDS).map(([old, now]) => [now, old]));
+  const engineBack = Object.fromEntries(Object.entries(LEGACY_ENGINE_IDS).map(([old, now]) => [now, old]));
+  const engineOld = (label: string): string => {
+    const [id, ...step] = label.split("#");
+    return [engineBack[id] ?? id, ...step].join("#");
+  };
   const params = new URLSearchParams(today);
   const old = new URLSearchParams();
   for (const [name, value] of params) {
     if (name === "rung") old.append(name, back[value] ?? value);
+    else if (name === "engine") old.append(name, engineOld(value));
     else if (name === "ref") {
       const parts = value.split(",");
       parts[1] = encodeURIComponent(back[decodeURIComponent(parts[1])] ?? decodeURIComponent(parts[1]));
+      parts[3] = encodeURIComponent(engineOld(decodeURIComponent(parts[3])));
       old.append(name, parts.join(","));
     } else old.append(name, value);
   }
   assert.notEqual(old.toString(), today);
   assert.ok(
     old.getAll("rung").every((id) => Object.hasOwn(LEGACY_CHECK_IDS, id)),
+    old.toString(),
+  );
+  assert.ok(
+    old.getAll("engine").some((id) => Object.hasOwn(LEGACY_ENGINE_IDS, id)),
     old.toString(),
   );
   const viewOld = views.lens(LENS_KEY, old.toString());
@@ -201,7 +212,7 @@ test("within the reference's request a difference is drawn as its section page d
     view.within.view.pairs.map((pair) => [pair.a, pair.b]),
     [
       ["optiland", "lv"],
-      ["wave", "lv"],
+      ["wave-mtf-of-lv-rays", "lv"],
     ],
   );
   const pairs = chart.pairs;
@@ -256,7 +267,7 @@ test("a curve that is not the answer the comparison judges is still within, with
   const choice = {
     run: [`${LENS_A}/1`],
     rung: ["mtf-vs-optiland-fft"],
-    engine: ["lv", "optiland", "optiland#fft512", "wave"],
+    engine: ["lv", "optiland", "optiland#fft512", "wave-mtf-of-lv-rays"],
     field: ["fraction:0.5"],
     cut: ["tangential"],
   };
@@ -276,7 +287,7 @@ test("a curve that is not the answer the comparison judges is still within, with
     [
       ["optiland", null, "lv", null],
       ["optiland", "fft512", "lv", null],
-      ["wave", null, "lv", null],
+      ["wave-mtf-of-lv-rays", null, "lv", null],
     ],
   );
   // At field 0.5 the stand-in's chief ray lands twice the limit away: the comparison sets the field aside as data.

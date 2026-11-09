@@ -1,8 +1,9 @@
-// LensVisualizer's summary tab against rung R1, and the engine `lv`'s `summary.native` against the tab. The tab presents
-// first-order readouts of the prepared state (`computeOpticalSummary` of the analysis drawer's request); `lv` answers
-// `paraxial.first-order` with LensVisualizer's paraxial kernel on the same state (`answerLvFirstOrder`), which R1 judges
-// against `ref` and optiland. Held here, on every exported state of the benchmark, states and focus-stations suites on
-// the reference line and the design plane (the tab is of the authored indices and of the prepared state's plane):
+// LensVisualizer's summary tab against rung R1, and the engine `lv`'s `summary.native` against the tab. The tab
+// presents first-order readouts of the prepared state (`computeOpticalSummary` of the analysis drawer's request); `lv`
+// answers `paraxial.first-order` with LensVisualizer's paraxial kernel on the same state (`answerLvFirstOrder`), which
+// R1 judges against `reference-tracer` and optiland. Held here, on every exported state of the benchmark, states and
+// focus-stations suites on the reference line and the design plane (the tab is of the authored indices and of the
+// prepared state's plane):
 //
 // - to the bit: the cardinal focal length and the back focus (R1's `efl`, `backFocus`), the front focus and the hiatus
 //   (the first vertex less R1's `frontFocalZ`, R1's `frontPrincipalZ` less its `rearPrincipalZ`), the image plane and
@@ -22,10 +23,10 @@
 //   index: since #933 the hook's pupil is the stop radius over the paraxial marginal ray's height ratio at the stop, a
 //   paraxial quantity as R1's is, so the two differ by roundings of two paraxial traces only.
 //
-// What R1 does not cover is listed in `NOT_COVERED_BY_R1`; its numbers are written as diagnostics. Then `lv`'s answer is
-// held to the tab asked with a request spelled out a second time. Nothing is written. Measured at LV 607ff23ae (engine
-// closure f016b35b), and again at 6287f4393 (closure fc5ae923, LV #940): the same cases and margins; at 55ddfb1e1,
-// ff57c4469 and 290c6dd85 the same margins on the 123 cases of `MEASURED_CASES`, and at 25f65d4b4 on 124.
+// What R1 does not cover is listed in `NOT_COVERED_BY_R1`; its numbers are written as diagnostics. Then `lv`'s answer
+// is held to the tab asked with a request spelled out a second time. Nothing is written. Measured at LV 607ff23ae
+// (engine closure f016b35b), and again at 6287f4393 (closure fc5ae923, LV #940): the same cases and margins; at
+// 55ddfb1e1, ff57c4469 and 290c6dd85 the same margins on the 123 cases of `MEASURED_CASES`, and at 25f65d4b4 on 124.
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
@@ -59,8 +60,8 @@ const SUITES = ["benchmark", "states", "focus-stations"] as const;
 const PINNED_CLOSURE = "4669921bae7179c7eddd220fa367e696eae7acec3a5a788d0ca90da632d3eb6b";
 
 /**
- * The first 16 hex digits of the id of each case the margins were measured on: 123 at 55ddfb1e1 (119 at 607ff23ae and at
- * 6287f4393; the Sigma 35 mm's rims and six lenses' focus stations moved 16 of them, and four stations are new); at
+ * The first 16 hex digits of the id of each case the margins were measured on: 123 at 55ddfb1e1 (119 at 607ff23ae and
+ * at 6287f4393; the Sigma 35 mm's rims and six lenses' focus stations moved 16 of them, and four stations are new); at
  * ff57c4469 the Thypoch Ksana 21's station moved with its re-solved focus gap (LV #954), the same at 290c6dd85; 124 at
  * 25f65d4b4, whose new Voigtlander Macro APO-Ultron 35 mm f/2 (LV #950) has a certified station.
  */

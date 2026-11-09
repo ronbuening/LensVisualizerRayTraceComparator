@@ -14,7 +14,7 @@
 
 | Engine | Status | Version | Engine code |
 |---|---|---|---|
-| flux | available | 1 | d938a42106e27b3b7b019869e2901dc6b87690f0d51c395f5164080cebe25b4b |
+| flux-of-lv-rays | available | 1 | a6d5e4d989d61448861d92742dc08908830fd0dd875ecd09ab3469ad9b2892f9 |
 | lv | available | 1 | e446589a9d2d1f032334b5e798670d49c6268734494645c2a0f45c4a5bc007a2 |
 
 ### Runs
@@ -39,7 +39,7 @@ No pair is Fail or Error, of 2 compared.
 
 ## Support matrix
 
-| Run | Check | flux | lv |
+| Run | Check | flux-of-lv-rays | lv |
 |---|---|---|---|
 | lens | vignetting-vs-flux-estimate | ok | ok |
 
@@ -51,7 +51,7 @@ No pair is Fail or Error, of 2 compared.
 
 Quantity `vignetting.native`: each engine's own method; side by side, no limit. Request `0367c7aa3b0b3c519764c40ad79da45fc9d382906565eba0da30f413f2189d96`.
 
-Reference vs each, against `flux`:
+Reference vs each, against `flux-of-lv-rays`:
 
 | Engine | chiefLanding.maxAbs (band 1.00e-5 mm) | geometricTransmission.maxAbs (band 1.00e-2) | falloff.maxAbs | relativeIllumination.maxAbs | fields.compared [elements] | fields.data [elements] | fields.unconverged [elements] | fields.unavailable [elements] | Verdict | Note |
 |---|---|---|---|---|---|---|---|---|---|---|
@@ -59,14 +59,14 @@ Reference vs each, against `flux`:
 
 Pairwise, the verdict of each two engines and the metric nearest to or furthest past its limit:
 
-| Engine | flux | lv |
+| Engine | flux-of-lv-rays | lv |
 |---|---|---|
-| flux | — | ATTENTION (chiefLanding.maxAbs 2.44e-4 at field 24, line 0) |
+| flux-of-lv-rays | — | ATTENTION (chiefLanding.maxAbs 2.44e-4 at field 24, line 0) |
 | lv | ATTENTION (chiefLanding.maxAbs 2.44e-4 at field 24, line 0) | — |
 
 Recorded values, as each engine reports them. They are listed and never judged:
 
-| Value | flux | lv |
+| Value | flux-of-lv-rays | lv |
 |---|---|---|
 | chiefLandingMm[0] | 0 | 0 |
 | chiefLandingMm[1] | -4 | -4 |

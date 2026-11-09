@@ -92,7 +92,7 @@ function engine(id: string, data: MtfNativeData): ParticipantResult {
 }
 
 function judged(a: MtfNativeData, b: MtfNativeData) {
-  return comparePair(engine("lv", a), engine("wave", b), R6B, mtfWaveComparator, undefined, CONTEXT);
+  return comparePair(engine("lv", a), engine("wave-mtf-of-lv-rays", b), R6B, mtfWaveComparator, undefined, CONTEXT);
 }
 
 /** Holds a figure to a difference of two decimals, each a double to half a unit in its last place. */

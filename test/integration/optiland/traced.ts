@@ -85,7 +85,7 @@ export function assertR2(t: TestContext, label: string, cycle: RunCycle): R2Summ
     verdicts[`${pair.engines} ${pair.verdict}`] = (verdicts[`${pair.engines} ${pair.verdict}`] ?? 0) + 1;
     assert.equal(pair.verdict, "PASS", said);
     assert.equal(pair.metrics["mask.mismatches"]?.value, 0, said);
-    if (pair.engines === "optiland / ref") {
+    if (pair.engines === "optiland / reference-tracer") {
       // The exact tracers retain their independent precision bounds.
       assert.equal(pair.verdict, "PASS", said);
       for (const name of GEOMETRY) {
@@ -137,7 +137,7 @@ function assertBlockedFailures(t: TestContext, label: string, cycle: RunCycle): 
     const failed = f8(data.status).flatMap((status, ray) => (status === RAY_STATUS.failed ? [ray] : []));
     if (failed.length === 0) continue;
     const end = f8(data.endSurface);
-    const others = ["lv", "ref"].map((engine) => {
+    const others = ["lv", "reference-tracer"].map((engine) => {
       const data = answer(job.run, job.requestId, engine);
       return { engine, status: f8(data.status), end: f8(data.endSurface) };
     });
@@ -197,7 +197,7 @@ export function assertR3(t: TestContext, label: string, comparisons: ComparisonF
       withoutChief.add(`${pair.run} ${pair.requestId}`);
     }
     for (const name of measured) assert.ok(pair.metrics[name].value !== null, `${said}: ${name} is not finite`);
-    if (pair.engines === "optiland / ref") {
+    if (pair.engines === "optiland / reference-tracer") {
       // The paths of two engines that share no code retain their absolute 1e-7-wave bound.
       assert.equal(pair.verdict, "PASS", said);
       for (const name of measured) {

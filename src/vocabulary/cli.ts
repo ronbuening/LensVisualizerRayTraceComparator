@@ -104,7 +104,7 @@ export const DOCTOR_TEXT = {
     lvCaveat: "ready to load, but lvrtc check-lv refuses a checkout outside git or with uncommitted changes",
     no: "not ready",
     optilandNeeded:
-      "lvrtc check-lv and lvrtc baseline check need it; lvrtc lenses, export, mtf (LensVisualizer's own MTF) and run --engines lv,ref work without it",
+      "lvrtc check-lv and lvrtc baseline check need it; lvrtc lenses, export, mtf (LensVisualizer's own MTF) and run --engines lv,reference-tracer work without it",
     checkLvYes: "ready: it runs every check",
     checkLvNo: "not ready: it refuses, running nothing, until each of these is fixed:",
     why: {
@@ -117,7 +117,7 @@ export const DOCTOR_TEXT = {
     },
     all: "Ready to check LensVisualizer: lvrtc check-lv can run.",
     lvOnly:
-      "LensVisualizer can be looked at now: lvrtc lenses, export, mtf (LensVisualizer's own MTF) and run --engines lv,ref work. lvrtc check-lv waits until the fix lines above are done.",
+      "LensVisualizer can be looked at now: lvrtc lenses, export, mtf (LensVisualizer's own MTF) and run --engines lv,reference-tracer work. lvrtc check-lv waits until the fix lines above are done.",
     none: "Not ready to check LensVisualizer: do what the fix lines above say. The demonstration under test/fixtures/fake-root runs without LensVisualizer or optiland (see the README).",
   },
 } as const;

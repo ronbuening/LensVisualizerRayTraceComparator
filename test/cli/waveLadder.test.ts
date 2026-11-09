@@ -65,8 +65,8 @@ function waveRoot(t: TestContext): string {
     kind: "suite",
     name: "wave",
     defaults: {
-      engines: ["ref", "ref-bent", "ref-twin", "fake-a"],
-      referenceEngine: "ref",
+      engines: ["reference-tracer", "ref-bent", "ref-twin", "fake-a"],
+      referenceEngine: "reference-tracer",
       rungs: ["wave-mtf"],
       fields: { kind: "angles-deg", values: [0] },
       sampling: { bundleGrid: GRID },
@@ -121,7 +121,7 @@ test("R6a compares a field on both lattices at every line as one set: a faithful
   const [pairwise] = sets("pairwise");
   assert.equal(
     pairwise.requestId,
-    manifest.jobs.find((job) => job.engine === "ref")?.requestId,
+    manifest.jobs.find((job) => job.engine === "reference-tracer")?.requestId,
     "the set stands under its first request",
   );
   const pair = (a: string, b: string): PairComparison => {
@@ -131,7 +131,7 @@ test("R6a compares a field on both lattices at every line as one set: a faithful
   };
 
   // The faithful copy: the same paths, and nothing between the two estimates, whatever the lattice is worth.
-  const twin = pair("ref", "ref-twin");
+  const twin = pair("ref-twin", "reference-tracer");
   const ofTwin = metricsOf(twin);
   assert.equal(twin.verdict, "PASS");
   assert.equal(ofTwin["waveMtf.maxAbs"] ?? ofTwin["waveMtf.flagged"], 0);
@@ -144,7 +144,7 @@ test("R6a compares a field on both lattices at every line as one set: a faithful
 
   // The other radius: another wavefront, and a figure that is not nothing. It is judged where the lattice is an
   // arbiter and written down where it is not; either way the two estimates are of the same rays.
-  const bent = pair("ref", "ref-bent");
+  const bent = pair("ref-bent", "reference-tracer");
   const ofBent = metricsOf(bent);
   const figure = (ofBent["waveMtf.maxAbs"] ?? ofBent["waveMtf.flagged"]) as number;
   assert.ok(figure > 1e-9, String(figure));
@@ -159,7 +159,7 @@ test("R6a compares a field on both lattices at every line as one set: a faithful
   }
   assert.equal(compared.code, bent.verdict === "FAIL" ? EXIT_FAILURE : EXIT_OK, compared.out);
   // The engine that traces no rays is unsupported, as in every rung of traced rays.
-  assert.equal(pair("fake-a", "ref").verdict, "UNSUPPORTED");
+  assert.equal(pair("fake-a", "reference-tracer").verdict, "UNSUPPORTED");
 
   const reported = await inProcess(rootDir, "report", "wave");
   assert.equal(reported.code, EXIT_OK, reported.err);
@@ -185,7 +185,7 @@ test("the finer lattice is asked of R6a alone: R2 to R4 trace the run's own sets
     "--checks",
     "ray-trace,optical-path,geometric-mtf",
     "--engines",
-    "ref,ref-twin",
+    "reference-tracer,ref-twin",
   );
   assert.equal(first.code, EXIT_OK, first.err);
   const before = read<RunManifest>(rootDir, "wave", MANIFEST_FILE);
@@ -200,7 +200,7 @@ test("the finer lattice is asked of R6a alone: R2 to R4 trace the run's own sets
     "--checks",
     "ray-trace,optical-path,geometric-mtf,wave-mtf",
     "--engines",
-    "ref,ref-twin",
+    "reference-tracer,ref-twin",
   );
   assert.equal(all.code, EXIT_OK, all.err);
   const after = read<RunManifest>(rootDir, "wave", MANIFEST_FILE);
@@ -243,7 +243,7 @@ test("lvrtc run --checks mtf-vs-wave-estimate: LensVisualizer's diffraction MTF 
     { name: "f8", lens: singlet, aperture: { kind: "lv-f8-comparison" }, frequenciesPerMm: [40, 10, 20] },
   ];
   // The suite names an engine that is none of the rung's: the rung is asked of its own two all the same.
-  const defaults = { engines: ["ref"], rungs: ["mtf-vs-wave-estimate"], sampling: { bundleGrid: 8 } };
+  const defaults = { engines: ["reference-tracer"], rungs: ["mtf-vs-wave-estimate"], sampling: { bundleGrid: 8 } };
   writeFileSync(suite, JSON.stringify({ contract: CONTRACT_VERSION, kind: "suite", name: "wave", defaults, runs }));
 
   const ran = lvrtc(rootDir, "run", suite);
@@ -252,11 +252,13 @@ test("lvrtc run --checks mtf-vs-wave-estimate: LensVisualizer's diffraction MTF 
   const manifest = read<RunManifest>(rootDir, "wave", MANIFEST_FILE);
   assert.deepEqual(
     manifest.jobs.map((job) => `${job.run} ${job.rung} ${job.quantity} ${job.engine} ${job.status}`),
-    runs.flatMap(({ name }) => ["lv", "wave"].map((engine) => `${name} mtf-vs-wave-estimate mtf.native ${engine} ok`)),
+    runs.flatMap(({ name }) =>
+      ["lv", "wave-mtf-of-lv-rays"].map((engine) => `${name} mtf-vs-wave-estimate mtf.native ${engine} ok`),
+    ),
   );
   // The two engines are one LensVisualizer, with an adapter revision each; the rung traces no rays of the run's.
   const [lv, wave] = manifest.engines;
-  assert.deepEqual([lv.id, wave.id, manifest.engines.length], ["lv", "wave", 2]);
+  assert.deepEqual([lv.id, wave.id, manifest.engines.length], ["lv", "wave-mtf-of-lv-rays", 2]);
   assert.ok(lv.status === "available" && wave.status === "available");
   assert.equal(wave.fingerprint, lv.fingerprint);
   assert.equal(wave.adapterRevision, adapterRevision(LV_WAVE_ENGINE_MODULE).revision);
@@ -275,8 +277,8 @@ test("lvrtc run --checks mtf-vs-wave-estimate: LensVisualizer's diffraction MTF 
   assert.deepEqual(
     pairwise.map((set) => [set.run, set.rung, set.pairs.map((pair) => `${pair.a} ${pair.b} ${pair.class}`)]),
     [
-      ["open", "mtf-vs-wave-estimate", ["lv wave recorded"]],
-      ["f8", "mtf-vs-wave-estimate", ["lv wave recorded"]],
+      ["open", "mtf-vs-wave-estimate", ["lv wave-mtf-of-lv-rays recorded"]],
+      ["f8", "mtf-vs-wave-estimate", ["lv wave-mtf-of-lv-rays recorded"]],
     ],
   );
   for (const set of pairwise) {

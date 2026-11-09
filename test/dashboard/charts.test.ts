@@ -123,7 +123,7 @@ test("the largest bar of every R2 pair is the pair's hits.maxDistance in compari
   assert.equal(charts, 6);
   assert.equal(bent, 4);
   // A bar of 0 is a ring on the axis, never a bar of no height, and the tolerance is drawn as a line.
-  const twin = chartGoldens(fixture).get("rays-r2-axis.deviation-ref-ref-twin.svg") ?? "";
+  const twin = chartGoldens(fixture).get("rays-r2-axis.deviation-reference-tracer-ref-twin.svg") ?? "";
   assert.equal((twin.match(/<circle class="ring"/g) ?? []).length, 11 + 1, "a ring per surface and one in the legend");
   assert.doesNotMatch(twin, /<rect class="bar"/);
   assert.match(
@@ -215,7 +215,10 @@ test("a store entry that is not there, or cannot be read, is a problem on the pa
   cpSync(fixture.mtfRunsDir, runsDir, { recursive: true });
   const manifest: RunManifest = readManifest(runsDir, "r5-stand-ins");
   const jobs = manifest.jobs.filter((job) => job.run === "edge" && job.storeKey !== null);
-  const [missing, corrupt] = [jobs.find((job) => job.engine === "wave"), jobs.find((job) => job.engine === "lv")];
+  const [missing, corrupt] = [
+    jobs.find((job) => job.engine === "wave-mtf-of-lv-rays"),
+    jobs.find((job) => job.engine === "lv"),
+  ];
   assert.ok(missing?.storeKey && corrupt?.storeKey);
   rmSync(join(runsDir, "store", `${missing.storeKey}.json.gz`));
   writeFileSync(join(runsDir, "store", `${corrupt.storeKey}.json.gz`), gzipSync("{ not json"));
@@ -233,12 +236,12 @@ test("a store entry that is not there, or cannot be read, is a problem on the pa
     view.charts.problems[0],
     /^The result cache entry for lv cannot be read, so that answer is not drawn: store entry [0-9a-f]{64}: it is malformed JSON/,
   );
-  assert.equal(view.charts.problems[1], text.storeMissing("wave", missing.storeKey));
+  assert.equal(view.charts.problems[1], text.storeMissing("wave-mtf-of-lv-rays", missing.storeKey));
   const page = visibleText(renderSection(view));
   for (const problem of view.charts.problems) assert.ok(page.includes(problem), problem);
   assert.deepEqual(wordingProblems(page), []);
   for (const overlay of view.charts.overlays) {
-    const wave = overlay.series.find((series) => series.engine === "wave");
+    const wave = overlay.series.find((series) => series.engine === "wave-mtf-of-lv-rays");
     const lv = overlay.series.find((series) => series.engine === "lv");
     assert.deepEqual([wave?.state, wave?.values, wave?.noCurves], ["no-answer", null, "missing"]);
     assert.deepEqual([lv?.state, lv?.noCurves], ["no-answer", "unreadable"]);
@@ -248,7 +251,7 @@ test("a store entry that is not there, or cannot be read, is a problem on the pa
     assert.match(svg, />LensVisualizer \(no curves: unreadable\)<\/text>/);
     assert.ok(
       svg.includes(
-        `<title>Wave MTF of LensVisualizer&#39;s rays: ${text.storeMissing("wave", missing.storeKey)}</title>`,
+        `<title>Wave MTF of LensVisualizer&#39;s rays: ${text.storeMissing("wave-mtf-of-lv-rays", missing.storeKey)}</title>`,
       ),
     );
     assert.doesNotMatch(svg, /<text[^>]*>[^<]*store entry/, "no store words in a legend label");

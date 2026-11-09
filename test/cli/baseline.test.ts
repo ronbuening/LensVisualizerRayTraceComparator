@@ -549,7 +549,7 @@ test("a LensVisualizer lens: a zoom is two records, an edited lens file is STALE
     contract: CONTRACT_VERSION,
     kind: "suite",
     name: "lenses",
-    defaults: { engines: ["lv", "ref"] },
+    defaults: { engines: ["lv", "reference-tracer"] },
     runs,
   };
   writeFileSync(join(rootDir, "suites", "lenses.json"), JSON.stringify(suite));
@@ -569,7 +569,7 @@ test("a LensVisualizer lens: a zoom is two records, an edited lens file is STALE
     baseline.engines.map((engine) => [engine.id, typeof engine.adapterRevision]),
     [
       ["lv", "string"],
-      ["ref", "string"],
+      ["reference-tracer", "string"],
     ],
   );
   assert.equal(child(rootDir, "verify").code, EXIT_OK);
@@ -585,11 +585,11 @@ test("a LensVisualizer lens: a zoom is two records, an edited lens file is STALE
   assert.equal(staleCase.code, EXIT_OK, staleCase.err + staleCase.out);
   assert.match(
     staleCase.out,
-    /^singlet +built-system +lv +ref +Out of date, still within limits \(lens data changed\) +Pass$/m,
+    /^singlet +built-system +lv +reference-tracer +Out of date, still within limits \(lens data changed\) +Pass$/m,
   );
   assert.match(
     staleCase.out,
-    /^singlet +first-order +lv +ref +Out of date, still within limits \(lens data changed\) +Pass$/m,
+    /^singlet +first-order +lv +reference-tracer +Out of date, still within limits \(lens data changed\) +Pass$/m,
   );
   assert.match(staleCase.out, /^lenses: 6 records: 4 Unchanged, 2 Out of date, still within limits$/m);
   assert.match(staleCase.out, /^lenses: out of date: lens data changed in 2 records$/m);

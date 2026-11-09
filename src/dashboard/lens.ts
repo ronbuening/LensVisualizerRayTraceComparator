@@ -31,7 +31,7 @@ import type {
 import { caseDocument, figureAt, optionalFigureAt } from "./figure.ts";
 import type { Curve, Derived, DocumentName, Figure } from "./figure.ts";
 import type { CaseSummary, Loaded } from "./sources.ts";
-import { currentCheckId } from "../core/legacyIds.ts";
+import { currentCheckId, currentEngineId } from "../core/legacyIds.ts";
 
 const TEXT = DASHBOARD_TEXT.lens;
 const CHARTS = DASHBOARD_TEXT.charts;
@@ -619,16 +619,25 @@ function differencesOf(
 }
 
 /**
- * A choice whose checks are read under the ids of today where no run names them as given: an address written before
- * the rename (`?rung=r5`) chooses what it chose then, quietly. A check the runs name as given is kept as it is. The
- * check of the reference curve (its second part) is read the same way.
+ * A choice whose checks and engines are read under the ids of today where no run names them as given: an address
+ * written before a rename (`?rung=r5`, `?engine=wave`) chooses what it chose then, quietly. A check or an engine the
+ * runs name as given is kept as it is; an engine's step (`optiland#fft512`) is kept. The check and the engine of the
+ * reference curve (its second and fourth parts) are read the same way.
  */
-function aliasedSelection(selection: LensSelection, known: ReadonlySet<string>): LensSelection {
+function aliasedSelection(
+  selection: LensSelection,
+  known: ReadonlySet<string>,
+  knownEngines: ReadonlySet<string>,
+): LensSelection {
   const now = (id: string): string => (known.has(id) ? id : currentCheckId(id));
+  const engineNow = (label: string): string => {
+    const [id, ...step] = label.split("#");
+    return [knownEngines.has(id) ? id : currentEngineId(id), ...step].join("#");
+  };
   // A part that is no encoded text (a malformed address) is left as it is, and names no curve.
-  const part = (text: string): string => {
+  const part = (text: string, read: (id: string) => string): string => {
     try {
-      return encodeURIComponent(now(decodeURIComponent(text)));
+      return encodeURIComponent(read(decodeURIComponent(text)));
     } catch {
       return text;
     }
@@ -638,9 +647,14 @@ function aliasedSelection(selection: LensSelection, known: ReadonlySet<string>):
       ? null
       : selection.reference
           .split(",")
-          .map((each, at) => (at === 1 ? part(each) : each))
+          .map((each, at) => (at === 1 ? part(each, now) : at === 3 ? part(each, engineNow) : each))
           .join(",");
-  return { ...selection, rungs: [...new Set(selection.rungs.map(now))], reference };
+  return {
+    ...selection,
+    rungs: [...new Set(selection.rungs.map(now))],
+    engines: [...new Set(selection.engines.map(engineNow))],
+    reference,
+  };
 }
 
 /**
@@ -654,6 +668,7 @@ export function buildLensView(inputs: LensInputs): LensView {
   const selection = aliasedSelection(
     inputs.selection,
     new Set(jobs.flatMap((each) => each.jobs.map((item) => item.job.rung))),
+    new Set(jobs.flatMap((each) => each.jobs.map((item) => item.job.engine))),
   );
   const nothing = chosenNothing(selection);
   const cutsChosen = nothing ? ["tangential"] : selection.cuts;

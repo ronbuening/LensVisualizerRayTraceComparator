@@ -101,7 +101,11 @@ function setup(
       await inner.close();
     },
   });
-  return { asked, adapter: new RemoteEngineAdapter({ id: "optiland-wave", transport: outer }), closes: () => closes };
+  return {
+    asked,
+    adapter: new RemoteEngineAdapter({ id: "otf-of-optiland-wavefront", transport: outer }),
+    closes: () => closes,
+  };
 }
 const request = () =>
   makeRequest({ caseId: SINGLET_CASE.id, quantity: "mtf.native", spec, engineOptions: { wavefrontGrids: [4] } });
@@ -203,7 +207,7 @@ test("R6c is named-only, uses R6b's native request and R5's angles, and has no f
     r6cRung.buildRequests(ALL_FEATURES_CASE, run, inputs),
     r6bRung.buildRequests(ALL_FEATURES_CASE, run, inputs),
   );
-  assert.deepEqual(r6cRung.engineOptions?.(run, inputs, "optiland-wave"), { fieldAnglesDeg: [0, 5, 10] });
+  assert.deepEqual(r6cRung.engineOptions?.(run, inputs, "otf-of-optiland-wavefront"), { fieldAnglesDeg: [0, 5, 10] });
   const policy = loadPolicy();
   assert.equal(policy.version, 25);
   assert.deepEqual(policy.rungs["mtf-vs-optiland-wavefront"], {

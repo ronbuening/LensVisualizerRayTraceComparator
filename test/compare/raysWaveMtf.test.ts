@@ -159,7 +159,7 @@ function engine(id: string, data: SpanAnswer): ParticipantResult {
 }
 
 function judged(a: SpanAnswer, b: SpanAnswer, context: ComparisonContext = CONTEXT) {
-  return comparePair(engine("ref", a), engine("other", b), R6A, raysWaveMtfComparator, undefined, context);
+  return comparePair(engine("reference-tracer", a), engine("other", b), R6A, raysWaveMtfComparator, undefined, context);
 }
 
 /** The wave MTF of the cylinder `a` on a full lattice of `cells`, at a shear of `m` cells along x at 500 nm. */

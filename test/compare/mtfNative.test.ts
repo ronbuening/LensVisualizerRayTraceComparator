@@ -338,7 +338,7 @@ test("optiland is asked again exactly where its pair with lv has a figure outsid
     const answers = new Map<string, MtfNativeData>();
     if (lv !== null) answers.set("lv", lv);
     if (optiland !== null) answers.set("optiland", optiland);
-    if (wave !== undefined) answers.set("wave", wave);
+    if (wave !== undefined) answers.set("wave-mtf-of-lv-rays", wave);
     return followUp.needed(answers, context);
   };
   const flat = answer("scalar-fft-mtf", [{ sagittal: ZERO, tangential: ZERO }, {}, {}]);

@@ -58,6 +58,9 @@ const CLAIMS: { readonly [name: string]: readonly string[] } = {
     "The FFT MTF of optiland matches LensVisualizer's within 0.004.",
     "The two MTF curves are consistent.",
     "There is agreement of the product MTF and optiland's.",
+    // A side-by-side counterpart by its engine id, under either spelling, in a sentence that also names identical rays.
+    "Within gated wave-mtf limits on identical rays, the MTF of optiland-wave agrees with LensVisualizer's.",
+    "Within gated wave-mtf limits on identical rays, the MTF of otf-of-optiland-wavefront agrees with LensVisualizer's.",
   ],
   "mtf-confirmed": [
     "optiland confirms the diffraction MTF of LensVisualizer.",
@@ -93,6 +96,9 @@ const CLAIMS: { readonly [name: string]: readonly string[] } = {
     "The FFT counterpart is better.",
     "We prefer the raw wavefront counterpart.",
     "optiland-wave is the preferred reference.",
+    // The same, under the engine id of today.
+    "otf-of-optiland-wavefront is the preferred reference.",
+    "The otf-of-optiland-wavefront counterpart is better than the FFT.",
     "The FFT counterpart is superior to the wavefront counterpart.",
     "With no preference claimed, the FFT counterpart is better.",
     "With no preference between them, the FFT counterpart is better.",
@@ -184,6 +190,8 @@ test("what a report may say is accepted: every template, and sentences that only
     "Within gated geometric-mtf and wave-mtf limits, geometric MTF and wave MTF of identical rays agree.",
     "The R6c difference is recorded as method, with numerical rows set aside.",
     "The FFT and raw wavefront counterparts are recorded side by side, with no preference claimed.",
+    "optiland and otf-of-optiland-wavefront are set side by side, with no preference claimed.",
+    "| geometric-mtf | lv | reference-tracer | PASS |\n| mtf-vs-optiland-wavefront | lv | otf-of-optiland-wavefront | RECORDED |",
     "Within gated R4 and R6a limits, geometric MTF and wave MTF of identical rays agree.",
     "| certified-artificial-focus1 | finite-conjugate-unavailable |",
     "| certified-artificial-focus1 | finite-conjugate-unavailable: focus position 1 at zoom 0 is not a station whose " +

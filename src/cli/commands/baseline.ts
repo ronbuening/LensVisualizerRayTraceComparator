@@ -415,7 +415,7 @@ async function check(
     for (const line of [...legend, ...columns(rows)]) io.stdout(`${line}\n`);
     for (const error of shownErrors) {
       io.stderr(
-        [`lvrtc baseline: ${t.error}: ${error.text}`, ...codeLines(error.code, 4, error.engine)]
+        [`lvrtc baseline: ${t.error}: ${error.text}`, ...codeLines(error.code, 4, error.engine, error.text)]
           .map((line) => `${line}\n`)
           .join(""),
       );

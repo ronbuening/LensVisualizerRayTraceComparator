@@ -5,7 +5,7 @@
 | Input | Value |
 |---|---|
 | Suite | r8a-stand-ins |
-| Suite hash | f10cd53eea865dbe26a4903f66c1154d4defffb2ea55d23fd72de511b4c8be82 |
+| Suite hash | 434fc7911cd47c38cb263173552ce1d37828232cd220cf78afa590fc10d7f004 |
 | Contract version | 1.0 |
 | Limits file | v1 |
 | Limits file hash | 7e4d10c8266cb14c57c2d394503083fd54b0294c3cfe1b00341fabb0ac71caac |
@@ -14,9 +14,9 @@
 
 | Engine | Status | Version | Engine code | This tool's code behind it |
 |---|---|---|---|---|
-| moved | available | 1 | b7d0684b593261d14a1dfebb903774775bbe481a07ae2955689644dc0ffd919e | 2225e342b4fd8539480e933e59a3ca95a8ae2beeb24f45972b55fd4e4a59d357 |
-| ref | available | 1 | b7d0684b593261d14a1dfebb903774775bbe481a07ae2955689644dc0ffd919e | 2225e342b4fd8539480e933e59a3ca95a8ae2beeb24f45972b55fd4e4a59d357 |
-| stopped | available | 1 | b7d0684b593261d14a1dfebb903774775bbe481a07ae2955689644dc0ffd919e | 2225e342b4fd8539480e933e59a3ca95a8ae2beeb24f45972b55fd4e4a59d357 |
+| moved | available | 1 | 1285061cefc83b4538eba70d6a45fc6f0186be2b876f122a3721e150c5a34ed3 | 49ce9a07661a4cb64d5850ff62a4c3ac138b08fee37d05c86596498dcd7db117 |
+| reference-tracer | available | 1 | 1285061cefc83b4538eba70d6a45fc6f0186be2b876f122a3721e150c5a34ed3 | 49ce9a07661a4cb64d5850ff62a4c3ac138b08fee37d05c86596498dcd7db117 |
+| stopped | available | 1 | 1285061cefc83b4538eba70d6a45fc6f0186be2b876f122a3721e150c5a34ed3 | 49ce9a07661a4cb64d5850ff62a4c3ac138b08fee37d05c86596498dcd7db117 |
 
 ### Runs
 
@@ -60,12 +60,12 @@ Of 2 requests with a consensus to look for, 2 have one.
 | Engine | In the consensus | Outlier | Apart | Placed, no consensus | Not placed |
 |---|---|---|---|---|---|
 | moved | 1 | 1 | 0 | 0 | 0 |
-| ref | 2 | 0 | 0 | 0 | 0 |
+| reference-tracer | 2 | 0 | 0 | 0 | 0 |
 | stopped | 1 | 1 | 0 | 0 | 0 |
 
 ## Support matrix
 
-| Run | Check | moved | ref | stopped |
+| Run | Check | moved | reference-tracer | stopped |
 |---|---|---|---|---|
 | lens | axial-rays, request 1 of 2 | ok | ok | ok |
 | lens | axial-rays, request 2 of 2 | ok | ok | ok |
@@ -78,7 +78,7 @@ Of 2 requests with a consensus to look for, 2 have one.
 
 Quantity `rays.trace`: one estimator on each engine's trace of the same rays; held to a limit. Request `5677d6589e713d8406cdff800a2020b7cb8ecdba13ded30df306b5858ff3901f`.
 
-Reference vs each, against `ref`:
+Reference vs each, against `reference-tracer`:
 
 | Engine | focus.maxScaled (≤ 1.00e-8 mm) | focus.maxAbs [mm] | focusRms.maxAbs (≤ 1.00e-8 mm) | intercept.maxScaled (≤ 1.00e-8 mm) | intercept.maxAbs [mm] | mask.mismatches (≤ 0 rays) | mask.rimBand [rays] | rays.compared [rays] | rays.dropped [rays] | Verdict | Note |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -87,17 +87,17 @@ Reference vs each, against `ref`:
 
 Pairwise, the verdict of each two engines and the metric nearest to or furthest past its limit:
 
-| Engine | moved | ref | stopped |
+| Engine | moved | reference-tracer | stopped |
 |---|---|---|---|
 | moved | — | PASS (focus.maxScaled 0 at field 0, line 0) | FAIL (mask.mismatches 1 at field 0, line 0, ray 1, surface 0) |
-| ref | PASS (focus.maxScaled 0 at field 0, line 0) | — | FAIL (mask.mismatches 1 at field 0, line 0, ray 1, surface 0) |
+| reference-tracer | PASS (focus.maxScaled 0 at field 0, line 0) | — | FAIL (mask.mismatches 1 at field 0, line 0, ray 1, surface 0) |
 | stopped | FAIL (mask.mismatches 1 at field 0, line 0, ray 1, surface 0) | FAIL (mask.mismatches 1 at field 0, line 0, ray 1, surface 0) | — |
 
-Consensus: `moved`, `ref`, every two of them within the limits of each other; outlier: `stopped`, beyond the limits of every engine of the consensus.
+Consensus: `moved`, `reference-tracer`, every two of them within the limits of each other; outlier: `stopped`, beyond the limits of every engine of the consensus.
 
 Recorded values, as each engine reports them. They are listed and never judged:
 
-| Value | moved | ref | stopped |
+| Value | moved | reference-tracer | stopped |
 |---|---|---|---|
 | axial.focusRmsMm[0] | 1.73451657e-3 | 1.73451657e-3 | 1.37119153e-3 |
 | axial.focusZ[0] | 5.20210538e1 | 5.20210538e1 | 5.20106791e1 |
@@ -109,7 +109,7 @@ Recorded values, as each engine reports them. They are listed and never judged:
 
 Quantity `rays.trace`: one estimator on each engine's trace of the same rays; held to a limit. Request `acb8c5760a1db26d69ddfe878c934967c571fc4e7fa2bea5f98ca182a4e92b89`.
 
-Reference vs each, against `ref`:
+Reference vs each, against `reference-tracer`:
 
 | Engine | focus.maxScaled (≤ 1.00e-8 mm) | focus.maxAbs [mm] | focusRms.maxAbs (≤ 1.00e-8 mm) | intercept.maxScaled (≤ 1.00e-8 mm) | intercept.maxAbs [mm] | mask.mismatches (≤ 0 rays) | mask.rimBand [rays] | rays.compared [rays] | rays.dropped [rays] | Verdict | Note |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -118,17 +118,17 @@ Reference vs each, against `ref`:
 
 Pairwise, the verdict of each two engines and the metric nearest to or furthest past its limit:
 
-| Engine | moved | ref | stopped |
+| Engine | moved | reference-tracer | stopped |
 |---|---|---|---|
 | moved | — | FAIL (intercept.maxScaled 1.49e-8 at field 0, line 1, ray 2) | FAIL (intercept.maxScaled 1.49e-8 at field 0, line 1, ray 2) |
-| ref | FAIL (intercept.maxScaled 1.49e-8 at field 0, line 1, ray 2) | — | PASS (focus.maxScaled 0 at field 0, line 1) |
+| reference-tracer | FAIL (intercept.maxScaled 1.49e-8 at field 0, line 1, ray 2) | — | PASS (focus.maxScaled 0 at field 0, line 1) |
 | stopped | FAIL (intercept.maxScaled 1.49e-8 at field 0, line 1, ray 2) | PASS (focus.maxScaled 0 at field 0, line 1) | — |
 
-Consensus: `ref`, `stopped`, every two of them within the limits of each other; outlier: `moved`, beyond the limits of every engine of the consensus.
+Consensus: `reference-tracer`, `stopped`, every two of them within the limits of each other; outlier: `moved`, beyond the limits of every engine of the consensus.
 
 Recorded values, as each engine reports them. They are listed and never judged:
 
-| Value | moved | ref | stopped |
+| Value | moved | reference-tracer | stopped |
 |---|---|---|---|
 | axial.focusRmsMm[0] | 1.80490707e-3 | 1.80490551e-3 | 1.80490551e-3 |
 | axial.focusZ[0] | 5.01941812e1 | 5.01941811e1 | 5.01941811e1 |

@@ -92,7 +92,7 @@ test("support quotes only the counted configurations' worsts while rung maxima k
       if (!["ray-trace", "optical-path", "geometric-mtf", "wave-mtf"].includes(rung.rung)) continue;
       for (const pair of rung.pairs) {
         for (const metric of pair.metrics.filter((metric) => metric.name !== "synthetic.zero")) metric.value = 1 / 32;
-        if (rung.rung === "wave-mtf" && pair.b === "ref")
+        if (rung.rung === "wave-mtf" && pair.b === "reference-tracer")
           pair.metrics = pair.metrics.filter((metric) => metric.name !== "waveMtf.maxAbs");
       }
     }

@@ -1,8 +1,9 @@
 // LensVisualizer's focus-breathing chart against rung R1: the chart plots, at each focus position of the current zoom
 // position, the focal length of the prepared state (`computeFocusBreathingSeries`, `computeFocusEFL`); `lv` answers
 // `paraxial.first-order` with LensVisualizer's paraxial kernel on the same prepared state (`answerLvFirstOrder`), which
-// R1 judges against `ref` and optiland. Held here, on every benchmark lens at infinity focus, both ends of its zoom,
-// and every focus station of those lenses that the exporter exports (LensVisualizer certifies its object distance):
+// R1 judges against `reference-tracer` and optiland. Held here, on every benchmark lens at infinity focus, both ends of
+// its zoom, and every focus station of those lenses that the exporter exports (LensVisualizer certifies its object
+// distance):
 //
 // - the chart's focal length of the state is `lv`'s R1 focal length to within four units in the last place (two
 //   arithmetics of one kernel: -1/u of one ray, against the cardinal construction of the system matrix);

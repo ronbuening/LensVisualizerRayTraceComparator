@@ -273,23 +273,23 @@ test("a comparison the tab does not offer is said to be none, also where its cas
 
 test("every named engine is asked the one request; one that does not offer the quantity is not asked", async (t) => {
   const { rootDir, runsDir } = freshRoot(t);
-  const run = await mtf(["acme-singlet-50", "--engines", "ref,lv"], rootDir);
+  const run = await mtf(["acme-singlet-50", "--engines", "reference-tracer,lv"], rootDir);
   assert.equal(run.code, EXIT_OK, run.err);
   assert.match(run.out, /^lv {2}answered {2}asked now$/m);
   assert.match(
     run.out,
-    /^ref {2}not computed {2}not offered\n {2}quantity mtf\.native: the engine does not offer mtf\.native$/m,
+    /^reference-tracer {2}not computed {2}not offered\n {2}quantity mtf\.native: the engine does not offer mtf\.native$/m,
   );
   const { record } = recordOf(runsDir, "acme-singlet-50");
   assert.deepEqual(
     record.engines.map((engine) => engine.id),
-    ["lv", "ref"],
+    ["lv", "reference-tracer"],
   );
   assert.deepEqual(
     record.answers.map(({ engine, status, storeKey }) => [engine, status, storeKey === null]),
     [
       ["lv", "ok", false],
-      ["ref", "unsupported", true],
+      ["reference-tracer", "unsupported", true],
     ],
   );
 });
@@ -514,7 +514,7 @@ test("a command line that is not the synopsis is a usage error, and nothing is w
   );
   await usage(
     ["acme-singlet-50", "--engines", "lv,zemax"],
-    'unknown engine "zemax": the configuration defines no engine; built in: flux, lv, optiland, optiland-wave, ref, ref-seidel, replay, wave',
+    'unknown engine "zemax": the configuration defines no engine; built in: flux-of-lv-rays, lv, optiland, otf-of-optiland-wavefront, reference-seidel, reference-tracer, replay-of-lv-mtf, wave-mtf-of-lv-rays',
   );
   await usage(["acme-singlet-50", "--root", "no-such-root"], "--root no-such-root: not a directory");
   // The tab reaches any other aperture only through its slider: the profile has no request for one.
@@ -568,7 +568,7 @@ function benchmarkOf(
 
 test("--profile benchmark: the lens in its eight conditions, run, compared and reported as a suite of its own", async (t) => {
   const { rootDir, runsDir } = sampledRoot(t);
-  const run = await mtf(["acme-singlet-50", "--profile", "benchmark", "--engines", "lv,ref"], rootDir);
+  const run = await mtf(["acme-singlet-50", "--profile", "benchmark", "--engines", "lv,reference-tracer"], rootDir);
   assert.equal(run.code, EXIT_OK, run.err);
   const { manifest, comparisons, markdown } = benchmarkOf(runsDir, "acme-singlet-50");
 
@@ -587,7 +587,7 @@ test("--profile benchmark: the lens in its eight conditions, run, compared and r
     [...new Set(manifest.jobs.map((job) => job.rung))],
     ["geometric-mtf", "lv-mtf-replay", "wave-mtf", "mtf-vs-wave-estimate"],
   );
-  assert.ok(manifest.engines.every((engine) => !["optiland", "optiland-wave"].includes(engine.id)));
+  assert.ok(manifest.engines.every((engine) => !["optiland", "otf-of-optiland-wavefront"].includes(engine.id)));
   assert.doesNotMatch(markdown, /^## .*`mtf-vs-optiland-wavefront`$/m);
   assert.ok(manifest.jobs.every((job) => job.status === "ok"));
   assert.deepEqual([...new Set(comparisons.comparisons.map((set) => set.run))], names);
@@ -597,28 +597,28 @@ test("--profile benchmark: the lens in its eight conditions, run, compared and r
   assert.match(markdown, /^# MTF of acme-singlet-50$/m);
   assert.match(
     markdown,
-    /^\| Geometric MTF of the same rays — `geometric-mtf` \| `rays\.trace` \| 8 \| 24 \| lv – ref \| 8 Pass \| 24 Pass \|$/m,
+    /^\| Geometric MTF of the same rays — `geometric-mtf` \| `rays\.trace` \| 8 \| 24 \| lv – reference-tracer \| 8 Pass \| 24 Pass \|$/m,
   );
   assert.match(
     markdown,
-    /^\| LensVisualizer's MTF sampling, replayed — `lv-mtf-replay` \| `mtf\.native` \| 8 \| 8 \| lv – replay \| 8 Pass \| 8 Pass \|$/m,
+    /^\| LensVisualizer's MTF sampling, replayed — `lv-mtf-replay` \| `mtf\.native` \| 8 \| 8 \| lv – replay-of-lv-mtf \| 8 Pass \| 8 Pass \|$/m,
   );
   assert.match(
     markdown,
-    /^\| Wave MTF of the same rays — `wave-mtf` \| `rays\.trace` \| 8 \| 24 \| lv – ref \| 8 Pass \| 24 Pass \|$/m,
+    /^\| Wave MTF of the same rays — `wave-mtf` \| `rays\.trace` \| 8 \| 24 \| lv – reference-tracer \| 8 Pass \| 24 Pass \|$/m,
   );
   assert.match(
     markdown,
-    /^\| MTF beside the wave estimate of LensVisualizer's rays — `mtf-vs-wave-estimate` \| `mtf\.native` \| 8 \| 8 \| lv – wave \| /m,
+    /^\| MTF beside the wave estimate of LensVisualizer's rays — `mtf-vs-wave-estimate` \| `mtf\.native` \| 8 \| 8 \| lv – wave-mtf-of-lv-rays \| /m,
   );
   assert.match(markdown, /^## Not covered$/m);
   assert.deepEqual(wordingProblems(markdown), []);
   assert.match(
     run.err,
-    /^lvrtc mtf: mtf-acme-singlet-50: 8 runs on lv, ref, with the checks geometric-mtf, lv-mtf-replay, wave-mtf, mtf-vs-wave-estimate \(mtf-vs-optiland-fft and geometric-mtf-vs-optiland and mtf-vs-optiland-wavefront need optiland\); what the result cache holds is not computed again$/m,
+    /^lvrtc mtf: mtf-acme-singlet-50: 8 runs on lv, reference-tracer, with the checks geometric-mtf, lv-mtf-replay, wave-mtf, mtf-vs-wave-estimate \(mtf-vs-optiland-fft and geometric-mtf-vs-optiland and mtf-vs-optiland-wavefront need optiland\); what the result cache holds is not computed again$/m,
   );
   assert.match(run.err, /^lvrtc mtf: {3}Checks: geometric-mtf Geometric MTF of the same rays; lv-mtf-replay /m);
-  assert.match(run.err, /^lvrtc mtf: {3}Engines: lv LensVisualizer; ref Reference tracer$/m);
+  assert.match(run.err, /^lvrtc mtf: {3}Engines: lv LensVisualizer; reference-tracer Reference tracer$/m);
   assert.match(run.err, /^lvrtc mtf: acme-singlet-50-f8-best-photopic mtf-vs-wave-estimate$/m);
   assert.ok(run.err.endsWith(`lvrtc mtf: run directory: ${join(runsDir, "mtf-acme-singlet-50")}\n`));
   // Nothing is written outside the run directory and the store.
@@ -626,14 +626,14 @@ test("--profile benchmark: the lens in its eight conditions, run, compared and r
   assert.equal(existsSync(join(rootDir, "baselines")), false);
 
   // Asked again, every answer is the store's, and the report is the same bytes.
-  const again = await mtf(["acme-singlet-50", "--profile", "benchmark", "--engines", "lv,ref"], rootDir);
+  const again = await mtf(["acme-singlet-50", "--profile", "benchmark", "--engines", "lv,reference-tracer"], rootDir);
   assert.equal(again.code, EXIT_OK, again.err);
   assert.equal(again.out, run.out);
   assert.match(again.err, /^lvrtc mtf: acme-singlet-50-ref lv-mtf-replay \(from the cache\)$/m);
 
   // One aperture is four runs; --json prints the report as one object.
   const f8 = await mtf(
-    ["acme-singlet-50", "--profile", "benchmark", "--engines", "lv,ref", "--aperture", "f/8", "--json"],
+    ["acme-singlet-50", "--profile", "benchmark", "--engines", "lv,reference-tracer", "--aperture", "f/8", "--json"],
     rootDir,
   );
   assert.equal(f8.code, EXIT_OK, f8.err);
@@ -658,11 +658,11 @@ test("--profile benchmark: naming optiland adds r5, r5g and r6c, with r6c on ref
   // Stand-ins offer no optical quantities: exercise selection without Python or a real optiland checkout.
   const module = fileURLToPath(new URL("../../src/engines/fake/engine.ts", import.meta.url));
   const engines = Object.fromEntries(
-    ["optiland", "optiland-wave"].map((id) => [id, { transport: "in-process", module, options: { id } }]),
+    ["optiland", "otf-of-optiland-wavefront"].map((id) => [id, { transport: "in-process", module, options: { id } }]),
   );
   writeFileSync(join(rootDir, CONFIG_FILE), JSON.stringify({ lvPath: "lv", engines }));
   const run = await mtf(
-    ["acme-singlet-50", "--profile", "benchmark", "--engines", "lv,ref,optiland", "--aperture", "f/8"],
+    ["acme-singlet-50", "--profile", "benchmark", "--engines", "lv,reference-tracer,optiland", "--aperture", "f/8"],
     rootDir,
   );
   assert.equal(run.code, EXIT_OK, run.err);
@@ -692,7 +692,7 @@ test("--profile benchmark: naming optiland adds r5, r5g and r6c, with r6c on ref
         .filter((job) => job.run === name)
         .map((job) => job.engine)
         .sort(),
-      ["lv", "optiland", "optiland-wave", "wave"],
+      ["lv", "optiland", "otf-of-optiland-wavefront", "wave-mtf-of-lv-rays"],
     );
   }
   assert.equal(run.out, markdown);
@@ -703,7 +703,15 @@ test("--profile benchmark: naming optiland adds r5, r5g and r6c, with r6c on ref
 test("--profile benchmark: a zoom is run at both ends, or at the position --zoom names", async (t) => {
   const { rootDir, runsDir, lv } = freshRoot(t);
   t.after(() => closeBinding(lv));
-  const args = ["acme-zoom-24-48", "--profile", "benchmark", "--engines", "lv,ref", "--aperture", "wide-open"];
+  const args = [
+    "acme-zoom-24-48",
+    "--profile",
+    "benchmark",
+    "--engines",
+    "lv,reference-tracer",
+    "--aperture",
+    "wide-open",
+  ];
   await mtf(args, rootDir);
   const both = benchmarkOf(runsDir, "acme-zoom-24-48").manifest.runs.map((each) => each.name);
   assert.deepEqual(
@@ -728,16 +736,16 @@ test("--profile benchmark: a gated pair that fails is named on the error stream,
   assert.equal(run.code, EXIT_FAILURE);
   const failing = run.err.split("\n").filter((line) => /: Fail: /.test(line));
   assert.equal(failing.length, 4, "each failing pair is named once");
-  assert.match(failing[0], /^lvrtc mtf: acme-singlet-50-f8-ref lv-mtf-replay lv replay: Fail: /);
+  assert.match(failing[0], /^lvrtc mtf: acme-singlet-50-f8-ref lv-mtf-replay lv replay-of-lv-mtf: Fail: /);
   assert.match(
     run.out,
-    /^\| LensVisualizer's MTF sampling, replayed — `lv-mtf-replay` \| `mtf\.native` \| 4 \| 4 \| lv – replay \| 4 Fail \| 4 Fail \|$/m,
+    /^\| LensVisualizer's MTF sampling, replayed — `lv-mtf-replay` \| `mtf\.native` \| 4 \| 4 \| lv – replay-of-lv-mtf \| 4 Fail \| 4 Fail \|$/m,
   );
 });
 
 test("benchmark --jobs 4 keeps the serial fake-LV manifest, comparisons and report bytes", async (t) => {
   const { rootDir, runsDir } = sampledRoot(t);
-  const args = ["acme-singlet-50", "--profile", "benchmark", "--engines", "lv,ref"];
+  const args = ["acme-singlet-50", "--profile", "benchmark", "--engines", "lv,reference-tracer"];
   const serial = await mtf(args, rootDir);
   assert.equal(serial.code, EXIT_OK, serial.err);
   const before = benchmarkOf(runsDir, "acme-singlet-50");

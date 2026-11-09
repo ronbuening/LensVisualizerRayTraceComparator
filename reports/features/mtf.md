@@ -23,20 +23,20 @@ How to read this, near the end, says what each label and column means.
 |---|---|---|---|
 | lv | LensVisualizer | 1 | clean checkout, 184 engine files |
 | optiland | optiland | 0.6.2.post117+g4e893f53 | backend numpy, checkout with uncommitted changes, JIT compilation on, Numba 0.65.1, NumPy 2.3.5, precision float64, Python 3.14.8, SciPy 1.16.3, 534 source files |
-| ref | Reference tracer | 1 | 13 source files |
-| replay | Replay of LensVisualizer's MTF | 1 | clean checkout, 184 engine files |
+| reference-tracer | Reference tracer | 1 | 13 source files |
+| replay-of-lv-mtf | Replay of LensVisualizer's MTF | 1 | clean checkout, 184 engine files |
 
 ## Summary
 
 | Check | Quantity | Runs | Requests | Pair | Runs by verdict | Requests by verdict |
 |---|---|---|---|---|---|---|
 | Geometric MTF of the same rays — `geometric-mtf` | `rays.trace` | 18 | 54 | lv – optiland | 18 Pass | 54 Pass |
-| Geometric MTF of the same rays — `geometric-mtf` | `rays.trace` | 18 | 54 | lv – ref | 18 Pass | 54 Pass |
-| Geometric MTF of the same rays — `geometric-mtf` | `rays.trace` | 18 | 54 | optiland – ref | 18 Pass | 54 Pass |
-| LensVisualizer's MTF sampling, replayed — `lv-mtf-replay` | `mtf.native` | 18 | 18 | lv – replay | 18 Pass | 18 Pass |
+| Geometric MTF of the same rays — `geometric-mtf` | `rays.trace` | 18 | 54 | lv – reference-tracer | 18 Pass | 54 Pass |
+| Geometric MTF of the same rays — `geometric-mtf` | `rays.trace` | 18 | 54 | optiland – reference-tracer | 18 Pass | 54 Pass |
+| LensVisualizer's MTF sampling, replayed — `lv-mtf-replay` | `mtf.native` | 18 | 18 | lv – replay-of-lv-mtf | 18 Pass | 18 Pass |
 | Wave MTF of the same rays — `wave-mtf` | `rays.trace` | 18 | 54 | lv – optiland | 18 Pass | 54 Pass |
-| Wave MTF of the same rays — `wave-mtf` | `rays.trace` | 18 | 54 | lv – ref | 18 Pass | 54 Pass |
-| Wave MTF of the same rays — `wave-mtf` | `rays.trace` | 18 | 54 | optiland – ref | 18 Pass | 54 Pass |
+| Wave MTF of the same rays — `wave-mtf` | `rays.trace` | 18 | 54 | lv – reference-tracer | 18 Pass | 54 Pass |
+| Wave MTF of the same rays — `wave-mtf` | `rays.trace` | 18 | 54 | optiland – reference-tracer | 18 Pass | 54 Pass |
 
 ## Support
 
@@ -47,12 +47,12 @@ In how many runs the jobs of an engine ended in each way. An engine that cannot 
 |---|---|---|
 | Geometric MTF of the same rays — `geometric-mtf` | lv | 18 answered |
 | Geometric MTF of the same rays — `geometric-mtf` | optiland | 18 answered |
-| Geometric MTF of the same rays — `geometric-mtf` | ref | 18 answered |
+| Geometric MTF of the same rays — `geometric-mtf` | reference-tracer | 18 answered |
 | LensVisualizer's MTF sampling, replayed — `lv-mtf-replay` | lv | 18 answered |
-| LensVisualizer's MTF sampling, replayed — `lv-mtf-replay` | replay | 18 answered |
+| LensVisualizer's MTF sampling, replayed — `lv-mtf-replay` | replay-of-lv-mtf | 18 answered |
 | Wave MTF of the same rays — `wave-mtf` | lv | 18 answered |
 | Wave MTF of the same rays — `wave-mtf` | optiland | 18 answered |
-| Wave MTF of the same rays — `wave-mtf` | ref | 18 answered |
+| Wave MTF of the same rays — `wave-mtf` | reference-tracer | 18 answered |
 
 ## Geometric MTF of the same rays — `geometric-mtf`
 
@@ -66,18 +66,18 @@ The worst of every figure over the suite:
 | lv – optiland | Rays both engines traced through — `rays.compared` | rays | — | 142434 | 54 of 54 | — | — |
 | lv – optiland | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | 54 of 54 | — | — |
 | lv – optiland | Wavelengths compared — `lines.compared` | wavelengths | — | 5 | 54 of 54 | odd-asphere-photopic | — |
-| lv – ref | Largest difference of an MTF value — `mtf.maxAbs` | (no unit) | ≤ 1.00e-7 | 6.91e-12 | 54 of 54 | flat-base-asphere-ref | cut sagittal, field 0 deg, frequencyPerMm 100 |
-| lv – ref | Rays both engines traced through — `rays.compared` | rays | — | 142434 | 54 of 54 | — | — |
-| lv – ref | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | 54 of 54 | — | — |
-| lv – ref | Wavelengths compared — `lines.compared` | wavelengths | — | 5 | 54 of 54 | odd-asphere-photopic | — |
-| optiland – ref | Largest difference of an MTF value — `mtf.maxAbs` | (no unit) | ≤ 1.00e-7 | 7.22e-12 | 54 of 54 | flat-base-asphere-ref | cut tangential, field 0 deg, frequencyPerMm 100 |
-| optiland – ref | Rays both engines traced through — `rays.compared` | rays | — | 142434 | 54 of 54 | — | — |
-| optiland – ref | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | 54 of 54 | — | — |
-| optiland – ref | Wavelengths compared — `lines.compared` | wavelengths | — | 5 | 54 of 54 | odd-asphere-photopic | — |
+| lv – reference-tracer | Largest difference of an MTF value — `mtf.maxAbs` | (no unit) | ≤ 1.00e-7 | 6.91e-12 | 54 of 54 | flat-base-asphere-ref | cut sagittal, field 0 deg, frequencyPerMm 100 |
+| lv – reference-tracer | Rays both engines traced through — `rays.compared` | rays | — | 142434 | 54 of 54 | — | — |
+| lv – reference-tracer | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | 54 of 54 | — | — |
+| lv – reference-tracer | Wavelengths compared — `lines.compared` | wavelengths | — | 5 | 54 of 54 | odd-asphere-photopic | — |
+| optiland – reference-tracer | Largest difference of an MTF value — `mtf.maxAbs` | (no unit) | ≤ 1.00e-7 | 7.22e-12 | 54 of 54 | flat-base-asphere-ref | cut tangential, field 0 deg, frequencyPerMm 100 |
+| optiland – reference-tracer | Rays both engines traced through — `rays.compared` | rays | — | 142434 | 54 of 54 | — | — |
+| optiland – reference-tracer | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | 54 of 54 | — | — |
+| optiland – reference-tracer | Wavelengths compared — `lines.compared` | wavelengths | — | 5 | 54 of 54 | odd-asphere-photopic | — |
 
 By run, each pair with its verdict and the judged figure that is largest against its limit, with the number of the run's requests it was measured in:
 
-| Run | Requests | lv – optiland | lv – ref | optiland – ref |
+| Run | Requests | lv – optiland | lv – reference-tracer | optiland – reference-tracer |
 |---|---|---|---|---|
 | odd-asphere-ref | 3 | Pass: mtf.maxAbs 4.03e-13 (3 of 3) | Pass: mtf.maxAbs 1.38e-12 (3 of 3) | Pass: mtf.maxAbs 1.75e-12 (3 of 3) |
 | odd-asphere-photopic | 3 | Pass: mtf.maxAbs 5.54e-13 (3 of 3) | Pass: mtf.maxAbs 7.99e-13 (3 of 3) | Pass: mtf.maxAbs 9.57e-13 (3 of 3) |
@@ -106,13 +106,13 @@ The worst of every figure over the suite:
 
 | Pair | Figure | Unit | Limit | Worst, or total | Requests measured | Run | Where |
 |---|---|---|---|---|---|---|---|
-| lv – replay | Largest difference of an MTF value — `mtf.maxAbs` | (no unit) | ≤ 1.00e-9 | 1.19e-14 | 18 of 18 | zero-asphere-ref | cut sagittal, field 1 of the image height, frequencyPerMm 8 |
-| lv – replay | Sampling grids, ray counts and ray outcomes that differ — `sampling.mismatches` | elements | ≤ 0 | 0 | 18 of 18 | — | — |
-| lv – replay | Fields whose outcome differs — `fields.mismatches` | elements | ≤ 0 | 0 | 18 of 18 | — | — |
+| lv – replay-of-lv-mtf | Largest difference of an MTF value — `mtf.maxAbs` | (no unit) | ≤ 1.00e-9 | 1.19e-14 | 18 of 18 | zero-asphere-ref | cut sagittal, field 1 of the image height, frequencyPerMm 8 |
+| lv – replay-of-lv-mtf | Sampling grids, ray counts and ray outcomes that differ — `sampling.mismatches` | elements | ≤ 0 | 0 | 18 of 18 | — | — |
+| lv – replay-of-lv-mtf | Fields whose outcome differs — `fields.mismatches` | elements | ≤ 0 | 0 | 18 of 18 | — | — |
 
 By run, each pair with its verdict and the judged figure that is largest against its limit, with the number of the run's requests it was measured in:
 
-| Run | Requests | lv – replay |
+| Run | Requests | lv – replay-of-lv-mtf |
 |---|---|---|
 | odd-asphere-ref | 1 | Pass: mtf.maxAbs 5.00e-15 (1 of 1) |
 | odd-asphere-photopic | 1 | Pass: mtf.maxAbs 4.00e-15 (1 of 1) |
@@ -149,26 +149,26 @@ The worst of every figure over the suite:
 | lv – optiland | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | 54 of 54 | — | — |
 | lv – optiland | Wavelengths compared — `lines.compared` | wavelengths | — | 5 | 54 of 54 | odd-asphere-photopic | — |
 | lv – optiland | Largest difference of a wave MTF value, in fields whose sampling did not settle (shown, not judged) — `waveMtf.flagged` | (no unit) | — | 9.74e-11 | 24 of 54 | flat-base-asphere-photopic | cut tangential, field 3.17e1 deg, frequencyPerMm 70 |
-| lv – ref | Largest difference of a wave MTF value, on the finest lattice — `waveMtf.maxAbs` | (no unit) | ≤ 2.00e-8 | 6.94e-10 | 30 of 54 | fixed-iris-zoom-photopic-tele | cut tangential, field 1.48e1 deg, frequencyPerMm 60 |
-| lv – ref | Largest phase step between neighbouring cells of the lattice that carry light — `phaseStep.waves` | waves | — | 6.37e0 | 54 of 54 | e-line-photopic | field 2.34e1 deg, line 1, ray 1091 |
-| lv – ref | Largest move of a wave MTF value from the coarser lattice to the finer — `convergence.maxAbs` | (no unit) | — | 7.18e-2 | 54 of 54 | e-line-ref | cut tangential, field 2.34e1 deg, frequencyPerMm 90 |
-| lv – ref | Cells across the finest lattice — `lattice.columns` | cells | — | 64 | 54 of 54 | odd-asphere-ref | — |
-| lv – ref | Rays both engines traced through — `rays.compared` | rays | — | 569990 | 54 of 54 | — | — |
-| lv – ref | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | 54 of 54 | — | — |
-| lv – ref | Wavelengths compared — `lines.compared` | wavelengths | — | 5 | 54 of 54 | odd-asphere-photopic | — |
-| lv – ref | Largest difference of a wave MTF value, in fields whose sampling did not settle (shown, not judged) — `waveMtf.flagged` | (no unit) | — | 4.00e-10 | 24 of 54 | flat-base-asphere-ref | cut tangential, field 0 deg, frequencyPerMm 60 |
-| optiland – ref | Largest difference of a wave MTF value, on the finest lattice — `waveMtf.maxAbs` | (no unit) | ≤ 2.00e-8 | 6.97e-10 | 30 of 54 | fixed-iris-zoom-photopic-tele | cut tangential, field 1.48e1 deg, frequencyPerMm 60 |
-| optiland – ref | Largest phase step between neighbouring cells of the lattice that carry light — `phaseStep.waves` | waves | — | 6.37e0 | 54 of 54 | e-line-photopic | field 2.34e1 deg, line 1, ray 1091 |
-| optiland – ref | Largest move of a wave MTF value from the coarser lattice to the finer — `convergence.maxAbs` | (no unit) | — | 7.18e-2 | 54 of 54 | e-line-ref | cut tangential, field 2.34e1 deg, frequencyPerMm 90 |
-| optiland – ref | Cells across the finest lattice — `lattice.columns` | cells | — | 64 | 54 of 54 | odd-asphere-ref | — |
-| optiland – ref | Rays both engines traced through — `rays.compared` | rays | — | 569990 | 54 of 54 | — | — |
-| optiland – ref | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | 54 of 54 | — | — |
-| optiland – ref | Wavelengths compared — `lines.compared` | wavelengths | — | 5 | 54 of 54 | odd-asphere-photopic | — |
-| optiland – ref | Largest difference of a wave MTF value, in fields whose sampling did not settle (shown, not judged) — `waveMtf.flagged` | (no unit) | — | 4.03e-10 | 24 of 54 | flat-base-asphere-ref | cut tangential, field 0 deg, frequencyPerMm 60 |
+| lv – reference-tracer | Largest difference of a wave MTF value, on the finest lattice — `waveMtf.maxAbs` | (no unit) | ≤ 2.00e-8 | 6.94e-10 | 30 of 54 | fixed-iris-zoom-photopic-tele | cut tangential, field 1.48e1 deg, frequencyPerMm 60 |
+| lv – reference-tracer | Largest phase step between neighbouring cells of the lattice that carry light — `phaseStep.waves` | waves | — | 6.37e0 | 54 of 54 | e-line-photopic | field 2.34e1 deg, line 1, ray 1091 |
+| lv – reference-tracer | Largest move of a wave MTF value from the coarser lattice to the finer — `convergence.maxAbs` | (no unit) | — | 7.18e-2 | 54 of 54 | e-line-ref | cut tangential, field 2.34e1 deg, frequencyPerMm 90 |
+| lv – reference-tracer | Cells across the finest lattice — `lattice.columns` | cells | — | 64 | 54 of 54 | odd-asphere-ref | — |
+| lv – reference-tracer | Rays both engines traced through — `rays.compared` | rays | — | 569990 | 54 of 54 | — | — |
+| lv – reference-tracer | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | 54 of 54 | — | — |
+| lv – reference-tracer | Wavelengths compared — `lines.compared` | wavelengths | — | 5 | 54 of 54 | odd-asphere-photopic | — |
+| lv – reference-tracer | Largest difference of a wave MTF value, in fields whose sampling did not settle (shown, not judged) — `waveMtf.flagged` | (no unit) | — | 4.00e-10 | 24 of 54 | flat-base-asphere-ref | cut tangential, field 0 deg, frequencyPerMm 60 |
+| optiland – reference-tracer | Largest difference of a wave MTF value, on the finest lattice — `waveMtf.maxAbs` | (no unit) | ≤ 2.00e-8 | 6.97e-10 | 30 of 54 | fixed-iris-zoom-photopic-tele | cut tangential, field 1.48e1 deg, frequencyPerMm 60 |
+| optiland – reference-tracer | Largest phase step between neighbouring cells of the lattice that carry light — `phaseStep.waves` | waves | — | 6.37e0 | 54 of 54 | e-line-photopic | field 2.34e1 deg, line 1, ray 1091 |
+| optiland – reference-tracer | Largest move of a wave MTF value from the coarser lattice to the finer — `convergence.maxAbs` | (no unit) | — | 7.18e-2 | 54 of 54 | e-line-ref | cut tangential, field 2.34e1 deg, frequencyPerMm 90 |
+| optiland – reference-tracer | Cells across the finest lattice — `lattice.columns` | cells | — | 64 | 54 of 54 | odd-asphere-ref | — |
+| optiland – reference-tracer | Rays both engines traced through — `rays.compared` | rays | — | 569990 | 54 of 54 | — | — |
+| optiland – reference-tracer | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | 54 of 54 | — | — |
+| optiland – reference-tracer | Wavelengths compared — `lines.compared` | wavelengths | — | 5 | 54 of 54 | odd-asphere-photopic | — |
+| optiland – reference-tracer | Largest difference of a wave MTF value, in fields whose sampling did not settle (shown, not judged) — `waveMtf.flagged` | (no unit) | — | 4.03e-10 | 24 of 54 | flat-base-asphere-ref | cut tangential, field 0 deg, frequencyPerMm 60 |
 
 By run, each pair with its verdict and the judged figure that is largest against its limit, with the number of the run's requests it was measured in:
 
-| Run | Requests | lv – optiland | lv – ref | optiland – ref |
+| Run | Requests | lv – optiland | lv – reference-tracer | optiland – reference-tracer |
 |---|---|---|---|---|
 | odd-asphere-ref | 3 | Pass: waveMtf.maxAbs 3.74e-11 (3 of 3) | Pass: waveMtf.maxAbs 4.51e-11 (3 of 3) | Pass: waveMtf.maxAbs 8.07e-11 (3 of 3) |
 | odd-asphere-photopic | 3 | Pass: waveMtf.maxAbs 3.06e-12 (1 of 3) | Pass: waveMtf.maxAbs 6.37e-11 (1 of 3) | Pass: waveMtf.maxAbs 6.66e-11 (1 of 3) |
@@ -243,8 +243,8 @@ A pair is named by the ids of its two engines:
 |---|---|
 | `lv` | LensVisualizer itself, loaded from a local checkout, asked for each figure as its own tabs ask for it, and made to trace the very rays every engine is handed in the checks held to a limit. |
 | `optiland` | optiland, an open-source optical design library in Python, run by this tool in a worker process of its own. |
-| `ref` | The reference tracer: a small exact ray tracer written in this repository from the optics alone, never from LensVisualizer's or optiland's code. |
-| `replay` | LensVisualizer's own MTF sampling, repeated step by step, with the geometric MTF summed by this tool. |
+| `reference-tracer` | The reference tracer: a small exact ray tracer written in this repository from the optics alone, never from LensVisualizer's or optiland's code. |
+| `replay-of-lv-mtf` | LensVisualizer's own MTF sampling, repeated step by step, with the geometric MTF summed by this tool. |
 
 ### Figures
 
@@ -300,8 +300,8 @@ contract version is that of the file format the baseline is written in.
 |---|---|---|---|
 | lv | 4669921bae7179c7eddd220fa367e696eae7acec3a5a788d0ca90da632d3eb6b | afad9cb89bd9a25fbfa5ee0ec335b1e315481414b7ba41da2f906c28856010c5 | commit 25f65d4b4213a21392cbae92680134906049b2ad |
 | optiland | bcfbf3916c1103b3b3b49a93117d3346a0bd6921ec35f01feb99bc1a2a6e39eb | 98f36151b0cdd2d3d3f82013841899de85309b22012967de64bbba662217fbcb | commit 4e893f53aee1312f2d091680b93dd2279711e197, distribution version 0.6.2.post117+g4e893f53, source hash 279af5c55d8ebe1610686b9dad3e6eeb22b1822037d59a0e5f148c2fb8937f38 |
-| ref | b7d0684b593261d14a1dfebb903774775bbe481a07ae2955689644dc0ffd919e | 2225e342b4fd8539480e933e59a3ca95a8ae2beeb24f45972b55fd4e4a59d357 | — |
-| replay | 4669921bae7179c7eddd220fa367e696eae7acec3a5a788d0ca90da632d3eb6b | 99024448fdb11f7eb293d0e54cf8281dc5272c57c468beeb30d66bb53ecf3409 | commit 25f65d4b4213a21392cbae92680134906049b2ad |
+| reference-tracer | b7d0684b593261d14a1dfebb903774775bbe481a07ae2955689644dc0ffd919e | 2225e342b4fd8539480e933e59a3ca95a8ae2beeb24f45972b55fd4e4a59d357 | — |
+| replay-of-lv-mtf | 4669921bae7179c7eddd220fa367e696eae7acec3a5a788d0ca90da632d3eb6b | 99024448fdb11f7eb293d0e54cf8281dc5272c57c468beeb30d66bb53ecf3409 | commit 25f65d4b4213a21392cbae92680134906049b2ad |
 
 | Run | Lens state |
 |---|---|

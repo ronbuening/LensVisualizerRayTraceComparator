@@ -97,7 +97,7 @@ function engine(id: string, data: SpanAnswer): ParticipantResult {
 }
 
 function judged(a: SpanAnswer, b: SpanAnswer, context: ComparisonContext = CONTEXT) {
-  return comparePair(engine("ref", a), engine("other", b), R4, raysMtfComparator, undefined, context);
+  return comparePair(engine("reference-tracer", a), engine("other", b), R4, raysMtfComparator, undefined, context);
 }
 
 /** The largest of `difference(nu)` over the frequencies of these tests, and the first frequency it occurs at. */

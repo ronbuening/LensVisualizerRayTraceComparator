@@ -63,7 +63,7 @@ test("policy 24: the landing's limit of 1e-5 mm and a band of 0.01 on the transm
   const pairOf = (b: VignettingNativeData) =>
     comparePair(
       { engine: "lv", fingerprint: "a", status: "ok", data: answer([field(0), field(8)]) as unknown as JsonObject },
-      { engine: "flux", fingerprint: "b", status: "ok", data: b as unknown as JsonObject },
+      { engine: "flux-of-lv-rays", fingerprint: "b", status: "ok", data: b as unknown as JsonObject },
       POLICY,
       vignettingNativeComparator,
     );

@@ -1,11 +1,12 @@
-// The engine `flux`: the comparator's flux estimator on LensVisualizer's own rays. It answers `vignetting.native`, and
-// where the engine `lv` hands such a request to LensVisualizer's vignetting tab, this engine launches LensVisualizer's
-// MTF lattice on the real stop of each field (since LensVisualizer #936; the tab's own is the same kind of lattice
-// since #931), has LensVisualizer trace it, and sums what gets through (src/estimators/illumination.ts): the share of
-// the stop's samples that reach the image, and their flux into the image in the optical direction cosines of each ray's
-// own exit direction, the relative illumination of the projected solid angle of the exit pupil (Rimmer's, as the tab's
-// since #931, which refers each ray's direction to the chief ray's image point through a reference sphere instead),
-// with no law of the field angle assumed. Rung R11b sets the two answers beside each other.
+// The engine `flux-of-lv-rays` (`flux` before Stage 9.8): the comparator's flux estimator on LensVisualizer's own rays.
+// It answers `vignetting.native`, and where the engine `lv` hands such a request to LensVisualizer's vignetting tab,
+// this engine launches LensVisualizer's MTF lattice on the real stop of each field (since LensVisualizer #936; the
+// tab's own is the same kind of lattice since #931), has LensVisualizer trace it, and sums what gets through
+// (src/estimators/illumination.ts): the share of the stop's samples that reach the image, and their flux into the image
+// in the optical direction cosines of each ray's own exit direction, the relative illumination of the projected solid
+// angle of the exit pupil (Rimmer's, as the tab's since #931, which refers each ray's direction to the chief ray's
+// image point through a reference sphere instead), with no law of the field angle assumed. Rung R11b sets the two
+// answers beside each other.
 //
 // It is no independent engine: its rays are LensVisualizer's, launched and traced by LensVisualizer, the very lattices
 // a run asks every engine to trace in rung R11a (`lvFieldRaySets`) and the very trace `lv` answers `rays.trace` with
@@ -39,7 +40,7 @@ import { answerLvRays } from "./rays.ts";
 import { linesBeyondCase } from "./spot.ts";
 
 /** The id of the engine that is the comparator's flux estimator on LensVisualizer's own rays. */
-export const LV_FLUX_ENGINE_ID = "flux";
+export const LV_FLUX_ENGINE_ID = "flux-of-lv-rays";
 
 /** The version of the engine, for people. Results are keyed by its fingerprint and its adapter revision. */
 export const LV_FLUX_ENGINE_VERSION = "1";
@@ -387,17 +388,17 @@ const IDENTITY: LvBackedIdentity = {
 };
 
 /**
- * The engine `flux` on a bound LensVisualizer checkout, as a protocol handler: `vignetting.native` by `answerLvFlux`,
- * and for a case everything the engine `lv` does (`createLvBackedEngine`): a case that is no longer what
- * LensVisualizer gives is "stale-case", and a case from any other source "unsupported".
+ * The engine `flux-of-lv-rays` on a bound LensVisualizer checkout, as a protocol handler: `vignetting.native` by
+ * `answerLvFlux`, and for a case everything the engine `lv` does (`createLvBackedEngine`): a case that is no longer
+ * what LensVisualizer gives is "stale-case", and a case from any other source "unsupported".
  */
 export function createLvFluxEngineOn(binding: LvBinding): ProtocolHandler {
   return createLvBackedEngine(binding, IDENTITY, ANSWERED);
 }
 
 /**
- * The engine `flux` on the LensVisualizer checkout at `lvPath`. Rejects with an `EngineUnavailableError` when
- * LensVisualizer cannot be bound, as the engine `lv` does.
+ * The engine `flux-of-lv-rays` on the LensVisualizer checkout at `lvPath`. Rejects with an `EngineUnavailableError`
+ * when LensVisualizer cannot be bound, as the engine `lv` does.
  */
 export async function createLvFluxEngine(lvPath: string | null): Promise<ProtocolHandler> {
   return createLvFluxEngineOn(await bindLvFor(LV_FLUX_ENGINE_ID, lvPath));

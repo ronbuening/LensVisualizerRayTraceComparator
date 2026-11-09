@@ -49,7 +49,7 @@ function compared(a: RaysTraceData, b: RaysTraceData, context: ComparisonContext
 }
 
 function judged(a: RaysTraceData, b: RaysTraceData) {
-  return comparePair(tracer("ref", a), tracer("other", b), R2, raysGeometryComparator, undefined, CONTEXT);
+  return comparePair(tracer("reference-tracer", a), tracer("other", b), R2, raysGeometryComparator, undefined, CONTEXT);
 }
 
 test("the comparator is of rays.trace for rung r2, and reports six metrics", () => {

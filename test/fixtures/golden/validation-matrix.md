@@ -17,9 +17,9 @@ This matrix is rendered from the benchmark's two baselines alone, with no engine
 |---|---|---|
 | lv | LensVisualizer | stand-in |
 | optiland | optiland | stand-in |
-| ref | Reference tracer | stand-in |
-| replay | Replay of LensVisualizer's MTF | stand-in |
-| wave | Wave MTF of LensVisualizer's rays | stand-in |
+| reference-tracer | Reference tracer | stand-in |
+| replay-of-lv-mtf | Replay of LensVisualizer's MTF | stand-in |
+| wave-mtf-of-lv-rays | Wave MTF of LensVisualizer's rays | stand-in |
 
 ## Rows
 
@@ -51,10 +51,10 @@ The foundation of every tab: the system each engine builds from the lens state, 
 
 | Check | Compares | Quantity | Engines | Configurations | Configuration pairs | Request pairs | Request-pair counts | Configuration-pair counts | Engines not answering | Baselines |
 |---|---|---|---|---:|---:|---:|---|---|---|---|
-| Built system — `built-system` | Built layout, shape, aperture, index and sampled sag | system.describe | lv, optiland, ref | 2 | 6 | 6 | 6 Pass | 6 Pass | every engine answered | baselines/benchmark.json |
-| First-order data — `first-order` | First-order quantities and pupils | paraxial.first-order | lv, optiland, ref | 2 | 6 | 6 | 6 Pass | 6 Pass | every engine answered | baselines/benchmark.json |
-| Ray trace — `ray-trace` | Hits, directions, image landings and masks of identical rays | rays.trace | lv, optiland, ref | 2 | 6 | 18 | 18 Pass | 6 Pass | every engine answered | baselines/benchmark.json |
-| Optical path — `optical-path` | Optical path, path to image and chief-relative OPD of identical rays | rays.trace | lv, optiland, ref | 2 | 6 | 18 | 18 Pass | 6 Pass | every engine answered | baselines/benchmark.json |
+| Built system — `built-system` | Built layout, shape, aperture, index and sampled sag | system.describe | lv, optiland, reference-tracer | 2 | 6 | 6 | 6 Pass | 6 Pass | every engine answered | baselines/benchmark.json |
+| First-order data — `first-order` | First-order quantities and pupils | paraxial.first-order | lv, optiland, reference-tracer | 2 | 6 | 6 | 6 Pass | 6 Pass | every engine answered | baselines/benchmark.json |
+| Ray trace — `ray-trace` | Hits, directions, image landings and masks of identical rays | rays.trace | lv, optiland, reference-tracer | 2 | 6 | 18 | 18 Pass | 6 Pass | every engine answered | baselines/benchmark.json |
+| Optical path — `optical-path` | Optical path, path to image and chief-relative OPD of identical rays | rays.trace | lv, optiland, reference-tracer | 2 | 6 | 18 | 18 Pass | 6 Pass | every engine answered | baselines/benchmark.json |
 
 ### Not covered
 
@@ -70,16 +70,16 @@ LensVisualizer's MTF tab: this tool's geometric and wave MTF of LensVisualizer's
 
 | Check | Compares | Quantity | Engines | Configurations | Configuration pairs | Request pairs | Request-pair counts | Configuration-pair counts | Engines not answering | Baselines |
 |---|---|---|---|---:|---:|---:|---|---|---|---|
-| Geometric MTF of the same rays — `geometric-mtf` | This tool's geometric MTF of identical rays, as each engine traces them | rays.trace | lv, optiland, ref | 2 | 6 | 12 | 12 Pass | 6 Pass | every engine answered | baselines/benchmark.json, baselines/benchmark.mtf.json |
-| LensVisualizer's MTF sampling, replayed — `lv-mtf-replay` | LensVisualizer's geometric MTF beside a replay of its own sampling | mtf.native | lv, replay | 2 | 2 | 2 | 2 Pass | 2 Pass | every engine answered | baselines/benchmark.mtf.json |
-| Wave MTF of the same rays — `wave-mtf` | This tool's wave MTF of identical rays, as each engine traces them, in fields whose sampling settled | rays.trace | lv, optiland, ref | 2 | 6 | 12 | 12 Pass | 6 Pass | every engine answered | baselines/benchmark.mtf.json |
+| Geometric MTF of the same rays — `geometric-mtf` | This tool's geometric MTF of identical rays, as each engine traces them | rays.trace | lv, optiland, reference-tracer | 2 | 6 | 12 | 12 Pass | 6 Pass | every engine answered | baselines/benchmark.json, baselines/benchmark.mtf.json |
+| LensVisualizer's MTF sampling, replayed — `lv-mtf-replay` | LensVisualizer's geometric MTF beside a replay of its own sampling | mtf.native | lv, replay-of-lv-mtf | 2 | 2 | 2 | 2 Pass | 2 Pass | every engine answered | baselines/benchmark.mtf.json |
+| Wave MTF of the same rays — `wave-mtf` | This tool's wave MTF of identical rays, as each engine traces them, in fields whose sampling settled | rays.trace | lv, optiland, reference-tracer | 2 | 6 | 12 | 12 Pass | 6 Pass | every engine answered | baselines/benchmark.mtf.json |
 
 ### Side by side
 
 | Check | Compares | Quantity | Engines | Configurations | Configuration pairs | Request pairs | Request-pair counts | Configuration-pair counts | Engines not answering | Baselines |
 |---|---|---|---|---:|---:|---:|---|---|---|---|
-| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | LensVisualizer's diffraction MTF beside optiland's FFT MTF and the wave estimate of LensVisualizer's rays | mtf.native | lv, optiland, wave | 2 | 6 | 6 | 4 Side by side, worth a look; 2 Not computed | 4 Side by side, worth a look; 2 Not computed | optiland: 1 answered, 1 not computed | baselines/benchmark.mtf.json |
-| MTF beside the wave estimate of LensVisualizer's rays — `mtf-vs-wave-estimate` | LensVisualizer's sheared diffraction MTF beside this tool's wave OTF of LensVisualizer's rays | mtf.native | lv, wave | 2 | 2 | 2 | 1 Side by side; 1 Side by side, worth a look | 1 Side by side; 1 Side by side, worth a look | every engine answered | baselines/benchmark.mtf.json |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | LensVisualizer's diffraction MTF beside optiland's FFT MTF and the wave estimate of LensVisualizer's rays | mtf.native | lv, optiland, wave-mtf-of-lv-rays | 2 | 6 | 6 | 4 Side by side, worth a look; 2 Not computed | 4 Side by side, worth a look; 2 Not computed | optiland: 1 answered, 1 not computed | baselines/benchmark.mtf.json |
+| MTF beside the wave estimate of LensVisualizer's rays — `mtf-vs-wave-estimate` | LensVisualizer's sheared diffraction MTF beside this tool's wave OTF of LensVisualizer's rays | mtf.native | lv, wave-mtf-of-lv-rays | 2 | 2 | 2 | 1 Side by side; 1 Side by side, worth a look | 1 Side by side; 1 Side by side, worth a look | every engine answered | baselines/benchmark.mtf.json |
 
 | Check | Compares | Quantity | Engines | Baselines |
 |---|---|---|---|---|
@@ -98,7 +98,7 @@ LensVisualizer's coma and bokeh tabs: the rings and fans of the coma cloud and t
 
 | Check | Compares | Quantity | Engines | Configurations | Configuration pairs | Request pairs | Request-pair counts | Configuration-pair counts | Engines not answering | Baselines |
 |---|---|---|---|---:|---:|---:|---|---|---|---|
-| Spot and fan rays — `spot-rays` | Spot and fan figures of the coma and bokeh tabs' rays, on identical rays | rays.trace | lv, optiland, ref | 2 | 6 | 24 | 16 Pass; 8 Not computed | 4 Pass; 2 Not computed | optiland: 1 answered, 1 not computed | baselines/benchmark.json |
+| Spot and fan rays — `spot-rays` | Spot and fan figures of the coma and bokeh tabs' rays, on identical rays | rays.trace | lv, optiland, reference-tracer | 2 | 6 | 24 | 16 Pass; 8 Not computed | 4 Pass; 2 Not computed | optiland: 1 answered, 1 not computed | baselines/benchmark.json |
 
 ### Side by side
 
@@ -122,7 +122,7 @@ LensVisualizer's spherical-aberration section (aberrations tab) and axial-colour
 
 | Check | Compares | Quantity | Engines | Configurations | Configuration pairs | Request pairs | Request-pair counts | Configuration-pair counts | Engines not answering | Baselines |
 |---|---|---|---|---:|---:|---:|---|---|---|---|
-| Spherical aberration and axial colour rays — `axial-rays` | Axial intercepts of the spherical-aberration and axial-colour sections' rays, on identical rays | rays.trace | lv, optiland, ref | 2 | 6 | 12 | 12 Pass | 6 Pass | every engine answered | baselines/benchmark.json |
+| Spherical aberration and axial colour rays — `axial-rays` | Axial intercepts of the spherical-aberration and axial-colour sections' rays, on identical rays | rays.trace | lv, optiland, reference-tracer | 2 | 6 | 12 | 12 Pass | 6 Pass | every engine answered | baselines/benchmark.json |
 
 ### Side by side
 
@@ -146,8 +146,8 @@ LensVisualizer's distortion and pupils tabs and its lateral-colour section: thei
 
 | Check | Compares | Quantity | Engines | Configurations | Configuration pairs | Request pairs | Request-pair counts | Configuration-pair counts | Engines not answering | Baselines |
 |---|---|---|---|---:|---:|---:|---|---|---|---|
-| Chief rays (distortion, pupils, lateral colour) — `chief-rays` | Chief rays of the distortion, pupils and lateral-colour tabs, on identical rays | rays.trace | lv, optiland, ref | 2 | 6 | 6 | 6 Pass | 6 Pass | every engine answered | baselines/benchmark.json |
-| First-order data — `first-order` | First-order quantities and pupils | paraxial.first-order | lv, optiland, ref | 2 | 6 | 6 | 6 Pass | 6 Pass | every engine answered | baselines/benchmark.json |
+| Chief rays (distortion, pupils, lateral colour) — `chief-rays` | Chief rays of the distortion, pupils and lateral-colour tabs, on identical rays | rays.trace | lv, optiland, reference-tracer | 2 | 6 | 6 | 6 Pass | 6 Pass | every engine answered | baselines/benchmark.json |
+| First-order data — `first-order` | First-order quantities and pupils | paraxial.first-order | lv, optiland, reference-tracer | 2 | 6 | 6 | 6 Pass | 6 Pass | every engine answered | baselines/benchmark.json |
 
 ### Side by side
 
@@ -173,7 +173,7 @@ LensVisualizer's field-curve and astigmatism sections (aberrations tab): the par
 
 | Check | Compares | Quantity | Engines | Configurations | Configuration pairs | Request pairs | Request-pair counts | Configuration-pair counts | Engines not answering | Baselines |
 |---|---|---|---|---:|---:|---:|---|---|---|---|
-| Field-curve rays — `field-curve-rays` | Tangential and sagittal foci of the field-curve sections' parabasal rays and fans, on identical rays | rays.trace | lv, optiland, ref | 2 | 6 | 12 | 12 Pass | 6 Pass | every engine answered | baselines/benchmark.json |
+| Field-curve rays — `field-curve-rays` | Tangential and sagittal foci of the field-curve sections' parabasal rays and fans, on identical rays | rays.trace | lv, optiland, reference-tracer | 2 | 6 | 12 | 12 Pass | 6 Pass | every engine answered | baselines/benchmark.json |
 
 ### Side by side
 
@@ -201,7 +201,7 @@ LensVisualizer's vignetting tab: an aimed lattice of rays on the real stop at ea
 
 | Check | Compares | Quantity | Engines | Baselines |
 |---|---|---|---|---|
-| Vignetting beside the flux estimate — `vignetting-vs-flux-estimate` | LensVisualizer's vignetting tab beside this tool's flux estimate on LensVisualizer's lattices | vignetting.native | flux, lv | in no baseline; run only where named |
+| Vignetting beside the flux estimate — `vignetting-vs-flux-estimate` | LensVisualizer's vignetting tab beside this tool's flux estimate on LensVisualizer's lattices | vignetting.native | flux-of-lv-rays, lv | in no baseline; run only where named |
 
 ### Not covered
 
@@ -219,7 +219,7 @@ LensVisualizer's summary tab and aperture control: their readouts are of the pre
 
 | Check | Compares | Quantity | Engines | Configurations | Configuration pairs | Request pairs | Request-pair counts | Configuration-pair counts | Engines not answering | Baselines |
 |---|---|---|---|---:|---:|---:|---|---|---|---|
-| First-order data — `first-order` | First-order quantities and pupils | paraxial.first-order | lv, optiland, ref | 2 | 6 | 6 | 6 Pass | 6 Pass | every engine answered | baselines/benchmark.json |
+| First-order data — `first-order` | First-order quantities and pupils | paraxial.first-order | lv, optiland, reference-tracer | 2 | 6 | 6 | 6 Pass | 6 Pass | every engine answered | baselines/benchmark.json |
 
 ### Side by side
 
@@ -243,8 +243,8 @@ LensVisualizer presents no Seidel sums, wavefront or Zernike coefficients: these
 
 | Check | Compares | Quantity | Engines | Baselines |
 |---|---|---|---|---|
-| Seidel sums beside optiland's — `seidel-vs-optiland` | This tool's Seidel sums of the reference model beside optiland's | seidel.native | optiland, ref-seidel | in no baseline; run only where named |
-| Zernike fit beside optiland's — `zernike-vs-optiland` | optiland's Zernike fit beside this tool's fit of the same raw wavefront samples | zernike.native | optiland, optiland-wave | in no baseline; run only where named |
+| Seidel sums beside optiland's — `seidel-vs-optiland` | This tool's Seidel sums of the reference model beside optiland's | seidel.native | optiland, reference-seidel | in no baseline; run only where named |
+| Zernike fit beside optiland's — `zernike-vs-optiland` | optiland's Zernike fit beside this tool's fit of the same raw wavefront samples | zernike.native | optiland, otf-of-optiland-wavefront | in no baseline; run only where named |
 
 ### Not covered
 
@@ -290,13 +290,13 @@ The hashes that tell one version from another: of the suite file, of the limits 
 | Limits file hash | b32032395aa189b6f09936b542be7154e4d611122d299340bb341ba713f7312a |
 | LensVisualizer commit | cccccccccccccccccccccccccccccccccccccccc |
 | LensVisualizer engine code | aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa |
-| baselines/benchmark.json | 14526bc9ba61bdcc6d85ae6c002d48c579392832dfb1cb0b84eb9a19bc32daa3 |
-| baselines/benchmark.mtf.json | 9cd7f2136634ed22d8913593a986957ed2a9c1bc3d889f83fd3eba5a05eeb685 |
+| baselines/benchmark.json | 4725fff38669e8448e0a12a08f2311a0b1ab506aa70cc4024a0b2f67c680a2f7 |
+| baselines/benchmark.mtf.json | 1d7dac852c5103fd2d710fc80bf0b9eb0ee269f44487b93b1b82050379174fb0 |
 
 | Engine | Engine code | This tool's code behind it |
 |---|---|---|
 | lv | aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa | 2222222222222222222222222222222222222222222222222222222222222222 |
 | optiland | bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb | 8888888888888888888888888888888888888888888888888888888888888888 |
-| ref | bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb | 3333333333333333333333333333333333333333333333333333333333333333 |
-| replay | aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa | 6666666666666666666666666666666666666666666666666666666666666666 |
-| wave | aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa | 4444444444444444444444444444444444444444444444444444444444444444 |
+| reference-tracer | bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb | 3333333333333333333333333333333333333333333333333333333333333333 |
+| replay-of-lv-mtf | aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa | 6666666666666666666666666666666666666666666666666666666666666666 |
+| wave-mtf-of-lv-rays | aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa | 4444444444444444444444444444444444444444444444444444444444444444 |

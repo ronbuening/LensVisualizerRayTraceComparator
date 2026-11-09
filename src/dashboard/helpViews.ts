@@ -39,7 +39,7 @@ export interface HelpView {
   readonly statuses: readonly LabelEntry[];
   readonly engines: readonly {
     readonly id: string;
-    readonly newId: string;
+    readonly oldId: string;
     readonly name: string;
     readonly description: string;
   }[];
@@ -60,7 +60,7 @@ export function buildHelpView(): HelpView {
     outcomes: entries(OUTCOME_TEXT),
     classes: entries(CLASS_TEXT),
     statuses: entries(ROW_STATUS_TEXT),
-    engines: ENGINES.map(({ id, newId, name, description }) => ({ id, newId, name, description })),
+    engines: ENGINES.map(({ id, oldId, name, description }) => ({ id, oldId, name, description })),
   };
 }
 

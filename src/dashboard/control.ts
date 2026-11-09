@@ -66,7 +66,7 @@ export const EXCHANGE_FOLDER_ORDER = [
 export const OWNER_ONLY_SUITES: readonly string[] = Object.freeze(["catalog"]);
 
 /** The engines "Run this lens" may name: LensVisualizer, the reference tracer and optiland (Stage 8.4). */
-export const LENS_ENGINES: readonly string[] = Object.freeze(["lv", "ref", "optiland"]);
+export const LENS_ENGINES: readonly string[] = Object.freeze(["lv", "reference-tracer", "optiland"]);
 /** The engine `lvrtc mtf` asks when a form names none. */
 const LENS_DEFAULT_ENGINES: readonly string[] = Object.freeze(["lv"]);
 /**

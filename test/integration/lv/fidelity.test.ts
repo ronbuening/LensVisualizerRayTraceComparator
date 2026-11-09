@@ -188,7 +188,7 @@ test(
       manifest.engines.map((engine) => [engine.id, engine.status]),
       [
         ["lv", "available"],
-        ["replay", "available"],
+        ["replay-of-lv-mtf", "available"],
       ],
     );
     const [lv] = manifest.engines;
@@ -273,7 +273,11 @@ test(
       const set = comparisons.comparisons.find((each) => each.run === run.name && each.mode === "pairwise");
       assert.ok(set !== undefined && set.rung === "lv-mtf-replay" && set.quantity === "mtf.native", run.name);
       const [pair] = set.pairs;
-      assert.deepEqual([set.pairs.length, pair.a, pair.b, pair.verdict], [1, "lv", "replay", "PASS"], run.name);
+      assert.deepEqual(
+        [set.pairs.length, pair.a, pair.b, pair.verdict],
+        [1, "lv", "replay-of-lv-mtf", "PASS"],
+        run.name,
+      );
       const metrics = Object.fromEntries(pair.metrics.map((metric) => [metric.name, metric]));
       assert.equal(metrics["sampling.mismatches"].value, 0, run.name);
       assert.equal(metrics["fields.mismatches"].value, 0, run.name);

@@ -15,7 +15,7 @@
 | Engine | Status | Version | Engine code |
 |---|---|---|---|
 | optiland | available | 1 | 5b42de3b00b5524489ff7d64c6f9c2d9fd6d53eb0f33fb98439c766aa9b33d31 |
-| optiland-wave | available | 1 | 324b7c3508eaea73b4fe516c15425c651b3e802d0237cfcbc3cd52efc5b595c4 |
+| otf-of-optiland-wavefront | available | 1 | 45749fab0ee9a0f72877424d177d5552c5a336c1e156521f21c2660dd96b7820 |
 
 ### Runs
 
@@ -39,7 +39,7 @@ No pair is Fail or Error, of 2 compared.
 
 ## Support matrix
 
-| Run | Check | optiland | optiland-wave |
+| Run | Check | optiland | otf-of-optiland-wavefront |
 |---|---|---|---|
 | lens | zernike-vs-optiland | ok | ok |
 
@@ -55,18 +55,18 @@ Reference vs each, against `optiland`:
 
 | Engine | chiefLanding.maxAbs (band 1.00e-9 mm) | coefficients.maxAbs (band 4.00e-11 waves) | fitCondition.max (band 1000000) | fitResidualRms.maxAbs (band 7.00e-16 waves) | pvToChief.maxAbs [waves] | rmsToChief.maxAbs (band 2.00e-16 waves) | fields.compared [elements] | fields.data [elements] | fields.numerical [elements] | fields.unavailable [elements] | Verdict | Note |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| optiland-wave | 0 at field 0 | 9.09e-13 at field 0, term 4 | 2.50e0 at field 0 | 0 at field 0 | 0 at field 0 | 0 at field 0 | 1 | 0 | 0 | 1 | RECORDED | field 20: unsupported, no-curve (optiland-zernike-fit: unavailable (optiland-raised-ValueError)) |
+| otf-of-optiland-wavefront | 0 at field 0 | 9.09e-13 at field 0, term 4 | 2.50e0 at field 0 | 0 at field 0 | 0 at field 0 | 0 at field 0 | 1 | 0 | 0 | 1 | RECORDED | field 20: unsupported, no-curve (optiland-zernike-fit: unavailable (optiland-raised-ValueError)) |
 
 Pairwise, the verdict of each two engines and the metric nearest to or furthest past its limit:
 
-| Engine | optiland | optiland-wave |
+| Engine | optiland | otf-of-optiland-wavefront |
 |---|---|---|
 | optiland | — | RECORDED (coefficients.maxAbs 9.09e-13 at field 0, term 4) |
-| optiland-wave | RECORDED (coefficients.maxAbs 9.09e-13 at field 0, term 4) | — |
+| otf-of-optiland-wavefront | RECORDED (coefficients.maxAbs 9.09e-13 at field 0, term 4) | — |
 
 Recorded values, as each engine reports them. They are listed and never judged:
 
-| Value | optiland | optiland-wave |
+| Value | optiland | otf-of-optiland-wavefront |
 |---|---|---|
 | Z1[0] | 1.25000000e-1 | 1.25000000e-1 |
 | Z1[1] | not finite | 5.00000000e-1 |

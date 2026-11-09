@@ -47,22 +47,22 @@ export type BuiltinEngines = {
 };
 
 /**
- * The built-in engines. `ref` is the comparator's own reference engine (`src/engines/ref`). `lv` is LensVisualizer
- * itself (`src/engines/lv/engine.ts`), loaded from the configuration's `lvPath` when the engine is made: without a
- * LensVisualizer to load it is unavailable, and nothing else is affected. `replay` is the comparator's own
- * estimators on a replay of LensVisualizer's sampling (`src/engines/lv/replayEngine.ts`), on the same checkout and
- * unavailable without it; it is what rung R4f holds `lv` to. `wave` is the comparator's wave estimator on the rays
- * LensVisualizer launches and traces (`src/engines/lv/waveEngine.ts`), on the same checkout; it is what rung R6b
- * sets beside LensVisualizer's own diffraction MTF. `flux` is the comparator's flux estimator on the lattices
- * LensVisualizer launches over each field's beam and traces (`src/engines/lv/fluxEngine.ts`), on the same checkout; it
- * is what rung R11b sets beside LensVisualizer's own vignetting tab. `optiland` is optiland behind the
- * comparator's Python worker (`src/engines/optiland/definition.ts`), run by the interpreter the configuration names
- * as `engines.optiland.python`: without one it is unavailable, and nothing else is affected.
+ * The built-in engines. `reference-tracer` is the comparator's own reference engine (`src/engines/ref`). `lv` is
+ * LensVisualizer itself (`src/engines/lv/engine.ts`), loaded from the configuration's `lvPath` when the engine is made:
+ * without a LensVisualizer to load it is unavailable, and nothing else is affected. `replay-of-lv-mtf` is the
+ * comparator's own estimators on a replay of LensVisualizer's sampling (`src/engines/lv/replayEngine.ts`), on the same
+ * checkout and unavailable without it; it is what rung R4f holds `lv` to. `wave-mtf-of-lv-rays` is the comparator's
+ * wave estimator on the rays LensVisualizer launches and traces (`src/engines/lv/waveEngine.ts`), on the same checkout;
+ * it is what rung R6b sets beside LensVisualizer's own diffraction MTF. `flux-of-lv-rays` is the comparator's flux
+ * estimator on the lattices LensVisualizer launches over each field's beam and traces (`src/engines/lv/fluxEngine.ts`),
+ * on the same checkout; it is what rung R11b sets beside LensVisualizer's own vignetting tab. `optiland` is optiland
+ * behind the comparator's Python worker (`src/engines/optiland/definition.ts`), run by the interpreter the
+ * configuration names as `engines.optiland.python`: without one it is unavailable, and nothing else is affected.
  *
- * A built-in engine can be named with any configuration root (`--engines lv,ref`, a run's `engines`). It is not
- * one of the engines a run that names none is run on: those are the engines the configuration defines. `replay`,
- * `wave`, `flux`, `optiland-wave` and `ref-seidel` are run where the rung that is about each is run
- * (`RungDefinition.engines`), and can be named like any other.
+ * A built-in engine can be named with any configuration root (`--engines lv,reference-tracer`, a run's `engines`). It
+ * is not one of the engines a run that names none is run on: those are the engines the configuration defines.
+ * `replay-of-lv-mtf`, `wave-mtf-of-lv-rays`, `flux-of-lv-rays`, `otf-of-optiland-wavefront` and `reference-seidel` are
+ * run where the rung that is about each is run (`RungDefinition.engines`), and can be named like any other.
  */
 export const BUILTIN_ENGINES: BuiltinEngines = Object.freeze({
   [LV_ENGINE_ID]: ({ config }) => createLvEngine(config.lvPath),

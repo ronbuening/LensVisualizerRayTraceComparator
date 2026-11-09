@@ -50,6 +50,7 @@ import { LV_TAB_COMPARISON_F_NUMBER, LV_TAB_PROFILE } from "../../engines/lv/tab
 import { ZOOM_ENDS, primeZoomNote, zoomEndAt } from "../../engines/lv/zoomEnds.ts";
 import type { ZoomEnd } from "../../engines/lv/zoomEnds.ts";
 import { createEngineRegistry } from "../../engines/registry.ts";
+import { aliasEngineId } from "../../core/legacyIds.ts";
 import { mtfNativeQuantity } from "../../quantities/mtfNative.ts";
 import { mtfTableRows, mtfTableText } from "../../report/mtfTable.ts";
 import type { MtfTableRow } from "../../report/mtfTable.ts";
@@ -119,7 +120,7 @@ const HELP = helpText([
       `the request to make (default: ${LV_TAB_PROFILE}). ${LV_TAB_PROFILE} is the request of LensVisualizer's MTF tab as it opens: its default method, wavelengths, focus, sampling, fields and frequencies, with the stop and pupil of the tab itself.`,
       (column) => [
         ...wrap(
-          `${BENCHMARK_PROFILE} is no one request but a comparison of the lens's MTF: the lens wide open and at the tab's f/8, at its design image plane and at LensVisualizer's best axial focus, at its reference wavelength and in white light (eight runs, a zoom sixteen; --aperture keeps one aperture, half as many), run and compared on the named engines as a suite is. The checks held to a limit are ${checkNames(BENCHMARK_KINDS.limit)}; side by side, ${checkNames(BENCHMARK_KINDS.sideBySide)}, and where optiland is named ${checkNames(OWN_MTF_RUNGS)}. It prints the MTF report of that run (lvrtc mtf <lensKey> --profile ${BENCHMARK_PROFILE} --engines lv,ref,optiland) and writes the run to <runsDir>/mtf-<lensKey>/, with mtf.md and mtf.json; lvrtc compare and lvrtc report read it as the run of a suite named mtf-<lensKey>. Progress is on the error stream: the engines' own MTF of a fast lens wide open takes minutes a run.`,
+          `${BENCHMARK_PROFILE} is no one request but a comparison of the lens's MTF: the lens wide open and at the tab's f/8, at its design image plane and at LensVisualizer's best axial focus, at its reference wavelength and in white light (eight runs, a zoom sixteen; --aperture keeps one aperture, half as many), run and compared on the named engines as a suite is. The checks held to a limit are ${checkNames(BENCHMARK_KINDS.limit)}; side by side, ${checkNames(BENCHMARK_KINDS.sideBySide)}, and where optiland is named ${checkNames(OWN_MTF_RUNGS)}. It prints the MTF report of that run (lvrtc mtf <lensKey> --profile ${BENCHMARK_PROFILE} --engines lv,reference-tracer,optiland) and writes the run to <runsDir>/mtf-<lensKey>/, with mtf.md and mtf.json; lvrtc compare and lvrtc report read it as the run of a suite named mtf-<lensKey>. Progress is on the error stream: the engines' own MTF of a fast lens wide open takes minutes a run.`,
           column,
           " ".repeat(column),
         ),
@@ -236,10 +237,13 @@ function readArguments(args: readonly string[]): MtfArguments {
   const { positionals: keys, values, flags } = parseArguments(args, VALUE_OPTIONS, ["--json", "--details"]);
   if (keys.length === 0) throw new UsageError("no lens key was given");
   if (keys.length > 1) throw new UsageError(`unexpected argument "${keys[1]}"`);
-  const engines = values.get("--engines")?.split(",") ?? [...DEFAULT_ENGINES];
-  if (engines.includes("")) {
+  const named = values.get("--engines")?.split(",") ?? [...DEFAULT_ENGINES];
+  if (named.includes("")) {
     throw new UsageError(`--engines needs ids separated by commas, got "${values.get("--engines")}"`);
   }
+  // An engine named by the id it had before it was renamed is that engine (a configuration cannot define an engine
+  // under an old id), and the command says so once (`aliasEngineId`).
+  const engines = named.map((id) => aliasEngineId(id));
   const profile = values.get("--profile") ?? LV_TAB_PROFILE;
   const ofLens = LENS_PROFILES.includes(profile);
   if (!Object.hasOwn(PROFILES, profile) && !ofLens) {
@@ -302,7 +306,8 @@ function engineText(asked: Asked, request: Extract<ProfileRequest, { ok: true }>
     return `${[head, ...items].join("\n")}\n`;
   }
   const code = answer.error === undefined ? "" : `${answer.error.code}: `;
-  return [head, `  ${code}${detail ?? ""}`, ...codeLines(answer.error?.code ?? null, 4, answer.engine), ""].join("\n");
+  const said = `${code}${detail ?? ""}`;
+  return [head, `  ${said}`, ...codeLines(answer.error?.code ?? null, 4, answer.engine, said), ""].join("\n");
 }
 
 /** The fields of each "ok" answer at the shown frequencies, as plain numbers: what `--json` adds to the record. */
@@ -422,7 +427,8 @@ async function runBenchmark(
       rungs,
       followUps: followUpsOf(policy),
       // One line a rung of a run, when its first job has ended (`onJob` is called with a job as it finishes): with
-      // the engines in the order lv, ref, optiland that is before optiland's own MTF, the slow part, is asked.
+      // the engines in the order lv, reference-tracer, optiland that is before optiland's own MTF, the slow part, is
+      // asked.
       onJob: ({ job, source }) => {
         const now = `${job.run} ${job.rung}`;
         if (now !== stage)

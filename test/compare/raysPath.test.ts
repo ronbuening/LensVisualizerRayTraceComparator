@@ -29,7 +29,7 @@ function compared(a: RaysTraceData, b: RaysTraceData, context: ComparisonContext
 }
 
 function judged(a: RaysTraceData, b: RaysTraceData, context: ComparisonContext = CONTEXT) {
-  return comparePair(tracer("ref", a), tracer("other", b), R3, raysPathComparator, undefined, context);
+  return comparePair(tracer("reference-tracer", a), tracer("other", b), R3, raysPathComparator, undefined, context);
 }
 
 /**

@@ -57,8 +57,8 @@ function ladderRoot(t: TestContext): string {
     kind: "suite",
     name: "mtf",
     defaults: {
-      engines: ["ref", "ref-bent", "ref-twin", "fake-a"],
-      referenceEngine: "ref",
+      engines: ["reference-tracer", "ref-bent", "ref-twin", "fake-a"],
+      referenceEngine: "reference-tracer",
       rungs: ["geometric-mtf"],
       fields: { kind: "angles-deg", values: [0, 3] },
       sampling: { bundleGrid: 12 },
@@ -134,7 +134,7 @@ test("R4 compares a field at every line as one set: a faithful copy differs by n
     for (const [index, set] of sets(run, "reference-vs-each").entries()) {
       assert.deepEqual(
         set.participants.map((participant) => `${participant.engine} ${participant.status}`),
-        ["fake-a unsupported", "ref ok", "ref-bent ok", "ref-twin ok"],
+        ["fake-a unsupported", "ref-bent ok", "ref-twin ok", "reference-tracer ok"],
       );
       const [none, bent, twin] = set.pairs;
       assert.deepEqual([none.b, none.verdict, none.metrics], ["fake-a", "UNSUPPORTED", []]);

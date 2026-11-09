@@ -54,7 +54,7 @@ test(
     const cycle = runAndCompare(t, {
       suite: suitePath("focus-stations"),
       name: "focus-stations",
-      engines: "lv,ref,optiland",
+      engines: "lv,reference-tracer,optiland",
       rungs: "ray-trace,optical-path",
       root: rootDir,
     });
@@ -87,8 +87,8 @@ test(
     assert.equal(paths.pairs.length, 3 * sets);
     assert.deepEqual([...new Set(paths.pairs.map((pair) => pair.engines))].sort(), [
       "lv / optiland",
-      "lv / ref",
-      "optiland / ref",
+      "lv / reference-tracer",
+      "optiland / reference-tracer",
     ]);
     // The rays of a station are LensVisualizer's own, with its chief ray, and the path relative to it is measured
     // wherever every engine lands that ray: in all but one set at c05a2ab7, where an aperture stops it for all three.

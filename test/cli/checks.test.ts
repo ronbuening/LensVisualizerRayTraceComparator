@@ -84,7 +84,7 @@ test("every command's help says how it exits, and run lists the checks and engin
   }
   assert.match(run, /--checks <ids> +the checks of every run/);
   assert.match(run, /--rungs is the older spelling/);
-  assert.match(run, /^ +ref +Reference tracer$/m);
+  assert.match(run, /^ +reference-tracer +Reference tracer$/m);
 });
 
 test("lvrtc checks lists every check with its kind and what it compares", async () => {
@@ -128,7 +128,7 @@ test("lvrtc checks <id> shows a check in full: its engines from the checks, its 
   const r5 = (await lvrtc(["checks", "mtf-vs-optiland-fft"])).out;
   assert.match(
     r5,
-    /^ {2}engines +lv \(LensVisualizer\), optiland, wave \(Wave MTF of LensVisualizer's rays\); asked of these/m,
+    /^ {2}engines +lv \(LensVisualizer\), optiland, wave-mtf-of-lv-rays \(Wave MTF of LensVisualizer's rays\); asked of$/m,
   );
   assert.match(r5, /^ {2}runs +only where a suite or --checks names it$/m);
   assert.match(r5, /\(mtfOnAxis\.maxAbs\): review band 0\.005\./);
@@ -140,7 +140,7 @@ test("lvrtc checks <id> shows a check in full: its engines from the checks, its 
   assert.match((await lvrtc(["checks", "seidel-vs-optiland"])).out, /\(SPHA\.maxAbs\): no review band\./);
 
   const json = JSON.parse((await lvrtc(["checks", "lv-mtf-replay", "--json"])).out);
-  assert.deepEqual(json.engines, ["lv", "replay"]);
+  assert.deepEqual(json.engines, ["lv", "replay-of-lv-mtf"]);
   assert.equal(json.onlyWhereNamed, false);
   assert.deepEqual(
     json.limits.map((limit: { metric: string }) => limit.metric),
@@ -172,7 +172,21 @@ test("lvrtc glossary prints the terms; a term is found by its word, a word it re
   assert.ok(
     (await lvrtc(["glossary", "ATTENTION"])).out.startsWith("Side by side, worth a look (stored as ATTENTION)\n"),
   );
-  assert.ok((await lvrtc(["glossary", "ref"])).out.includes("Reference tracer (stored as ref)\n"));
+  // An engine by its id, or by the id it had before the rename, which the command says it read as today's.
+  const engineById = await lvrtc(["glossary", "reference-tracer"]);
+  assert.ok(engineById.out.startsWith("Reference tracer (replaces ref; stored as reference-tracer)\n"), engineById.out);
+  const engineByOldId = await lvrtc(["glossary", "replay"]);
+  assert.ok(
+    engineByOldId.out.startsWith("Replay of LensVisualizer's MTF (replaces replay; stored as replay-of-lv-mtf)\n"),
+  );
+  assert.match(
+    engineByOldId.err,
+    /^note: some ids were read under their new names: engine replay is now replay-of-lv-mtf; /,
+  );
+  // The old word ref is both the term the reference tracer replaces and the engine's old id: both are found.
+  const ref = await lvrtc(["glossary", "ref"]);
+  assert.ok(ref.out.startsWith("reference tracer (replaces ref)\n"), ref.out);
+  assert.ok(ref.out.includes("\n\nReference tracer (replaces ref; stored as reference-tracer)\n"), ref.out);
   // A check by its id, or by the id it had before the rename, which the command says it read as today's.
   const byId = await lvrtc(["glossary", "ray-trace"]);
   assert.ok(byId.out.startsWith("Ray trace (replaces r2; stored as ray-trace)\n"), byId.out);

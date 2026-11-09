@@ -134,7 +134,8 @@ export async function runCli(
   try {
     return await command.run(rest, io);
   } catch (error) {
-    io.stderr(`lvrtc ${command.name}: ${error instanceof Error ? error.message : String(error)}\n`);
+    const message = error instanceof Error ? error.message : String(error);
+    io.stderr(`lvrtc ${command.name}: ${message}\n`);
     // An error that carries a code the vocabulary knows (LensVisualizer's binding, an engine) says how to fix it: the
     // error classes keep their words, and the remedy is added where the error is shown.
     const code = (error as { readonly code?: unknown } | null)?.code;
@@ -142,6 +143,7 @@ export async function runCli(
       typeof code === "string" ? code : null,
       2,
       error instanceof LvBindingError ? "lv" : undefined,
+      message,
     );
     if (means.length > 0) io.stderr(`${ERROR_OUTPUT_TEXT.fix}:\n${means.join("\n")}\n`);
     return EXIT_FAILURE;

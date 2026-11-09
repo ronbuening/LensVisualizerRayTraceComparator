@@ -66,7 +66,7 @@ function assertAllPass(t: TestContext, suite: string, pairs: readonly RungPair[]
   }
   const optiland = pairs.filter((pair) => pair.engines.includes("optiland"));
   assert.ok(optiland.length > 0);
-  for (const other of ["ref", "lv"]) {
+  for (const other of ["reference-tracer", "lv"]) {
     const against = optiland.filter((pair) => pair.engines.split(" / ").includes(other));
     if (against.length === 0) continue;
     const [scaled, plain] = [worstOf(against, "sag.maxScaled"), worstOf(against, "sag.maxAbs")];
@@ -97,10 +97,16 @@ test(
     };
     writeFileSync(join(rootDir, "suite.json"), JSON.stringify(suite));
 
-    const { manifest, pairs, verdicts } = r0Cycle(t, "suite.json", "contract-cases", "ref,optiland", rootDir);
+    const { manifest, pairs, verdicts } = r0Cycle(
+      t,
+      "suite.json",
+      "contract-cases",
+      "reference-tracer,optiland",
+      rootDir,
+    );
     assert.deepEqual(
       manifest.jobs.map((job) => [job.run, job.rung, job.engine, job.status]),
-      names.flatMap((name) => ["optiland", "ref"].map((engine) => [name, "built-system", engine, "ok"])),
+      names.flatMap((name) => ["optiland", "reference-tracer"].map((engine) => [name, "built-system", engine, "ok"])),
     );
     const optiland = manifest.engines.find((engine) => engine.id === "optiland");
     assert.ok(optiland !== undefined && optiland.status === "available");
@@ -112,7 +118,7 @@ test(
     assert.equal(verdicts, "contract-cases: 6 pairs: 6 Pass");
     assert.deepEqual(
       pairs.map((pair) => [pair.run, pair.engines]),
-      names.map((name) => [name, "optiland / ref"]),
+      names.map((name) => [name, "optiland / reference-tracer"]),
     );
     assertAllPass(t, "contract-cases", pairs);
     // Measured: the largest sag difference of the three cases is 8.9e-16 mm, and 2.9e-16 on the scale of a rounding,
@@ -202,7 +208,12 @@ test(
   "the benchmark on R0: lv, ref and optiland built the same system for all 24 runs, at the reference and photopic lines",
   { skip: skipSuites, timeout: 900_000 },
   (t) => {
-    const { manifest, pairs, verdicts } = r0Cycle(t, rungSuite(t, "benchmark"), "benchmark", "lv,ref,optiland");
+    const { manifest, pairs, verdicts } = r0Cycle(
+      t,
+      rungSuite(t, "benchmark"),
+      "benchmark",
+      "lv,reference-tracer,optiland",
+    );
     // 12 configurations, each at the reference line and at the five photopic lines; one request for each engine.
     assert.equal(manifest.runs.length, 24);
     assert.equal(manifest.jobs.length, 24 * 3);
@@ -213,8 +224,8 @@ test(
     assert.equal(pairs.length, 24 * 3);
     assert.deepEqual([...new Set(pairs.map((pair) => pair.engines))].sort(), [
       "lv / optiland",
-      "lv / ref",
-      "optiland / ref",
+      "lv / reference-tracer",
+      "optiland / reference-tracer",
     ]);
     assertAllPass(t, "benchmark", pairs);
   },
@@ -224,7 +235,7 @@ test(
   "the feature suite on R0: every translation path passes three ways, and optiland declares nothing unsupported",
   { skip: skipSuites, timeout: 900_000 },
   (t) => {
-    const { manifest, pairs, verdicts } = r0Cycle(t, suitePath("features"), "features", "lv,ref,optiland");
+    const { manifest, pairs, verdicts } = r0Cycle(t, suitePath("features"), "features", "lv,reference-tracer,optiland");
     // 16 runs as written, 18 as run: the fixed-iris zoom is run at both ends.
     assert.equal(manifest.runs.length, 18);
     assert.ok(manifest.runs.every((run) => run.caseId !== null && run.problems.length === 0));

@@ -21,12 +21,12 @@ The supportable sentence's figures are over the configurations it counts, while 
 | Ray trace | `ray-trace` | Hits, directions, image landings and masks of identical rays | held to a limit | 8 | 16 | 32 | 32 Pass | landing.maxDistance 1.56e-2 mm; benchmark / artificial-line; lv / optiland at field 0 |
 | Optical path | `optical-path` | Optical path, path to image and chief-relative OPD of identical rays | held to a limit | 8 | 16 | 32 | 32 Pass | opticalPath.maxAbs 1.56e-2 waves; benchmark / artificial-line; lv / optiland at field 0 |
 | Geometric MTF of the same rays | `geometric-mtf` | This tool's geometric MTF of identical rays, as each engine traces them | held to a limit | 8 | 16 | 32 | 32 Pass | mtf.maxAbs 1.56e-2 (no unit); benchmark / artificial-line; lv / optiland at field 0 |
-| LensVisualizer's MTF sampling, replayed | `lv-mtf-replay` | LensVisualizer's geometric MTF beside a replay of its own sampling | held to a limit | 8 | 8 | 16 | 16 Pass | synthetic.maxAbs 1.56e-2 (no unit); benchmark / artificial-line; lv / replay at field 0 |
+| LensVisualizer's MTF sampling, replayed | `lv-mtf-replay` | LensVisualizer's geometric MTF beside a replay of its own sampling | held to a limit | 8 | 8 | 16 | 16 Pass | synthetic.maxAbs 1.56e-2 (no unit); benchmark / artificial-line; lv / replay-of-lv-mtf at field 0 |
 | MTF beside optiland's FFT MTF | `mtf-vs-optiland-fft` | LensVisualizer's diffraction MTF beside optiland's FFT MTF and the wave estimate of LensVisualizer's rays | side by side, no limit | 2 | 2 | 2 | 1 Side by side, worth a look; 1 Not computed | mtfOnAxis.maxAbs 1.25e-1 (no unit); benchmark / artificial-line; lv / optiland at cut sagittal, field 0 of the image height, frequencyPerMm 10 |
 | Geometric MTF beside optiland's | `geometric-mtf-vs-optiland` | Geometric MTF on each method's own pupil sampling | side by side, no limit | 2 | 2 | 2 | 2 Side by side, worth a look | mtfOnAxis.maxAbs 1.25e-1 (no unit); benchmark / artificial-line; lv / optiland at cut sagittal, field 0 of the image height, frequencyPerMm 10 |
 | Wave MTF of the same rays | `wave-mtf` | This tool's wave MTF of identical rays, as each engine traces them, in fields whose sampling settled | held to a limit | 8 | 16 | 32 | 32 Pass | waveMtf.maxAbs 1.56e-2 (no unit); benchmark / artificial-line; lv / optiland at field 0 |
-| MTF beside the wave estimate of LensVisualizer's rays | `mtf-vs-wave-estimate` | LensVisualizer's sheared diffraction MTF beside this tool's wave OTF of LensVisualizer's rays | side by side, no limit | 2 | 2 | 2 | 2 Side by side, worth a look | mtfOnAxis.maxAbs 1.25e-1 (no unit); benchmark / artificial-line; lv / wave at cut sagittal, field 0 of the image height, frequencyPerMm 10 |
-| MTF beside the OTF of optiland's wavefront | `mtf-vs-optiland-wavefront` | LensVisualizer's MTF, the wave OTF of its rays and optiland's FFT MTF beside this tool's OTF of optiland's raw wavefronts | side by side, no limit | 2 | 2 | 2 | 2 Side by side, worth a look | mtfOnAxis.maxAbs 1.25e-1 (no unit); benchmark / artificial-line; lv / optiland-wave at cut sagittal, field 0 of the image height, frequencyPerMm 10 |
+| MTF beside the wave estimate of LensVisualizer's rays | `mtf-vs-wave-estimate` | LensVisualizer's sheared diffraction MTF beside this tool's wave OTF of LensVisualizer's rays | side by side, no limit | 2 | 2 | 2 | 2 Side by side, worth a look | mtfOnAxis.maxAbs 1.25e-1 (no unit); benchmark / artificial-line; lv / wave-mtf-of-lv-rays at cut sagittal, field 0 of the image height, frequencyPerMm 10 |
+| MTF beside the OTF of optiland's wavefront | `mtf-vs-optiland-wavefront` | LensVisualizer's MTF, the wave OTF of its rays and optiland's FFT MTF beside this tool's OTF of optiland's raw wavefronts | side by side, no limit | 2 | 2 | 2 | 2 Side by side, worth a look | mtfOnAxis.maxAbs 1.25e-1 (no unit); benchmark / artificial-line; lv / otf-of-optiland-wavefront at cut sagittal, field 0 of the image height, frequencyPerMm 10 |
 
 ### Limits and largest values
 
@@ -69,8 +69,8 @@ The supportable sentence's figures are over the configurations it counts, while 
 
 - limit: synthetic.maxAbs 1.25e-1 (no unit)
 - limit: synthetic.zero 0 elements
-- synthetic.maxAbs 1.56e-2 (no unit); benchmark / artificial-line; lv / replay at field 0; measured request pairs 16
-- synthetic.zero 0 elements; benchmark / artificial-line; lv / replay; measured request pairs 16
+- synthetic.maxAbs 1.56e-2 (no unit); benchmark / artificial-line; lv / replay-of-lv-mtf at field 0; measured request pairs 16
+- synthetic.zero 0 elements; benchmark / artificial-line; lv / replay-of-lv-mtf; measured request pairs 16
 
 #### MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft`
 
@@ -98,14 +98,14 @@ The supportable sentence's figures are over the configurations it counts, while 
 - sorting limit: chiefLanding.maxAbs 1.56e-2 mm
 - review band: mtfOffAxis.maxAbs 1.25e-1 (no unit)
 - review band: mtfOnAxis.maxAbs 6.25e-2 (no unit)
-- mtfOnAxis.maxAbs 1.25e-1 (no unit); benchmark / artificial-line; lv / wave at cut sagittal, field 0 of the image height, frequencyPerMm 10; measured request pairs 2
+- mtfOnAxis.maxAbs 1.25e-1 (no unit); benchmark / artificial-line; lv / wave-mtf-of-lv-rays at cut sagittal, field 0 of the image height, frequencyPerMm 10; measured request pairs 2
 
 #### MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront`
 
 - sorting limit: chiefLanding.maxAbs 1.56e-2 mm
 - review band: mtfOffAxis.maxAbs 1.25e-1 (no unit)
 - review band: mtfOnAxis.maxAbs 6.25e-2 (no unit)
-- mtfOnAxis.maxAbs 1.25e-1 (no unit); benchmark / artificial-line; lv / optiland-wave at cut sagittal, field 0 of the image height, frequencyPerMm 10; measured request pairs 2
+- mtfOnAxis.maxAbs 1.25e-1 (no unit); benchmark / artificial-line; lv / otf-of-optiland-wavefront at cut sagittal, field 0 of the image height, frequencyPerMm 10; measured request pairs 2
 
 ## External diffraction counterparts
 
@@ -114,7 +114,7 @@ Both external diffraction counterparts are set side by side with LensVisualizer,
 | Check | Counterpart | Configurations | Rows | Rows by class | Worst of the rows with a review band | Worst set aside |
 |---|---|---:|---:|---|---|---|
 | MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | optiland | 2 | 24 | 4 the methods differ (`method`); 4 not converged (`numerical`); 16 not computed by one engine (`unsupported`) | mtf.maxAbs 1.25e-1 (no unit); benchmark / artificial-line; lv / optiland at cut sagittal, field 0 of the image height, frequencyPerMm 10 | mtf.maxAbs 3.75e-1 (no unit); benchmark / artificial-line; lv / optiland at cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 10 |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | optiland-wave | 2 | 24 | 8 the methods differ (`method`); 8 not converged (`numerical`); 8 not computed by one engine (`unsupported`) | mtf.maxAbs 1.25e-1 (no unit); benchmark / artificial-line; lv / optiland-wave at cut sagittal, field 0 of the image height, frequencyPerMm 10 | mtf.maxAbs 3.75e-1 (no unit); benchmark / artificial-line; lv / optiland-wave at cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 10 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | otf-of-optiland-wavefront | 2 | 24 | 8 the methods differ (`method`); 8 not converged (`numerical`); 8 not computed by one engine (`unsupported`) | mtf.maxAbs 1.25e-1 (no unit); benchmark / artificial-line; lv / otf-of-optiland-wavefront at cut sagittal, field 0 of the image height, frequencyPerMm 10 | mtf.maxAbs 3.75e-1 (no unit); benchmark / artificial-line; lv / otf-of-optiland-wavefront at cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 10 |
 
 ### MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft`: optiland
 
@@ -131,7 +131,7 @@ Both external diffraction counterparts are set side by side with LensVisualizer,
 | benchmark | artificial-line / 0 | 500 | 500 | 0: method / two-methods; 0.5: numerical / unconverged; 1: unsupported / no-curve | 1.56e-2 | Side by side, worth a look |
 | benchmark | artificial-several / 0 | 400, 600 |  | 0: unsupported / no-curve; 0.5: unsupported / no-curve; 1: unsupported / no-curve | 1.56e-2 | Not computed |
 
-### MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront`: optiland-wave
+### MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront`: otf-of-optiland-wavefront
 
 - Wavelengths asked of LensVisualizer (nm): 400, 500, 600
 - Wavelengths the counterpart answered (nm): 400, 500, 600
@@ -215,14 +215,14 @@ The SHA-256 hashes of the eight baseline files this statement is rendered from, 
 
 | Baseline file | SHA-256 |
 |---|---|
-| baselines/benchmark.json | a7bf02155932fb6d5605e669f59d18a5de447e7c1d7d3f2c159d709f6f9ec2c4 |
-| baselines/benchmark.mtf.json | deaeb0caf32da47c056ee461625851124fea279d266b33c29ef821798a10ee25 |
-| baselines/features.json | 4977e471c07fe18726b4eb577366ee77abfe55c5471668f1e62f3a18d0081185 |
-| baselines/features.mtf.json | 38f65274d84acc43bcddc09f20f40565551cebd80202de16bff0289355c5299a |
-| baselines/states.json | 2dc3ecf56edf724987f78fec7943756b55851f53e5c969f8f427d967d888a234 |
-| baselines/states.mtf.json | 1f417e60af80a87228d91db4ccdf6dcd7a88c3d5e19f1523a18e8cd8951956d3 |
-| baselines/focus-stations.json | 07b4df6f57e7c72aebe81d4127ae24ee2352e008d8e7bb05b9bf718d1b083d5f |
-| baselines/focus-stations.mtf.json | d033c8af02d8bdf4199454211d2a3d58a643e3cf49ca3628fbeb1cb79229abd2 |
+| baselines/benchmark.json | cba47314871dc931b291b15c7ce1004d93fdfc03eececdc9bbd4e06338d23415 |
+| baselines/benchmark.mtf.json | c98e1b1ad455488ef6c255867b3c0a42d3ef4bf5c041e58e17eff53bab1632b1 |
+| baselines/features.json | 4bb5f6a6b2866a891fe6fec0d9df9b3c92c330ff7d08cddaf22ff899069aa97c |
+| baselines/features.mtf.json | ec494a51cb7903ba017c6d651ca3e5b13c7114a316c7a2f5c94e8b137c2c78de |
+| baselines/states.json | 1645695cc51504e92c22c017ee93bbe5678191e08d446cf88948eed2e578f071 |
+| baselines/states.mtf.json | 702e246b7ca9804674980e62a291eab988b0f546207a22fefc06c79be7d32f1f |
+| baselines/focus-stations.json | ca7ceab0f098e586531a6d6e70676ad720c9e2c2365ecb771d884f8f8a47ba0e |
+| baselines/focus-stations.mtf.json | 1316f0a8722d2e20057bc840a7db02091b3815ad07a1756a6ce639dfe1bab83e |
 
 | Suite | Named state | Lens state (SHA-256) |
 |---|---|---|

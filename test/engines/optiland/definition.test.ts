@@ -45,6 +45,7 @@ import { RAYS_SPEC_SINGLET } from "../../contract/corpus.ts";
 import { caseFixture, tempDir } from "../../core/support.ts";
 import { CASE, echoRequest } from "../support.ts";
 import { FAKE_OPTILAND_MISSING, fakeOptilandRoot } from "./support.ts";
+import { CODES } from "../../../src/vocabulary/index.ts";
 
 const skip = FAKE_OPTILAND_MISSING;
 const FAKE_ENGINE = fileURLToPath(new URL("../../../src/engines/fake/engine.ts", import.meta.url));
@@ -139,15 +140,18 @@ test("without an interpreter the engine is not-configured, and the message says 
         assert.deepEqual([error.engineId, error.code], ["optiland", "not-configured"]);
         assert.equal(
           error.message,
-          "engine optiland is unavailable (not-configured): no interpreter is configured for it: " +
-            "set engines.optiland.python in lvrtc.local.json (or LVRTC_OPTILAND_PYTHON) to an interpreter that can " +
-            "import optiland, as lvrtc.local.example.json shows",
+          "engine optiland is unavailable (not-configured): no interpreter is configured for it. " +
+            "Set engines.optiland.python in lvrtc.local.json (or LVRTC_OPTILAND_PYTHON) to a Python interpreter that " +
+            "can import optiland.",
         );
         return true;
       },
     );
   }
   assert.match(OPTILAND_SETTING_HINT, /lvrtc\.local\.json/);
+  // The hint is the remedy the vocabulary gives both codes, word for word, so a command prints it once.
+  for (const code of ["not-configured", "spawn-failed"])
+    assert.ok(CODES[code].remedy.includes(OPTILAND_SETTING_HINT), code);
 });
 
 test("an interpreter that is not on this machine is spawn-failed, with the path and what to set", (t) => {
@@ -162,7 +166,7 @@ test("an interpreter that is not on this machine is spawn-failed, with the path 
       assert.equal(error.code, "spawn-failed");
       assert.equal(
         error.message,
-        `engine optiland is unavailable (spawn-failed): its interpreter ${python} does not exist: ` +
+        `engine optiland is unavailable (spawn-failed): its interpreter ${python} does not exist. ` +
           OPTILAND_SETTING_HINT,
       );
       return true;
@@ -180,17 +184,17 @@ test("optiland is a built-in engine: named under any root, unavailable alone whe
   assert.deepEqual(registry.ids(), []);
   assert.ok(registry.builtinIds().includes("optiland"));
   const error = await unavailable(registry.create("optiland"), "not-configured");
-  assert.match(error.message, /set engines\.optiland\.python in lvrtc\.local\.json \(or LVRTC_OPTILAND_PYTHON\)/);
+  assert.match(error.message, /Set engines\.optiland\.python in lvrtc\.local\.json \(or LVRTC_OPTILAND_PYTHON\)/);
   await unavailable(createEngineTransport(loaded, "optiland"), "not-configured");
 
   const wrong = loadConfig({ rootDir: rootWith(t, {}), env: { LVRTC_OPTILAND_PYTHON: "/nowhere/python" } });
   const missing = await unavailable(createEngineRegistry(wrong).create("optiland"), "spawn-failed");
-  assert.match(missing.message, /its interpreter \/nowhere\/python does not exist: set engines\.optiland\.python/);
+  assert.match(missing.message, /its interpreter \/nowhere\/python does not exist\. Set engines\.optiland\.python/);
 
   // Every other engine carries on.
-  const ref = await registry.create("ref");
+  const ref = await registry.create("reference-tracer");
   t.after(() => ref.close());
-  assert.equal((await ref.describe()).identity.id, "ref");
+  assert.equal((await ref.describe()).identity.id, "reference-tracer");
 });
 
 test("the engine's own waits are used unless the configuration defines the id itself", (t) => {
@@ -198,7 +202,7 @@ test("the engine's own waits are used unless the configuration defines the id it
   assert.ok((OPTILAND_TIMEOUTS.helloMs ?? 0) > DEFAULT_ENGINE_TIMEOUTS.helloMs);
   const loaded = loadConfig({ rootDir: rootWith(t, {}), env: {} });
   assert.deepEqual(engineTimeouts(loaded, "optiland"), { helloMs: 180_000 });
-  assert.deepEqual(engineTimeouts(loaded, "ref"), {});
+  assert.deepEqual(engineTimeouts(loaded, "reference-tracer"), {});
   assert.deepEqual(engineTimeouts(loaded, "lv"), {});
   assert.deepEqual(engineTimeouts(loaded, "nobody"), {});
   assert.deepEqual(engineTimeouts(loaded, "constructor"), {});
@@ -540,10 +544,16 @@ test("lvrtc run: optiland without an interpreter is unavailable, and the other e
   const rootDir = suiteRoot(t, ["pipeline-echo"]);
   const ended = await run(rootDir, ["--engines", "fake-a,optiland"]);
   assert.equal(ended.code, EXIT_FAILURE);
-  assert.match(ended.out, /^singlet {2}pipeline-echo {16}fake-a {9}answered {17}asked now$/m);
+  assert.match(ended.out, /^singlet {2}pipeline-echo {16}fake-a {21}answered {17}asked now$/m);
   assert.match(
     ended.out,
-    /^singlet {2}pipeline-echo {16}optiland {7}error {20}engine unusable {2}not-configured: engine optiland is unavailable \(not-configured\): no interpreter is configured for it: set engines\.optiland\.python in lvrtc\.local\.json/m,
+    /^singlet {2}pipeline-echo {16}optiland {19}error {20}engine unusable {2}not-configured: engine optiland is unavailable \(not-configured\): no interpreter is configured for it\. Set engines\.optiland\.python in lvrtc\.local\.json/m,
+  );
+  // The fix is said once: the remedy under the line leaves out the sentence the message already said.
+  assert.equal(ended.out.split("Set engines.optiland.python").length, 2, ended.out);
+  assert.match(
+    ended.out,
+    /^ {4}\(or the environment variable LVRTC_LV_PATH\) to a LensVisualizer checkout\. Or check the engine id\.$/m,
   );
   const manifest: RunManifest = JSON.parse(readFileSync(join(rootDir, "runs", "pair", MANIFEST_FILE), "utf8"));
   assert.deepEqual(
@@ -568,9 +578,9 @@ test(
     assert.equal(ended.code, EXIT_OK, ended.out);
     const rows = ended.out.split("\n").filter((line) => line.startsWith("singlet") && line.includes("optiland"));
     assert.deepEqual(rows, [
-      "singlet  pipeline-echo                optiland       not computed             not offered      the engine does not offer selftest.echo",
+      "singlet  pipeline-echo                optiland                   not computed             not offered      the engine does not offer selftest.echo",
     ]);
-    assert.match(ended.out, /^singlet {2}pipeline-echo {16}fake-a {9}answered {17}asked now$/m);
+    assert.match(ended.out, /^singlet {2}pipeline-echo {16}fake-a {21}answered {17}asked now$/m);
     const manifest: RunManifest = JSON.parse(readFileSync(join(rootDir, "runs", "pair", MANIFEST_FILE), "utf8"));
     const engine = manifest.engines.find((entry) => entry.id === "optiland");
     assert.ok(engine !== undefined && engine.status === "available");

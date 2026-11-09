@@ -1160,11 +1160,11 @@ export function renderHelp(view: HelpView): string {
     h(2, GLOSSARY_TEXT.engines),
     p(GLOSSARY_TEXT.enginesIntro),
     table(
-      [C.engine, C.id, C.newId, C.whatItIs],
+      [C.engine, C.id, C.oldId, C.whatItIs],
       view.engines.map((each) => [
         escapeHtml(each.name),
         code(each.id),
-        code(each.newId),
+        code(each.oldId),
         escapeHtml(each.description),
       ]),
     ),
@@ -2142,7 +2142,7 @@ function cardBlock(view: CompareView, card: CompareCard): string[] {
   ];
   if (card.recorded.length + card.notCompared.length > 0) {
     out.push(h(3, text.recordedHeading));
-    if (card.tab === "vignetting") out.push(p(text.flux(engineName("flux")), "muted"));
+    if (card.tab === "vignetting") out.push(p(text.flux(engineName("flux-of-lv-rays")), "muted"));
     out.push(...recordedTable(view, card.recorded));
     out.push(...card.notCompared.map((rung) => p(text.notCompared(checkName(rung)), "muted")));
   }

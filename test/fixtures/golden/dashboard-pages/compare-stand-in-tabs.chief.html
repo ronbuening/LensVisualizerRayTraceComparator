@@ -168,7 +168,7 @@ figure{margin:8px 0 16px}figcaption{color:var(--muted);max-width:110ch;margin-to
 <h3>Identical rays</h3>
 <div class="scroll"><table>
 <tr><th>Check</th><th>Pairs</th><th>Largest</th><th>Limit</th></tr>
-<tr><td>Chief rays (distortion, pupils, lateral colour) <code>chief-rays</code></td><td><code>moved</code> and <span title="ref">Reference tracer</span> <span class="v-FAIL" title="FAIL">Fail: beyond limit</span><br><code>moved</code> and <code>stopped</code> <span class="v-FAIL" title="FAIL">Fail: beyond limit</span><br><span title="ref">Reference tracer</span> and <code>stopped</code> <span class="v-FAIL" title="FAIL">Fail: beyond limit</span></td><td><span title="landing.maxAbs">Largest difference, along x or y, of the two engines&#39; landings of a chief or reference ray</span> <span class="fig" title="r9a-stand-ins/comparisons.json /comparisons/0/pairs/0/metrics/0/value">1.49e-8</span> (<code>moved</code> and <span title="ref">Reference tracer</span>)</td><td><span class="fig" title="policy/compare-policy.json /rungs/chief-rays/metrics/landing.maxAbs/tolerance">1.00e-8</span></td></tr>
+<tr><td>Chief rays (distortion, pupils, lateral colour) <code>chief-rays</code></td><td><code>moved</code> and <span title="reference-tracer">Reference tracer</span> <span class="v-FAIL" title="FAIL">Fail: beyond limit</span><br><code>moved</code> and <code>stopped</code> <span class="v-FAIL" title="FAIL">Fail: beyond limit</span><br><span title="reference-tracer">Reference tracer</span> and <code>stopped</code> <span class="v-FAIL" title="FAIL">Fail: beyond limit</span></td><td><span title="landing.maxAbs">Largest difference, along x or y, of the two engines&#39; landings of a chief or reference ray</span> <span class="fig" title="r9a-stand-ins/comparisons.json /comparisons/0/pairs/0/metrics/0/value">1.49e-8</span> (<code>moved</code> and <span title="reference-tracer">Reference tracer</span>)</td><td><span class="fig" title="policy/compare-policy.json /rungs/chief-rays/metrics/landing.maxAbs/tolerance">1.00e-8</span></td></tr>
 <tr><td>First-order data <code>first-order</code></td><td><span class="muted">none</span></td><td><span class="muted">—</span></td><td><span class="muted">—</span></td></tr>
 </table></div>
 <p class="muted">Read from the comparisons of the run directories r9a-stand-ins.</p>
@@ -552,13 +552,13 @@ figure{margin:8px 0 16px}figcaption{color:var(--muted);max-width:110ch;margin-to
 <form method="post" action="/control/lens">
 <input type="hidden" name="token" value="0000000000000000000000000000000000000000000000000000000000000000">
 <input type="hidden" name="lens" value="stand-in-tabs">
-<label>Engines <input type="text" name="engines" size="24" placeholder="lv,ref,optiland"></label>
+<label>Engines <input type="text" name="engines" size="24" placeholder="lv,reference-tracer,optiland"></label>
 <label>Profile <select name="profile"><option value="">benchmark</option><option value="tabs">tabs</option><option value="both" selected>both</option></select></label>
 <label>Aperture <select name="aperture"><option value="">both</option><option value="wide-open">wide-open</option><option value="f/8">f/8</option></select></label>
 <label>Jobs <input type="number" name="jobs" min="1" max="4" value="1"></label>
 <button type="submit">Run this lens</button>
 </form>
-<p>Engines are optional, ids of lv, ref, optiland separated by commas (lv alone when left empty); the aperture is one of wide-open, f/8, or both when left empty; the profile is one of benchmark, tabs, both, or benchmark when left empty; jobs is 1 to 4, and no more than the memory budget of this machine allows.</p>
+<p>Engines are optional, ids of lv, reference-tracer, optiland separated by commas (lv alone when left empty); the aperture is one of wide-open, f/8, or both when left empty; the profile is one of benchmark, tabs, both, or benchmark when left empty; jobs is 1 to 4, and no more than the memory budget of this machine allows.</p>
 </main>
 </body>
 </html>

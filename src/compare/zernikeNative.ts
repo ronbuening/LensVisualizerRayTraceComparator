@@ -1,8 +1,8 @@
 // The comparator of `zernike.native` for rung R14b: two engines' own wavefront figures of one case at one line, field
 // by field. optiland's own `ZernikeFit` of its wavefront beside the comparator's estimator (src/estimators/zernike.ts)
-// on optiland's raw samples of the same wavefront (`optiland-wave`) is the pair the rung is named for: the same data
-// and two fits, so a difference is of the fits (their bases, orderings, normalisations and solutions) and of the
-// figures' arithmetic, never of the wavefront. Nothing here is gated.
+// on optiland's raw samples of the same wavefront (`otf-of-optiland-wavefront`) is the pair the rung is named for: the
+// same data and two fits, so a difference is of the fits (their bases, orderings, normalisations and solutions) and of
+// the figures' arithmetic, never of the wavefront. Nothing here is gated.
 //
 // A field is sorted before any difference is taken, by R5's sorting (`classifyNativeField`, src/compare/mtfNative.ts):
 // unsupported (an answer has no figures of it), data (other wavelengths; chief rays that land further apart than the
@@ -54,7 +54,8 @@ export const CONDITION_METRIC = "fitCondition.max";
 
 /**
  * The largest condition either answer states of a field the sorting set aside as numerical: a figure of the fields in
- * no figure, shown and never judged (the policy gives it no band), as R5 shows nothing of an unconverged field's moduli.
+ * no figure, shown and never judged (the policy gives it no band), as R5 shows nothing of an unconverged field's
+ * moduli.
  */
 export const SET_ASIDE_CONDITION_METRIC = "fitCondition.setAsideMax";
 

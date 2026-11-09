@@ -107,7 +107,7 @@ test("the report of a baseline: verdicts by run and by request, the worst figure
   assert.deepEqual(renderBaselineReport(JSON.parse(baselineText(BASELINE_RAYS))), { markdown, json });
   assert.match(
     markdown,
-    /^\| Ray trace — `ray-trace` \| `rays\.trace` \| 1 \| 2 \| lv – ref \| 1 Within a numerical floor \| 1 Pass; 1 Within a numerical floor \|$/m,
+    /^\| Ray trace — `ray-trace` \| `rays\.trace` \| 1 \| 2 \| lv – reference-tracer \| 1 Within a numerical floor \| 1 Pass; 1 Within a numerical floor \|$/m,
   );
   assert.match(
     markdown,
@@ -115,7 +115,7 @@ test("the report of a baseline: verdicts by run and by request, the worst figure
   );
   assert.match(
     markdown,
-    /^\| lv – ref \| Largest distance between the two engines' ray landings on the image plane — `landing\.maxDistance` \| mm \| ≤ 1\.00e-8 \| 1\.25e-8 \| zoom-wide \| field 54 deg, line 0, ray 4 \|$/m,
+    /^\| lv – reference-tracer \| Largest distance between the two engines' ray landings on the image plane — `landing\.maxDistance` \| mm \| ≤ 1\.00e-8 \| 1\.25e-8 \| zoom-wide \| field 54 deg, line 0, ray 4 \|$/m,
   );
   assert.match(
     markdown,

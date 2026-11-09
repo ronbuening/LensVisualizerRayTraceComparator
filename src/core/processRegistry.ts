@@ -431,7 +431,9 @@ export function createProcessRegistry(
         }));
       const definition = loaded.config.engineDefinitions[id];
       const persistent =
-        definition === undefined ? ["optiland", "optiland-wave"].includes(id) : definition.transport === "stdio";
+        definition === undefined
+          ? ["optiland", "otf-of-optiland-wavefront"].includes(id)
+          : definition.transport === "stdio";
       // The slots whose replica of this engine has ended while the slot lives on. An earlier job asked late (a
       // duplicate after a failed answer) goes to a slot whose replica lives, as long as one does: a replica is not
       // restarted, and the serial engine would still have answered that job.

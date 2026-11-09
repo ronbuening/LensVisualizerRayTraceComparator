@@ -6,11 +6,12 @@
 //
 // R11a is gated: every pair of the three engines passes, no ray is valid in one engine and not in another, every
 // field's flux into the image is measured and so is the landing of each field's stop-centre ray. R11b is recorded, of
-// LensVisualizer and the engine `flux`. What is held is that LensVisualizer answers exactly the ask its tab answers and
-// says why not of the other, that `flux` answers every ask, that every field of the design runs is of two methods
-// within the limit of the sorting, that since LensVisualizer #931 the tab's geometric transmission and the flux's are
-// one measure on two stop lattices, the share of the stop's samples that reach the image, within R11b's band of each
-// other across the wide angle's field (docs/gotchas.md, "Vignetting"), and that the report claims nothing it may not.
+// LensVisualizer and the engine `flux-of-lv-rays`. What is held is that LensVisualizer answers exactly the ask its tab
+// answers and says why not of the other, that `flux-of-lv-rays` answers every ask, that every field of the design runs
+// is of two methods within the limit of the sorting, that since LensVisualizer #931 the tab's geometric transmission
+// and the flux's are one measure on two stop lattices, the share of the stop's samples that reach the image, within
+// R11b's band of each other across the wide angle's field (docs/gotchas.md, "Vignetting"), and that the report claims
+// nothing it may not.
 import assert from "node:assert/strict";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -63,7 +64,7 @@ test(
     const { manifest, comparisons, runsDir } = runAndCompare(t, {
       suite,
       name: "benchmark",
-      engines: "lv,ref,optiland",
+      engines: "lv,reference-tracer,optiland",
       rungs: "vignetting-rays,vignetting-vs-flux-estimate",
     });
 
@@ -104,7 +105,7 @@ test(
     // R11b: LensVisualizer answers its tab's ask at the authored line; a photopic run has no line of the tab's and no
     // ask, and a case off the design plane is refused by lv and answered by flux.
     const native = manifest.jobs.filter((job) => job.rung === "vignetting-vs-flux-estimate");
-    assert.deepEqual([...new Set(native.map((job) => job.engine))].sort(), ["flux", "lv"]);
+    assert.deepEqual([...new Set(native.map((job) => job.engine))].sort(), ["flux-of-lv-rays", "lv"]);
     assert.equal(native.length, 2 * 3);
     assert.ok(!native.some((job) => job.run === PHOTOPIC));
     const statuses = (run: string, engine: string): string[] =>
@@ -116,7 +117,7 @@ test(
     assert.deepEqual(statuses(DESIGN, "lv"), ["ok"]);
     assert.deepEqual(statuses(WIDE, "lv"), ["ok"]);
     assert.deepEqual(statuses(BEST, "lv"), ["focus.off-design"]);
-    for (const run of [DESIGN, BEST, WIDE]) assert.deepEqual(statuses(run, "flux"), ["ok"], run);
+    for (const run of [DESIGN, BEST, WIDE]) assert.deepEqual(statuses(run, "flux-of-lv-rays"), ["ok"], run);
 
     const recorded = pairsOf(comparisons, "vignetting-vs-flux-estimate", VIGNETTING_NATIVE);
     assert.equal(recorded.length, 3);
@@ -148,7 +149,7 @@ test(
       (candidate) => candidate.requestId === of(WIDE).requestId && candidate.mode === "pairwise",
     );
     const side = (engine: string) => set?.participants.find((participant) => participant.engine === engine)?.recorded;
-    const [lv, flux] = [side("lv"), side("flux")];
+    const [lv, flux] = [side("lv"), side("flux-of-lv-rays")];
     assert.ok(lv !== undefined && flux !== undefined);
     const curve = (values: readonly (number | null)[]): number[] => values.map((v) => v ?? Number.NaN);
     const [tab, lattice] = [curve(lv.geometricTransmission), curve(flux.geometricTransmission)];

@@ -320,7 +320,7 @@ export function buildStatement(inputs: readonly StatementInput[], maps: LegacyMa
   });
   const counterparts = [
     counterpart(records, "mtf-vs-optiland-fft", "optiland"),
-    counterpart(records, "mtf-vs-optiland-wavefront", "optiland-wave"),
+    counterpart(records, "mtf-vs-optiland-wavefront", "otf-of-optiland-wavefront"),
   ];
   const wavelengthsNm = sortedNumbers(counterparts.flatMap((c) => c.linesNm));
   const required = ["ray-trace", "optical-path", "geometric-mtf", "wave-mtf"];
@@ -335,7 +335,7 @@ export function buildStatement(inputs: readonly StatementInput[], maps: LegacyMa
                 r.suite === suite.suite &&
                 r.run.name === state.run &&
                 r.rung.rung === id &&
-                ["optiland", "ref"].every((engine) =>
+                ["optiland", "reference-tracer"].every((engine) =>
                   r.rung.pairs.some(
                     (p) =>
                       p.a === "lv" &&

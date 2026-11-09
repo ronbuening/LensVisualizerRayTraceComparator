@@ -1,7 +1,8 @@
-// The engine `replay`: the comparator's own estimators on a replay of LensVisualizer's sampling. It answers
-// `mtf.native` for the request the engine `lv` would make for the same case and spec, and where `lv` hands that
-// request to LensVisualizer's `computeMtf`, this engine replays LensVisualizer's sampling of it (`replayLvMtf`) and
-// puts the comparator's geometric estimator on the rays. Rung R4f holds the two answers to each other.
+// The engine `replay-of-lv-mtf` (`replay` before Stage 9.8): the comparator's own estimators on a replay of
+// LensVisualizer's sampling. It answers `mtf.native` for the request the engine `lv` would make for the same case and
+// spec, and where `lv` hands that request to LensVisualizer's `computeMtf`, this engine replays LensVisualizer's
+// sampling of it (`replayLvMtf`) and puts the comparator's geometric estimator on the rays. Rung R4f holds the two
+// answers to each other.
 //
 // It is no independent engine: its rays are LensVisualizer's, launched and traced by LensVisualizer. What is its
 // own is which bundles it asks for, what it sums and how, which is the comparator's understanding of
@@ -23,7 +24,7 @@ import type { LvReplay, LvReplayApi } from "./replay.ts";
 import type { LvMtfOptions } from "./types.ts";
 
 /** The id of the engine that is the comparator's estimators on LensVisualizer's own sampling. */
-export const LV_REPLAY_ENGINE_ID = "replay";
+export const LV_REPLAY_ENGINE_ID = "replay-of-lv-mtf";
 
 /** The version of the engine, for people. Results are keyed by its fingerprint and its adapter revision. */
 export const LV_REPLAY_ENGINE_VERSION = "1";
@@ -177,7 +178,7 @@ const IDENTITY: LvBackedIdentity = {
 };
 
 /**
- * The engine `replay` on a bound LensVisualizer checkout, as a protocol handler: `mtf.native` by
+ * The engine `replay-of-lv-mtf` on a bound LensVisualizer checkout, as a protocol handler: `mtf.native` by
  * `answerLvReplay`, and for a case everything the engine `lv` does (`createLvBackedEngine`): a case that is no
  * longer what LensVisualizer gives is "stale-case", and a case from any other source "unsupported".
  */
@@ -186,8 +187,8 @@ export function createLvReplayEngineOn(binding: LvBinding): ProtocolHandler {
 }
 
 /**
- * The engine `replay` on the LensVisualizer checkout at `lvPath`. Rejects with an `EngineUnavailableError` when
- * LensVisualizer cannot be bound, as the engine `lv` does.
+ * The engine `replay-of-lv-mtf` on the LensVisualizer checkout at `lvPath`. Rejects with an `EngineUnavailableError`
+ * when LensVisualizer cannot be bound, as the engine `lv` does.
  */
 export async function createLvReplayEngine(lvPath: string | null): Promise<ProtocolHandler> {
   return createLvReplayEngineOn(await bindLvFor(LV_REPLAY_ENGINE_ID, lvPath));

@@ -105,16 +105,34 @@ test("the same over stdio: the worker is started from the configuration and ends
   assert.match(ended.out, /^worker: conforms: 15 passed, 0 failed, 0 skipped$/m);
 });
 
-test("the built-in engine ref conforms under a root that defines no engine; it offers no selftest.echo", async (t) => {
-  const ended = await engine(["conformance", "ref"], { rootDir: rootWith(t, {}) });
+test("the built-in reference tracer conforms under a root that defines no engine; it offers no selftest.echo", async (t) => {
+  const ended = await engine(["conformance", "reference-tracer"], { rootDir: rootWith(t, {}) });
   assert.equal(ended.code, EXIT_OK, ended.out + ended.err);
   assert.equal(ended.err, "");
-  assert.match(ended.out, /^passed {3}engine-id +the descriptor names ref$/m);
+  assert.match(ended.out, /^passed {3}engine-id +the descriptor names reference-tracer$/m);
   assert.match(ended.out, /^passed {3}unknown-quantity +conformance\.no-such-quantity is answered "unsupported"$/m);
   assert.match(ended.out, /^passed {3}malformed-run +a run whose request has no spec is refused with ok: false$/m);
   assert.match(ended.out, /^skipped {2}echo\.matrix +the engine does not offer selftest\.echo$/m);
   assert.match(ended.out, /^passed {3}deterministic /m);
-  assert.match(ended.out, /^ref: conforms: 8 passed, 0 failed, 7 skipped$/m);
+  assert.match(ended.out, /^reference-tracer: conforms: 8 passed, 0 failed, 7 skipped$/m);
+});
+
+test("an engine named by the id it had before the rename is that engine, with one note", async (t) => {
+  const rootDir = rootWith(t, {});
+  const today = await engine(["conformance", "reference-tracer"], { rootDir });
+  const old = await engine(["conformance", "ref"], { rootDir });
+  assert.equal(old.code, EXIT_OK, old.out + old.err);
+  assert.equal(old.out, today.out);
+  assert.match(old.err, /^note: some ids were read under their new names: engine ref is now reference-tracer; /);
+  assert.equal(old.err.trim().split("\n").length, 1);
+  const described = await engine(["describe", "ref", "lv", "--json"], { rootDir });
+  assert.equal(described.code, EXIT_OK, described.err);
+  const { engines } = JSON.parse(described.out) as { engines: { id: string }[] };
+  assert.deepEqual(
+    engines.map((each) => each.id),
+    ["reference-tracer", "lv"],
+  );
+  assert.match(described.err, /engine ref is now reference-tracer/);
 });
 
 test("a built-in engine in a worker is waited for as long as it says, unless the command is given other waits", async (t) => {

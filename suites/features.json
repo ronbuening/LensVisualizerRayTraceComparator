@@ -2,7 +2,11 @@
   "contract": "1.0",
   "kind": "suite",
   "name": "features",
-  "defaults": { "aperture": { "kind": "wide-open" }, "imagePlane": { "kind": "design" }, "engines": ["lv", "ref"] },
+  "defaults": {
+    "aperture": { "kind": "wide-open" },
+    "imagePlane": { "kind": "design" },
+    "engines": ["lv", "reference-tracer"]
+  },
   "runs": [
     {
       "name": "odd-asphere-ref",

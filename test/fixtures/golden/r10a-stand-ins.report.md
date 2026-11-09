@@ -5,7 +5,7 @@
 | Input | Value |
 |---|---|
 | Suite | r10a-stand-ins |
-| Suite hash | dbba2ef2b8587819e37337050a85f8ebb843e42d1fc473ee7f03a67f8143547c |
+| Suite hash | 0128c41c5f08687d7a3e3b1f55c90f6faf2fc5266f2787cd267a8edd54850948 |
 | Contract version | 1.0 |
 | Limits file | v1 |
 | Limits file hash | 2634c37a382cead06434b2495fe329cbdd74e1d13e819058d46c64632ff6e0a6 |
@@ -14,9 +14,9 @@
 
 | Engine | Status | Version | Engine code | This tool's code behind it |
 |---|---|---|---|---|
-| moved | available | 1 | b7d0684b593261d14a1dfebb903774775bbe481a07ae2955689644dc0ffd919e | 2225e342b4fd8539480e933e59a3ca95a8ae2beeb24f45972b55fd4e4a59d357 |
-| ref | available | 1 | b7d0684b593261d14a1dfebb903774775bbe481a07ae2955689644dc0ffd919e | 2225e342b4fd8539480e933e59a3ca95a8ae2beeb24f45972b55fd4e4a59d357 |
-| stopped | available | 1 | b7d0684b593261d14a1dfebb903774775bbe481a07ae2955689644dc0ffd919e | 2225e342b4fd8539480e933e59a3ca95a8ae2beeb24f45972b55fd4e4a59d357 |
+| moved | available | 1 | 1285061cefc83b4538eba70d6a45fc6f0186be2b876f122a3721e150c5a34ed3 | 49ce9a07661a4cb64d5850ff62a4c3ac138b08fee37d05c86596498dcd7db117 |
+| reference-tracer | available | 1 | 1285061cefc83b4538eba70d6a45fc6f0186be2b876f122a3721e150c5a34ed3 | 49ce9a07661a4cb64d5850ff62a4c3ac138b08fee37d05c86596498dcd7db117 |
+| stopped | available | 1 | 1285061cefc83b4538eba70d6a45fc6f0186be2b876f122a3721e150c5a34ed3 | 49ce9a07661a4cb64d5850ff62a4c3ac138b08fee37d05c86596498dcd7db117 |
 
 ### Runs
 
@@ -60,12 +60,12 @@ Of 2 requests with a consensus to look for, 2 have one.
 | Engine | In the consensus | Outlier | Apart | Placed, no consensus | Not placed |
 |---|---|---|---|---|---|
 | moved | 1 | 1 | 0 | 0 | 0 |
-| ref | 2 | 0 | 0 | 0 | 0 |
+| reference-tracer | 2 | 0 | 0 | 0 | 0 |
 | stopped | 1 | 1 | 0 | 0 | 0 |
 
 ## Support matrix
 
-| Run | Check | moved | ref | stopped |
+| Run | Check | moved | reference-tracer | stopped |
 |---|---|---|---|---|
 | lens | field-curve-rays, request 1 of 2 | ok | ok | ok |
 | lens | field-curve-rays, request 2 of 2 | ok | ok | ok |
@@ -78,7 +78,7 @@ Of 2 requests with a consensus to look for, 2 have one.
 
 Quantity `rays.trace`: one estimator on each engine's trace of the same rays; held to a limit. Request `709bbb6dcdac471d6993cd95fe4039d2461bea51584489a2cfd263960368663b`.
 
-Reference vs each, against `ref`:
+Reference vs each, against `reference-tracer`:
 
 | Engine | landing.maxAbs (≤ 1.00e-8 mm) | mask.mismatches (≤ 0 rays) | mask.rimBand [rays] | sagittalFocus.maxScaled (≤ 1.00e-8 mm) | sagittalFocus.maxAbs [mm] | tangentialFocus.maxScaled (≤ 1.00e-8 mm) | tangentialFocus.maxAbs [mm] | astigmatism.maxAbs [mm] | rays.compared [rays] | rays.dropped [rays] | fields.compared [elements] | Verdict | Note |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -87,17 +87,17 @@ Reference vs each, against `ref`:
 
 Pairwise, the verdict of each two engines and the metric nearest to or furthest past its limit:
 
-| Engine | moved | ref | stopped |
+| Engine | moved | reference-tracer | stopped |
 |---|---|---|---|
 | moved | — | PASS (landing.maxAbs 0 at line 0, ray 0) | FAIL (mask.mismatches 1 at line 0, ray 3, surface 0) |
-| ref | PASS (landing.maxAbs 0 at line 0, ray 0) | — | FAIL (mask.mismatches 1 at line 0, ray 3, surface 0) |
+| reference-tracer | PASS (landing.maxAbs 0 at line 0, ray 0) | — | FAIL (mask.mismatches 1 at line 0, ray 3, surface 0) |
 | stopped | FAIL (mask.mismatches 1 at line 0, ray 3, surface 0) | FAIL (mask.mismatches 1 at line 0, ray 3, surface 0) | — |
 
-Consensus: `moved`, `ref`, every two of them within the limits of each other; outlier: `stopped`, beyond the limits of every engine of the consensus.
+Consensus: `moved`, `reference-tracer`, every two of them within the limits of each other; outlier: `stopped`, beyond the limits of every engine of the consensus.
 
 Recorded values, as each engine reports them. They are listed and never judged:
 
-| Value | moved | ref | stopped |
+| Value | moved | reference-tracer | stopped |
 |---|---|---|---|
 | rays.blocked[0] | 0 | 0 | 1 |
 | rays.failed[0] | 0 | 0 | 0 |
@@ -107,7 +107,7 @@ Recorded values, as each engine reports them. They are listed and never judged:
 
 Quantity `rays.trace`: one estimator on each engine's trace of the same rays; held to a limit. Request `007e6b4dd3ede455414a91d136fe046da004bcc7bd456f8a89f6cfdc3d56054d`.
 
-Reference vs each, against `ref`:
+Reference vs each, against `reference-tracer`:
 
 | Engine | landing.maxAbs (≤ 1.00e-8 mm) | mask.mismatches (≤ 0 rays) | mask.rimBand [rays] | sagittalFocus.maxScaled (≤ 1.00e-8 mm) | sagittalFocus.maxAbs [mm] | tangentialFocus.maxScaled (≤ 1.00e-8 mm) | tangentialFocus.maxAbs [mm] | astigmatism.maxAbs [mm] | rays.compared [rays] | rays.dropped [rays] | fields.compared [elements] | Verdict | Note |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -116,17 +116,17 @@ Reference vs each, against `ref`:
 
 Pairwise, the verdict of each two engines and the metric nearest to or furthest past its limit:
 
-| Engine | moved | ref | stopped |
+| Engine | moved | reference-tracer | stopped |
 |---|---|---|---|
 | moved | — | FAIL (landing.maxAbs 2.98e-8 at line 1, ray 6) | FAIL (landing.maxAbs 2.98e-8 at line 1, ray 6) |
-| ref | FAIL (landing.maxAbs 2.98e-8 at line 1, ray 6) | — | PASS (landing.maxAbs 0 at line 1, ray 0) |
+| reference-tracer | FAIL (landing.maxAbs 2.98e-8 at line 1, ray 6) | — | PASS (landing.maxAbs 0 at line 1, ray 0) |
 | stopped | FAIL (landing.maxAbs 2.98e-8 at line 1, ray 6) | PASS (landing.maxAbs 0 at line 1, ray 0) | — |
 
-Consensus: `ref`, `stopped`, every two of them within the limits of each other; outlier: `moved`, beyond the limits of every engine of the consensus.
+Consensus: `reference-tracer`, `stopped`, every two of them within the limits of each other; outlier: `moved`, beyond the limits of every engine of the consensus.
 
 Recorded values, as each engine reports them. They are listed and never judged:
 
-| Value | moved | ref | stopped |
+| Value | moved | reference-tracer | stopped |
 |---|---|---|---|
 | rays.blocked[0] | 0 | 0 | 0 |
 | rays.failed[0] | 0 | 0 | 0 |

@@ -19,7 +19,7 @@ engines are still those of the baseline. How to read this, near the end, says wh
 |---|---|---|---|
 | lv | LensVisualizer | 1 | clean checkout, 184 engine files |
 | optiland | optiland | 0.6.2.post117+g4e893f53 | backend numpy, checkout with uncommitted changes, JIT compilation on, Numba 0.65.1, NumPy 2.3.5, precision float64, Python 3.14.8, SciPy 1.16.3, 534 source files |
-| ref | Reference tracer | 1 | 13 source files |
+| reference-tracer | Reference tracer | 1 | 13 source files |
 
 ## Runs with a problem
 
@@ -33,20 +33,20 @@ engines are still those of the baseline. How to read this, near the end, says wh
 | Check | Quantity | Runs | Requests | Pair | Runs by verdict | Requests by verdict |
 |---|---|---|---|---|---|---|
 | Built system — `built-system` | `system.describe` | 72 | 72 | lv – optiland | 72 Pass | 72 Pass |
-| Built system — `built-system` | `system.describe` | 72 | 72 | lv – ref | 72 Pass | 72 Pass |
-| Built system — `built-system` | `system.describe` | 72 | 72 | optiland – ref | 72 Pass | 72 Pass |
+| Built system — `built-system` | `system.describe` | 72 | 72 | lv – reference-tracer | 72 Pass | 72 Pass |
+| Built system — `built-system` | `system.describe` | 72 | 72 | optiland – reference-tracer | 72 Pass | 72 Pass |
 | First-order data — `first-order` | `paraxial.first-order` | 72 | 72 | lv – optiland | 72 Pass | 72 Pass |
-| First-order data — `first-order` | `paraxial.first-order` | 72 | 72 | lv – ref | 72 Pass | 72 Pass |
-| First-order data — `first-order` | `paraxial.first-order` | 72 | 72 | optiland – ref | 72 Pass | 72 Pass |
+| First-order data — `first-order` | `paraxial.first-order` | 72 | 72 | lv – reference-tracer | 72 Pass | 72 Pass |
+| First-order data — `first-order` | `paraxial.first-order` | 72 | 72 | optiland – reference-tracer | 72 Pass | 72 Pass |
 | Ray trace — `ray-trace` | `rays.trace` | 72 | 206 | lv – optiland | 72 Pass | 206 Pass |
-| Ray trace — `ray-trace` | `rays.trace` | 72 | 206 | lv – ref | 72 Pass | 206 Pass |
-| Ray trace — `ray-trace` | `rays.trace` | 72 | 206 | optiland – ref | 72 Pass | 206 Pass |
+| Ray trace — `ray-trace` | `rays.trace` | 72 | 206 | lv – reference-tracer | 72 Pass | 206 Pass |
+| Ray trace — `ray-trace` | `rays.trace` | 72 | 206 | optiland – reference-tracer | 72 Pass | 206 Pass |
 | Optical path — `optical-path` | `rays.trace` | 72 | 206 | lv – optiland | 72 Pass | 206 Pass |
-| Optical path — `optical-path` | `rays.trace` | 72 | 206 | lv – ref | 72 Pass | 206 Pass |
-| Optical path — `optical-path` | `rays.trace` | 72 | 206 | optiland – ref | 72 Pass | 206 Pass |
+| Optical path — `optical-path` | `rays.trace` | 72 | 206 | lv – reference-tracer | 72 Pass | 206 Pass |
+| Optical path — `optical-path` | `rays.trace` | 72 | 206 | optiland – reference-tracer | 72 Pass | 206 Pass |
 | Geometric MTF of the same rays — `geometric-mtf` | `rays.trace` | 72 | 206 | lv – optiland | 72 Pass | 206 Pass |
-| Geometric MTF of the same rays — `geometric-mtf` | `rays.trace` | 72 | 206 | lv – ref | 72 Pass | 206 Pass |
-| Geometric MTF of the same rays — `geometric-mtf` | `rays.trace` | 72 | 206 | optiland – ref | 72 Pass | 206 Pass |
+| Geometric MTF of the same rays — `geometric-mtf` | `rays.trace` | 72 | 206 | lv – reference-tracer | 72 Pass | 206 Pass |
+| Geometric MTF of the same rays — `geometric-mtf` | `rays.trace` | 72 | 206 | optiland – reference-tracer | 72 Pass | 206 Pass |
 
 ## Support
 
@@ -57,19 +57,19 @@ In how many runs the jobs of an engine ended in each way. An engine that cannot 
 |---|---|---|
 | Built system — `built-system` | lv | 72 answered |
 | Built system — `built-system` | optiland | 72 answered |
-| Built system — `built-system` | ref | 72 answered |
+| Built system — `built-system` | reference-tracer | 72 answered |
 | First-order data — `first-order` | lv | 72 answered |
 | First-order data — `first-order` | optiland | 72 answered |
-| First-order data — `first-order` | ref | 72 answered |
+| First-order data — `first-order` | reference-tracer | 72 answered |
 | Ray trace — `ray-trace` | lv | 72 answered |
 | Ray trace — `ray-trace` | optiland | 72 answered |
-| Ray trace — `ray-trace` | ref | 72 answered |
+| Ray trace — `ray-trace` | reference-tracer | 72 answered |
 | Optical path — `optical-path` | lv | 72 answered |
 | Optical path — `optical-path` | optiland | 72 answered |
-| Optical path — `optical-path` | ref | 72 answered |
+| Optical path — `optical-path` | reference-tracer | 72 answered |
 | Geometric MTF of the same rays — `geometric-mtf` | lv | 72 answered |
 | Geometric MTF of the same rays — `geometric-mtf` | optiland | 72 answered |
-| Geometric MTF of the same rays — `geometric-mtf` | ref | 72 answered |
+| Geometric MTF of the same rays — `geometric-mtf` | reference-tracer | 72 answered |
 
 ## Built system — `built-system`
 
@@ -85,22 +85,22 @@ The worst of every figure over the suite:
 | lv – optiland | Refractive indices that differ — `index.mismatches` | elements | ≤ 0 | 0 | — | — |
 | lv – optiland | Largest sag difference at the sampled heights, over the size of a rounding there — `sag.maxScaled` | (no unit) | ≤ 1.00e-12 | 6.04e-16 | certified-tamron-35-150mm-f2-28-di-iii-vxd-a058-zoom0-focus1 | sample 6, surface 28 |
 | lv – optiland | Largest sag difference at the sampled heights — `sag.maxAbs` | mm | — | 8.88e-15 | certified-olympus-zuiko-digital-ed-7-14mm-f4-zoom0-focus1 | sample 8, surface 3 |
-| lv – ref | Surfaces whose count or place differs — `layout.mismatches` | elements | ≤ 0 | 0 | — | — |
-| lv – ref | Surfaces whose curvature, conic or asphere terms differ — `shape.mismatches` | elements | ≤ 0 | 0 | — | — |
-| lv – ref | Stops and clear apertures that differ — `aperture.mismatches` | elements | ≤ 0 | 0 | — | — |
-| lv – ref | Refractive indices that differ — `index.mismatches` | elements | ≤ 0 | 0 | — | — |
-| lv – ref | Largest sag difference at the sampled heights, over the size of a rounding there — `sag.maxScaled` | (no unit) | ≤ 1.00e-12 | 4.03e-16 | certified-fujifilm-gf-110mm-f56-ts-macro-zoom0-focus100 | sample 6, surface 10 |
-| lv – ref | Largest sag difference at the sampled heights — `sag.maxAbs` | mm | — | 5.33e-15 | certified-sigma-85mm-f12-dg-art-zoom0-focus1 | sample 8, surface 2 |
-| optiland – ref | Surfaces whose count or place differs — `layout.mismatches` | elements | ≤ 0 | 0 | — | — |
-| optiland – ref | Surfaces whose curvature, conic or asphere terms differ — `shape.mismatches` | elements | ≤ 0 | 0 | — | — |
-| optiland – ref | Stops and clear apertures that differ — `aperture.mismatches` | elements | ≤ 0 | 0 | — | — |
-| optiland – ref | Refractive indices that differ — `index.mismatches` | elements | ≤ 0 | 0 | — | — |
-| optiland – ref | Largest sag difference at the sampled heights, over the size of a rounding there — `sag.maxScaled` | (no unit) | ≤ 1.00e-12 | 6.04e-16 | certified-tamron-35-150mm-f2-28-di-iii-vxd-a058-zoom0-focus1 | sample 6, surface 28 |
-| optiland – ref | Largest sag difference at the sampled heights — `sag.maxAbs` | mm | — | 5.33e-15 | certified-olympus-zuiko-digital-ed-7-14mm-f4-zoom0-focus1 | sample 8, surface 3 |
+| lv – reference-tracer | Surfaces whose count or place differs — `layout.mismatches` | elements | ≤ 0 | 0 | — | — |
+| lv – reference-tracer | Surfaces whose curvature, conic or asphere terms differ — `shape.mismatches` | elements | ≤ 0 | 0 | — | — |
+| lv – reference-tracer | Stops and clear apertures that differ — `aperture.mismatches` | elements | ≤ 0 | 0 | — | — |
+| lv – reference-tracer | Refractive indices that differ — `index.mismatches` | elements | ≤ 0 | 0 | — | — |
+| lv – reference-tracer | Largest sag difference at the sampled heights, over the size of a rounding there — `sag.maxScaled` | (no unit) | ≤ 1.00e-12 | 4.03e-16 | certified-fujifilm-gf-110mm-f56-ts-macro-zoom0-focus100 | sample 6, surface 10 |
+| lv – reference-tracer | Largest sag difference at the sampled heights — `sag.maxAbs` | mm | — | 5.33e-15 | certified-sigma-85mm-f12-dg-art-zoom0-focus1 | sample 8, surface 2 |
+| optiland – reference-tracer | Surfaces whose count or place differs — `layout.mismatches` | elements | ≤ 0 | 0 | — | — |
+| optiland – reference-tracer | Surfaces whose curvature, conic or asphere terms differ — `shape.mismatches` | elements | ≤ 0 | 0 | — | — |
+| optiland – reference-tracer | Stops and clear apertures that differ — `aperture.mismatches` | elements | ≤ 0 | 0 | — | — |
+| optiland – reference-tracer | Refractive indices that differ — `index.mismatches` | elements | ≤ 0 | 0 | — | — |
+| optiland – reference-tracer | Largest sag difference at the sampled heights, over the size of a rounding there — `sag.maxScaled` | (no unit) | ≤ 1.00e-12 | 6.04e-16 | certified-tamron-35-150mm-f2-28-di-iii-vxd-a058-zoom0-focus1 | sample 6, surface 28 |
+| optiland – reference-tracer | Largest sag difference at the sampled heights — `sag.maxAbs` | mm | — | 5.33e-15 | certified-olympus-zuiko-digital-ed-7-14mm-f4-zoom0-focus1 | sample 8, surface 3 |
 
 By run, each pair with its verdict and the judged figure that is largest against its limit:
 
-| Run | Requests | lv – optiland | lv – ref | optiland – ref |
+| Run | Requests | lv – optiland | lv – reference-tracer | optiland – reference-tracer |
 |---|---|---|---|---|
 | certified-fujifilm-gf-110mm-f56-ts-macro-zoom0-focus100 | 1 | Pass: sag.maxScaled 3.94e-16 | Pass: sag.maxScaled 4.03e-16 | Pass: sag.maxScaled 5.92e-16 |
 | certified-fujifilm-gf80-f17-zoom0-focus1 | 1 | Pass: sag.maxScaled 2.20e-16 | Pass: sag.maxScaled 2.47e-16 | Pass: sag.maxScaled 2.90e-16 |
@@ -188,20 +188,20 @@ The worst of every figure over the suite:
 | lv – optiland | Largest difference of a pupil position — `pupilZ.maxAbs` | mm | — | 2.44e-12 | certified-leica-summilux-c-18mm-t14-zoom0-focus2 | line 0, quantity exitPupilZ |
 | lv – optiland | Largest difference of a pupil radius, scaled by its pupil's distance from the image — `pupilRadius.maxScaled` | mm | ≤ 1.00e-9 | 9.66e-13 | certified-leica-summilux-c-18mm-t14-zoom0-focus2 | line 0, quantity exitPupilSemiDiameter |
 | lv – optiland | Largest difference of a pupil radius — `pupilRadius.maxAbs` | mm | — | 9.66e-13 | certified-leica-summilux-c-18mm-t14-zoom0-focus2 | line 0, quantity exitPupilSemiDiameter |
-| lv – ref | Largest difference of a focal length, focal point, principal point or back focus — `firstOrder.maxAbs` | mm | ≤ 1.00e-9 | 2.27e-12 | certified-sigma-apo-50-500mm-f45-63-dg-os-hsm-zoom64-focus4 | line 0, quantity frontFocalZ |
-| lv – ref | Largest difference of a pupil position, scaled by its distance from the image plane — `pupilZ.maxScaled` | mm | ≤ 1.00e-9 | 2.61e-12 | certified-leica-summilux-c-18mm-t14-zoom0-focus2 | line 0, quantity exitPupilZ |
-| lv – ref | Largest difference of a pupil position — `pupilZ.maxAbs` | mm | — | 2.61e-12 | certified-leica-summilux-c-18mm-t14-zoom0-focus2 | line 0, quantity exitPupilZ |
-| lv – ref | Largest difference of a pupil radius, scaled by its pupil's distance from the image — `pupilRadius.maxScaled` | mm | ≤ 1.00e-9 | 9.81e-13 | certified-leica-summilux-c-18mm-t14-zoom0-focus2 | line 0, quantity exitPupilSemiDiameter |
-| lv – ref | Largest difference of a pupil radius — `pupilRadius.maxAbs` | mm | — | 9.81e-13 | certified-leica-summilux-c-18mm-t14-zoom0-focus2 | line 0, quantity exitPupilSemiDiameter |
-| optiland – ref | Largest difference of a focal length, focal point, principal point or back focus — `firstOrder.maxAbs` | mm | ≤ 1.00e-9 | 4.32e-12 | certified-sony-fe-600mm-f4-gm-oss-zoom0-focus1 | line 0, quantity frontFocalZ |
-| optiland – ref | Largest difference of a pupil position, scaled by its distance from the image plane — `pupilZ.maxScaled` | mm | ≤ 1.00e-9 | 1.82e-12 | certified-sigma-apo-50-500mm-f45-63-dg-os-hsm-zoom64-focus4 | line 0, quantity entrancePupilZ |
-| optiland – ref | Largest difference of a pupil position — `pupilZ.maxAbs` | mm | — | 1.82e-12 | certified-sigma-apo-50-500mm-f45-63-dg-os-hsm-zoom64-focus4 | line 0, quantity entrancePupilZ |
-| optiland – ref | Largest difference of a pupil radius, scaled by its pupil's distance from the image — `pupilRadius.maxScaled` | mm | ≤ 1.00e-9 | 1.99e-13 | certified-leica-summilux-c-18mm-t14-zoom0-focus1 | line 0, quantity exitPupilSemiDiameter |
-| optiland – ref | Largest difference of a pupil radius — `pupilRadius.maxAbs` | mm | — | 1.99e-13 | certified-leica-summilux-c-18mm-t14-zoom0-focus1 | line 0, quantity exitPupilSemiDiameter |
+| lv – reference-tracer | Largest difference of a focal length, focal point, principal point or back focus — `firstOrder.maxAbs` | mm | ≤ 1.00e-9 | 2.27e-12 | certified-sigma-apo-50-500mm-f45-63-dg-os-hsm-zoom64-focus4 | line 0, quantity frontFocalZ |
+| lv – reference-tracer | Largest difference of a pupil position, scaled by its distance from the image plane — `pupilZ.maxScaled` | mm | ≤ 1.00e-9 | 2.61e-12 | certified-leica-summilux-c-18mm-t14-zoom0-focus2 | line 0, quantity exitPupilZ |
+| lv – reference-tracer | Largest difference of a pupil position — `pupilZ.maxAbs` | mm | — | 2.61e-12 | certified-leica-summilux-c-18mm-t14-zoom0-focus2 | line 0, quantity exitPupilZ |
+| lv – reference-tracer | Largest difference of a pupil radius, scaled by its pupil's distance from the image — `pupilRadius.maxScaled` | mm | ≤ 1.00e-9 | 9.81e-13 | certified-leica-summilux-c-18mm-t14-zoom0-focus2 | line 0, quantity exitPupilSemiDiameter |
+| lv – reference-tracer | Largest difference of a pupil radius — `pupilRadius.maxAbs` | mm | — | 9.81e-13 | certified-leica-summilux-c-18mm-t14-zoom0-focus2 | line 0, quantity exitPupilSemiDiameter |
+| optiland – reference-tracer | Largest difference of a focal length, focal point, principal point or back focus — `firstOrder.maxAbs` | mm | ≤ 1.00e-9 | 4.32e-12 | certified-sony-fe-600mm-f4-gm-oss-zoom0-focus1 | line 0, quantity frontFocalZ |
+| optiland – reference-tracer | Largest difference of a pupil position, scaled by its distance from the image plane — `pupilZ.maxScaled` | mm | ≤ 1.00e-9 | 1.82e-12 | certified-sigma-apo-50-500mm-f45-63-dg-os-hsm-zoom64-focus4 | line 0, quantity entrancePupilZ |
+| optiland – reference-tracer | Largest difference of a pupil position — `pupilZ.maxAbs` | mm | — | 1.82e-12 | certified-sigma-apo-50-500mm-f45-63-dg-os-hsm-zoom64-focus4 | line 0, quantity entrancePupilZ |
+| optiland – reference-tracer | Largest difference of a pupil radius, scaled by its pupil's distance from the image — `pupilRadius.maxScaled` | mm | ≤ 1.00e-9 | 1.99e-13 | certified-leica-summilux-c-18mm-t14-zoom0-focus1 | line 0, quantity exitPupilSemiDiameter |
+| optiland – reference-tracer | Largest difference of a pupil radius — `pupilRadius.maxAbs` | mm | — | 1.99e-13 | certified-leica-summilux-c-18mm-t14-zoom0-focus1 | line 0, quantity exitPupilSemiDiameter |
 
 By run, each pair with its verdict and the judged figure that is largest against its limit:
 
-| Run | Requests | lv – optiland | lv – ref | optiland – ref |
+| Run | Requests | lv – optiland | lv – reference-tracer | optiland – reference-tracer |
 |---|---|---|---|---|
 | certified-fujifilm-gf-110mm-f56-ts-macro-zoom0-focus100 | 1 | Pass: firstOrder.maxAbs 1.71e-13 mm | Pass: firstOrder.maxAbs 2.13e-13 mm | Pass: firstOrder.maxAbs 1.99e-13 mm |
 | certified-fujifilm-gf80-f17-zoom0-focus1 | 1 | Pass: pupilZ.maxScaled 6.39e-14 mm | Pass: firstOrder.maxAbs 3.55e-14 mm | Pass: firstOrder.maxAbs 5.68e-14 mm |
@@ -290,22 +290,22 @@ The worst of every figure over the suite:
 | lv – optiland | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
 | lv – optiland | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
 | lv – optiland | Rays both engines traced through — `rays.compared` | rays | — | 183473 | — | — |
-| lv – ref | Largest distance between the two engines' ray hits on a surface — `hits.maxDistance` | mm | ≤ 1.00e-8 | 1.98e-12 | certified-leica-summilux-c-18mm-t14-zoom0-focus1 | field 4.07e1 deg, line 0, ray 615, surface 32 |
-| lv – ref | Largest difference of a component of a ray's exit direction — `direction.maxAbs` | (no unit) | ≤ 1.00e-9 | 3.18e-14 | certified-leica-summilux-c-18mm-t14-zoom0-focus1 | field 4.07e1 deg, line 0, ray 615 |
-| lv – ref | Largest distance between the two engines' ray landings on the image plane — `landing.maxDistance` | mm | ≤ 1.00e-8 | 1.12e-12 | certified-sigma-24mm-f2-dg-dn-contemporary-zoom0-focus1 | field 4.45e1 deg, line 0, ray 449 |
-| lv – ref | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
-| lv – ref | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
-| lv – ref | Rays both engines traced through — `rays.compared` | rays | — | 183473 | — | — |
-| optiland – ref | Largest distance between the two engines' ray hits on a surface — `hits.maxDistance` | mm | ≤ 1.00e-8 | 2.66e-12 | certified-leica-summilux-c-18mm-t14-zoom0-focus1 | field 4.07e1 deg, line 0, ray 745, surface 32 |
-| optiland – ref | Largest difference of a component of a ray's exit direction — `direction.maxAbs` | (no unit) | ≤ 1.00e-9 | 4.38e-14 | certified-leica-summilux-c-18mm-t14-zoom0-focus1 | field 4.07e1 deg, line 0, ray 745 |
-| optiland – ref | Largest distance between the two engines' ray landings on the image plane — `landing.maxDistance` | mm | ≤ 1.00e-8 | 1.20e-12 | certified-hasselblad-xcd-25mm-f25-v-zoom0-focus1 | field 4.99e1 deg, line 0, ray 812 |
-| optiland – ref | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
-| optiland – ref | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
-| optiland – ref | Rays both engines traced through — `rays.compared` | rays | — | 183473 | — | — |
+| lv – reference-tracer | Largest distance between the two engines' ray hits on a surface — `hits.maxDistance` | mm | ≤ 1.00e-8 | 1.98e-12 | certified-leica-summilux-c-18mm-t14-zoom0-focus1 | field 4.07e1 deg, line 0, ray 615, surface 32 |
+| lv – reference-tracer | Largest difference of a component of a ray's exit direction — `direction.maxAbs` | (no unit) | ≤ 1.00e-9 | 3.18e-14 | certified-leica-summilux-c-18mm-t14-zoom0-focus1 | field 4.07e1 deg, line 0, ray 615 |
+| lv – reference-tracer | Largest distance between the two engines' ray landings on the image plane — `landing.maxDistance` | mm | ≤ 1.00e-8 | 1.12e-12 | certified-sigma-24mm-f2-dg-dn-contemporary-zoom0-focus1 | field 4.45e1 deg, line 0, ray 449 |
+| lv – reference-tracer | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
+| lv – reference-tracer | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
+| lv – reference-tracer | Rays both engines traced through — `rays.compared` | rays | — | 183473 | — | — |
+| optiland – reference-tracer | Largest distance between the two engines' ray hits on a surface — `hits.maxDistance` | mm | ≤ 1.00e-8 | 2.66e-12 | certified-leica-summilux-c-18mm-t14-zoom0-focus1 | field 4.07e1 deg, line 0, ray 745, surface 32 |
+| optiland – reference-tracer | Largest difference of a component of a ray's exit direction — `direction.maxAbs` | (no unit) | ≤ 1.00e-9 | 4.38e-14 | certified-leica-summilux-c-18mm-t14-zoom0-focus1 | field 4.07e1 deg, line 0, ray 745 |
+| optiland – reference-tracer | Largest distance between the two engines' ray landings on the image plane — `landing.maxDistance` | mm | ≤ 1.00e-8 | 1.20e-12 | certified-hasselblad-xcd-25mm-f25-v-zoom0-focus1 | field 4.99e1 deg, line 0, ray 812 |
+| optiland – reference-tracer | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
+| optiland – reference-tracer | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
+| optiland – reference-tracer | Rays both engines traced through — `rays.compared` | rays | — | 183473 | — | — |
 
 By run, each pair with its verdict and the judged figure that is largest against its limit:
 
-| Run | Requests | lv – optiland | lv – ref | optiland – ref | Rays of lv: ok / blocked / failed | Rays of optiland: ok / blocked / failed | Rays of ref: ok / blocked / failed |
+| Run | Requests | lv – optiland | lv – reference-tracer | optiland – reference-tracer | Rays of lv: ok / blocked / failed | Rays of optiland: ok / blocked / failed | Rays of reference-tracer: ok / blocked / failed |
 |---|---|---|---|---|---|---|---|
 | certified-fujifilm-gf-110mm-f56-ts-macro-zoom0-focus100 | 3 | Pass: landing.maxDistance 2.04e-13 mm | Pass: hits.maxDistance 9.96e-13 mm | Pass: hits.maxDistance 9.96e-13 mm | 2853 / 222 / 0 | 2853 / 222 / 0 | 2853 / 222 / 0 |
 | certified-fujifilm-gf80-f17-zoom0-focus1 | 3 | Pass: hits.maxDistance 5.86e-13 mm | Pass: hits.maxDistance 8.28e-13 mm | Pass: hits.maxDistance 8.34e-13 mm | 2082 / 993 / 0 | 2082 / 993 / 0 | 2082 / 993 / 0 |
@@ -391,16 +391,16 @@ The worst of every figure over the suite:
 | lv – optiland | Largest difference of an optical path length to a surface — `opticalPath.maxAbs` | waves | ≤ 2.00e-5 | 2.81e-9 | certified-sigma-135mm-f14-dg-art-zoom0-focus2 | field 8.49e0 deg, line 0, ray 551 |
 | lv – optiland | Largest difference of an optical path length to the image plane — `opticalPathToImage.maxAbs` | waves | ≤ 2.00e-5 | 2.32e-9 | certified-sigma-70-200mm-f28-dg-dn-os-sports-zoom1-focus1 | field 6.15e0 deg, line 0, ray 803 |
 | lv – optiland | Largest difference of an optical path difference from the chief ray — `opd.maxAbs` | waves | ≤ 2.00e-5 | 2.90e-9 | certified-tamron-35-150mm-f2-28-di-iii-vxd-a058-zoom2-focus1 | field 1.12e1 deg, line 0, ray 267 |
-| lv – ref | Largest difference of an optical path length to a surface — `opticalPath.maxAbs` | waves | ≤ 2.00e-5 | 3.63e-9 | certified-sigma-12mm-f14-dc-contemporary-zoom0-focus1 | field 5.72e1 deg, line 0, ray 513 |
-| lv – ref | Largest difference of an optical path length to the image plane — `opticalPathToImage.maxAbs` | waves | ≤ 2.00e-5 | 2.42e-9 | certified-sigma-70-200mm-f28-dg-dn-os-sports-zoom1-focus1 | field 6.15e0 deg, line 0, ray 803 |
-| lv – ref | Largest difference of an optical path difference from the chief ray — `opd.maxAbs` | waves | ≤ 2.00e-5 | 2.90e-9 | certified-sigma-50mm-f12-dg-dn-art-zoom0-focus1 | field 2.54e1 deg, line 0, ray 546 |
-| optiland – ref | Largest difference of an optical path length to a surface — `opticalPath.maxAbs` | waves | ≤ 2.00e-5 | 3.48e-9 | certified-sigma-135mm-f14-dg-art-zoom0-focus1 | field 8.83e0 deg, line 0, ray 481 |
-| optiland – ref | Largest difference of an optical path length to the image plane — `opticalPathToImage.maxAbs` | waves | ≤ 2.00e-5 | 2.47e-9 | certified-sigma-50mm-f12-dg-dn-art-zoom0-focus1 | field 2.54e1 deg, line 0, ray 546 |
-| optiland – ref | Largest difference of an optical path difference from the chief ray — `opd.maxAbs` | waves | ≤ 2.00e-5 | 3.14e-9 | certified-sigma-50mm-f12-dg-dn-art-zoom0-focus1 | field 2.54e1 deg, line 0, ray 546 |
+| lv – reference-tracer | Largest difference of an optical path length to a surface — `opticalPath.maxAbs` | waves | ≤ 2.00e-5 | 3.63e-9 | certified-sigma-12mm-f14-dc-contemporary-zoom0-focus1 | field 5.72e1 deg, line 0, ray 513 |
+| lv – reference-tracer | Largest difference of an optical path length to the image plane — `opticalPathToImage.maxAbs` | waves | ≤ 2.00e-5 | 2.42e-9 | certified-sigma-70-200mm-f28-dg-dn-os-sports-zoom1-focus1 | field 6.15e0 deg, line 0, ray 803 |
+| lv – reference-tracer | Largest difference of an optical path difference from the chief ray — `opd.maxAbs` | waves | ≤ 2.00e-5 | 2.90e-9 | certified-sigma-50mm-f12-dg-dn-art-zoom0-focus1 | field 2.54e1 deg, line 0, ray 546 |
+| optiland – reference-tracer | Largest difference of an optical path length to a surface — `opticalPath.maxAbs` | waves | ≤ 2.00e-5 | 3.48e-9 | certified-sigma-135mm-f14-dg-art-zoom0-focus1 | field 8.83e0 deg, line 0, ray 481 |
+| optiland – reference-tracer | Largest difference of an optical path length to the image plane — `opticalPathToImage.maxAbs` | waves | ≤ 2.00e-5 | 2.47e-9 | certified-sigma-50mm-f12-dg-dn-art-zoom0-focus1 | field 2.54e1 deg, line 0, ray 546 |
+| optiland – reference-tracer | Largest difference of an optical path difference from the chief ray — `opd.maxAbs` | waves | ≤ 2.00e-5 | 3.14e-9 | certified-sigma-50mm-f12-dg-dn-art-zoom0-focus1 | field 2.54e1 deg, line 0, ray 546 |
 
 By run, each pair with its verdict and the judged figure that is largest against its limit:
 
-| Run | Requests | lv – optiland | lv – ref | optiland – ref |
+| Run | Requests | lv – optiland | lv – reference-tracer | optiland – reference-tracer |
 |---|---|---|---|---|
 | certified-fujifilm-gf-110mm-f56-ts-macro-zoom0-focus100 | 3 | Pass: opd.maxAbs 3.39e-10 waves | Pass: opticalPath.maxAbs 2.61e-9 waves | Pass: opticalPath.maxAbs 2.56e-9 waves |
 | certified-fujifilm-gf80-f17-zoom0-focus1 | 3 | Pass: opd.maxAbs 1.11e-9 waves | Pass: opd.maxAbs 1.31e-9 waves | Pass: opticalPath.maxAbs 1.21e-9 waves |
@@ -487,18 +487,18 @@ The worst of every figure over the suite:
 | lv – optiland | Rays both engines traced through — `rays.compared` | rays | — | 183473 | — | — |
 | lv – optiland | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
 | lv – optiland | Wavelengths compared — `lines.compared` | wavelengths | — | 1 | certified-fujifilm-gf-110mm-f56-ts-macro-zoom0-focus100 | — |
-| lv – ref | Largest difference of an MTF value — `mtf.maxAbs` | (no unit) | ≤ 1.00e-7 | 1.37e-11 | certified-thypoch-ksana-21mm-f35-zoom0-focus1 | cut tangential, field 4.38e1 deg, frequencyPerMm 100 |
-| lv – ref | Rays both engines traced through — `rays.compared` | rays | — | 183473 | — | — |
-| lv – ref | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
-| lv – ref | Wavelengths compared — `lines.compared` | wavelengths | — | 1 | certified-fujifilm-gf-110mm-f56-ts-macro-zoom0-focus100 | — |
-| optiland – ref | Largest difference of an MTF value — `mtf.maxAbs` | (no unit) | ≤ 1.00e-7 | 1.46e-11 | certified-thypoch-ksana-21mm-f35-zoom0-focus1 | cut tangential, field 4.38e1 deg, frequencyPerMm 100 |
-| optiland – ref | Rays both engines traced through — `rays.compared` | rays | — | 183473 | — | — |
-| optiland – ref | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
-| optiland – ref | Wavelengths compared — `lines.compared` | wavelengths | — | 1 | certified-fujifilm-gf-110mm-f56-ts-macro-zoom0-focus100 | — |
+| lv – reference-tracer | Largest difference of an MTF value — `mtf.maxAbs` | (no unit) | ≤ 1.00e-7 | 1.37e-11 | certified-thypoch-ksana-21mm-f35-zoom0-focus1 | cut tangential, field 4.38e1 deg, frequencyPerMm 100 |
+| lv – reference-tracer | Rays both engines traced through — `rays.compared` | rays | — | 183473 | — | — |
+| lv – reference-tracer | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
+| lv – reference-tracer | Wavelengths compared — `lines.compared` | wavelengths | — | 1 | certified-fujifilm-gf-110mm-f56-ts-macro-zoom0-focus100 | — |
+| optiland – reference-tracer | Largest difference of an MTF value — `mtf.maxAbs` | (no unit) | ≤ 1.00e-7 | 1.46e-11 | certified-thypoch-ksana-21mm-f35-zoom0-focus1 | cut tangential, field 4.38e1 deg, frequencyPerMm 100 |
+| optiland – reference-tracer | Rays both engines traced through — `rays.compared` | rays | — | 183473 | — | — |
+| optiland – reference-tracer | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | — | — |
+| optiland – reference-tracer | Wavelengths compared — `lines.compared` | wavelengths | — | 1 | certified-fujifilm-gf-110mm-f56-ts-macro-zoom0-focus100 | — |
 
 By run, each pair with its verdict and the judged figure that is largest against its limit:
 
-| Run | Requests | lv – optiland | lv – ref | optiland – ref |
+| Run | Requests | lv – optiland | lv – reference-tracer | optiland – reference-tracer |
 |---|---|---|---|---|
 | certified-fujifilm-gf-110mm-f56-ts-macro-zoom0-focus100 | 3 | Pass: mtf.maxAbs 2.62e-12 | Pass: mtf.maxAbs 1.30e-12 | Pass: mtf.maxAbs 1.98e-12 |
 | certified-fujifilm-gf80-f17-zoom0-focus1 | 3 | Pass: mtf.maxAbs 3.62e-12 | Pass: mtf.maxAbs 3.02e-12 | Pass: mtf.maxAbs 4.26e-12 |
@@ -606,7 +606,7 @@ A pair is named by the ids of its two engines:
 |---|---|
 | `lv` | LensVisualizer itself, loaded from a local checkout, asked for each figure as its own tabs ask for it, and made to trace the very rays every engine is handed in the checks held to a limit. |
 | `optiland` | optiland, an open-source optical design library in Python, run by this tool in a worker process of its own. |
-| `ref` | The reference tracer: a small exact ray tracer written in this repository from the optics alone, never from LensVisualizer's or optiland's code. |
+| `reference-tracer` | The reference tracer: a small exact ray tracer written in this repository from the optics alone, never from LensVisualizer's or optiland's code. |
 
 ### Figures
 
@@ -662,7 +662,7 @@ contract version is that of the file format the baseline is written in.
 |---|---|---|---|
 | lv | 4669921bae7179c7eddd220fa367e696eae7acec3a5a788d0ca90da632d3eb6b | afad9cb89bd9a25fbfa5ee0ec335b1e315481414b7ba41da2f906c28856010c5 | commit 25f65d4b4213a21392cbae92680134906049b2ad |
 | optiland | bcfbf3916c1103b3b3b49a93117d3346a0bd6921ec35f01feb99bc1a2a6e39eb | 98f36151b0cdd2d3d3f82013841899de85309b22012967de64bbba662217fbcb | commit 4e893f53aee1312f2d091680b93dd2279711e197, distribution version 0.6.2.post117+g4e893f53, source hash 279af5c55d8ebe1610686b9dad3e6eeb22b1822037d59a0e5f148c2fb8937f38 |
-| ref | b7d0684b593261d14a1dfebb903774775bbe481a07ae2955689644dc0ffd919e | 2225e342b4fd8539480e933e59a3ca95a8ae2beeb24f45972b55fd4e4a59d357 | — |
+| reference-tracer | b7d0684b593261d14a1dfebb903774775bbe481a07ae2955689644dc0ffd919e | 2225e342b4fd8539480e933e59a3ca95a8ae2beeb24f45972b55fd4e4a59d357 | — |
 
 | Run | Lens state |
 |---|---|

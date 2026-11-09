@@ -23,19 +23,19 @@ How to read this, near the end, says what each label and column means.
 |---|---|---|---|
 | lv | LensVisualizer | 1 | bias 0, failMode none, offersQuantities true |
 | optiland | optiland | 1 | bias 0, failMode none, offersQuantities true |
-| optiland-wave | OTF of optiland's wavefront | 1 | bias 0, failMode none, offersQuantities true |
-| wave | Wave MTF of LensVisualizer's rays | 1 | bias 0, failMode none, offersQuantities true |
+| otf-of-optiland-wavefront | OTF of optiland's wavefront | 1 | bias 0, failMode none, offersQuantities true |
+| wave-mtf-of-lv-rays | Wave MTF of LensVisualizer's rays | 1 | bias 0, failMode none, offersQuantities true |
 
 ## Summary
 
 | Check | Quantity | Runs | Requests | Pair | Runs by verdict | Requests by verdict |
 |---|---|---|---|---|---|---|
 | MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | `mtf.native` | 3 | 3 | lv – optiland | 1 Side by side; 1 Side by side, worth a look; 1 Not computed | 1 Side by side; 1 Side by side, worth a look; 1 Not computed |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | `mtf.native` | 3 | 3 | lv – optiland-wave | 3 Side by side, worth a look | 3 Side by side, worth a look |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | `mtf.native` | 3 | 3 | lv – wave | 3 Side by side | 3 Side by side |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | `mtf.native` | 3 | 3 | optiland – optiland-wave | 2 Side by side, worth a look; 1 Not computed | 2 Side by side, worth a look; 1 Not computed |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | `mtf.native` | 3 | 3 | optiland – wave | 1 Side by side; 1 Side by side, worth a look; 1 Not computed | 1 Side by side; 1 Side by side, worth a look; 1 Not computed |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | `mtf.native` | 3 | 3 | optiland-wave – wave | 3 Side by side, worth a look | 3 Side by side, worth a look |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | `mtf.native` | 3 | 3 | lv – otf-of-optiland-wavefront | 3 Side by side, worth a look | 3 Side by side, worth a look |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | `mtf.native` | 3 | 3 | lv – wave-mtf-of-lv-rays | 3 Side by side | 3 Side by side |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | `mtf.native` | 3 | 3 | optiland – otf-of-optiland-wavefront | 2 Side by side, worth a look; 1 Not computed | 2 Side by side, worth a look; 1 Not computed |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | `mtf.native` | 3 | 3 | optiland – wave-mtf-of-lv-rays | 1 Side by side; 1 Side by side, worth a look; 1 Not computed | 1 Side by side; 1 Side by side, worth a look; 1 Not computed |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | `mtf.native` | 3 | 3 | otf-of-optiland-wavefront – wave-mtf-of-lv-rays | 3 Side by side, worth a look | 3 Side by side, worth a look |
 
 ## Support
 
@@ -46,8 +46,8 @@ In how many runs the jobs of an engine ended in each way. An engine that cannot 
 |---|---|---|
 | MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | lv | 3 answered |
 | MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | optiland | 2 answered, 1 not computed (feature lines.polychromatic) |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | optiland-wave | 3 answered |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | wave | 3 answered |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | otf-of-optiland-wavefront | 3 answered |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | wave-mtf-of-lv-rays | 3 answered |
 
 ## MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront`
 
@@ -66,54 +66,54 @@ The worst of every figure over the suite:
 | lv – optiland | Fields set aside because an engine lost a rim ray — `fields.rimLost` | elements | — | 1 | 2 of 3 | — | — |
 | lv – optiland | Fields whose two answers are of different inputs — `fields.data` | elements | — | 1 | 2 of 3 | — | — |
 | lv – optiland | Fields an engine has no answer for — `fields.unavailable` | elements | — | 0 | 2 of 3 | — | — |
-| lv – optiland-wave | Largest distance between the two engines' chief-ray landings — `chiefLanding.maxAbs` | mm | — | 4 | 3 of 3 | edge | field 1 of the image height |
-| lv – optiland-wave | Largest MTF difference on the axis — `mtfOnAxis.maxAbs` | (no unit) | review band 3.91e-3 | 7.81e-3 | 3 of 3 | edge | cut sagittal, field 0 of the image height, frequencyPerMm 10 |
-| lv – optiland-wave | Largest MTF difference in fields whose sampling did not settle (in no review band) — `mtfFlagged.maxAbs` | (no unit) | — | 0 | 2 of 3 | edge | cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 10 |
-| lv – optiland-wave | Fields compared — `fields.compared` | elements | — | 4 | 3 of 3 | — | — |
-| lv – optiland-wave | Fields set aside because a sampling did not settle — `fields.flagged` | elements | — | 2 | 3 of 3 | — | — |
-| lv – optiland-wave | Fields set aside because an engine lost a rim ray — `fields.rimLost` | elements | — | 0 | 3 of 3 | — | — |
-| lv – optiland-wave | Fields whose two answers are of different inputs — `fields.data` | elements | — | 3 | 3 of 3 | — | — |
-| lv – optiland-wave | Fields an engine has no answer for — `fields.unavailable` | elements | — | 0 | 3 of 3 | — | — |
-| lv – optiland-wave | Largest MTF difference off the axis — `mtfOffAxis.maxAbs` | (no unit) | review band 7.81e-3 | 0 | 1 of 3 | polychromatic | cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 10 |
-| lv – wave | Largest distance between the two engines' chief-ray landings — `chiefLanding.maxAbs` | mm | — | 0 | 3 of 3 | edge | field 0 of the image height |
-| lv – wave | Largest MTF difference on the axis — `mtfOnAxis.maxAbs` | (no unit) | review band 3.91e-3 | 0 | 3 of 3 | edge | cut sagittal, field 0 of the image height, frequencyPerMm 10 |
-| lv – wave | Largest MTF difference off the axis — `mtfOffAxis.maxAbs` | (no unit) | review band 7.81e-3 | 0 | 3 of 3 | edge | cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 10 |
-| lv – wave | Largest MTF difference in fields whose sampling did not settle (in no review band) — `mtfFlagged.maxAbs` | (no unit) | — | 0 | 3 of 3 | edge | cut sagittal, field 1 of the image height, frequencyPerMm 10 |
-| lv – wave | Fields compared — `fields.compared` | elements | — | 6 | 3 of 3 | — | — |
-| lv – wave | Fields set aside because a sampling did not settle — `fields.flagged` | elements | — | 3 | 3 of 3 | — | — |
-| lv – wave | Fields set aside because an engine lost a rim ray — `fields.rimLost` | elements | — | 0 | 3 of 3 | — | — |
-| lv – wave | Fields whose two answers are of different inputs — `fields.data` | elements | — | 0 | 3 of 3 | — | — |
-| lv – wave | Fields an engine has no answer for — `fields.unavailable` | elements | — | 0 | 3 of 3 | — | — |
-| optiland – optiland-wave | Largest distance between the two engines' chief-ray landings — `chiefLanding.maxAbs` | mm | — | 4 | 2 of 3 | edge | field 1 of the image height |
-| optiland – optiland-wave | Largest MTF difference on the axis — `mtfOnAxis.maxAbs` | (no unit) | review band 3.91e-3 | 7.81e-3 | 2 of 3 | beyond | cut sagittal, field 0 of the image height, frequencyPerMm 10 |
-| optiland – optiland-wave | Largest MTF difference in fields whose sampling did not settle (in no review band) — `mtfFlagged.maxAbs` | (no unit) | — | 7.81e-3 | 1 of 3 | edge | cut tangential, field 5.00e-1 of the image height, frequencyPerMm 30 |
-| optiland – optiland-wave | Fields compared — `fields.compared` | elements | — | 2 | 2 of 3 | — | — |
-| optiland – optiland-wave | Fields set aside because a sampling did not settle — `fields.flagged` | elements | — | 1 | 2 of 3 | — | — |
-| optiland – optiland-wave | Fields set aside because an engine lost a rim ray — `fields.rimLost` | elements | — | 0 | 2 of 3 | — | — |
-| optiland – optiland-wave | Fields whose two answers are of different inputs — `fields.data` | elements | — | 3 | 2 of 3 | — | — |
-| optiland – optiland-wave | Fields an engine has no answer for — `fields.unavailable` | elements | — | 0 | 2 of 3 | — | — |
-| optiland – wave | Largest distance between the two engines' chief-ray landings — `chiefLanding.maxAbs` | mm | — | 1.95e-3 | 2 of 3 | beyond | field 5.00e-1 of the image height |
-| optiland – wave | Largest MTF difference on the axis — `mtfOnAxis.maxAbs` | (no unit) | review band 3.91e-3 | 3.91e-3 | 2 of 3 | beyond | cut sagittal, field 0 of the image height, frequencyPerMm 50 |
-| optiland – wave | Largest MTF difference off the axis — `mtfOffAxis.maxAbs` | (no unit) | review band 7.81e-3 | 7.81e-3 | 1 of 3 | edge | cut tangential, field 5.00e-1 of the image height, frequencyPerMm 30 |
-| optiland – wave | Largest MTF difference in fields whose sampling did not settle (in no review band) — `mtfFlagged.maxAbs` | (no unit) | — | 1.25e-1 | 2 of 3 | edge | cut sagittal, field 1 of the image height, frequencyPerMm 50 |
-| optiland – wave | Fields compared — `fields.compared` | elements | — | 3 | 2 of 3 | — | — |
-| optiland – wave | Fields set aside because a sampling did not settle — `fields.flagged` | elements | — | 2 | 2 of 3 | — | — |
-| optiland – wave | Fields set aside because an engine lost a rim ray — `fields.rimLost` | elements | — | 0 | 2 of 3 | — | — |
-| optiland – wave | Fields whose two answers are of different inputs — `fields.data` | elements | — | 1 | 2 of 3 | — | — |
-| optiland – wave | Fields an engine has no answer for — `fields.unavailable` | elements | — | 0 | 2 of 3 | — | — |
-| optiland-wave – wave | Largest distance between the two engines' chief-ray landings — `chiefLanding.maxAbs` | mm | — | 4 | 3 of 3 | edge | field 1 of the image height |
-| optiland-wave – wave | Largest MTF difference on the axis — `mtfOnAxis.maxAbs` | (no unit) | review band 3.91e-3 | 7.81e-3 | 3 of 3 | edge | cut sagittal, field 0 of the image height, frequencyPerMm 10 |
-| optiland-wave – wave | Largest MTF difference in fields whose sampling did not settle (in no review band) — `mtfFlagged.maxAbs` | (no unit) | — | 0 | 2 of 3 | edge | cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 10 |
-| optiland-wave – wave | Fields compared — `fields.compared` | elements | — | 4 | 3 of 3 | — | — |
-| optiland-wave – wave | Fields set aside because a sampling did not settle — `fields.flagged` | elements | — | 2 | 3 of 3 | — | — |
-| optiland-wave – wave | Fields set aside because an engine lost a rim ray — `fields.rimLost` | elements | — | 0 | 3 of 3 | — | — |
-| optiland-wave – wave | Fields whose two answers are of different inputs — `fields.data` | elements | — | 3 | 3 of 3 | — | — |
-| optiland-wave – wave | Fields an engine has no answer for — `fields.unavailable` | elements | — | 0 | 3 of 3 | — | — |
-| optiland-wave – wave | Largest MTF difference off the axis — `mtfOffAxis.maxAbs` | (no unit) | review band 7.81e-3 | 0 | 1 of 3 | polychromatic | cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 10 |
+| lv – otf-of-optiland-wavefront | Largest distance between the two engines' chief-ray landings — `chiefLanding.maxAbs` | mm | — | 4 | 3 of 3 | edge | field 1 of the image height |
+| lv – otf-of-optiland-wavefront | Largest MTF difference on the axis — `mtfOnAxis.maxAbs` | (no unit) | review band 3.91e-3 | 7.81e-3 | 3 of 3 | edge | cut sagittal, field 0 of the image height, frequencyPerMm 10 |
+| lv – otf-of-optiland-wavefront | Largest MTF difference in fields whose sampling did not settle (in no review band) — `mtfFlagged.maxAbs` | (no unit) | — | 0 | 2 of 3 | edge | cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 10 |
+| lv – otf-of-optiland-wavefront | Fields compared — `fields.compared` | elements | — | 4 | 3 of 3 | — | — |
+| lv – otf-of-optiland-wavefront | Fields set aside because a sampling did not settle — `fields.flagged` | elements | — | 2 | 3 of 3 | — | — |
+| lv – otf-of-optiland-wavefront | Fields set aside because an engine lost a rim ray — `fields.rimLost` | elements | — | 0 | 3 of 3 | — | — |
+| lv – otf-of-optiland-wavefront | Fields whose two answers are of different inputs — `fields.data` | elements | — | 3 | 3 of 3 | — | — |
+| lv – otf-of-optiland-wavefront | Fields an engine has no answer for — `fields.unavailable` | elements | — | 0 | 3 of 3 | — | — |
+| lv – otf-of-optiland-wavefront | Largest MTF difference off the axis — `mtfOffAxis.maxAbs` | (no unit) | review band 7.81e-3 | 0 | 1 of 3 | polychromatic | cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 10 |
+| lv – wave-mtf-of-lv-rays | Largest distance between the two engines' chief-ray landings — `chiefLanding.maxAbs` | mm | — | 0 | 3 of 3 | edge | field 0 of the image height |
+| lv – wave-mtf-of-lv-rays | Largest MTF difference on the axis — `mtfOnAxis.maxAbs` | (no unit) | review band 3.91e-3 | 0 | 3 of 3 | edge | cut sagittal, field 0 of the image height, frequencyPerMm 10 |
+| lv – wave-mtf-of-lv-rays | Largest MTF difference off the axis — `mtfOffAxis.maxAbs` | (no unit) | review band 7.81e-3 | 0 | 3 of 3 | edge | cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 10 |
+| lv – wave-mtf-of-lv-rays | Largest MTF difference in fields whose sampling did not settle (in no review band) — `mtfFlagged.maxAbs` | (no unit) | — | 0 | 3 of 3 | edge | cut sagittal, field 1 of the image height, frequencyPerMm 10 |
+| lv – wave-mtf-of-lv-rays | Fields compared — `fields.compared` | elements | — | 6 | 3 of 3 | — | — |
+| lv – wave-mtf-of-lv-rays | Fields set aside because a sampling did not settle — `fields.flagged` | elements | — | 3 | 3 of 3 | — | — |
+| lv – wave-mtf-of-lv-rays | Fields set aside because an engine lost a rim ray — `fields.rimLost` | elements | — | 0 | 3 of 3 | — | — |
+| lv – wave-mtf-of-lv-rays | Fields whose two answers are of different inputs — `fields.data` | elements | — | 0 | 3 of 3 | — | — |
+| lv – wave-mtf-of-lv-rays | Fields an engine has no answer for — `fields.unavailable` | elements | — | 0 | 3 of 3 | — | — |
+| optiland – otf-of-optiland-wavefront | Largest distance between the two engines' chief-ray landings — `chiefLanding.maxAbs` | mm | — | 4 | 2 of 3 | edge | field 1 of the image height |
+| optiland – otf-of-optiland-wavefront | Largest MTF difference on the axis — `mtfOnAxis.maxAbs` | (no unit) | review band 3.91e-3 | 7.81e-3 | 2 of 3 | beyond | cut sagittal, field 0 of the image height, frequencyPerMm 10 |
+| optiland – otf-of-optiland-wavefront | Largest MTF difference in fields whose sampling did not settle (in no review band) — `mtfFlagged.maxAbs` | (no unit) | — | 7.81e-3 | 1 of 3 | edge | cut tangential, field 5.00e-1 of the image height, frequencyPerMm 30 |
+| optiland – otf-of-optiland-wavefront | Fields compared — `fields.compared` | elements | — | 2 | 2 of 3 | — | — |
+| optiland – otf-of-optiland-wavefront | Fields set aside because a sampling did not settle — `fields.flagged` | elements | — | 1 | 2 of 3 | — | — |
+| optiland – otf-of-optiland-wavefront | Fields set aside because an engine lost a rim ray — `fields.rimLost` | elements | — | 0 | 2 of 3 | — | — |
+| optiland – otf-of-optiland-wavefront | Fields whose two answers are of different inputs — `fields.data` | elements | — | 3 | 2 of 3 | — | — |
+| optiland – otf-of-optiland-wavefront | Fields an engine has no answer for — `fields.unavailable` | elements | — | 0 | 2 of 3 | — | — |
+| optiland – wave-mtf-of-lv-rays | Largest distance between the two engines' chief-ray landings — `chiefLanding.maxAbs` | mm | — | 1.95e-3 | 2 of 3 | beyond | field 5.00e-1 of the image height |
+| optiland – wave-mtf-of-lv-rays | Largest MTF difference on the axis — `mtfOnAxis.maxAbs` | (no unit) | review band 3.91e-3 | 3.91e-3 | 2 of 3 | beyond | cut sagittal, field 0 of the image height, frequencyPerMm 50 |
+| optiland – wave-mtf-of-lv-rays | Largest MTF difference off the axis — `mtfOffAxis.maxAbs` | (no unit) | review band 7.81e-3 | 7.81e-3 | 1 of 3 | edge | cut tangential, field 5.00e-1 of the image height, frequencyPerMm 30 |
+| optiland – wave-mtf-of-lv-rays | Largest MTF difference in fields whose sampling did not settle (in no review band) — `mtfFlagged.maxAbs` | (no unit) | — | 1.25e-1 | 2 of 3 | edge | cut sagittal, field 1 of the image height, frequencyPerMm 50 |
+| optiland – wave-mtf-of-lv-rays | Fields compared — `fields.compared` | elements | — | 3 | 2 of 3 | — | — |
+| optiland – wave-mtf-of-lv-rays | Fields set aside because a sampling did not settle — `fields.flagged` | elements | — | 2 | 2 of 3 | — | — |
+| optiland – wave-mtf-of-lv-rays | Fields set aside because an engine lost a rim ray — `fields.rimLost` | elements | — | 0 | 2 of 3 | — | — |
+| optiland – wave-mtf-of-lv-rays | Fields whose two answers are of different inputs — `fields.data` | elements | — | 1 | 2 of 3 | — | — |
+| optiland – wave-mtf-of-lv-rays | Fields an engine has no answer for — `fields.unavailable` | elements | — | 0 | 2 of 3 | — | — |
+| otf-of-optiland-wavefront – wave-mtf-of-lv-rays | Largest distance between the two engines' chief-ray landings — `chiefLanding.maxAbs` | mm | — | 4 | 3 of 3 | edge | field 1 of the image height |
+| otf-of-optiland-wavefront – wave-mtf-of-lv-rays | Largest MTF difference on the axis — `mtfOnAxis.maxAbs` | (no unit) | review band 3.91e-3 | 7.81e-3 | 3 of 3 | edge | cut sagittal, field 0 of the image height, frequencyPerMm 10 |
+| otf-of-optiland-wavefront – wave-mtf-of-lv-rays | Largest MTF difference in fields whose sampling did not settle (in no review band) — `mtfFlagged.maxAbs` | (no unit) | — | 0 | 2 of 3 | edge | cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 10 |
+| otf-of-optiland-wavefront – wave-mtf-of-lv-rays | Fields compared — `fields.compared` | elements | — | 4 | 3 of 3 | — | — |
+| otf-of-optiland-wavefront – wave-mtf-of-lv-rays | Fields set aside because a sampling did not settle — `fields.flagged` | elements | — | 2 | 3 of 3 | — | — |
+| otf-of-optiland-wavefront – wave-mtf-of-lv-rays | Fields set aside because an engine lost a rim ray — `fields.rimLost` | elements | — | 0 | 3 of 3 | — | — |
+| otf-of-optiland-wavefront – wave-mtf-of-lv-rays | Fields whose two answers are of different inputs — `fields.data` | elements | — | 3 | 3 of 3 | — | — |
+| otf-of-optiland-wavefront – wave-mtf-of-lv-rays | Fields an engine has no answer for — `fields.unavailable` | elements | — | 0 | 3 of 3 | — | — |
+| otf-of-optiland-wavefront – wave-mtf-of-lv-rays | Largest MTF difference off the axis — `mtfOffAxis.maxAbs` | (no unit) | review band 7.81e-3 | 0 | 1 of 3 | polychromatic | cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 10 |
 
 By run, each pair with its verdict and the judged figure that is largest against its limit, with the number of the run's requests it was measured in:
 
-| Run | Requests | lv – optiland | lv – optiland-wave | lv – wave | optiland – optiland-wave | optiland – wave | optiland-wave – wave |
+| Run | Requests | lv – optiland | lv – otf-of-optiland-wavefront | lv – wave-mtf-of-lv-rays | optiland – otf-of-optiland-wavefront | optiland – wave-mtf-of-lv-rays | otf-of-optiland-wavefront – wave-mtf-of-lv-rays |
 |---|---|---|---|---|---|---|---|
 | edge | 1 | Side by side: no judged figure | Side by side, worth a look: no judged figure | Side by side: no judged figure | Side by side, worth a look: no judged figure | Side by side: no judged figure | Side by side, worth a look: no judged figure |
 | beyond | 1 | Side by side, worth a look: no judged figure | Side by side, worth a look: no judged figure | Side by side: no judged figure | Side by side, worth a look: no judged figure | Side by side, worth a look: no judged figure | Side by side, worth a look: no judged figure |
@@ -121,10 +121,11 @@ By run, each pair with its verdict and the judged figure that is largest against
 
 #### edge
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -133,16 +134,16 @@ choices of each method.
 Review bands: 3.91e-3 on the axis, 7.81e-3 off it. Two chief rays that land more than 9.77e-4 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side, worth a look; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side, worth a look; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 0.5 | 4.000 | ok | ok | ok | unconverged | 0 | not converged | unconverged: a sampling did not settle; the difference is shown apart, in no review band | not converged | unconverged | not converged | unconverged |
 | 1 | 8.000 | ok | unconverged | ok | ok | 4 | the inputs differ | chief-landing-apart: the chief rays land further apart than the limit: two image points; no difference is shown | the inputs differ | chief-landing-apart | the inputs differ | chief-landing-apart |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.8750 | 0.8750 | 0.8711 | 0.8672 | 7.81e-3 | Side by side, worth a look | the methods differ | 7.81e-3 | Side by side, worth a look | the methods differ | 3.91e-3 | Side by side | the methods differ |
 | 0 | sagittal | 30 | 0.7500 | 0.7500 | 0.7500 | 0.7500 | 0 | Side by side | the methods differ | 0 | Side by side | the methods differ | 0 | Side by side | the methods differ |
@@ -168,10 +169,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### beyond
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -180,16 +182,16 @@ choices of each method.
 Review bands: 3.91e-3 on the axis, 7.81e-3 off it. Two chief rays that land more than 9.77e-4 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side, worth a look; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side, worth a look; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | the methods differ | two-methods |
 | 0.5 | 4.000 | ok | ok | ok | unconverged | 0 | not converged | unconverged: a sampling did not settle; the difference is shown apart, in no review band | not converged | unconverged | the inputs differ | chief-landing-apart |
 | 1 | 8.000 | ok | unconverged | ok | ok | 4 | the inputs differ | chief-landing-apart: the chief rays land further apart than the limit: two image points; no difference is shown | the inputs differ | chief-landing-apart | the inputs differ | chief-landing-apart |
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.8750 | 0.8750 | 0.8750 | 0.8672 | 7.81e-3 | Side by side, worth a look | the methods differ | 7.81e-3 | Side by side, worth a look | the methods differ | 7.81e-3 | Side by side, worth a look | the methods differ |
 | 0 | sagittal | 30 | 0.7500 | 0.7500 | 0.7500 | 0.7500 | 0 | Side by side | the methods differ | 0 | Side by side | the methods differ | 0 | Side by side | the methods differ |
@@ -215,10 +217,11 @@ more; a difference outside it is worth a look and fails nothing.
 
 #### polychromatic
 
-The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
+The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − otf-of-optiland-wavefront.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of
-LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw
-Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
+LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's
+raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter
+of another.
 The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's
 convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain
@@ -227,16 +230,16 @@ choices of each method.
 Review bands: 3.91e-3 on the axis, 7.81e-3 off it. Two chief rays that land more than 1.00e-3 mm apart
 are of two fields.
 
-Over every frequency of the request `lv` against `optiland-wave` comes to Side by side, worth a look; a row below has the
+Over every frequency of the request `lv` against `otf-of-optiland-wavefront` comes to Side by side, worth a look; a row below has the
 status of its own frequency.
 
-| Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
+| Field | Angle [deg] | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | Chief rays apart [mm] | Class | Reason | wave-mtf-of-lv-rays − otf-of-optiland-wavefront: class | Reason | optiland − otf-of-optiland-wavefront: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | — | ok | 0 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 4.000 | ok | ok | — | ok | 5.00e-6 | the methods differ | two-methods: both engines stand by their curves; the difference is set beside the review band | the methods differ | two-methods | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 8.000 | ok | unconverged | — | ok | 4 | the inputs differ | chief-landing-apart: the chief rays land further apart than the limit: two image points; no difference is shown | the inputs differ | chief-landing-apart | not computed by one engine | optiland is unsupported (feature lines.polychromatic) |
 
-On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,
+On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is
 phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by
 its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column
@@ -246,7 +249,7 @@ Fields of several wavelengths use the chief-landing sorting limit 1.00e-3 mm of 
 The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0
 are different rays; a common reference point does not change the modulus.
 
-| Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
+| Field | Cut | Cycles/mm | lv | wave-mtf-of-lv-rays | optiland | otf-of-optiland-wavefront | lv − otf-of-optiland-wavefront | Status | Class | wave-mtf-of-lv-rays − otf-of-optiland-wavefront | Status | Class | optiland − otf-of-optiland-wavefront | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | sagittal | 10 | 0.8750 | 0.8750 | — | 0.8672 | 7.81e-3 | Side by side, worth a look | the methods differ | 7.81e-3 | Side by side, worth a look | the methods differ | — | Not computed | not computed by one engine |
 | 0 | sagittal | 30 | 0.7500 | 0.7500 | — | 0.7500 | 0 | Side by side | the methods differ | 0 | Side by side | the methods differ | — | Not computed | not computed by one engine |
@@ -278,16 +281,16 @@ sorting limit tells two image points apart; nothing here is a failure.
 
 | Check | Run | Field | Pair | Figures above their review band or sorting limit |
 |---|---|---|---|---|
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | edge | — | lv – optiland-wave | chiefLanding.maxAbs 4 (sorting limit 9.77e-4) at field 1 of the image height; mtfOnAxis.maxAbs 7.81e-3 (review band 3.91e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 10 |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | edge | — | optiland – optiland-wave | chiefLanding.maxAbs 4 (sorting limit 9.77e-4) at field 1 of the image height |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | edge | — | optiland-wave – wave | chiefLanding.maxAbs 4 (sorting limit 9.77e-4) at field 1 of the image height; mtfOnAxis.maxAbs 7.81e-3 (review band 3.91e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 10 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | edge | — | lv – otf-of-optiland-wavefront | chiefLanding.maxAbs 4 (sorting limit 9.77e-4) at field 1 of the image height; mtfOnAxis.maxAbs 7.81e-3 (review band 3.91e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 10 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | edge | — | optiland – otf-of-optiland-wavefront | chiefLanding.maxAbs 4 (sorting limit 9.77e-4) at field 1 of the image height |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | edge | — | otf-of-optiland-wavefront – wave-mtf-of-lv-rays | chiefLanding.maxAbs 4 (sorting limit 9.77e-4) at field 1 of the image height; mtfOnAxis.maxAbs 7.81e-3 (review band 3.91e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 10 |
 | MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | beyond | — | lv – optiland | chiefLanding.maxAbs 1.95e-3 (sorting limit 9.77e-4) at field 5.00e-1 of the image height; mtfOnAxis.maxAbs 3.91e-3 (review band 3.91e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 50 |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | beyond | — | lv – optiland-wave | chiefLanding.maxAbs 4 (sorting limit 9.77e-4) at field 1 of the image height; mtfOnAxis.maxAbs 7.81e-3 (review band 3.91e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 10 |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | beyond | — | optiland – optiland-wave | chiefLanding.maxAbs 4 (sorting limit 9.77e-4) at field 1 of the image height; mtfOnAxis.maxAbs 7.81e-3 (review band 3.91e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 10 |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | beyond | — | optiland – wave | chiefLanding.maxAbs 1.95e-3 (sorting limit 9.77e-4) at field 5.00e-1 of the image height; mtfOnAxis.maxAbs 3.91e-3 (review band 3.91e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 50 |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | beyond | — | optiland-wave – wave | chiefLanding.maxAbs 4 (sorting limit 9.77e-4) at field 1 of the image height; mtfOnAxis.maxAbs 7.81e-3 (review band 3.91e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 10 |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | polychromatic | — | lv – optiland-wave | chiefLanding.maxAbs 4 (sorting limit 1.00e-3) at field 1 of the image height; mtfOnAxis.maxAbs 7.81e-3 (review band 3.91e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 10 |
-| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | polychromatic | — | optiland-wave – wave | chiefLanding.maxAbs 4 (sorting limit 1.00e-3) at field 1 of the image height; mtfOnAxis.maxAbs 7.81e-3 (review band 3.91e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 10 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | beyond | — | lv – otf-of-optiland-wavefront | chiefLanding.maxAbs 4 (sorting limit 9.77e-4) at field 1 of the image height; mtfOnAxis.maxAbs 7.81e-3 (review band 3.91e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 10 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | beyond | — | optiland – otf-of-optiland-wavefront | chiefLanding.maxAbs 4 (sorting limit 9.77e-4) at field 1 of the image height; mtfOnAxis.maxAbs 7.81e-3 (review band 3.91e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 10 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | beyond | — | optiland – wave-mtf-of-lv-rays | chiefLanding.maxAbs 1.95e-3 (sorting limit 9.77e-4) at field 5.00e-1 of the image height; mtfOnAxis.maxAbs 3.91e-3 (review band 3.91e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 50 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | beyond | — | otf-of-optiland-wavefront – wave-mtf-of-lv-rays | chiefLanding.maxAbs 4 (sorting limit 9.77e-4) at field 1 of the image height; mtfOnAxis.maxAbs 7.81e-3 (review band 3.91e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 10 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | polychromatic | — | lv – otf-of-optiland-wavefront | chiefLanding.maxAbs 4 (sorting limit 1.00e-3) at field 1 of the image height; mtfOnAxis.maxAbs 7.81e-3 (review band 3.91e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 10 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | polychromatic | — | otf-of-optiland-wavefront – wave-mtf-of-lv-rays | chiefLanding.maxAbs 4 (sorting limit 1.00e-3) at field 1 of the image height; mtfOnAxis.maxAbs 7.81e-3 (review band 3.91e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 10 |
 
 ## Not covered
 
@@ -335,8 +338,8 @@ A pair is named by the ids of its two engines:
 |---|---|
 | `lv` | LensVisualizer itself, loaded from a local checkout, asked for each figure as its own tabs ask for it, and made to trace the very rays every engine is handed in the checks held to a limit. |
 | `optiland` | optiland, an open-source optical design library in Python, run by this tool in a worker process of its own. |
-| `optiland-wave` | This tool's OTF and Zernike fit of the raw wavefront samples that optiland computes. |
-| `wave` | This tool's wave-optics MTF estimate, computed from the rays LensVisualizer launches and traces. |
+| `otf-of-optiland-wavefront` | This tool's OTF and Zernike fit of the raw wavefront samples that optiland computes. |
+| `wave-mtf-of-lv-rays` | This tool's wave-optics MTF estimate, computed from the rays LensVisualizer launches and traces. |
 
 ### Figures
 
@@ -400,7 +403,7 @@ contract version is that of the file format the baseline is written in.
 | Identifier | Value |
 |---|---|
 | Suite file | 42859dd104196db2704aaaf6d38ad4e21e94bab0a2b28e1147aa7888ff5fa5d4 |
-| Baseline file | 73550bdac29c928cb71b1398bd57ee0977f4aaf101ce00dd625595906db6b3bc |
+| Baseline file | 7748b6e6a84ce778bf35e4a07f4331f33e5e9c4c28418b6a9ec195abe0c72c06 |
 | Limits file | 0f9d1439d5a64ffd54b79fa6e0b75031180841b145ead77f4e660650741e0530 |
 | Contract version of the baseline file | 1.1 |
 
@@ -408,8 +411,8 @@ contract version is that of the file format the baseline is written in.
 |---|---|---|---|
 | lv | e446589a9d2d1f032334b5e798670d49c6268734494645c2a0f45c4a5bc007a2 | — | — |
 | optiland | 5b42de3b00b5524489ff7d64c6f9c2d9fd6d53eb0f33fb98439c766aa9b33d31 | — | — |
-| optiland-wave | 324b7c3508eaea73b4fe516c15425c651b3e802d0237cfcbc3cd52efc5b595c4 | — | — |
-| wave | a348558d728efd5c7b52a212b84aac868d7c2d5b1839c2f4a564dcd7f81d4f16 | — | — |
+| otf-of-optiland-wavefront | 45749fab0ee9a0f72877424d177d5552c5a336c1e156521f21c2660dd96b7820 | — | — |
+| wave-mtf-of-lv-rays | f726f40bc7f30ada0156f055e3ecc24b6c8a629d916291e451c6ad946abeeb7c | — | — |
 
 | Run | Lens state |
 |---|---|

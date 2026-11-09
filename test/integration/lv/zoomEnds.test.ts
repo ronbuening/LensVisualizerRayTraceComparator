@@ -61,11 +61,14 @@ function lvrtc(runsDir: string, ...args: string[]): { code: number | null; out: 
   return { code: child.status, out: child.stdout, err: child.stderr };
 }
 
-/** `lv` on the real LensVisualizer and `ref`, each behind an adapter, in this process, and the exporter. */
+/** `lv` on the real LensVisualizer and `reference-tracer`, each behind an adapter, in this process, and the exporter. */
 async function engines(t: TestContext) {
   const binding = await loadLvBinding(LV_PATH);
   const lv = new RemoteEngineAdapter({ id: "lv", transport: createInProcessTransport(createLvEngineOn(binding)) });
-  const ref = new RemoteEngineAdapter({ id: "ref", transport: createInProcessTransport(createRefEngine()) });
+  const ref = new RemoteEngineAdapter({
+    id: "reference-tracer",
+    transport: createInProcessTransport(createRefEngine()),
+  });
   t.after(() => Promise.all([lv.close(), ref.close()]));
   return { binding, exporter: createLvExporter(binding), lv, ref };
 }
@@ -77,7 +80,7 @@ function runOf(key: string, options: RunOptions): RunSpec {
   return { contract: CONTRACT_VERSION, kind: "run-spec", name: key, lens: { kind: "lv", key }, ...options };
 }
 
-/** The pair of `lv` and `ref` on one request of a rung, judged by the rung's policy as `lvrtc compare` judges it. */
+/** The pair of `lv` and `reference-tracer` on one request of a rung, judged by the rung's policy as `lvrtc compare` judges it. */
 async function judged(
   ask: Engines,
   rung: "built-system" | "first-order" | "ray-trace" | "optical-path",
@@ -111,7 +114,7 @@ function judgedAnswers(
       requestId: request.id,
       participants: [
         { engine: "lv", fingerprint: null, status: "ok", data: lvData },
-        { engine: "ref", fingerprint: null, status: "ok", data: refData },
+        { engine: "reference-tracer", fingerprint: null, status: "ok", data: refData },
       ],
       policy: POLICY.rungs[rung],
       comparator: COMPARATORS.get(quantity, rung),
@@ -397,7 +400,7 @@ test(
       for (const rung of ["built-system", "first-order", "ray-trace", "optical-path", "geometric-mtf", "wave-mtf"]) {
         assert.match(
           compared.out,
-          new RegExp(`^fixed-iris-zoom-photopic-${end} +${rung} +every pair +lv +ref +Pass`, "m"),
+          new RegExp(`^fixed-iris-zoom-photopic-${end} +${rung} +every pair +lv +reference-tracer +Pass`, "m"),
         );
       }
     }

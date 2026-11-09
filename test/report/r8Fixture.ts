@@ -106,7 +106,10 @@ export const R8A_FIXTURE_RUNG: RungDefinition = {
 /** The reference engine, under the id it is made with, answering as `answer` changes its trace. */
 function refLike(change?: (data: RaysTraceData, request: QuantityRequest) => RaysTraceData): EngineMaker {
   return async (id) => {
-    const adapter = new RemoteEngineAdapter({ id: "ref", transport: createInProcessTransport(createRefEngine()) });
+    const adapter = new RemoteEngineAdapter({
+      id: "reference-tracer",
+      transport: createInProcessTransport(createRefEngine()),
+    });
     const described = await adapter.describe();
     const descriptor: EngineDescriptor = { ...described, identity: { ...described.identity, id } };
     return {
@@ -125,13 +128,13 @@ function refLike(change?: (data: RaysTraceData, request: QuantityRequest) => Ray
 }
 
 /**
- * The engines of R8a: `ref`; `moved`, which has ray 2 of the second line leave the last surface 2^-26 mm (1.49e-8
- * mm) further along y in the same direction, so that it crosses the axis that over its slope further on, beyond the
- * gate on the transverse scale; and `stopped`, which stops ray 1 of the first line at the first surface.
+ * The engines of R8a: `reference-tracer`; `moved`, which has ray 2 of the second line leave the last surface 2^-26 mm
+ * (1.49e-8 mm) further along y in the same direction, so that it crosses the axis that over its slope further on,
+ * beyond the gate on the transverse scale; and `stopped`, which stops ray 1 of the first line at the first surface.
  */
 function r8aEngines(): { readonly [engine: string]: EngineMaker } {
   return {
-    ref: refLike(),
+    "reference-tracer": refLike(),
     moved: refLike((data, request) =>
       (request.spec as { line: number }).line === 1
         ? changed(data, (arrays) => {
@@ -151,7 +154,7 @@ export function r8aCycle(runsDir: string): Promise<R8Cycle> {
     runsDir,
     R8A_GOLDEN,
     R8A_FIXTURE_RUNG,
-    [{ name: "lens", opticalCase: LENS, referenceEngine: "ref" }],
+    [{ name: "lens", opticalCase: LENS, referenceEngine: "reference-tracer" }],
     r8aEngines(),
     R8A_POLICY,
   );

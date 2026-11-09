@@ -160,7 +160,12 @@ test("policy 24: the invariant's limit of 3e-14 mm and a band of 8e-15 on the sc
   assert.equal(POLICY.class, "recorded");
   const pairOf = (b: SeidelNativeData) =>
     comparePair(
-      { engine: "ref-seidel", fingerprint: "a", status: "ok", data: SEIDEL_DATA_TWO_SURFACES as unknown as JsonObject },
+      {
+        engine: "reference-seidel",
+        fingerprint: "a",
+        status: "ok",
+        data: SEIDEL_DATA_TWO_SURFACES as unknown as JsonObject,
+      },
       { engine: "optiland", fingerprint: "b", status: "ok", data: b as unknown as JsonObject },
       POLICY,
       seidelNativeComparator,

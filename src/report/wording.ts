@@ -55,8 +55,9 @@ export const WAVEFRONT_HEADING = "The three-way diffraction comparison, with FFT
 export const MTF_COMPARISON_INTROS: { readonly [kind in MtfComparisonKind]: readonly string[] } = {
   wavefront: [
     "The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of",
-    "LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and this tool's OTF of optiland's raw",
-    "Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.",
+    "LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's",
+    "raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter",
+    "of another.",
     "The last column uses the radial optical cosines of optiland's chief-ray reference",
     "sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's",
     "convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain",
@@ -88,7 +89,7 @@ export const GEOMETRIC_SEVERAL_LINES: readonly string[] = [
 
 /** How the several-wavelength column of check r6c is formed; optiland's FFT remains of one wavelength only. */
 export const WAVEFRONT_SEVERAL_LINES: readonly string[] = [
-  "On several wavelengths optiland-wave is this tool's sum of complex OTFs of optiland's raw wavefronts,",
+  "On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,",
   "one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is",
   "phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by",
   "its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column",
@@ -257,7 +258,7 @@ const IDENTICAL_RAYS = /\bidentical[- ]rays?\b/i;
 const GATED_SAME_RAYS =
   /\btrace the same rays within the gates, and the optical path, geometric MTF and wave MTF computed from those rays agree within theirs\b/i;
 const RECORDED_MTF = new RegExp(
-  `\\b(?:(?:recorded|FFT|optiland-wave)\\b|${checkIds(["r5", "r5g", "r6b", "r6c"])})`,
+  `\\b(?:(?:recorded|FFT|optiland-wave|otf-of-optiland-wavefront)\\b|${checkIds(["r5", "r5g", "r6b", "r6c"])})`,
   "i",
 );
 const recordedContext = (sentence: string): boolean =>
@@ -319,7 +320,7 @@ export const BANNED_CLAIMS: readonly BannedClaim[] = [
         .replace(/\bno column is an? arbiter\b/gi, "")
         .replace(/\bneither (?:column|counterpart) is (?:preferred|an? arbiter)\b/gi, "");
       return mentions(
-        /\b(FFT|wavefront|optiland-wave|counterpart)s?\b/i,
+        /\b(FFT|wavefront|optiland-wave|otf-of-optiland-wavefront|counterpart)s?\b/i,
         /\b(prefer\w*|better|best (?:counterpart|method|reference)|superior|inferior|arbiter|more accurate|reference standard)\b/i,
       )(affirmative);
     },
@@ -1639,7 +1640,6 @@ export const DASHBOARD_TEXT = {
       stored: "Stored as",
       term: "Term",
       id: "Id",
-      newId: "Future id",
       oldId: "Old id",
       whatItIs: "What it is",
       compares: "Compares",

@@ -1,7 +1,7 @@
-// Rung R5g from end to end on engines that know no optics: three stand-ins named `lv`, `optiland` and `replay`
-// answer one `mtf.native` request for a geometric MTF with curves this file writes out, and the suite of
-// `r5Fixture.ts` is run, compared and reported with them. Every number is synthetic: a binary fraction, or a band of
-// the policy.
+// Rung R5g from end to end on engines that know no optics: three stand-ins named `lv`, `optiland` and
+// `replay-of-lv-mtf` answer one `mtf.native` request for a geometric MTF with curves this file writes out, and the
+// suite of `r5Fixture.ts` is run, compared and reported with them. Every number is synthetic: a binary fraction, or a
+// band of the policy.
 import type { Policy } from "../../src/contract/policy.ts";
 import { MTF_NATIVE } from "../../src/contract/quantities/mtfNative.ts";
 import type { MtfNativeSpec } from "../../src/contract/quantities/mtfNative.ts";
@@ -39,7 +39,7 @@ export const R5G_POLICY: Policy = {
 export const R5G_FIXTURE_RUNG: RungDefinition = {
   id: "geometric-mtf-vs-optiland",
   quantity: MTF_NATIVE,
-  engines: ["lv", "optiland", "replay"],
+  engines: ["lv", "optiland", "replay-of-lv-mtf"],
   buildRequests: (opticalCase) => [makeRequest({ caseId: opticalCase.id, quantity: MTF_NATIVE, spec: GEOMETRIC_SPEC })],
 };
 
@@ -98,7 +98,7 @@ export function geometricStandIns(): { readonly [engine: string]: EngineMaker } 
         ? ok(answer("spot-landings-sum", [{}, { sagittal: raised(2 * OFF_AXIS_BAND, 1) }, {}], SEVERAL_LINES))
         : ok(answer("geometric-mtf", optilandFields(request))),
     ),
-    replay: mtfEngine((request) => ok(answer("binless-replay", [{}, {}, {}], lines(request)))),
+    "replay-of-lv-mtf": mtfEngine((request) => ok(answer("binless-replay", [{}, {}, {}], lines(request)))),
   };
 }
 

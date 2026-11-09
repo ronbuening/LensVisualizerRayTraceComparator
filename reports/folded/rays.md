@@ -19,7 +19,7 @@ engines are still those of the baseline. How to read this, near the end, says wh
 |---|---|---|---|
 | lv | LensVisualizer | 1 | clean checkout, 184 engine files |
 | optiland | optiland | 0.6.2.post117+g4e893f53 | backend numpy, checkout with uncommitted changes, JIT compilation on, Numba 0.65.1, NumPy 2.3.5, precision float64, Python 3.14.8, SciPy 1.16.3, 534 source files |
-| ref | Reference tracer | 1 | 13 source files |
+| reference-tracer | Reference tracer | 1 | 13 source files |
 
 ## Runs with a problem
 
@@ -47,17 +47,17 @@ engines are still those of the baseline. How to read this, near the end, says wh
 | Check | Quantity | Runs | Requests | Pair | Runs by verdict | Requests by verdict |
 |---|---|---|---|---|---|---|
 | Built system — `built-system` | `system.describe` | 8 | 8 | lv – optiland | 8 Pass | 8 Pass |
-| Built system — `built-system` | `system.describe` | 8 | 8 | lv – ref | 8 Pass | 8 Pass |
-| Built system — `built-system` | `system.describe` | 8 | 8 | optiland – ref | 8 Pass | 8 Pass |
+| Built system — `built-system` | `system.describe` | 8 | 8 | lv – reference-tracer | 8 Pass | 8 Pass |
+| Built system — `built-system` | `system.describe` | 8 | 8 | optiland – reference-tracer | 8 Pass | 8 Pass |
 | First-order data — `first-order` | `paraxial.first-order` | 8 | 8 | lv – optiland | 1 Pass; 7 Not computed | 1 Pass; 7 Not computed |
-| First-order data — `first-order` | `paraxial.first-order` | 8 | 8 | lv – ref | 1 Pass; 7 Not computed | 1 Pass; 7 Not computed |
-| First-order data — `first-order` | `paraxial.first-order` | 8 | 8 | optiland – ref | 7 Pass; 1 Not computed | 7 Pass; 1 Not computed |
+| First-order data — `first-order` | `paraxial.first-order` | 8 | 8 | lv – reference-tracer | 1 Pass; 7 Not computed | 1 Pass; 7 Not computed |
+| First-order data — `first-order` | `paraxial.first-order` | 8 | 8 | optiland – reference-tracer | 7 Pass; 1 Not computed | 7 Pass; 1 Not computed |
 | Ray trace — `ray-trace` | `rays.trace` | 8 | 16 | lv – optiland | 8 Pass | 16 Pass |
-| Ray trace — `ray-trace` | `rays.trace` | 8 | 16 | lv – ref | 8 Pass | 16 Pass |
-| Ray trace — `ray-trace` | `rays.trace` | 8 | 16 | optiland – ref | 8 Pass | 16 Pass |
+| Ray trace — `ray-trace` | `rays.trace` | 8 | 16 | lv – reference-tracer | 8 Pass | 16 Pass |
+| Ray trace — `ray-trace` | `rays.trace` | 8 | 16 | optiland – reference-tracer | 8 Pass | 16 Pass |
 | Optical path — `optical-path` | `rays.trace` | 8 | 16 | lv – optiland | 8 Not computed | 16 Not computed |
-| Optical path — `optical-path` | `rays.trace` | 8 | 16 | lv – ref | 8 Not computed | 16 Not computed |
-| Optical path — `optical-path` | `rays.trace` | 8 | 16 | optiland – ref | 8 Pass | 16 Pass |
+| Optical path — `optical-path` | `rays.trace` | 8 | 16 | lv – reference-tracer | 8 Not computed | 16 Not computed |
+| Optical path — `optical-path` | `rays.trace` | 8 | 16 | optiland – reference-tracer | 8 Pass | 16 Pass |
 
 ## Support
 
@@ -68,16 +68,16 @@ In how many runs the jobs of an engine ended in each way. An engine that cannot 
 |---|---|---|
 | Built system — `built-system` | lv | 8 answered |
 | Built system — `built-system` | optiland | 8 answered |
-| Built system — `built-system` | ref | 8 answered |
+| Built system — `built-system` | reference-tracer | 8 answered |
 | First-order data — `first-order` | lv | 1 answered, 7 not computed (feature folded-stop-not-visited; feature lv-folded-first-order-unavailable) |
 | First-order data — `first-order` | optiland | 7 answered, 1 not computed (feature folded-stop-not-visited) |
-| First-order data — `first-order` | ref | 7 answered, 1 not computed (feature folded-stop-not-visited) |
+| First-order data — `first-order` | reference-tracer | 7 answered, 1 not computed (feature folded-stop-not-visited) |
 | Ray trace — `ray-trace` | lv | 8 answered |
 | Ray trace — `ray-trace` | optiland | 8 answered |
-| Ray trace — `ray-trace` | ref | 8 answered |
+| Ray trace — `ray-trace` | reference-tracer | 8 answered |
 | Optical path — `optical-path` | lv | 8 answered |
 | Optical path — `optical-path` | optiland | 8 answered |
-| Optical path — `optical-path` | ref | 8 answered |
+| Optical path — `optical-path` | reference-tracer | 8 answered |
 
 ## Built system — `built-system`
 
@@ -93,22 +93,22 @@ The worst of every figure over the suite:
 | lv – optiland | Refractive indices that differ — `index.mismatches` | elements | ≤ 0 | 0 | — | — |
 | lv – optiland | Largest sag difference at the sampled heights, over the size of a rounding there — `sag.maxScaled` | (no unit) | ≤ 1.00e-12 | 3.10e-16 | reference-mangin-second-surface-mirror | sample 8, surface 2 |
 | lv – optiland | Largest sag difference at the sampled heights — `sag.maxAbs` | mm | — | 8.88e-16 | minolta-af-reflex-500mm-f8 | sample 8, surface 9 |
-| lv – ref | Surfaces whose count or place differs — `layout.mismatches` | elements | ≤ 0 | 0 | — | — |
-| lv – ref | Surfaces whose curvature, conic or asphere terms differ — `shape.mismatches` | elements | ≤ 0 | 0 | — | — |
-| lv – ref | Stops and clear apertures that differ — `aperture.mismatches` | elements | ≤ 0 | 0 | — | — |
-| lv – ref | Refractive indices that differ — `index.mismatches` | elements | ≤ 0 | 0 | — | — |
-| lv – ref | Largest sag difference at the sampled heights, over the size of a rounding there — `sag.maxScaled` | (no unit) | ≤ 1.00e-12 | 2.15e-16 | minolta-af-reflex-500mm-f8 | sample 6, surface 10 |
-| lv – ref | Largest sag difference at the sampled heights — `sag.maxAbs` | mm | — | 8.88e-16 | nikon-reflex-nikkor-500mm-f8-new | sample 8, surface 7 |
-| optiland – ref | Surfaces whose count or place differs — `layout.mismatches` | elements | ≤ 0 | 0 | — | — |
-| optiland – ref | Surfaces whose curvature, conic or asphere terms differ — `shape.mismatches` | elements | ≤ 0 | 0 | — | — |
-| optiland – ref | Stops and clear apertures that differ — `aperture.mismatches` | elements | ≤ 0 | 0 | — | — |
-| optiland – ref | Refractive indices that differ — `index.mismatches` | elements | ≤ 0 | 0 | — | — |
-| optiland – ref | Largest sag difference at the sampled heights, over the size of a rounding there — `sag.maxScaled` | (no unit) | ≤ 1.00e-12 | 3.10e-16 | reference-mangin-second-surface-mirror | sample 8, surface 2 |
-| optiland – ref | Largest sag difference at the sampled heights — `sag.maxAbs` | mm | — | 8.88e-16 | minolta-af-reflex-500mm-f8 | sample 8, surface 9 |
+| lv – reference-tracer | Surfaces whose count or place differs — `layout.mismatches` | elements | ≤ 0 | 0 | — | — |
+| lv – reference-tracer | Surfaces whose curvature, conic or asphere terms differ — `shape.mismatches` | elements | ≤ 0 | 0 | — | — |
+| lv – reference-tracer | Stops and clear apertures that differ — `aperture.mismatches` | elements | ≤ 0 | 0 | — | — |
+| lv – reference-tracer | Refractive indices that differ — `index.mismatches` | elements | ≤ 0 | 0 | — | — |
+| lv – reference-tracer | Largest sag difference at the sampled heights, over the size of a rounding there — `sag.maxScaled` | (no unit) | ≤ 1.00e-12 | 2.15e-16 | minolta-af-reflex-500mm-f8 | sample 6, surface 10 |
+| lv – reference-tracer | Largest sag difference at the sampled heights — `sag.maxAbs` | mm | — | 8.88e-16 | nikon-reflex-nikkor-500mm-f8-new | sample 8, surface 7 |
+| optiland – reference-tracer | Surfaces whose count or place differs — `layout.mismatches` | elements | ≤ 0 | 0 | — | — |
+| optiland – reference-tracer | Surfaces whose curvature, conic or asphere terms differ — `shape.mismatches` | elements | ≤ 0 | 0 | — | — |
+| optiland – reference-tracer | Stops and clear apertures that differ — `aperture.mismatches` | elements | ≤ 0 | 0 | — | — |
+| optiland – reference-tracer | Refractive indices that differ — `index.mismatches` | elements | ≤ 0 | 0 | — | — |
+| optiland – reference-tracer | Largest sag difference at the sampled heights, over the size of a rounding there — `sag.maxScaled` | (no unit) | ≤ 1.00e-12 | 3.10e-16 | reference-mangin-second-surface-mirror | sample 8, surface 2 |
+| optiland – reference-tracer | Largest sag difference at the sampled heights — `sag.maxAbs` | mm | — | 8.88e-16 | minolta-af-reflex-500mm-f8 | sample 8, surface 9 |
 
 By run, each pair with its verdict and the judged figure that is largest against its limit:
 
-| Run | Requests | lv – optiland | lv – ref | optiland – ref |
+| Run | Requests | lv – optiland | lv – reference-tracer | optiland – reference-tracer |
 |---|---|---|---|---|
 | minolta-af-reflex-500mm-f8 | 1 | Pass: sag.maxScaled 2.03e-16 | Pass: sag.maxScaled 2.15e-16 | Pass: sag.maxScaled 2.15e-16 |
 | nikon-reflex-nikkor-1000mm-f11 | 1 | Pass: sag.maxScaled 2.22e-16 | Pass: sag.maxScaled 2.01e-16 | Pass: sag.maxScaled 2.01e-16 |
@@ -132,20 +132,20 @@ The worst of every figure over the suite:
 | lv – optiland | Largest difference of a pupil position — `pupilZ.maxAbs` | mm | — | 0 | reference-spherical-primary-mirror | line 0, quantity entrancePupilZ |
 | lv – optiland | Largest difference of a pupil radius, scaled by its pupil's distance from the image — `pupilRadius.maxScaled` | mm | ≤ 1.00e-9 | 0 | reference-spherical-primary-mirror | line 0, quantity entrancePupilSemiDiameter |
 | lv – optiland | Largest difference of a pupil radius — `pupilRadius.maxAbs` | mm | — | 0 | reference-spherical-primary-mirror | line 0, quantity entrancePupilSemiDiameter |
-| lv – ref | Largest difference of a focal length, focal point, principal point or back focus — `firstOrder.maxAbs` | mm | ≤ 1.00e-9 | 2.08e-15 | reference-spherical-primary-mirror | line 0, quantity frontFocalZ |
-| lv – ref | Largest difference of a pupil position, scaled by its distance from the image plane — `pupilZ.maxScaled` | mm | ≤ 1.00e-9 | 0 | reference-spherical-primary-mirror | line 0, quantity entrancePupilZ |
-| lv – ref | Largest difference of a pupil position — `pupilZ.maxAbs` | mm | — | 0 | reference-spherical-primary-mirror | line 0, quantity entrancePupilZ |
-| lv – ref | Largest difference of a pupil radius, scaled by its pupil's distance from the image — `pupilRadius.maxScaled` | mm | ≤ 1.00e-9 | 0 | reference-spherical-primary-mirror | line 0, quantity entrancePupilSemiDiameter |
-| lv – ref | Largest difference of a pupil radius — `pupilRadius.maxAbs` | mm | — | 0 | reference-spherical-primary-mirror | line 0, quantity entrancePupilSemiDiameter |
-| optiland – ref | Largest difference of a focal length, focal point, principal point or back focus — `firstOrder.maxAbs` | mm | ≤ 1.00e-9 | 1.00e-11 | nikon-reflex-nikkor-c-500mm-f8 | line 0, quantity frontFocalZ |
-| optiland – ref | Largest difference of a pupil position, scaled by its distance from the image plane — `pupilZ.maxScaled` | mm | ≤ 1.00e-9 | 5.68e-14 | reference-mangin-second-surface-mirror | line 0, quantity exitPupilZ |
-| optiland – ref | Largest difference of a pupil position — `pupilZ.maxAbs` | mm | — | 5.68e-14 | reference-mangin-second-surface-mirror | line 0, quantity exitPupilZ |
-| optiland – ref | Largest difference of a pupil radius, scaled by its pupil's distance from the image — `pupilRadius.maxScaled` | mm | ≤ 1.00e-9 | 1.42e-14 | reference-mangin-second-surface-mirror | line 0, quantity exitPupilSemiDiameter |
-| optiland – ref | Largest difference of a pupil radius — `pupilRadius.maxAbs` | mm | — | 1.42e-14 | reference-mangin-second-surface-mirror | line 0, quantity exitPupilSemiDiameter |
+| lv – reference-tracer | Largest difference of a focal length, focal point, principal point or back focus — `firstOrder.maxAbs` | mm | ≤ 1.00e-9 | 2.08e-15 | reference-spherical-primary-mirror | line 0, quantity frontFocalZ |
+| lv – reference-tracer | Largest difference of a pupil position, scaled by its distance from the image plane — `pupilZ.maxScaled` | mm | ≤ 1.00e-9 | 0 | reference-spherical-primary-mirror | line 0, quantity entrancePupilZ |
+| lv – reference-tracer | Largest difference of a pupil position — `pupilZ.maxAbs` | mm | — | 0 | reference-spherical-primary-mirror | line 0, quantity entrancePupilZ |
+| lv – reference-tracer | Largest difference of a pupil radius, scaled by its pupil's distance from the image — `pupilRadius.maxScaled` | mm | ≤ 1.00e-9 | 0 | reference-spherical-primary-mirror | line 0, quantity entrancePupilSemiDiameter |
+| lv – reference-tracer | Largest difference of a pupil radius — `pupilRadius.maxAbs` | mm | — | 0 | reference-spherical-primary-mirror | line 0, quantity entrancePupilSemiDiameter |
+| optiland – reference-tracer | Largest difference of a focal length, focal point, principal point or back focus — `firstOrder.maxAbs` | mm | ≤ 1.00e-9 | 1.00e-11 | nikon-reflex-nikkor-c-500mm-f8 | line 0, quantity frontFocalZ |
+| optiland – reference-tracer | Largest difference of a pupil position, scaled by its distance from the image plane — `pupilZ.maxScaled` | mm | ≤ 1.00e-9 | 5.68e-14 | reference-mangin-second-surface-mirror | line 0, quantity exitPupilZ |
+| optiland – reference-tracer | Largest difference of a pupil position — `pupilZ.maxAbs` | mm | — | 5.68e-14 | reference-mangin-second-surface-mirror | line 0, quantity exitPupilZ |
+| optiland – reference-tracer | Largest difference of a pupil radius, scaled by its pupil's distance from the image — `pupilRadius.maxScaled` | mm | ≤ 1.00e-9 | 1.42e-14 | reference-mangin-second-surface-mirror | line 0, quantity exitPupilSemiDiameter |
+| optiland – reference-tracer | Largest difference of a pupil radius — `pupilRadius.maxAbs` | mm | — | 1.42e-14 | reference-mangin-second-surface-mirror | line 0, quantity exitPupilSemiDiameter |
 
 By run, each pair with its verdict and the judged figure that is largest against its limit:
 
-| Run | Requests | lv – optiland | lv – ref | optiland – ref |
+| Run | Requests | lv – optiland | lv – reference-tracer | optiland – reference-tracer |
 |---|---|---|---|---|
 | minolta-af-reflex-500mm-f8 | 1 | Not computed | Not computed | Pass: firstOrder.maxAbs 1.36e-12 mm |
 | nikon-reflex-nikkor-1000mm-f11 | 1 | Not computed | Not computed | Pass: firstOrder.maxAbs 5.46e-12 mm |
@@ -170,22 +170,22 @@ The worst of every figure over the suite:
 | lv – optiland | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
 | lv – optiland | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
 | lv – optiland | Rays both engines traced through — `rays.compared` | rays | — | 1976 | — | — |
-| lv – ref | Largest distance between the two engines' ray hits on a surface — `hits.maxDistance` | mm | ≤ 1.00e-8 | 9.08e-14 | nikon-reflex-nikkor-1000mm-f11 | field 2.50e-1 deg, line 0, ray 195, surface 13 |
-| lv – ref | Largest difference of a component of a ray's exit direction — `direction.maxAbs` | (no unit) | ≤ 1.00e-9 | 1.30e-15 | nikon-reflex-nikkor-500mm-f8-new | field 2.50e-1 deg, line 0, ray 22 |
-| lv – ref | Largest distance between the two engines' ray landings on the image plane — `landing.maxDistance` | mm | ≤ 1.00e-8 | 1.75e-13 | nikon-reflex-nikkor-1000mm-f11 | field 2.50e-1 deg, line 0, ray 195 |
-| lv – ref | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
-| lv – ref | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
-| lv – ref | Rays both engines traced through — `rays.compared` | rays | — | 1976 | — | — |
-| optiland – ref | Largest distance between the two engines' ray hits on a surface — `hits.maxDistance` | mm | ≤ 1.00e-8 | 1.19e-13 | minolta-af-reflex-500mm-f8 | field 2.50e-1 deg, line 0, ray 113, surface 17 |
-| optiland – ref | Largest difference of a component of a ray's exit direction — `direction.maxAbs` | (no unit) | ≤ 1.00e-9 | 4.11e-15 | nikon-reflex-nikkor-500mm-f8-new | field 2.50e-1 deg, line 0, ray 54 |
-| optiland – ref | Largest distance between the two engines' ray landings on the image plane — `landing.maxDistance` | mm | ≤ 1.00e-8 | 2.27e-13 | minolta-af-reflex-500mm-f8 | field 2.50e-1 deg, line 0, ray 231 |
-| optiland – ref | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
-| optiland – ref | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
-| optiland – ref | Rays both engines traced through — `rays.compared` | rays | — | 1976 | — | — |
+| lv – reference-tracer | Largest distance between the two engines' ray hits on a surface — `hits.maxDistance` | mm | ≤ 1.00e-8 | 9.08e-14 | nikon-reflex-nikkor-1000mm-f11 | field 2.50e-1 deg, line 0, ray 195, surface 13 |
+| lv – reference-tracer | Largest difference of a component of a ray's exit direction — `direction.maxAbs` | (no unit) | ≤ 1.00e-9 | 1.30e-15 | nikon-reflex-nikkor-500mm-f8-new | field 2.50e-1 deg, line 0, ray 22 |
+| lv – reference-tracer | Largest distance between the two engines' ray landings on the image plane — `landing.maxDistance` | mm | ≤ 1.00e-8 | 1.75e-13 | nikon-reflex-nikkor-1000mm-f11 | field 2.50e-1 deg, line 0, ray 195 |
+| lv – reference-tracer | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
+| lv – reference-tracer | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
+| lv – reference-tracer | Rays both engines traced through — `rays.compared` | rays | — | 1976 | — | — |
+| optiland – reference-tracer | Largest distance between the two engines' ray hits on a surface — `hits.maxDistance` | mm | ≤ 1.00e-8 | 1.19e-13 | minolta-af-reflex-500mm-f8 | field 2.50e-1 deg, line 0, ray 113, surface 17 |
+| optiland – reference-tracer | Largest difference of a component of a ray's exit direction — `direction.maxAbs` | (no unit) | ≤ 1.00e-9 | 4.11e-15 | nikon-reflex-nikkor-500mm-f8-new | field 2.50e-1 deg, line 0, ray 54 |
+| optiland – reference-tracer | Largest distance between the two engines' ray landings on the image plane — `landing.maxDistance` | mm | ≤ 1.00e-8 | 2.27e-13 | minolta-af-reflex-500mm-f8 | field 2.50e-1 deg, line 0, ray 231 |
+| optiland – reference-tracer | Rays one engine stops and the other lets through — `mask.mismatches` | rays | ≤ 0 | 0 | — | — |
+| optiland – reference-tracer | Rays one engine stops and the other lets through within 1e-8 mm of a rim or central obstruction (shown, not judged) — `mask.rimBand` | rays | — | 0 | — | — |
+| optiland – reference-tracer | Rays both engines traced through — `rays.compared` | rays | — | 1976 | — | — |
 
 By run, each pair with its verdict and the judged figure that is largest against its limit:
 
-| Run | Requests | lv – optiland | lv – ref | optiland – ref | Rays of lv: ok / blocked / failed | Rays of optiland: ok / blocked / failed | Rays of ref: ok / blocked / failed |
+| Run | Requests | lv – optiland | lv – reference-tracer | optiland – reference-tracer | Rays of lv: ok / blocked / failed | Rays of optiland: ok / blocked / failed | Rays of reference-tracer: ok / blocked / failed |
 |---|---|---|---|---|---|---|---|
 | minolta-af-reflex-500mm-f8 | 2 | Pass: landing.maxDistance 1.74e-13 mm | Pass: landing.maxDistance 1.39e-13 mm | Pass: landing.maxDistance 2.27e-13 mm | 264 / 209 / 40 | 264 / 249 / 0 | 264 / 249 / 0 |
 | nikon-reflex-nikkor-1000mm-f11 | 2 | Pass: landing.maxDistance 1.86e-13 mm | Pass: landing.maxDistance 1.75e-13 mm | Pass: landing.maxDistance 1.90e-13 mm | 268 / 233 / 12 | 268 / 245 / 0 | 268 / 245 / 0 |
@@ -204,13 +204,13 @@ The worst of every figure over the suite:
 
 | Pair | Figure | Unit | Limit | Worst, or total | Run | Where |
 |---|---|---|---|---|---|---|
-| optiland – ref | Largest difference of an optical path length to a surface — `opticalPath.maxAbs` | waves | ≤ 2.00e-5 | 5.80e-10 | nikon-reflex-nikkor-1000mm-f11 | field 2.50e-1 deg, line 0, ray 83 |
-| optiland – ref | Largest difference of an optical path length to the image plane — `opticalPathToImage.maxAbs` | waves | ≤ 2.00e-5 | 3.87e-10 | nikon-reflex-nikkor-1000mm-f11 | field 0 deg, line 0, ray 71 |
-| optiland – ref | Largest difference of an optical path difference from the chief ray — `opd.maxAbs` | waves | ≤ 2.00e-5 | 1.45e-10 | reference-spherical-primary-mirror | field 0 deg, line 0, ray 103 |
+| optiland – reference-tracer | Largest difference of an optical path length to a surface — `opticalPath.maxAbs` | waves | ≤ 2.00e-5 | 5.80e-10 | nikon-reflex-nikkor-1000mm-f11 | field 2.50e-1 deg, line 0, ray 83 |
+| optiland – reference-tracer | Largest difference of an optical path length to the image plane — `opticalPathToImage.maxAbs` | waves | ≤ 2.00e-5 | 3.87e-10 | nikon-reflex-nikkor-1000mm-f11 | field 0 deg, line 0, ray 71 |
+| optiland – reference-tracer | Largest difference of an optical path difference from the chief ray — `opd.maxAbs` | waves | ≤ 2.00e-5 | 1.45e-10 | reference-spherical-primary-mirror | field 0 deg, line 0, ray 103 |
 
 By run, each pair with its verdict and the judged figure that is largest against its limit:
 
-| Run | Requests | lv – optiland | lv – ref | optiland – ref |
+| Run | Requests | lv – optiland | lv – reference-tracer | optiland – reference-tracer |
 |---|---|---|---|---|
 | minolta-af-reflex-500mm-f8 | 2 | Not computed | Not computed | Pass: opticalPathToImage.maxAbs 2.90e-10 waves |
 | nikon-reflex-nikkor-1000mm-f11 | 2 | Not computed | Not computed | Pass: opticalPath.maxAbs 5.80e-10 waves |
@@ -254,7 +254,7 @@ A pair is named by the ids of its two engines:
 |---|---|
 | `lv` | LensVisualizer itself, loaded from a local checkout, asked for each figure as its own tabs ask for it, and made to trace the very rays every engine is handed in the checks held to a limit. |
 | `optiland` | optiland, an open-source optical design library in Python, run by this tool in a worker process of its own. |
-| `ref` | The reference tracer: a small exact ray tracer written in this repository from the optics alone, never from LensVisualizer's or optiland's code. |
+| `reference-tracer` | The reference tracer: a small exact ray tracer written in this repository from the optics alone, never from LensVisualizer's or optiland's code. |
 
 ### Figures
 
@@ -308,7 +308,7 @@ contract version is that of the file format the baseline is written in.
 |---|---|---|---|
 | lv | 4669921bae7179c7eddd220fa367e696eae7acec3a5a788d0ca90da632d3eb6b | afad9cb89bd9a25fbfa5ee0ec335b1e315481414b7ba41da2f906c28856010c5 | commit 25f65d4b4213a21392cbae92680134906049b2ad |
 | optiland | bcfbf3916c1103b3b3b49a93117d3346a0bd6921ec35f01feb99bc1a2a6e39eb | 98f36151b0cdd2d3d3f82013841899de85309b22012967de64bbba662217fbcb | commit 4e893f53aee1312f2d091680b93dd2279711e197, distribution version 0.6.2.post117+g4e893f53, source hash 279af5c55d8ebe1610686b9dad3e6eeb22b1822037d59a0e5f148c2fb8937f38 |
-| ref | b7d0684b593261d14a1dfebb903774775bbe481a07ae2955689644dc0ffd919e | 2225e342b4fd8539480e933e59a3ca95a8ae2beeb24f45972b55fd4e4a59d357 | — |
+| reference-tracer | b7d0684b593261d14a1dfebb903774775bbe481a07ae2955689644dc0ffd919e | 2225e342b4fd8539480e933e59a3ca95a8ae2beeb24f45972b55fd4e4a59d357 | — |
 
 | Run | Lens state |
 |---|---|

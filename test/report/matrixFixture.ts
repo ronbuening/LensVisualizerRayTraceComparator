@@ -8,15 +8,19 @@ import type { StatementInput } from "../../src/report/statement.ts";
 
 export const MATRIX_POLICY: Policy = { contract: "1.3", kind: "policy", version: 1, rungs: {} };
 const policy = { version: 1, hash: hashCanonical(MATRIX_POLICY) };
-const engines: BaselineEngine[] = ["lv", "optiland", "ref", "replay", "wave"].map((id) => ({
-  id,
-  version: "stand-in",
-  fingerprint: (id === "lv" || id === "replay" || id === "wave" ? "a" : "b").repeat(64),
-  adapterRevision: id.length.toString(16).repeat(64),
-  details: (id === "lv"
-    ? { commit: "c".repeat(40), dirty: false, engineFileCount: 3 }
-    : {}) as BaselineEngine["details"],
-}));
+const engines: BaselineEngine[] = ["lv", "optiland", "reference-tracer", "replay-of-lv-mtf", "wave-mtf-of-lv-rays"].map(
+  (id) => ({
+    id,
+    version: "stand-in",
+    fingerprint: (id === "lv" || id === "replay-of-lv-mtf" || id === "wave-mtf-of-lv-rays" ? "a" : "b").repeat(64),
+    // The digit of the stand-in revision is the length of the engine's id before the rename (Stage 9.8).
+    adapterRevision:
+      { lv: "2", optiland: "8", "reference-tracer": "3", "replay-of-lv-mtf": "6" }[id]?.repeat(64) ?? "4".repeat(64),
+    details: (id === "lv"
+      ? { commit: "c".repeat(40), dirty: false, engineFileCount: 3 }
+      : {}) as BaselineEngine["details"],
+  }),
+);
 
 const QUANTITIES: Readonly<Record<string, string>> = {
   "built-system": "system.describe",
@@ -54,7 +58,7 @@ function rung(
   };
 }
 
-const TRACERS = ["lv", "optiland", "ref"];
+const TRACERS = ["lv", "optiland", "reference-tracer"];
 
 /** The rays baseline holds R0 to R4 and R7a to R10a (no R11a); the MTF baseline R4, R4f, R5, R6a and R6b. */
 export function matrixInputs(): StatementInput[] {
@@ -66,10 +70,15 @@ export function matrixInputs(): StatementInput[] {
       rungs: mtf
         ? [
             rung("geometric-mtf", TRACERS, ["PASS", "PASS"]),
-            rung("lv-mtf-replay", ["lv", "replay"], ["PASS"]),
-            rung("mtf-vs-optiland-fft", ["lv", "optiland", "wave"], ["ATTENTION"], second ? "optiland" : undefined),
+            rung("lv-mtf-replay", ["lv", "replay-of-lv-mtf"], ["PASS"]),
+            rung(
+              "mtf-vs-optiland-fft",
+              ["lv", "optiland", "wave-mtf-of-lv-rays"],
+              ["ATTENTION"],
+              second ? "optiland" : undefined,
+            ),
             rung("wave-mtf", TRACERS, ["PASS", "PASS"]),
-            rung("mtf-vs-wave-estimate", ["lv", "wave"], [second ? "ATTENTION" : "RECORDED"]),
+            rung("mtf-vs-wave-estimate", ["lv", "wave-mtf-of-lv-rays"], [second ? "ATTENTION" : "RECORDED"]),
           ]
         : [
             rung("built-system", TRACERS, ["PASS"]),

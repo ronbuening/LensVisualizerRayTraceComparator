@@ -266,7 +266,7 @@ test(
     const { manifest, comparisons, verdicts } = runAndCompare(t, {
       suite: `${name}.json`,
       name,
-      engines: "ref,optiland",
+      engines: "reference-tracer,optiland",
       rungs: "built-system,first-order",
       root: rootDir,
     });
@@ -278,7 +278,7 @@ test(
     const r1 = pairsOf(comparisons, "first-order", PARAXIAL_FIRST_ORDER);
     assert.deepEqual(
       r1.map((pair) => [pair.run, pair.engines]),
-      names.map((run) => [run, "optiland / ref"]),
+      names.map((run) => [run, "optiland / reference-tracer"]),
     );
     assertR1Passes(t, name, r1);
     // Measured: no value of these systems is more than 5.4e-14 mm apart in the two engines.
@@ -291,10 +291,13 @@ test(
       return set?.participants.find((participant) => participant.engine === engine)?.recorded ?? {};
     };
     assert.deepEqual(Object.keys(recordedBy("singlet", "optiland")), ["optilandFNumber"]);
-    assert.deepEqual(recordedBy("singlet", "ref"), {});
+    assert.deepEqual(recordedBy("singlet", "reference-tracer"), {});
     for (const run of ["finite-object", "all-features"]) {
       assert.deepEqual(Object.keys(recordedBy(run, "optiland")), ["magnification", "optilandFNumber"], run);
-      const [mine, theirs] = [recordedBy(run, "optiland").magnification, recordedBy(run, "ref").magnification];
+      const [mine, theirs] = [
+        recordedBy(run, "optiland").magnification,
+        recordedBy(run, "reference-tracer").magnification,
+      ];
       assert.equal(mine.length, theirs.length);
       mine.forEach((value, line) => {
         const other = theirs[line];
@@ -317,7 +320,7 @@ test(
     const { manifest, comparisons, verdicts } = runAndCompare(t, {
       suite: `${name}.json`,
       name,
-      engines: "ref,optiland",
+      engines: "reference-tracer,optiland",
       rungs: "built-system,first-order",
       root: rootDir,
     });
@@ -326,9 +329,9 @@ test(
       manifest.jobs.map((job) => [job.run, job.rung, job.engine, job.status === "ok" ? "ok" : job.unsupported]),
       names.flatMap((run) => [
         [run, "built-system", "optiland", "ok"],
-        [run, "built-system", "ref", "ok"],
+        [run, "built-system", "reference-tracer", "ok"],
         [run, "first-order", "optiland", item(REFUSED[run].optiland)],
-        [run, "first-order", "ref", item(REFUSED[run].ref)],
+        [run, "first-order", "reference-tracer", item(REFUSED[run].ref)],
       ]),
     );
     const pairs = names.length * 2;
@@ -359,7 +362,7 @@ test(
     const { manifest, comparisons, verdicts } = runAndCompare(t, {
       suite: rungSuite(t, "benchmark"),
       name: "benchmark",
-      engines: "lv,ref,optiland",
+      engines: "lv,reference-tracer,optiland",
       rungs: "built-system,first-order",
     });
     // 12 configurations, each at the reference line and at the five photopic lines; two rungs, three engines.
@@ -372,8 +375,8 @@ test(
     assert.equal(pairs.length, 24 * 3);
     assert.deepEqual([...new Set(pairs.map((pair) => pair.engines))].sort(), [
       "lv / optiland",
-      "lv / ref",
-      "optiland / ref",
+      "lv / reference-tracer",
+      "optiland / reference-tracer",
     ]);
     assertR1Passes(t, "benchmark", pairs);
     // Measured: the largest difference of the suite is 1.8e-12 mm, the front focal point of the 400 mm lens.
@@ -389,7 +392,7 @@ test(
     const { manifest, comparisons, verdicts } = runAndCompare(t, {
       suite: suitePath("features"),
       name: "features",
-      engines: "lv,ref,optiland",
+      engines: "lv,reference-tracer,optiland",
       rungs: "built-system,first-order",
     });
     // 16 runs as written, 18 as run: the fixed-iris zoom is run at both ends.
@@ -410,11 +413,14 @@ test(
 
 // ── In this process: the stations, the stored constants and the catalog ──────────────────────────────────────────
 
-/** `lv` on the real LensVisualizer and `ref` in this process, `optiland` in its worker, and LensVisualizer's exporter. */
+/** `lv` on the real LensVisualizer and `reference-tracer` in this process, `optiland` in its worker, and LensVisualizer's exporter. */
 async function engines(t: TestContext) {
   const binding = await loadLvBinding(LV_PATH);
   const lv = new RemoteEngineAdapter({ id: "lv", transport: createInProcessTransport(createLvEngineOn(binding)) });
-  const ref = new RemoteEngineAdapter({ id: "ref", transport: createInProcessTransport(createRefEngine()) });
+  const ref = new RemoteEngineAdapter({
+    id: "reference-tracer",
+    transport: createInProcessTransport(createRefEngine()),
+  });
   const optiland = await createEngineRegistry(optilandRoot(t)).create("optiland");
   t.after(() => Promise.all([lv.close(), ref.close(), optiland.close()]));
   return { binding, exporter: createLvExporter(binding), lv, ref, optiland };
@@ -655,7 +661,7 @@ test(
           }
           const [pair] = judged(id, request, opticalCase, at, {
             optiland: mine.data as JsonObject,
-            ref: theirs.data as JsonObject,
+            "reference-tracer": theirs.data as JsonObject,
           });
           counts[id === "built-system" ? "r0" : "r1"]++;
           if (pair.verdict !== "PASS") failed.push(`${at} ${id}: ${pair.verdict} ${pair.reason ?? ""}`);

@@ -87,7 +87,10 @@ export const R7A_FIXTURE_RUNG: RungDefinition = {
 /** The reference engine, under the id it is made with, answering as `answer` changes its trace. */
 function refLike(change?: (data: RaysTraceData, request: QuantityRequest) => RaysTraceData): EngineMaker {
   return async (id) => {
-    const adapter = new RemoteEngineAdapter({ id: "ref", transport: createInProcessTransport(createRefEngine()) });
+    const adapter = new RemoteEngineAdapter({
+      id: "reference-tracer",
+      transport: createInProcessTransport(createRefEngine()),
+    });
     const described = await adapter.describe();
     const descriptor: EngineDescriptor = { ...described, identity: { ...described.identity, id } };
     return {
@@ -106,12 +109,13 @@ function refLike(change?: (data: RaysTraceData, request: QuantityRequest) => Ray
 }
 
 /**
- * The engines of R7a: `ref`; `moved`, which lands ray 2 of the second line 2^-26 mm (1.49e-8 mm) further along y,
- * beyond the gate; and `stopped`, which stops ray 1 of the first line at the first surface, which no other does.
+ * The engines of R7a: `reference-tracer`; `moved`, which lands ray 2 of the second line 2^-26 mm (1.49e-8 mm) further
+ * along y, beyond the gate; and `stopped`, which stops ray 1 of the first line at the first surface, which no other
+ * does.
  */
 function r7aEngines(): { readonly [engine: string]: EngineMaker } {
   return {
-    ref: refLike(),
+    "reference-tracer": refLike(),
     moved: refLike((data, request) =>
       (request.spec as { line: number }).line === 1
         ? changed(data, (arrays) => {
@@ -131,7 +135,7 @@ export function r7aCycle(runsDir: string): Promise<R7Cycle> {
     runsDir,
     R7A_GOLDEN,
     R7A_FIXTURE_RUNG,
-    [{ name: "lens", opticalCase: LENS, referenceEngine: "ref" }],
+    [{ name: "lens", opticalCase: LENS, referenceEngine: "reference-tracer" }],
     r7aEngines(),
     R7A_POLICY,
   );

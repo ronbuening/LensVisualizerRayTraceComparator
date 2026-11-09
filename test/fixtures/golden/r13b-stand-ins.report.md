@@ -15,7 +15,7 @@
 | Engine | Status | Version | Engine code |
 |---|---|---|---|
 | optiland | available | 1 | 5b42de3b00b5524489ff7d64c6f9c2d9fd6d53eb0f33fb98439c766aa9b33d31 |
-| ref-seidel | available | 1 | 548bba63ec0e2e7171ac9a2a0f93034b62728ae0681c5f0f6caad223033b6dfa |
+| reference-seidel | available | 1 | eed70e526636b564511b4e11602dfb6792fcd651a0a22fc3378a48bf946b79fa |
 
 ### Runs
 
@@ -39,7 +39,7 @@ No pair is Fail or Error, of 2 compared.
 
 ## Support matrix
 
-| Run | Check | optiland | ref-seidel |
+| Run | Check | optiland | reference-seidel |
 |---|---|---|---|
 | lens | seidel-vs-optiland | ok | ok |
 
@@ -55,18 +55,18 @@ Reference vs each, against `optiland`:
 
 | Engine | ASTI.maxAbs [mm] | CLA.maxAbs [mm] | COMA.maxAbs [mm] | CTR.maxAbs [mm] | DIST.maxAbs [mm] | FCUR.maxAbs [mm] | SPHA.maxAbs [mm] | invariant.maxAbs (band 3.00e-14 mm) | surfaces.maxAbs [mm] | total.maxScaled (band 8.00e-15) | Verdict | Note |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| ref-seidel | 0 | — | 0 | — | 0 | 0 | 9.31e-10 | 0 | 9.31e-10 at sum SPHA, surface 0 | 1.24e-9 at sum SPHA | ATTENTION | total.maxScaled 1.24e-9 is outside its attention band 8.00e-15 at sum SPHA; CLA.maxAbs was not measured: optiland-seidels states none; CTR.maxAbs was not measured: optiland-seidels states none |
+| reference-seidel | 0 | — | 0 | — | 0 | 0 | 9.31e-10 | 0 | 9.31e-10 at sum SPHA, surface 0 | 1.24e-9 at sum SPHA | ATTENTION | total.maxScaled 1.24e-9 is outside its attention band 8.00e-15 at sum SPHA; CLA.maxAbs was not measured: optiland-seidels states none; CTR.maxAbs was not measured: optiland-seidels states none |
 
 Pairwise, the verdict of each two engines and the metric nearest to or furthest past its limit:
 
-| Engine | optiland | ref-seidel |
+| Engine | optiland | reference-seidel |
 |---|---|---|
 | optiland | — | ATTENTION (total.maxScaled 1.24e-9 at sum SPHA) |
-| ref-seidel | ATTENTION (total.maxScaled 1.24e-9 at sum SPHA) | — |
+| reference-seidel | ATTENTION (total.maxScaled 1.24e-9 at sum SPHA) | — |
 
 Recorded values, as each engine reports them. They are listed and never judged:
 
-| Value | optiland | ref-seidel |
+| Value | optiland | reference-seidel |
 |---|---|---|
 | ASTI[0] | 6.25000000e-2 | 6.25000000e-2 |
 | CLA[0] | not finite | 2.50000000e-1 |

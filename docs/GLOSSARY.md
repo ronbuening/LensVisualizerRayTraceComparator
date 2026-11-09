@@ -250,18 +250,18 @@ A check held to a limit hands two engines the same input and passes or fails. A 
 
 ## Engines
 
-The engines built into this tool. LensVisualizer is under review, optiland is an independent external engine, and the others are this tool's own.
+The engines built into this tool. LensVisualizer is under review, optiland is an independent external engine, and the others are this tool's own. The id is the one stored today; the old id is the one it had before the ids were renamed, which the catalog snapshot and files written before the rename still name and which is still read.
 
-| Engine | Id | To be renamed | What it is |
+| Engine | Id | Old id | What it is |
 | --- | --- | --- | --- |
 | LensVisualizer | `lv` | `lv` | LensVisualizer itself, loaded from a local checkout, asked for each figure as its own tabs ask for it, and made to trace the very rays every engine is handed in the checks held to a limit. |
 | optiland | `optiland` | `optiland` | optiland, an open-source optical design library in Python, run by this tool in a worker process of its own. |
-| Reference tracer | `ref` | `reference-tracer` | The reference tracer: a small exact ray tracer written in this repository from the optics alone, never from LensVisualizer's or optiland's code. |
-| Reference Seidel sums | `ref-seidel` | `reference-seidel` | This tool's third-order Seidel sums of the reference tracer's model of the lens, written from the optics alone. |
-| Replay of LensVisualizer's MTF | `replay` | `replay-of-lv-mtf` | LensVisualizer's own MTF sampling, repeated step by step, with the geometric MTF summed by this tool. |
-| Wave MTF of LensVisualizer's rays | `wave` | `wave-mtf-of-lv-rays` | This tool's wave-optics MTF estimate, computed from the rays LensVisualizer launches and traces. |
-| Flux of LensVisualizer's rays | `flux` | `flux-of-lv-rays` | This tool's estimate of transmission and relative illumination, from the ray lattices LensVisualizer launches and traces. |
-| OTF of optiland's wavefront | `optiland-wave` | `otf-of-optiland-wavefront` | This tool's OTF and Zernike fit of the raw wavefront samples that optiland computes. |
+| Reference tracer | `reference-tracer` | `ref` | The reference tracer: a small exact ray tracer written in this repository from the optics alone, never from LensVisualizer's or optiland's code. |
+| Reference Seidel sums | `reference-seidel` | `ref-seidel` | This tool's third-order Seidel sums of the reference tracer's model of the lens, written from the optics alone. |
+| Replay of LensVisualizer's MTF | `replay-of-lv-mtf` | `replay` | LensVisualizer's own MTF sampling, repeated step by step, with the geometric MTF summed by this tool. |
+| Wave MTF of LensVisualizer's rays | `wave-mtf-of-lv-rays` | `wave` | This tool's wave-optics MTF estimate, computed from the rays LensVisualizer launches and traces. |
+| Flux of LensVisualizer's rays | `flux-of-lv-rays` | `flux` | This tool's estimate of transmission and relative illumination, from the ray lattices LensVisualizer launches and traces. |
+| OTF of optiland's wavefront | `otf-of-optiland-wavefront` | `optiland-wave` | This tool's OTF and Zernike fit of the raw wavefront samples that optiland computes. |
 
 ## Suites
 
