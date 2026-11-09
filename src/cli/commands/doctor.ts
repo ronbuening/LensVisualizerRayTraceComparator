@@ -16,6 +16,9 @@ import { OPTILAND_ENGINE_ID } from "../../engines/optiland/definition.ts";
 import { createEngineRegistry } from "../../engines/registry.ts";
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "../command.ts";
 import type { CliCommand } from "../command.ts";
+import { ROOT_OPTION, helpText, options, paragraph, wrap } from "../help.ts";
+import { DOCTOR_TEXT, codeTextOf } from "../../vocabulary/index.ts";
+import { doctorRefusals } from "../verifyReal.ts";
 
 export type { CommandResult };
 
@@ -100,6 +103,22 @@ const NODE_RANGE: string = packageJson.engines.node;
 /** optiland has no `__version__`; its distribution metadata is the only version it carries. */
 const OPTILAND_VERSION_SCRIPT = "import importlib.metadata as m; print(m.version('optiland'))";
 const USAGE = "Usage: lvrtc doctor [--root <dir>] [--json]\n";
+const HELP = helpText([
+  USAGE,
+  ...paragraph(
+    "Says whether this machine is ready to check LensVisualizer, and what to fix where it is not. It reports the Node version, every configuration value with the file or environment variable that set it, the LensVisualizer checkout (its commit, whether it has uncommitted changes, and whether it loads), the Python interpreter, and optiland (its interpreter, its version, and the engine started once to ask who it is). Under each row that is not as it should be, a fix line says what to set, in lvrtc.local.json or in the environment. A last section says what is ready: LensVisualizer, optiland, and whether lvrtc check-lv can run.",
+  ),
+  ...paragraph(
+    "It only reads: nothing is installed, and nothing is written into LensVisualizer or optiland (optiland's worker keeps its caches under the configuration's cacheDir).",
+  ),
+  ...options([
+    ROOT_OPTION,
+    ["--json", "print one JSON object in place of the lines, with sorted keys; ready says what is ready"],
+  ]),
+  ...paragraph(
+    "Exit code: 0 when the Node version is in range, whatever else is missing (that is reported, not a failure); 1 when Node is out of range or a configuration file cannot be read; 2 when the command line cannot be used as given.",
+  ),
+]);
 
 type Version = readonly [number, number, number];
 
@@ -179,15 +198,40 @@ export async function collectDoctorReport(loaded: LoadedConfig, probe: DoctorPro
 
 type Row = readonly [label: string, value: string];
 
+/** The rows whose value is prose, wrapped under itself; every other value is printed as it is. */
+const WRAPPED: ReadonlySet<string> = new Set([DOCTOR_TEXT.fix, "role"]);
+
 function section(title: string, rows: readonly Row[]): string {
   const width = Math.max(...rows.map(([label]) => label.length));
-  return [title, ...rows.map(([label, value]) => `  ${label.padEnd(width)}  ${value}`)].join("\n");
+  return [
+    title,
+    ...rows.flatMap(([label, value]) => {
+      const first = `  ${label.padEnd(width)}  `;
+      return WRAPPED.has(label) ? wrap(value, first.length, first) : [`${first}${value}`];
+    }),
+  ].join("\n");
+}
+
+/** A fix line: what to do about the row above it. */
+function fix(remedy: string): Row {
+  return [DOCTOR_TEXT.fix, remedy];
+}
+
+/** The remedy of a code, or `fallback` where the vocabulary has none for it. */
+function remedyOf(code: string, fallback: string): string {
+  const remedy = codeTextOf(code)?.remedy ?? "";
+  return remedy === "" ? fallback : remedy;
 }
 
 /** The rows that say who the engine `optiland` is, or why it cannot be used. */
 function optilandEngineRows(engine: DoctorOptilandEngine | null): Row[] {
   if (engine === null) return [];
-  if (engine.status === "unavailable") return [["engine", `unavailable (${engine.code}): ${engine.message}`]];
+  if (engine.status === "unavailable") {
+    return [
+      ["engine", `unavailable (${engine.code}): ${engine.message}`],
+      fix(remedyOf(engine.code, DOCTOR_TEXT.optilandPython)),
+    ];
+  }
   const { details } = engine;
   const said = (name: string): string => String(details[name] ?? "unknown");
   const commit =
@@ -205,20 +249,90 @@ function optilandEngineRows(engine: DoctorOptilandEngine | null): Row[] {
   ];
 }
 
+/** What is ready, as `--json` states it under `ready`. */
+export interface DoctorReadiness {
+  /** LensVisualizer is a checkout that loads through the binding. */
+  readonly lensVisualizer: boolean;
+  /** The engine optiland answered who it is. */
+  readonly optiland: boolean;
+  /** `lvrtc check-lv` would run: `doctorRefusals`, the rule it refuses by, finds nothing. */
+  readonly checkLv: boolean;
+}
+
+/** What is ready, from the report alone. */
+export function readinessOf(report: DoctorReport): DoctorReadiness {
+  const { lensVisualizer, optiland } = report;
+  return {
+    lensVisualizer: lensVisualizer.status === "present" && lensVisualizer.binding?.status === "loaded",
+    optiland: optiland.engine?.status === "available",
+    checkLv: doctorRefusals(report).length === 0,
+  };
+}
+
+/** Why LensVisualizer is not ready, in a few words. */
+function lvWhy(report: DoctorReport): string {
+  const why = DOCTOR_TEXT.ready.why;
+  const lv = report.lensVisualizer;
+  if (lv.status === "not configured") return why.notConfigured;
+  if (lv.status === "missing") return why.noCheckout;
+  return lv.binding?.status === "failed" ? `${why.notLoadable}: ${lv.binding.code}` : why.notLoadable;
+}
+
+/** Why optiland is not ready, in a few words. */
+function optilandWhy(report: DoctorReport): string {
+  const why = DOCTOR_TEXT.ready.why;
+  const optiland = report.optiland;
+  if (optiland.interpreter === "not configured") return why.notConfigured;
+  if (optiland.interpreter === "missing") return why.noInterpreter;
+  if (optiland.version === null) return why.notImportable;
+  return optiland.engine?.status === "unavailable" ? `${why.engine}: ${optiland.engine.code}` : why.engine;
+}
+
+/** The closing section: what is ready, and what can be run. */
+function readySection(report: DoctorReport): string {
+  const t = DOCTOR_TEXT.ready;
+  const ready = readinessOf(report);
+  const git = report.lensVisualizer.git;
+  const lv = ready.lensVisualizer ? (git === null || git.dirty ? t.lvCaveat : t.yes) : `${t.no} (${lvWhy(report)})`;
+  const optiland = ready.optiland ? t.yes : `${t.no} (${optilandWhy(report)}): ${t.optilandNeeded}`;
+  const overall = ready.checkLv ? t.all : ready.lensVisualizer ? t.lvOnly : t.none;
+  const width = Math.max(t.lensVisualizer.length, t.optiland.length, t.checkLv.length);
+  const row = (label: string, value: string): string[] => {
+    const first = `  ${label.padEnd(width)}  `;
+    return wrap(value, first.length, first);
+  };
+  const refusals = ready.checkLv
+    ? []
+    : doctorRefusals(report).flatMap((refusal) => wrap(refusal, width + 6, `${" ".repeat(width + 4)}- `));
+  return [
+    t.title,
+    ...row(t.lensVisualizer, lv),
+    ...row(t.optiland, optiland),
+    ...row(t.checkLv, ready.checkLv ? t.checkLvYes : t.checkLvNo),
+    ...refusals,
+    ...wrap(overall, 2),
+  ].join("\n");
+}
+
 /** The human-readable report: a pure function of the report, with no timestamps. */
 export function renderDoctorText(report: DoctorReport): string {
   const { node, config, lensVisualizer, python, optiland } = report;
 
   const lvRows: Row[] = [["status", lensVisualizer.status]];
   if (lensVisualizer.path !== null) lvRows.unshift(["path", lensVisualizer.path]);
-  if (lensVisualizer.status === "missing") lvRows.push(["reason", `${LV_MARKER} not found under the path`]);
-  if (lensVisualizer.status === "present") {
+  if (lensVisualizer.status !== "present") {
+    if (lensVisualizer.status === "missing") lvRows.push(["reason", `${LV_MARKER} not found under the path`]);
+    lvRows.push(fix(DOCTOR_TEXT.lvPath));
+  } else {
     const { git, binding } = lensVisualizer;
     lvRows.push(["git", git === null ? "not a git checkout" : `${git.commit} (${git.dirty ? "dirty" : "clean"})`]);
+    if (git === null) lvRows.push(fix(DOCTOR_TEXT.lvNotGit));
+    else if (git.dirty) lvRows.push(fix(DOCTOR_TEXT.lvDirty));
     if (binding?.status === "loaded") {
       lvRows.push(["engine", `${binding.engineFileCount} files, closure ${binding.engineClosureHash}`]);
     } else if (binding?.status === "failed") {
       lvRows.push(["engine", `not loadable (${binding.code}): ${binding.message}`]);
+      lvRows.push(fix(remedyOf(binding.code, DOCTOR_TEXT.lvPath)));
     }
   }
 
@@ -227,25 +341,35 @@ export function renderDoctorText(report: DoctorReport): string {
   if (optiland.interpreter === "present") {
     optilandRows[optilandRows.length - 1] = ["interpreter", `present (${optiland.interpreterVersion})`];
     optilandRows.push(["version", optiland.version ?? "not importable"]);
+    if (optiland.version === null) optilandRows.push(fix(DOCTOR_TEXT.optilandNotImportable));
     optilandRows.push(...optilandEngineRows(optiland.engine));
+  } else {
+    optilandRows.push(fix(DOCTOR_TEXT.optilandPython));
   }
 
+  const nodeRows: Row[] = [
+    ["version", node.version],
+    ["required", node.required],
+    ["status", node.ok ? "ok" : "out of range"],
+  ];
+  if (!node.ok) nodeRows.push(fix(DOCTOR_TEXT.node));
+  const pythonRows: Row[] = [
+    ["role", DOCTOR_TEXT.pythonRole],
+    ["command", python.command],
+    ["version", python.version ?? "not found"],
+  ];
+  if (python.version === null) pythonRows.push(fix(DOCTOR_TEXT.python));
+
   const sections = [
-    section("Node", [
-      ["version", node.version],
-      ["required", node.required],
-      ["status", node.ok ? "ok" : "out of range"],
-    ]),
+    section("Node", nodeRows),
     section(
       "Config",
       CONFIG_KEYS.map((key) => [key, `${config[key].value ?? "(not set)"}  [${config[key].source}]`]),
     ),
     section("LensVisualizer", lvRows),
-    section("Python", [
-      ["command", python.command],
-      ["version", python.version ?? "not found"],
-    ]),
+    section("Python", pythonRows),
     section("optiland", optilandRows),
+    readySection(report),
   ];
   return `${sections.join("\n\n")}\n`;
 }
@@ -259,7 +383,7 @@ function withSortedKeys(value: unknown): unknown {
 
 /** The report as one JSON object with keys sorted at every level, so equal reports print identically. */
 export function renderDoctorJson(report: DoctorReport): string {
-  return `${JSON.stringify(withSortedKeys(report), null, 2)}\n`;
+  return `${JSON.stringify(withSortedKeys({ ...report, ready: readinessOf(report) }), null, 2)}\n`;
 }
 
 /**
@@ -271,10 +395,10 @@ export function renderDoctorJson(report: DoctorReport): string {
 export function createDoctorCommand(inputs: DoctorInputs): CliCommand {
   return {
     name: "doctor",
-    summary: "Report the Node version, configuration, LensVisualizer, Python and optiland",
+    summary: "Say whether this machine is ready to check LensVisualizer, and what to fix",
     run: async (args, io) => {
       if (args.includes("-h") || args.includes("--help")) {
-        io.stdout(USAGE);
+        io.stdout(HELP);
         return EXIT_OK;
       }
       let json = false;

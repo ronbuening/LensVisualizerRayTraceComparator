@@ -16,8 +16,11 @@ npm run test:lv        # tests against the real LensVisualizer (test/integration
 npm run test:optiland  # tests against the real optiland (test/integration/optiland); NOT part of check; the suites, focus stations and catalog sweep need LV too; r2 needs a POSIX shell
 npm run verify:real    # Stage 5.4: lvrtc doctor, then baseline check benchmark and benchmark --mtf on live LV and optiland, one at a time; NOT part of check
 npm run verify:real -- --all   # the same for every routine committed suite in a fixed order (not the catalog, a dated snapshot: --suite catalog); --suites a,b and --jobs <n> (default 4, a ceiling)
-node bin/lvrtc.mjs     # the CLI
-node bin/lvrtc.mjs doctor   # Node, config layers, LV, Python and optiland as this machine sees them
+node bin/lvrtc.mjs     # the CLI: commands grouped for reviewers; lvrtc help <command> prints one command's help
+node bin/lvrtc.mjs doctor   # Node, config layers, LV, Python and optiland as this machine sees them, a fix line under each problem, and Ready (--json: ready.{lensVisualizer,optiland,checkLv})
+node bin/lvrtc.mjs check-lv --suite features   # Stage 9.2: the reviewers' front door; exactly npm run verify:real (same runner, same doctor refusal, same options)
+node bin/lvrtc.mjs checks [<id>]     # every check (title, kind, what it compares), or one in full with its engines and the limits file's figures
+node bin/lvrtc.mjs glossary [<term>] # the glossary's terms, or one by its word, a word it replaces or a stored value (lvrtc glossary rung)
 node bin/lvrtc.mjs run suites/features.json --rungs r0,r1,r2,r3,r4 --jobs 2   # process pool; default --jobs 1 is serial
 node bin/lvrtc.mjs compare features --jobs 2   # parallel comparisons, collected in manifest order
 node bin/lvrtc.mjs baseline check features --jobs 2   # the same pool for baseline suites

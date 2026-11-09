@@ -46,6 +46,7 @@ import { GLOSSARY_FILE, renderGlossary } from "../../vocabulary/glossary.ts";
 import { parseArguments } from "../arguments.ts";
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "../command.ts";
 import type { CliCommand } from "../command.ts";
+import { helpText, options, paragraph } from "../help.ts";
 
 /** What `lvrtc verify` is wired to, injected so that tests choose it. */
 export interface VerifyCommandInputs {
@@ -62,34 +63,31 @@ export interface VerifyCommandInputs {
 }
 
 const SYNOPSIS = "Usage: lvrtc verify [--root <dir>] [--write]\n";
-const HELP = [
+const HELP = helpText([
   SYNOPSIS,
-  "Holds the committed baselines and the reports rendered from them together, with no engine: neither",
-  "LensVisualizer nor optiland is read. Every <root>/baselines/<suite>.json must be a baseline by its schema and",
-  "its rules, be the canonical text of what it holds, be named after its suite and be judged by the policy at",
-  "hand; <root>/reports/<suite>/rays.md and rays.json must be, byte for byte, what the baseline renders; and no",
-  "such report may be without its baseline. The catalog's two baselines are a dated snapshot: each is held to the",
-  "policy it records, which must be a frozen policy of this repository (policy/snapshots/rungs.v<version>.json, of",
-  "that version and canonical hash), with the gates and bands it records that policy's; never to the policy at",
-  "hand. Everything else about them is held as for any baseline, with their classified failures and the catalog",
-  "report. An MTF baseline, <root>/baselines/<suite>.mtf.json, is held the same",
-  "way with its reports, <root>/reports/<suite>/mtf.md and mtf.json.",
-  "A root with all eight suite baselines also requires reports/validation-statement.{json,md}, byte for",
-  "byte from all eight suite baselines, as lvrtc statement writes it; --write regenerates it too. A root with",
-  "both benchmark baselines also requires reports/benchmark/validation-matrix.{json,md}, byte for byte from",
-  "those two, as lvrtc matrix writes it; --write regenerates it too. This repository, and any root with a",
-  "docs/GLOSSARY.md, also requires that file byte for byte as src/vocabulary renders it; --write regenerates it.",
-  "",
-  "It cannot see a case or an engine that has changed since a baseline was written (STALE): that needs the",
-  "engines, and is what lvrtc baseline check says.",
-  "",
-  "  --root <dir>  the directory that holds baselines/ and reports/ (default: this repository)",
-  "  --write       write the reports anew from the baselines in place of comparing them; a baseline is never",
-  "                written here",
-  "",
-  "Exit code: 0 when everything holds; 1 otherwise.",
-  "",
-].join("\n");
+  ...paragraph(
+    "For maintainers, and part of npm run check. Holds the committed baselines and the reports rendered from them together, with no engine: neither LensVisualizer nor optiland is read. Every <root>/baselines/<suite>.json must be a valid baseline, be the canonical text of what it holds, be named after its suite and be judged by the limits file at hand; <root>/reports/<suite>/rays.md and rays.json must be, byte for byte, what the baseline renders; and no such report may be without its baseline. An MTF baseline, <root>/baselines/<suite>.mtf.json, is held the same way with its reports mtf.md and mtf.json.",
+  ),
+  ...paragraph(
+    "The catalog's two baselines are a dated snapshot: each is held to the limits file it records, which must be a frozen copy kept under policy/snapshots/ of that version and hash, never to the limits file at hand. Everything else about them is held as for any baseline, with their classified failures and the catalog report.",
+  ),
+  ...paragraph(
+    "A root with all eight baselines of the benchmark, features, states and focus-stations suites also needs reports/validation-statement.json and .md, byte for byte as lvrtc statement writes them; a root with both benchmark baselines needs reports/benchmark/validation-matrix.json and .md, as lvrtc matrix writes them; and this repository, or any root with a docs/GLOSSARY.md, needs that file byte for byte as the vocabulary renders it. --write writes each of them anew.",
+  ),
+  ...paragraph(
+    "It cannot see a lens state or an engine that has changed since a baseline was written: that needs the engines, and is what lvrtc baseline check and lvrtc check-lv say.",
+  ),
+  ...options([
+    ["--root <dir>", "the directory that holds baselines/ and reports/ (default: this repository)"],
+    [
+      "--write",
+      "write the reports anew from the baselines in place of comparing them; a baseline is never written here",
+    ],
+  ]),
+  ...paragraph(
+    "Exit code: 0 when everything holds; 1 otherwise; 2 when the command line or the root cannot be used as given.",
+  ),
+]);
 
 function readText(file: string): string | undefined {
   try {
@@ -140,7 +138,7 @@ function snapshotSaid(suite: string, baseline: Baseline): string {
 export function createVerifyCommand(inputs: VerifyCommandInputs): CliCommand {
   return {
     name: "verify",
-    summary: "Check the committed baselines and their reports, with no engine",
+    summary: "Check that the committed results and reports hold together, without running any engine",
     run: async (args, io) => {
       if (args.includes("-h") || args.includes("--help")) {
         io.stdout(HELP);

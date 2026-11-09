@@ -52,6 +52,9 @@ import { parseTargetArguments, resolveRunDirectory } from "../runTarget.ts";
 import type { RunTargetInputs } from "../runTarget.ts";
 import { compareRunDirectoryWithJobs } from "./compare.ts";
 import { prepareSuiteRun } from "./run.ts";
+import { JOBS_OPTIONS, helpText, options, paragraph, wrap } from "../help.ts";
+import type { OptionRow } from "../help.ts";
+import { OUTCOME_TEXT, STALE_REASON_TEXT, outcomeLabel, verdictLabel } from "../../vocabulary/index.ts";
 
 /** What `lvrtc baseline` is wired to, injected so that tests choose it. */
 export interface BaselineCommandInputs extends RunTargetInputs {
@@ -64,47 +67,57 @@ export interface BaselineCommandInputs extends RunTargetInputs {
 const SYNOPSIS =
   "Usage: lvrtc baseline write <suite name | run directory> [--root <dir>] [--mtf] [--replace]\n" +
   "       lvrtc baseline check <suite name | suite.json> [--root <dir>] [--mtf] [--jobs <n>] [--memory-budget <GiB>] [--json]\n";
-const HELP = [
+const HELP = helpText([
   SYNOPSIS,
-  "write   Writes the baseline of a run that has been compared: <root>/baselines/<suite>.json, and the report that",
-  "        is rendered from it, <root>/reports/<suite>/rays.md and rays.json. A baseline holds, for every run as",
-  "        it was run, every rung and every pair of engines, the verdict, the metrics and the counts, with the",
-  "        hash of the run's case, each engine's fingerprint and adapter revision, and the policy. Nothing is",
-  "        asked of any engine. It is refused for a run with an engine that could not be used, a run that was not",
-  "        started, a case source that changed during the run, and a pair that is FAIL or ERROR.",
-  "        Catalog alone admits exact FAIL evidence from docs/known-failures.json, retaining FAIL and its class.",
-  "check   Needs the engines. Runs the suite of the baseline again on the baseline's engines and rungs, asking an",
-  "        engine only for what the result store does not hold, compares it (comparisons.json is written as lvrtc",
-  "        compare writes it), and sets every record of the baseline against it:",
-  "          OK                        same case, same engines, same policy, and what it was",
-  "          STALE(case) REFRESHABLE   LensVisualizer now exports another case for the run; the verdicts are the",
-  "                                    same and no judged metric moved by more than its tolerance",
-  "          STALE(engine) REFRESHABLE an engine's fingerprint or adapter revision is another; likewise",
-  "          DRIFT                     a verdict changed, or a judged metric moved by more than its tolerance",
-  "          MOVED                     of a rung that is only recorded: a verdict changed, or a figure moved by",
-  "                                    more than its attention band. It is written down and fails nothing",
-  "          NEW, GONE                 the suite has a record the baseline lacks, or lacks one it has",
-  "        Then, for each rung, pair and figure that is not what the baseline has, however little it moved: in",
-  "        how many records, and the largest change with its run. A suite name is <root>/suites/<name>.json.",
-  "",
-  "  --root <dir>  the directory that holds lvrtc.config.json, baselines/ and reports/ (default: this repository)",
-  `  --mtf         the MTF baseline of the suite, <root>/baselines/<suite>.mtf.json, with its reports mtf.md and`,
-  `                mtf.json: the rungs ${MTF_BASELINE_RUNGS.join(", ")} of the run, each metric with the number of`,
-  "                requests it was measured in, and the requests of the engines' own MTF as they were compared.",
-  "                Without it, the rays baseline: <suite>.json, rays.md and rays.json, every rung of the run",
-  "  --jobs <n>    check: concurrent jobs in isolated processes (default: 1, serial)",
-  "  --memory-budget <GiB>  replica RSS budget (default: 25% of installed RAM minus 2 GiB);",
-  "                         jobs are capped at 2.5 GiB each, 4 GiB when R6c is selected",
-  "  --replace     write: write the baseline although the one that is there has a rung this run lacks. Without",
-  "                it such a run is refused: a run directory is of the last run of its suite, which may be the",
-  "                run of other rungs (of the other kind of baseline, or of lvrtc run --rungs)",
-  "  --json        check: print the records as one JSON object in place of the lines",
-  "",
-  "Exit code: write: 0 when the baseline was written; 1 when a pair is FAIL or ERROR; 2 when the run cannot be a",
-  "baseline. check: 0 when no record is DRIFT and no unlisted pair is FAIL or ERROR today, STALE or not; 1 otherwise; 2",
-  "when nothing was checked.",
-  "",
-].join("\n");
+  ...paragraph(
+    "A baseline is the committed record of a suite's results: for every run, check and pair of engines, the verdict and the figures, with a hash of each lens state, the version of each engine and the limits file they were judged by. It holds no rays and no prescriptions.",
+  ),
+  ...options([
+    [
+      "check",
+      "Needs the engines. Runs the suite of the baseline again on the baseline's engines and checks, asking an engine only for what the result cache does not hold, compares the answers (writing comparisons.json as lvrtc compare does), and sets every record of the baseline beside today's result. Each record comes out as one of these:",
+      (column) => [
+        ...Object.entries(OUTCOME_TEXT).flatMap(([outcome, text]) =>
+          wrap(`${text.label} (${outcome}): ${text.meaning}`, column + 4, " ".repeat(column + 2)),
+        ),
+        ...wrap(
+          `A record that is out of date says why: ${Object.values(STALE_REASON_TEXT)
+            .map(
+              (reason) => `${reason.label} (${reason.meaning.charAt(0).toLowerCase()}${reason.meaning.slice(1, -1)})`,
+            )
+            .join("; ")}.`,
+          column,
+          " ".repeat(column),
+        ),
+        ...wrap(
+          "Then, for each check, pair and figure that is not what the baseline has, however little it moved: in how many records, and the largest change with its run. A suite name is <root>/suites/<name>.json.",
+          column,
+          " ".repeat(column),
+        ),
+      ],
+    ],
+    [
+      "write",
+      `For maintainers. Writes the baseline of a run that has been compared: <root>/baselines/<suite>.json, and the report rendered from it, <root>/reports/<suite>/rays.md and rays.json. Nothing is asked of any engine. It is refused for a run with an engine that could not be used, a run that was not started, LensVisualizer changing during the run, and a pair that is "${verdictLabel("FAIL")}" or "${verdictLabel("ERROR")}"; the catalog alone admits a failure listed exactly in docs/known-failures.json, keeping it as a failure with its class.`,
+    ],
+  ]),
+  ...options([
+    ["--root <dir>", "the directory that holds lvrtc.config.json, baselines/ and reports/ (default: this repository)"],
+    [
+      "--mtf",
+      `the MTF baseline of the suite, <root>/baselines/<suite>.mtf.json, with its reports mtf.md and mtf.json: the MTF checks ${MTF_BASELINE_RUNGS.join(", ")} of the run, each figure with the number of requests it was measured in, and the engines' own MTF as they were compared. Without it, the rays baseline: <suite>.json, rays.md and rays.json, every check of the run`,
+    ],
+    ...JOBS_OPTIONS.map(([name, description]): OptionRow => [name, `check: ${description}`]),
+    [
+      "--replace",
+      "write: write the baseline although the one that is there has a check this run lacks. Without it such a run is refused: a run directory holds the last run of its suite, which may have run other checks (those of the other kind of baseline, or those lvrtc run --checks named)",
+    ],
+    ["--json", "check: print the records as one JSON object in place of the lines"],
+  ]),
+  ...paragraph(
+    `Exit code: write: 0 when the baseline was written; 1 when a pair is "${verdictLabel("FAIL")}" or "${verdictLabel("ERROR")}"; 2 when the run cannot be a baseline. check: 0 when no record is "${outcomeLabel("DRIFT")}" (DRIFT) and no pair that docs/known-failures.json does not list fails or is an error today, out of date or not; 1 otherwise; 2 when nothing was checked.`,
+  ),
+]);
 
 function rootOf(root: string | undefined, inputs: RunTargetInputs): string {
   const rootDir = root === undefined ? inputs.rootDir : resolve(inputs.cwd, root);
@@ -410,7 +423,7 @@ function runEngines(baseline: Baseline): string[] {
 export function createBaselineCommand(inputs: BaselineCommandInputs): CliCommand {
   return {
     name: "baseline",
-    summary: "Write the baseline of a compared run, or check a baseline against the engines",
+    summary: "Check a suite's committed results against the engines, or write them anew",
     run: async (args, io) => {
       if (args.length === 0 || args.includes("-h") || args.includes("--help")) {
         io.stdout(HELP);

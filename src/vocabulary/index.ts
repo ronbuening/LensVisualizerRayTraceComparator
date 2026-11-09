@@ -2,6 +2,7 @@
 // data and small helpers, imports nothing of an engine, and is in no engine's import closure.
 export * from "./checks.ts";
 export * from "./classes.ts";
+export * from "./cli.ts";
 export * from "./codes.ts";
 export * from "./engines.ts";
 export * from "./glossary.ts";

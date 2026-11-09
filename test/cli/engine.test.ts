@@ -69,9 +69,12 @@ test("engine is a registered command, and --help says what conformance checks", 
   const help = spawnSync(process.execPath, [BIN, "engine", "--help"], { encoding: "utf8", cwd: REPO_ROOT });
   assert.equal(help.status, EXIT_OK);
   assert.ok(help.stdout.startsWith(SYNOPSIS));
-  assert.match(help.stdout, /PASS, FAIL or SKIPPED with a reason/);
+  assert.match(help.stdout, /PASS,\s+FAIL\s+or\s+SKIPPED\s+with\s+a\s+reason/);
   const list = spawnSync(process.execPath, [BIN, "--help"], { encoding: "utf8", cwd: REPO_ROOT });
-  assert.match(list.stdout, /^ {2}engine +Check that an engine conforms to the contract, or say who engines are$/m);
+  assert.match(
+    list.stdout,
+    /^ {2}engine +Check that an engine speaks the message format, or say which version of each engine would run$/m,
+  );
 });
 
 test("an engine that conforms: a line per check, a count, exit 0", async (t) => {

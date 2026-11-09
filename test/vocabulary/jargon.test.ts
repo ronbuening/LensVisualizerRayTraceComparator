@@ -13,26 +13,20 @@ import { fileURLToPath } from "node:url";
 
 import { COMMANDS, runCli } from "../../src/cli/main.ts";
 import { JARGON, jargonProblems, jargonTerms, withoutExemptions } from "../../src/vocabulary/jargon.ts";
+import { OUTCOME_TEXT, VERDICT_TEXT } from "../../src/vocabulary/index.ts";
 
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
 
 /** The words each surface still uses: a key is a command (`lvrtc` for the top-level help) or a file. */
 type Allowlist = Readonly<Record<string, readonly string[]>>;
 
-/** `lvrtc --help` and `lvrtc <command> --help`. */
+/** `lvrtc --help` and `lvrtc <command> --help`. `run` names --rungs, the older spelling of --checks. */
 const CLI_HELP: Allowlist = {
-  lvrtc: ["owner"],
-  run: ["rung", "manifest"],
-  compare: ["rung", "manifest"],
-  report: ["rung", "manifest"],
-  baseline: ["rung", "adapter revision", "fingerprint"],
-  verify: ["rung"],
-  matrix: ["rung"],
-  engine: ["manifest", "adapter revision", "fingerprint"],
-  mtf: ["rung"],
-  store: ["owner"],
-  serve: ["owner"],
+  run: ["rung"],
 };
+
+/** The README, a reviewer's first page: it uses none of the tool's own words. */
+const README: Allowlist = {};
 
 /** Every committed `reports/**\/*.md`, by its path under reports/. */
 const REPORTS: Allowlist = {
@@ -193,6 +187,20 @@ test("the help of lvrtc and of every command uses no more of the tool's own word
   const texts = new Map<string, string>([["lvrtc", await output(["--help"])]]);
   for (const command of COMMANDS) texts.set(command.name, await output([command.name, "--help"]));
   ratchet("help", texts, CLI_HELP);
+});
+
+test("the help of lvrtc help <command> is the command's own help", async () => {
+  for (const command of COMMANDS)
+    assert.equal(await output(["help", command.name]), await output([command.name, "--help"]));
+});
+
+test("the README uses none of the tool's own words, and shows every verdict and outcome by the vocabulary's label", () => {
+  const readme = readFileSync(join(ROOT, "README.md"), "utf8");
+  ratchet("", new Map([["README.md", readme]]), README);
+  for (const [stored, text] of [...Object.entries(VERDICT_TEXT), ...Object.entries(OUTCOME_TEXT)]) {
+    assert.ok(readme.includes(text.label), text.label);
+    assert.ok(readme.includes(`\`${stored}\``), stored);
+  }
 });
 
 test("every committed report uses no more of the tool's own words than its allowlist", () => {

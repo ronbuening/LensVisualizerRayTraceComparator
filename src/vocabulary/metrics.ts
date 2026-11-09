@@ -194,3 +194,16 @@ export function metricUnit(key: string): string | null {
     METRICS[key] ?? (key.endsWith(FIRST_STEP) ? METRICS[`${key.slice(0, -FIRST_STEP.length)}.maxAbs`] : undefined);
   return known === undefined ? null : (UNIT_TEXT[known.unit] ?? known.unit);
 }
+
+/**
+ * The metrics of a side-by-side check whose limit sorts a field or wavelength before any difference is taken (beyond
+ * it the two answers are not of the same thing, or one has not converged): a limit of the sorting, not a review band.
+ */
+export const SORTING_LIMITS: readonly string[] = [
+  "chiefLanding.maxAbs",
+  "landing.maxAbs",
+  "pupilRadius.relative",
+  "rearFocus.maxAbs",
+  "invariant.maxAbs",
+  "fitCondition.max",
+];

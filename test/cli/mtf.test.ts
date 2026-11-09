@@ -100,7 +100,7 @@ test("mtf is a registered command, and --help prints the usage and loads nothing
   const help = await mtf(["--help"], rootDir);
   assert.equal(help.code, EXIT_OK);
   assert.ok(help.out.startsWith(USAGE));
-  assert.match(help.out, /--profile <name> {2}the request to make \(default: lv-tab-default\)/);
+  assert.match(help.out, /--profile <name> +the request to make \(default: lv-tab-default\)/);
   assert.equal(help.err, "");
 });
 

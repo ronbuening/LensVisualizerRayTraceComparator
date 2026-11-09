@@ -21,7 +21,7 @@ const BIN = fileURLToPath(new URL("../../bin/lvrtc.mjs", import.meta.url));
 const FAKE_MIXED_SUITE = fileURLToPath(new URL("../fixtures/suites/fake-mixed.json", import.meta.url));
 const FAKE_ENGINE = fileURLToPath(new URL("../../src/engines/fake/engine.ts", import.meta.url));
 const SYNOPSIS =
-  "Usage: lvrtc run <suite.json> [--root <dir>] [--engines <id,...>] [--rungs <id,...>] [--jobs <n>] [--memory-budget <GiB>] [--json]\n";
+  "Usage: lvrtc run <suite.json> [--root <dir>] [--engines <id,...>] [--checks <id,...>] [--jobs <n>] [--memory-budget <GiB>] [--json]\n";
 /** The environment variable that tells the engine of the SIGKILL test after how many runs to kill its process. */
 const KILL_AFTER_RUNS = "LVRTC_TEST_KILL_AFTER_RUNS";
 
@@ -123,7 +123,7 @@ test("run is a registered command", async () => {
   assert.ok(COMMANDS.some((command) => command.name === "run"));
   const out: string[] = [];
   assert.equal(await runCli(["--help"], { stdout: (text) => void out.push(text), stderr: () => {} }), EXIT_OK);
-  assert.match(out.join(""), /^ {2}run +Run a suite on the configured engines, reusing stored results$/m);
+  assert.match(out.join(""), /^ {2}run +Run a suite on its engines, reusing answers already in the result cache$/m);
 });
 
 test("lvrtc run: a line per job and a summary, exit 0; the second run finds every answer in the store", (t) => {
@@ -223,6 +223,23 @@ test("--rungs runs only the rungs named; an unknown rung is a usage error and no
   assert.equal(named.code, EXIT_OK, named.err);
   assert.deepEqual(
     manifestOf(runsDir, "fake-pair").jobs.map((job) => `${job.run} ${job.rung}`),
+    ["singlet selftest", "double-gauss selftest"],
+  );
+});
+
+test("--checks is the documented name of --rungs: the same jobs and the same run record", (t) => {
+  const byRungs = join(tempDir(t), "runs");
+  const byChecks = join(tempDir(t), "runs");
+  const rungs = fakePair(byRungs, "--rungs", "selftest", "--engines", "fake-a");
+  const checks = fakePair(byChecks, "--checks", "selftest", "--engines", "fake-a");
+  assert.equal(checks.code, EXIT_OK, checks.err);
+  assert.equal(checks.code, rungs.code);
+  assert.equal(
+    readFileSync(join(byChecks, "fake-pair", MANIFEST_FILE), "utf8"),
+    readFileSync(join(byRungs, "fake-pair", MANIFEST_FILE), "utf8"),
+  );
+  assert.deepEqual(
+    manifestOf(byChecks, "fake-pair").jobs.map((job) => `${job.run} ${job.rung}`),
     ["singlet selftest", "double-gauss selftest"],
   );
 });
@@ -432,7 +449,7 @@ test("--help prints the usage and runs nothing", async (t) => {
   assert.equal(ended.code, EXIT_OK);
   assert.ok(ended.out.startsWith(SYNOPSIS), ended.out);
   assert.match(ended.out, /^ {2}--root <dir> /m);
-  assert.match(ended.out, /^Exit code: 0 when no job ended as an error/m);
+  assert.match(ended.out, /^Exit code: 0 when no job ended in an error/m);
   assert.equal(ended.err, "");
 });
 
@@ -450,6 +467,12 @@ test("a command line that is not the synopsis is a usage error that shows it", a
     [["suite.json", "--engines", "fake-a", "--engines", "fake-a"], "--engines is given more than once"],
     [["suite.json", "--engines", "fake-a,,fake-b"], '--engines needs ids separated by commas, got "fake-a,,fake-b"'],
     [["suite.json", "--rungs", ""], '--rungs needs ids separated by commas, got ""'],
+    [["suite.json", "--checks"], "--checks needs a value"],
+    [["suite.json", "--checks", "selftest,"], '--checks needs ids separated by commas, got "selftest,"'],
+    [
+      ["suite.json", "--checks", "selftest", "--rungs", "selftest"],
+      "--checks and --rungs are two spellings of one option: give one of them",
+    ],
   ];
   for (const [args, said] of lines) {
     const ended = await inProcess(args, { rootDir, env: { LVRTC_RUNS_DIR: join(rootDir, "runs") } });

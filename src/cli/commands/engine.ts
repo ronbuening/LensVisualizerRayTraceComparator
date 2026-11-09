@@ -15,6 +15,7 @@ import type { EngineTimeouts } from "../../engines/remote.ts";
 import { parseArguments } from "../arguments.ts";
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "../command.ts";
 import type { CliCommand } from "../command.ts";
+import { ROOT_OPTION, helpText, options, paragraph } from "../help.ts";
 
 /** What `lvrtc engine` is wired to, injected so that tests choose it. */
 export interface EngineCommandInputs {
@@ -32,26 +33,23 @@ export interface EngineCommandInputs {
 const SYNOPSIS =
   "Usage: lvrtc engine conformance <id> [--root <dir>] [--json]\n" +
   "       lvrtc engine describe <id>... [--root <dir>] [--json]\n";
-const HELP = [
+const HELP = helpText([
   SYNOPSIS,
-  "conformance: runs the conformance kit on one engine, configured or built in: it must answer hello with a",
-  'descriptor of this contract and its own id, answer an unknown quantity "unsupported", refuse a malformed run,',
-  "echo ids, answer the contract's selftest.echo examples byte for byte if it offers the quantity, repeat itself if",
-  "it says it is deterministic, and answer shutdown, then end cleanly. Every check is reported",
-  "PASS, FAIL or SKIPPED with a reason.",
-  "",
-  "describe: opens each engine named through the registry, takes its describe() and closes it, and prints what the",
-  "manifest of a run would record of it: its version, fingerprint, adapter revision and details, or that it is",
-  "unavailable and the code of why. With --json, one object { engines: [...] } in the order the ids were given.",
-  "",
-  "  --root <dir>  the directory that holds lvrtc.config.json (default: this repository)",
-  "  --json        print one JSON object in place of the lines",
-  "",
-  "Exit code of conformance: 0 when no check failed; 1 when one did; 2 when nothing was checked because the command",
-  "line or the engine id cannot be used as given. Of describe: 0 when it printed, unavailable engines included; 2",
-  "for a command line that cannot be used as given.",
-  "",
-].join("\n");
+  ...options([
+    [
+      "conformance",
+      'For maintainers and engine authors. Runs the conformance kit on one engine, configured or built in: it must answer hello with a description of itself in this message format and with its own id, answer "unsupported" to a quantity it does not know, refuse a malformed request, echo ids, answer the format\'s selftest.echo examples byte for byte if it offers that quantity, give the same answer twice if it says it is deterministic, and answer shutdown, then end cleanly. Every check is reported PASS, FAIL or SKIPPED with a reason.',
+    ],
+    [
+      "describe",
+      "Starts each engine named, asks it who it is and lets it go, and prints what a run would record of it: its version, the hashes that identify its code and this tool's code behind it, and its details; or that it cannot be used, with the code of why. With --json, one object { engines: [...] } in the order the ids were given.",
+    ],
+  ]),
+  ...options([ROOT_OPTION, ["--json", "print one JSON object in place of the lines"]]),
+  ...paragraph(
+    "Exit code of conformance: 0 when no check failed; 1 when one did; 2 when nothing was checked because the command line or the engine id cannot be used as given. Of describe: 0 when it printed, engines that cannot be used included; 2 for a command line that cannot be used as given.",
+  ),
+]);
 
 const LABELS: Readonly<Record<ConformanceStatus, string>> = { pass: "PASS", fail: "FAIL", skipped: "SKIPPED" };
 
@@ -114,7 +112,7 @@ function reportText(report: ConformanceReport): string {
 export function createEngineCommand(inputs: EngineCommandInputs): CliCommand {
   return {
     name: "engine",
-    summary: "Check that an engine conforms to the contract, or say who engines are",
+    summary: "Check that an engine speaks the message format, or say which version of each engine would run",
     run: async (args, io) => {
       if (args.includes("-h") || args.includes("--help")) {
         io.stdout(HELP);

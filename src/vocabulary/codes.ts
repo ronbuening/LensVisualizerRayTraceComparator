@@ -12,7 +12,16 @@ const LV_PATH =
   "Set lvPath in lvrtc.local.json (or the environment variable LVRTC_LV_PATH) to a LensVisualizer checkout.";
 const OPTILAND_PYTHON =
   "Set engines.optiland.python in lvrtc.local.json (or LVRTC_OPTILAND_PYTHON) to a Python interpreter that can import optiland.";
+const PYTHON =
+  "Set python in lvrtc.local.json (or the environment variable LVRTC_PYTHON) to a Python 3.10 or later interpreter.";
 const RUN_AGAIN = "Run the suite again: the lens state is exported anew.";
+
+/** What to set, and where, for each value a user sets on their own machine. */
+export const REMEDIES = {
+  lvPath: LV_PATH,
+  optilandPython: OPTILAND_PYTHON,
+  python: PYTHON,
+} as const;
 
 /** The ways LensVisualizer cannot be loaded (`LvBindingErrorCode`), also met with the prefix `lv-`. */
 const LV_BINDING: Readonly<Record<string, CodeText>> = {

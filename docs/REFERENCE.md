@@ -1729,7 +1729,7 @@ for such a case and is asked about every other as before.
 Values are layered, lowest precedence first:
 
 1. built-in defaults;
-2. `lvrtc.config.json` (committed): sibling-relative defaults for the LensVisualizer and optiland checkouts;
+2. `lvrtc.config.json` (committed): names no LensVisualizer or optiland checkout, so each machine sets its own;
 3. `lvrtc.local.json` (gitignored): per-machine overrides; copy `lvrtc.local.example.json` to start;
 4. the environment: `LVRTC_LV_PATH`, `LVRTC_PYTHON`, `LVRTC_OPTILAND_PYTHON`, `LVRTC_RUNS_DIR`.
 
@@ -2291,7 +2291,7 @@ of the run's case, each engine's id, fingerprint and adapter revision with the c
 version and hash. It holds no ray, no prescription, no time and no path, and is canonical JSON: the same run gives
 the same bytes anywhere.
 
-**To write the two that are committed**, on the checkouts of `lvrtc.config.json`:
+**To write the two that are committed**, on the configured checkouts:
 
 ```bash
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r0,r1,r2,r3,r4

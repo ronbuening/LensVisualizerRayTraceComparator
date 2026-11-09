@@ -134,7 +134,7 @@ test("doctor is a registered command", async () => {
   assert.ok(COMMANDS.some((command) => command.name === "doctor"));
   const out: string[] = [];
   assert.equal(await runCli(["--help"], { stdout: (text) => void out.push(text), stderr: () => {} }), EXIT_OK);
-  assert.match(out.join(""), /^ {2}doctor +Report the Node version/m);
+  assert.match(out.join(""), /^ {2}doctor +Say whether this machine is ready to check LensVisualizer/m);
 });
 
 test("everything present: the full report, exit 0", async (t) => {
@@ -163,6 +163,8 @@ test("everything present: the full report, exit 0", async (t) => {
       `  engine  141 files, closure ${CLOSURE}`,
       "",
       "Python",
+      "  role     runs the Python engines a configuration defines, such as the demonstration engines under",
+      "           test/fixtures/fake-root; checking LensVisualizer does not need it (optiland has an interpreter of its own)",
       "  command  python3",
       "  version  Python 3.13.1",
       "",
@@ -176,6 +178,12 @@ test("everything present: the full report, exit 0", async (t) => {
       "  versions     Python 3.12.7, numpy 9.1, scipy 9.2, numba 9.3",
       "  jit          on",
       `  adapter      ${REVISION}`,
+      "",
+      "Ready",
+      "  LensVisualizer  ready",
+      "  optiland        ready",
+      "  lvrtc check-lv  ready: it runs every check",
+      "  Ready to check LensVisualizer: lvrtc check-lv can run.",
       "",
     ].join("\n"),
   );
@@ -272,11 +280,24 @@ test("LensVisualizer and optiland not configured are reported, not a failure", a
   const run = await runDoctor(t, machine, { config: {} });
   assert.equal(run.code, EXIT_OK);
   assert.match(run.out, /^ {2}lvPath {19}\(not set\) {2}\[default\]$/m);
-  assert.match(run.out, /^LensVisualizer\n {2}status {2}not configured\n\n/m);
-  assert.match(run.out, /^optiland\n {2}interpreter {2}not configured\n$/m);
+  assert.match(
+    run.out,
+    /^LensVisualizer\n {2}status {2}not configured\n {2}fix {5}Set lvPath in lvrtc\.local\.json \(or the environment variable LVRTC_LV_PATH\)/m,
+  );
+  assert.match(
+    run.out,
+    /^optiland\n {2}interpreter {2}not configured\n {2}fix {10}Set engines\.optiland\.python in lvrtc\.local\.json \(or LVRTC_OPTILAND_PYTHON\)/m,
+  );
+  assert.match(run.out, /^ {2}LensVisualizer {2}not ready \(not configured\)$/m);
+  assert.match(
+    run.out,
+    /^ {2}optiland {8}not ready \(not configured\): lvrtc check-lv and lvrtc baseline check need it; lvrtc lenses, export,$/m,
+  );
+  assert.match(run.out, /^ {2}Not ready to check LensVisualizer: do what the fix lines above say\./m);
   assert.deepEqual(run.ran, ["python3 --version"]);
 
   const json = JSON.parse((await runDoctor(t, machine, { args: ["--json"], config: {} })).out);
+  assert.deepEqual(json.ready, { checkLv: false, lensVisualizer: false, optiland: false });
   assert.deepEqual(json.lensVisualizer, { binding: null, git: null, path: null, status: "not configured" });
   assert.deepEqual(json.optiland, {
     engine: null,
@@ -292,7 +313,10 @@ test("Python not found is reported, not a failure", async (t) => {
   machine.commands["python3 --version"] = null;
   const run = await runDoctor(t, machine);
   assert.equal(run.code, EXIT_OK);
-  assert.match(run.out, /^Python\n {2}command {2}python3\n {2}version {2}not found$/m);
+  assert.match(
+    run.out,
+    /^ {2}command {2}python3\n {2}version {2}not found\n {2}fix {6}Set python in lvrtc\.local\.json \(or the environment variable LVRTC_PYTHON\)/m,
+  );
 });
 
 test("optiland not importable is reported, not a failure", async (t) => {
@@ -320,7 +344,19 @@ test("an optiland engine that cannot be used is reported with its code and reaso
   const run = await runDoctor(t, machine);
   assert.equal(run.code, EXIT_OK);
   assert.equal(run.err, "");
-  assert.ok(run.out.endsWith(`  version      0.6.2\n  engine       unavailable (hello-failed): ${message}\n`), run.out);
+  assert.ok(
+    run.out.includes(
+      `  version      0.6.2\n  engine       unavailable (hello-failed): ${message}\n  fix          Set engines.optiland.python`,
+    ),
+    run.out,
+  );
+  assert.match(
+    run.out,
+    /^ {2}optiland {8}not ready \(the engine cannot be used: hello-failed\): lvrtc check-lv and lvrtc baseline check/m,
+  );
+  assert.match(run.out, /^ {18}- the engine optiland cannot be used \(hello-failed: /m);
+  assert.match(run.out, /^ {2}LensVisualizer can be looked at now: /m);
+  assert.doesNotMatch(run.out, /Ready to check LensVisualizer/);
   const json = JSON.parse((await runDoctor(t, machine, { args: ["--json"] })).out);
   assert.deepEqual(json.optiland.engine, { code: "hello-failed", message, status: "unavailable" });
 });
@@ -330,7 +366,7 @@ test("an optiland that is not a git checkout, and details that are missing, are 
   machine.engine = { status: "available", fingerprint: FINGERPRINT, adapterRevision: null, details: { commit: null } };
   const run = await runDoctor(t, machine);
   assert.ok(
-    run.out.endsWith(
+    run.out.includes(
       [
         `  engine       fingerprint ${FINGERPRINT}`,
         "  git          not a git checkout",
@@ -339,6 +375,7 @@ test("an optiland that is not a git checkout, and details that are missing, are 
         "  jit          unknown",
         "  adapter      none stated",
         "",
+        "Ready",
       ].join("\n"),
     ),
     run.out,
@@ -350,7 +387,11 @@ test("a missing optiland interpreter is reported and not asked for optiland", as
   machine.commands[`${OPTILAND_PYTHON} --version`] = null;
   const run = await runDoctor(t, machine);
   assert.equal(run.code, EXIT_OK);
-  assert.match(run.out, /^ {2}interpreter {2}missing\n$/m);
+  assert.match(
+    run.out,
+    /^ {2}interpreter {2}missing\n {2}fix {10}Set engines\.optiland\.python in lvrtc\.local\.json/m,
+  );
+  assert.match(run.out, /^ {2}optiland {8}not ready \(its interpreter does not run\)/m);
   assert.ok(!run.ran.some((line) => line.includes(" -c ") || line.startsWith("engine ")));
 });
 
@@ -396,6 +437,7 @@ test("--json prints one stable object with sorted keys", async (t) => {
       version: "0.6.2",
     },
     python: { command: "python3", version: "Python 3.13.1" },
+    ready: { checkLv: true, lensVisualizer: true, optiland: true },
   };
   assert.equal(run.out, `${JSON.stringify(expected, null, 2)}\n`);
   assertKeysSorted(JSON.parse(run.out));
@@ -435,7 +477,98 @@ test("--root reads the configuration of that root, and one that is no directory 
 test("--help prints the usage", async (t) => {
   const run = await runDoctor(t, healthyMachine(), { args: ["--help"] });
   assert.equal(run.code, EXIT_OK);
-  assert.equal(run.out, "Usage: lvrtc doctor [--root <dir>] [--json]\n");
+  assert.ok(run.out.startsWith("Usage: lvrtc doctor [--root <dir>] [--json]\n\n"), run.out);
+  assert.match(run.out, /fix line says what to set, in lvrtc\.local\.json or in the environment/);
+  assert.match(run.out, /^Exit code: 0 when the Node version is in range/m);
+  assert.deepEqual(run.ran, []);
+});
+
+test("a fix line stands under every row that is not as it should be, and Ready says what is ready", async (t) => {
+  // LensVisualizer present and dirty, loaded: ready, with what check-lv needs said twice.
+  const dirty = healthyMachine();
+  dirty.commands[GIT_STATUS] = ok(" M src/optics/buildLens.ts\n");
+  const dirtyRun = await runDoctor(t, dirty);
+  assert.match(
+    dirtyRun.out,
+    /^ {2}git {5}\S+ \(dirty\)\n {2}fix {5}lvrtc check-lv needs LensVisualizer's checkout clean: [\s\S]*?lvrtc\.local\.json/m,
+  );
+  assert.match(
+    dirtyRun.out,
+    /^ {2}LensVisualizer {2}ready to load, but lvrtc check-lv refuses a checkout outside git or with uncommitted\s+changes$/m,
+  );
+  // optiland is ready, and still check-lv is not: the summary is check-lv's own rule of refusal.
+  assert.match(dirtyRun.out, /^ {2}optiland {8}ready$/m);
+  assert.match(
+    dirtyRun.out,
+    /^ {2}lvrtc check-lv {2}not ready: it refuses, running nothing, until each of these is fixed:$/m,
+  );
+  assert.match(dirtyRun.out, /^ {18}- LensVisualizer at \/checkouts\/lv has uncommitted changes/m);
+  assert.doesNotMatch(dirtyRun.out, /Ready to check LensVisualizer/);
+  assert.deepEqual(JSON.parse((await runDoctor(t, dirty, { args: ["--json"] })).out).ready, {
+    checkLv: false,
+    lensVisualizer: true,
+    optiland: true,
+  });
+  const outsideGit = healthyMachine();
+  outsideGit.commands[GIT_TOP] = failed("fatal: not a git repository\n");
+  const outsideGitRun = await runDoctor(t, outsideGit);
+  assert.match(outsideGitRun.out, /^ {18}- LensVisualizer at \/checkouts\/lv is not a git checkout/m);
+  assert.doesNotMatch(outsideGitRun.out, /Ready to check LensVisualizer/);
+
+  // A checkout that does not load: the remedy of its code.
+  const unloadable = healthyMachine();
+  unloadable.binding = { status: "failed", code: "import-failed", message: "1 of 40 modules cannot be imported" };
+  const unloadableRun = await runDoctor(t, unloadable);
+  assert.match(
+    unloadableRun.out,
+    /^ {2}fix {5}Update the LensVisualizer checkout, and check that lvPath in\s+lvrtc\.local\.json/m,
+  );
+  assert.match(unloadableRun.out, /^ {2}LensVisualizer {2}not ready \(it cannot be loaded: import-failed\)$/m);
+  assert.match(unloadableRun.out, /^ {2}Not ready to check LensVisualizer/m);
+  assert.deepEqual(JSON.parse((await runDoctor(t, unloadable, { args: ["--json"] })).out).ready, {
+    checkLv: false,
+    lensVisualizer: false,
+    optiland: true,
+  });
+
+  // An interpreter that cannot import optiland: install it, or point at one that can.
+  const noOptiland = healthyMachine();
+  noOptiland.commands[`${OPTILAND_PYTHON} -c ${OPTILAND_SCRIPT}`] = failed("PackageNotFoundError: optiland\n");
+  noOptiland.engine = { status: "unavailable", code: "hello-failed", message: "no module named optiland" };
+  const noOptilandRun = await runDoctor(t, noOptiland);
+  assert.match(
+    noOptilandRun.out,
+    /^ {2}version {6}not importable\n {2}fix {10}The interpreter runs but cannot import optiland/m,
+  );
+  assert.match(noOptilandRun.out, /^ {2}optiland {8}not ready \(its interpreter cannot import optiland\)/m);
+
+  // Node out of range.
+  const oldNode = await runDoctor(t, { ...healthyMachine(), nodeVersion: "22.18.0" });
+  assert.match(oldNode.out, /^ {2}status {4}out of range\n {2}fix {7}Use Node 24\.15 or a later 24 release/m);
+  assert.match(oldNode.out, /^ {18}- Node 22\.18\.0 is outside the supported range/m);
+  assert.doesNotMatch(oldNode.out, /Ready to check LensVisualizer/);
+  const oldNodeJson = await runDoctor(t, { ...healthyMachine(), nodeVersion: "22.18.0" }, { args: ["--json"] });
+  assert.deepEqual(JSON.parse(oldNodeJson.out).ready, { checkLv: false, lensVisualizer: true, optiland: true });
+
+  // Every row that is as it should be has no fix line.
+  assert.doesNotMatch((await runDoctor(t, healthyMachine())).out, /^ {2}fix /m);
+});
+
+test("on a root with nothing configured, and with paths that are set but lead nowhere, every fix names where to set it", async (t) => {
+  const envs: Record<string, string>[] = [
+    {},
+    { LVRTC_LV_PATH: "/nowhere/lv", LVRTC_OPTILAND_PYTHON: "/nowhere/python" },
+  ];
+  for (const env of envs) {
+    const run = await runDoctor(t, { ...healthyMachine(), files: [] }, { config: {}, env });
+    assert.equal(run.code, EXIT_OK);
+    const fixes = run.out.split("\n").filter((line) => /^ {2}fix /.test(line));
+    assert.equal(fixes.length, 2, run.out);
+    assert.match(fixes[0], /lvPath in lvrtc\.local\.json \(or the environment variable LVRTC_LV_PATH\)/);
+    assert.match(fixes[1], /engines\.optiland\.python in lvrtc\.local\.json \(or LVRTC_OPTILAND_PYTHON\)/);
+    assert.match(run.out, /\nReady\n {2}LensVisualizer {2}not ready \(/);
+    assert.ok(!run.ran.some((line) => line.startsWith("engine ")), "no engine is started");
+  }
 });
 
 test("a configuration file that cannot be read is an error naming the file", async (t) => {

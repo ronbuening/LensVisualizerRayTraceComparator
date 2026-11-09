@@ -150,7 +150,7 @@ test("baseline and verify are registered commands, with help", async () => {
   assert.match(help.out, /^Exit code: write: 0 when /m);
   const verify = await lvrtc(REPO_ROOT, ["verify", "--help"]);
   assert.match(verify.out, /^Usage: lvrtc verify \[--root <dir>\] \[--write\]$/m);
-  assert.match(verify.out, /It cannot see a case or an engine that has changed/);
+  assert.match(verify.out, /It cannot see a lens state or an engine that has changed/);
 });
 
 test("write, then verify: the baseline is valid, canonical and keyed on run name and case hash; verify exits 0", async (t) => {

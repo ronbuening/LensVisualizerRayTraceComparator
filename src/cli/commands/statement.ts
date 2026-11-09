@@ -8,15 +8,25 @@ import { readStatementInputs, renderStatement, STATEMENT_JSON, STATEMENT_MARKDOW
 import { parseArguments } from "../arguments.ts";
 import { EXIT_OK, EXIT_USAGE } from "../command.ts";
 import type { CliCommand } from "../command.ts";
+import { helpText, options, paragraph } from "../help.ts";
 
-const HELP =
-  "Usage: lvrtc statement [--root <dir>]\n\nWrites reports/validation-statement.{json,md} from the eight benchmark, features, states and focus-stations baselines alone. No engine is read. Missing or inconsistent inputs write nothing.\n";
+const SYNOPSIS = "Usage: lvrtc statement [--root <dir>]\n";
+const HELP = helpText([
+  SYNOPSIS,
+  ...paragraph(
+    "For maintainers. Writes reports/validation-statement.json and .md, the summary statement of what the checks found, from the eight baselines of the benchmark, features, states and focus-stations suites alone. No engine is read. Missing or inconsistent inputs write nothing.",
+  ),
+  ...options([["--root <dir>", "the directory that holds baselines/ and reports/ (default: this repository)"]]),
+  ...paragraph(
+    "Exit code: 0 when it was written; 1 when the baselines are missing or do not hold together; 2 when the command line cannot be used as given.",
+  ),
+]);
 
 /** The statement command reads baselines only, without resolving any engine or configuration. */
 export function createStatementCommand(inputs: { rootDir: string; cwd: string }): CliCommand {
   return {
     name: "statement",
-    summary: "Write the four-suite statement from the eight baselines alone",
+    summary: "Write the summary statement from the committed results of four suites",
     run: async (args, io) => {
       if (args.includes("--help") || args.includes("-h")) {
         io.stdout(HELP);

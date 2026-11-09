@@ -15,6 +15,7 @@ import { EXIT_OK, EXIT_USAGE } from "../command.ts";
 import type { CliCommand } from "../command.ts";
 import { parseTargetArguments, resolveRunDirectory } from "../runTarget.ts";
 import type { RunTargetInputs } from "../runTarget.ts";
+import { helpText, options, paragraph } from "../help.ts";
 
 /** What `lvrtc report` is wired to, injected so that tests choose it. */
 export interface ReportCommandInputs extends RunTargetInputs {
@@ -23,25 +24,29 @@ export interface ReportCommandInputs extends RunTargetInputs {
 }
 
 const SYNOPSIS = "Usage: lvrtc report <suite name | run directory> [--root <dir>] [--floor <dir>] [--catalog]\n";
-const HELP = [
+const HELP = helpText([
   SYNOPSIS,
-  "Writes the report of a run that has been compared: report.json and report.md in the run directory, from the",
-  "run's manifest, its comparisons.json and the policy. Both files are the same, byte for byte, whenever and",
-  "wherever they are written from the same three.",
-  "",
-  "  --root <dir>   the directory that holds lvrtc.config.json, whose runsDir a suite name is looked up in",
-  "                 (default: this repository)",
-  "  --floor <dir>  also write the numerical-floor digest of the run into <dir>, as <engine>-floor.json and",
-  "                 <engine>-floor.md, for the engine the policy gives a floor (lv) against its arbiter (ref):",
-  "                 per run and rung the worst of every metric, the verdicts and how the rays ended. It holds",
-  "                 results, counts, run names and hashes only, and is what is committed of a benchmark",
-  "",
-  "  --catalog      catalog only: statistics from baselines/catalog{,.mtf}.json alone, in reports/catalog.{md,json}",
-  "",
-  "Exit code: 0 when the report was written, whatever its verdicts are (lvrtc compare is what fails on them); 2",
-  "when it was not, because the run has no manifest or no comparisons, or they do not belong together.",
-  "",
-].join("\n");
+  ...paragraph(
+    "Writes the report of a run that has been compared: report.json and report.md in the run directory, from the run record, its comparisons.json and the limits file. Both files are the same, byte for byte, whenever and wherever they are written from the same three.",
+  ),
+  ...options([
+    [
+      "--root <dir>",
+      "the directory that holds lvrtc.config.json, whose runs directory a suite name is looked up in (default: this repository)",
+    ],
+    [
+      "--floor <dir>",
+      "also write the numerical-floor digest of the run into <dir>, as <engine>-floor.json and <engine>-floor.md, for an engine the limits file gives a known numerical floor, against the engine it is held to; the limits file at hand grants none, so this is a tool for a future engine",
+    ],
+    [
+      "--catalog",
+      "for the catalog alone: statistics from baselines/catalog.json and catalog.mtf.json, written to reports/catalog.md and catalog.json",
+    ],
+  ]),
+  ...paragraph(
+    "Exit code: 0 when the report was written, whatever its verdicts are (lvrtc compare is what fails on them); 2 when it was not, because the run has no run record or no comparisons, or they do not belong together.",
+  ),
+]);
 
 /**
  * Builds `lvrtc report <suite name | run directory> [--root <dir>] [--floor <dir>]`.
@@ -64,7 +69,7 @@ const HELP = [
 export function createReportCommand(inputs: ReportCommandInputs): CliCommand {
   return {
     name: "report",
-    summary: "Write the report of a compared run as JSON and Markdown",
+    summary: "Write the report of a compared run, as Markdown and JSON",
     run: async (args, io) => {
       if (args.includes("-h") || args.includes("--help")) {
         io.stdout(HELP);

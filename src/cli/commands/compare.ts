@@ -21,6 +21,8 @@ import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "../command.ts";
 import type { CliCommand } from "../command.ts";
 import { parseTargetArguments, resolveRunDirectory } from "../runTarget.ts";
 import type { RunTargetInputs } from "../runTarget.ts";
+import { helpText, options, paragraph } from "../help.ts";
+import { verdictLabel } from "../../vocabulary/index.ts";
 
 /** What `lvrtc compare` is wired to, injected so that tests choose it. */
 export interface CompareCommandInputs extends RunTargetInputs {
@@ -31,27 +33,35 @@ export interface CompareCommandInputs extends RunTargetInputs {
 const SYNOPSIS =
   "Usage: lvrtc compare <suite name | run directory> [--root <dir>] [--reference <engine>]\n" +
   "                     [--mode reference-vs-each|pairwise|both] [--jobs <n>] [--memory-budget <GiB>] [--json]\n";
-const HELP = [
+const HELP = helpText([
   SYNOPSIS,
-  "Compares the answers of a run's engines, request by request, and judges each pair by the policy of its rung.",
-  "It reads the run's manifest, its cases and the result store beside the run directory, and writes",
-  "comparisons.json into the run directory. Nothing is asked of any engine.",
-  "",
-  "  --root <dir>          the directory that holds lvrtc.config.json, whose runsDir a suite name is looked up in",
-  "                        (default: this repository)",
-  "  --reference <engine>  the engine every other is compared against (default: each run's referenceEngine, else",
-  '                        the first engine, by id, that has an "ok" result)',
-  "  --mode <mode>         reference-vs-each, pairwise or both (default: both)",
-  "  --jobs <n>            parallel comparison workers over runs (default: 1, serial)",
-  "  --memory-budget <GiB>  comparison memory allowance (default: 25% of installed RAM minus 2 GiB);",
-  "                         jobs are capped at 2.5 GiB each (comparison starts no engine workers)",
-  "  --json                print the comparisons as one JSON object in place of the lines",
-  "",
-  "Exit code: 0 when no pair is FAIL or ERROR (FLOOR is a pass; UNSUPPORTED, RECORDED and ATTENTION are not",
-  "failures); 1 otherwise; 2 when nothing was compared because the run has no manifest or the reference is not an",
-  "engine of the run.",
-  "",
-].join("\n");
+  ...paragraph(
+    "Compares the answers of a run's engines, request by request, and gives each pair of engines a verdict by the limits file of each check. It reads the run record and lens states that lvrtc run wrote, and the answers in the result cache, and writes comparisons.json into the run directory. No engine is asked anything.",
+  ),
+  ...paragraph(
+    "A check held to a limit gives each pair a pass or a fail; a side-by-side check sets the two answers beside each other, marks a difference outside its review band as worth a look, and fails nothing. lvrtc glossary explains each verdict.",
+  ),
+  ...options([
+    [
+      "--root <dir>",
+      "the directory that holds lvrtc.config.json, whose runs directory a suite name is looked up in (default: this repository)",
+    ],
+    [
+      "--reference <engine>",
+      'the engine every other is compared against (default: each run\'s referenceEngine, else the first engine, by id, that has an "ok" answer)',
+    ],
+    ["--mode <mode>", "reference-vs-each, pairwise or both (default: both)"],
+    ["--jobs <n>", "how many runs are compared at once, in threads (default 1: one after another)"],
+    [
+      "--memory-budget <GiB>",
+      "the memory the comparisons may use together (default: a quarter of the installed memory, less 2 GiB); a comparison is counted as 2.5 GiB (it starts no engine)",
+    ],
+    ["--json", "print the comparisons as one JSON object in place of the lines"],
+  ]),
+  ...paragraph(
+    `Exit code: 0 when no pair is "${verdictLabel("FAIL")}" or "${verdictLabel("ERROR")}" (side-by-side verdicts and answers an engine did not compute fail nothing); 1 otherwise; 2 when nothing was compared because the run has no run record or the reference is not an engine of the run.`,
+  ),
+]);
 
 const MODE_CHOICES: Readonly<Record<string, readonly ComparisonMode[]>> = {
   "reference-vs-each": ["reference-vs-each"],
@@ -138,7 +148,7 @@ export async function compareRunDirectoryWithJobs(
 export function createCompareCommand(inputs: CompareCommandInputs): CliCommand {
   return {
     name: "compare",
-    summary: "Compare the engines of a run, against a reference and pairwise",
+    summary: "Compare the answers of a run's engines and give each pair a verdict",
     run: async (args, io) => {
       if (args.includes("-h") || args.includes("--help")) {
         io.stdout(HELP);

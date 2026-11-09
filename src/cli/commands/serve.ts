@@ -14,39 +14,32 @@ import { parseArguments } from "../arguments.ts";
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "../command.ts";
 import type { CliCommand } from "../command.ts";
 import type { RunTargetInputs } from "../runTarget.ts";
+import { helpText, options, paragraph } from "../help.ts";
 
 const SYNOPSIS = "Usage: lvrtc serve [--root <dir>] [--port <n>] [--no-ask]\n";
-const HELP = [
+const HELP = helpText([
   SYNOPSIS,
-  "Serves a dashboard of the runs and baselines on 127.0.0.1 only: an index of the run directories of the runs",
-  "directory and the baselines of the root, a page per run (engines, support matrix, verdicts, sections, pending",
-  "jobs), a page per compared request, and a page per baseline and per run of it with the STALE badge of each record.",
-  "Every page has a JSON twin under /api/, and no page writes anything. It runs until it is interrupted (SIGINT or",
-  "SIGTERM): it then ends a running job's process group (SIGTERM, then SIGKILL after 5 s) and waits for it, ignoring",
-  "a second SIGINT or SIGTERM until it has ended. Once listening it asks the engines of the baselines who they are, in",
-  "a child `lvrtc engine describe`; until they answer, and with --no-ask, a record's engines are held to the suite's",
-  "last run.",
-  "",
-  "/lens/<lensKey> gathers every run of a lens across the run directories (a run is of the lens its case names), with",
-  "the condition of each, and overlays the MTF curves of its mtf.native answers that a form in its address chooses,",
-  "with differences against one curve chosen as the reference: within the reference's request as its section page",
-  "draws them, and apart, as no verdict, across runs, requests, fields and cuts.",
-  "",
-  "/control starts a suite listed in <root>/suites/*.json (lvrtc run, compare and report in turn, at most 4 jobs),",
-  "runs one lens (lvrtc lenses list, then lvrtc mtf <lensKey> --profile benchmark when the key is in the catalog,",
-  "at most 4 jobs and no more than the memory budget allows), collects the answers of file-exchange engines (lvrtc",
-  "collect) and asks the engines again: each a child lvrtc command, one job at a time, its output kept in memory and",
-  "shown on /control/job/<n>. Runs of real engines are heavy commands and must not overlap another session's. It",
-  "also plans lvrtc store prune or compress as a dry run, and only from that plan's page confirms it, refused unless",
-  "the store is still in the state the plan was made of (owner only; no other writer may run meanwhile).",
-  "",
-  "  --root <dir>     the directory that holds lvrtc.config.json and baselines/ (default: this repository)",
-  `  --port <n>       the port, 0 for a free one (default: ${DEFAULT_PORT})`,
-  "  --no-ask         do not ask the engines: a record's engines are held to the suite's last run",
-  "",
-  "Exit code: 0 once stopped; 1 when it cannot listen; 2 when the command line or the root cannot be used as given.",
-  "",
-].join("\n");
+  ...paragraph(
+    "Serves a dashboard of the results on 127.0.0.1 only, for a browser on this machine: an index of the run directories and the committed baselines, a page per run (engines, what each answered, verdicts, comparisons), a page per compared request with its charts, and a page per baseline and per run of it, saying of each record whether it is up to date. Every page has a JSON twin under /api/, and no page writes anything. It runs until it is interrupted (Ctrl-C, SIGINT or SIGTERM); it then ends a running job and its child processes (SIGTERM, then SIGKILL after 5 s) and waits for them, ignoring a second interrupt until they have ended.",
+  ),
+  ...paragraph(
+    "Once listening, it asks the engines of the baselines which version of each would run now, in a child lvrtc engine describe, to say whether each record is out of date; until they answer, and with --no-ask, it judges by the versions the suite's last run recorded.",
+  ),
+  ...paragraph(
+    "/lens/<lensKey> gathers every run of one lens across the run directories and overlays the MTF curves its address chooses. /compare/<lensKey> sets LensVisualizer beside optiland one tab at a time.",
+  ),
+  ...paragraph(
+    "/control starts work as child lvrtc commands, one job at a time, its output shown on /control/job/<n>: a suite listed in <root>/suites/ (lvrtc run, compare and report in turn, at most 4 jobs), one lens (lvrtc mtf <lensKey> --profile benchmark or tabs, at most 4 jobs and no more than the memory budget allows), collecting the answers of file-exchange engines, and asking the engines again. Runs of LensVisualizer and optiland are heavy: do not overlap them with other heavy work. For maintainers only, it also plans lvrtc store prune or compress as a dry run, and only from that plan's page confirms it, refused unless the cache is still in the state the plan was made of.",
+  ),
+  ...options([
+    ["--root <dir>", "the directory that holds lvrtc.config.json and baselines/ (default: this repository)"],
+    ["--port <n>", `the port, 0 for a free one (default: ${DEFAULT_PORT})`],
+    ["--no-ask", "do not ask the engines: judge each record by the engine versions of the suite's last run"],
+  ]),
+  ...paragraph(
+    "Exit code: 0 once stopped; 1 when it cannot listen; 2 when the command line or the root cannot be used as given.",
+  ),
+]);
 
 /** What `lvrtc serve` is wired to, injected so that tests choose it. */
 export interface ServeCommandInputs extends RunTargetInputs {
@@ -136,7 +129,7 @@ function releaseSignals(): void {
 export function createServeCommand(inputs: ServeCommandInputs): CliCommand {
   return {
     name: "serve",
-    summary: "Serve a dashboard of the runs and baselines on 127.0.0.1, with run control",
+    summary: "Serve a dashboard of runs and results at http://127.0.0.1:<port>/",
     run: async (args, io) => {
       if (args.includes("-h") || args.includes("--help")) {
         io.stdout(HELP);

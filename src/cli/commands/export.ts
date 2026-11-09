@@ -18,6 +18,7 @@ import { parseArguments } from "../arguments.ts";
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "../command.ts";
 import type { CliCommand, CliIo } from "../command.ts";
 import { apertureOption, sliderPosition } from "../lensOptions.ts";
+import { ROOT_OPTION, helpText, options, paragraph } from "../help.ts";
 
 /** What `lvrtc export` is wired to, injected so that tests choose all three. */
 export interface ExportCommandInputs {
@@ -34,30 +35,38 @@ const SYNOPSIS = [
   "       lvrtc export --all [--census <dir>] [--json] [--root <dir>]",
   "",
 ].join("\n");
-const HELP = [
+const HELP = helpText([
   SYNOPSIS,
-  "Writes a LensVisualizer lens as an optical case: the document every engine is asked about. The case is built",
-  "from the state LensVisualizer prepares for tracing, at the design image plane.",
-  "",
-  "  --zoom <t>      zoom position from 0 (wide) to 1 (tele); default 0, the wide end: one lens is exported in one",
-  "                  state, and --zoom 1 gives the tele end of a zoom. A prime has no zoom position",
-  "  --focus <t>     focus position from 0 (infinity) to 1 (closest); default infinity. A position other than 0",
-  "                  is exported only where LensVisualizer certifies the object distance of that station",
-  "  --aperture <a>  wide-open (default), f/<N> by LensVisualizer's stop-down rule, or r=<mm>, a stop radius",
-  "  --lines <set>   reference (default), cdf or photopic: LensVisualizer's lines, weights and indices",
-  "  --out <file>    write the case to the file; without it the case is printed",
-  "  --all           export every lens on its reference line, a zoom at both ends (zoom 0 and zoom 1), and print",
-  "                  the census: how many states were exported, how many were not and why, by lens key",
-  "  --census <dir>  with --all: write the census to <dir>/lv-export.json and <dir>/lv-export.md",
-  "  --json          with --all: print the census as JSON in place of the summary",
-  "  --root <dir>    the directory that holds lvrtc.config.json (default: this repository)",
-  "",
-  "Exit code: 0 when the case, or the census, was written; 1 when the lens cannot be exported as asked (each",
-  "reason is printed with its code), when LensVisualizer cannot be loaded, and, for --all, when exporting a lens",
-  "threw or a lens file could not be indexed; 2 when the command line cannot be used as given, which includes a",
-  "key that is not in the catalog.",
-  "",
-].join("\n");
+  ...paragraph(
+    "Writes a LensVisualizer lens state as the engine-neutral file every engine is handed: the surfaces, glasses, stop, wavelengths and image plane of the lens as LensVisualizer prepares it for tracing, at its design image plane. What the file format cannot express exactly, such as a tilted surface, is refused with a code and never approximated. A lens state reproduces a prescription: keep it out of anything you commit.",
+  ),
+  ...options([
+    [
+      "--zoom <t>",
+      "zoom position from 0 (wide) to 1 (tele); default 0, the wide end: one lens is exported in one state, and --zoom 1 gives the tele end of a zoom. A prime has no zoom position",
+    ],
+    [
+      "--focus <t>",
+      "focus position from 0 (infinity) to 1 (closest); default infinity. A position other than 0 is exported only where LensVisualizer gives the object distance of that focus station",
+    ],
+    ["--aperture <a>", "wide-open (default), f/<N> by LensVisualizer's stop-down rule, or r=<mm>, a stop radius"],
+    [
+      "--lines <set>",
+      "the wavelengths: reference (default, the lens's reference wavelength), cdf (the C, d and F lines) or photopic (white light), each with LensVisualizer's weights and indices",
+    ],
+    ["--out <file>", "write the lens state to the file; without it the lens state is printed"],
+    [
+      "--all",
+      "export every lens at its reference wavelength, a zoom at both ends (zoom 0 and zoom 1), and print how many states were exported, how many were not and why, by lens key",
+    ],
+    ["--census <dir>", "with --all: write that count to <dir>/lv-export.json and <dir>/lv-export.md"],
+    ["--json", "with --all: print the count as JSON in place of the summary"],
+    ROOT_OPTION,
+  ]),
+  ...paragraph(
+    "Exit code: 0 when the lens state, or the count, was written; 1 when the lens cannot be exported as asked (each reason is printed with its code), when LensVisualizer cannot be loaded, and, for --all, when exporting a lens threw or a lens file could not be read; 2 when the command line cannot be used as given, which includes a key that is not in the catalog.",
+  ),
+]);
 
 const VALUE_OPTIONS = ["--zoom", "--focus", "--aperture", "--lines", "--out", "--root", "--census"];
 /** The options of the first form of the synopsis, which --all does not take, and those only --all takes. */
@@ -202,7 +211,7 @@ async function exportAll(binding: LvBinding, censusDir: string | undefined, json
 export function createExportCommand(inputs: ExportCommandInputs): CliCommand {
   return {
     name: "export",
-    summary: "Write a LensVisualizer lens as an optical case, or the census of every lens",
+    summary: "Write one LensVisualizer lens state as the file every engine is handed, or export every lens",
     run: async (args, io) => {
       if (args.includes("-h") || args.includes("--help")) {
         io.stdout(HELP);

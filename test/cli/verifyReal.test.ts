@@ -27,6 +27,8 @@ import {
   verifyReal,
 } from "../../src/cli/verifyReal.ts";
 import type { CheckStep, LvrtcEnded, VerifyRealRunner } from "../../src/cli/verifyReal.ts";
+import { CHECK_LV_PROGRAM, createCheckLvCommand } from "../../src/cli/commands/checkLv.ts";
+import { COMMANDS, runCli } from "../../src/cli/main.ts";
 import { CONTRACT_VERSION } from "../../src/contract/version.ts";
 import { CONFIG_FILE, REPO_ROOT } from "../../src/core/config.ts";
 import { UsageError } from "../../src/core/usageError.ts";
@@ -766,5 +768,84 @@ test("bin/verify-real.mjs refuses, before any check, a machine where LensVisuali
   );
   assert.match(child.stderr, /^verify:real: refused: LensVisualizer is not at \/nonexistent\/lv: /m);
   assert.match(child.stderr, /^verify:real: refused: optiland's interpreter \/nonexistent\/python does not run$/m);
+  assert.doesNotMatch(child.stdout, /checking/);
+});
+
+// ── lvrtc check-lv: the same runner under another name ───────────────────────────────────────────────────────────
+
+/** `lvrtc check-lv` through the dispatcher, on a scripted runner. */
+async function checkedLv(args: readonly string[], runner: VerifyRealRunner): Promise<Said> {
+  const out: string[] = [];
+  const err: string[] = [];
+  const command = createCheckLvCommand({ rootDir: REPO_ROOT, cwd: REPO_ROOT, runner, machine: OWNER_MACHINE });
+  const code = await runCli(
+    ["check-lv", ...args],
+    { stdout: (text) => void out.push(text), stderr: (text) => void err.push(text) },
+    [command],
+  );
+  return { code, out: out.join(""), err: err.join("") };
+}
+
+test("lvrtc check-lv asks the runner exactly what npm run verify:real asks, and ends with the same code", async () => {
+  assert.ok(COMMANDS.some((command) => command.name === "check-lv"));
+  const answers: ((args: readonly string[]) => LvrtcEnded)[] = [
+    ALL_OK,
+    (args) => (args.includes("--mtf") ? ALL_OK() : ended(checkSaid([{ outcome: "DRIFT", verdict: "FAIL" }]), 1)),
+  ];
+  for (const args of [[], ["--all"], ["--suite", "features", "--jobs", "2"], ["--suites", "benchmark,states"]]) {
+    for (const answer of answers) {
+      const viaVerify = scripted(healthy(), answer);
+      const viaCheckLv = scripted(healthy(), answer);
+      const verify = await verified(args, viaVerify.runner);
+      const checkLv = await checkedLv(args, viaCheckLv.runner);
+      assert.deepEqual(viaCheckLv.asked, viaVerify.asked, args.join(" "));
+      assert.equal(checkLv.code, verify.code, args.join(" "));
+      assert.match(checkLv.out, /^lvrtc check-lv: \d+ checks?, one at a time, of /m);
+      assert.doesNotMatch(checkLv.out, /verify:real:/);
+    }
+  }
+});
+
+test("lvrtc check-lv refuses a machine that is not ready as verify:real does, and says its own usage", async () => {
+  const notReady = scripted(
+    healthy((report) => (report.lensVisualizer = { status: "not configured", path: null, git: null, binding: null })),
+    ALL_OK,
+  );
+  const refused = await checkedLv([], notReady.runner);
+  assert.equal(refused.code, EXIT_USAGE);
+  assert.deepEqual(
+    notReady.asked.map((args) => args[0]),
+    ["doctor"],
+  );
+  assert.match(refused.err, /^lvrtc check-lv: refused: LensVisualizer is not configured: .*lvrtc\.local\.json$/m);
+
+  const usage = scripted(healthy(), ALL_OK);
+  const wrong = await checkedLv(["--jobs", "x"], usage.runner);
+  assert.equal(wrong.code, EXIT_USAGE);
+  assert.match(wrong.err, /^lvrtc check-lv: --jobs must be a positive integer/m);
+  assert.ok(wrong.err.endsWith(CHECK_LV_PROGRAM.synopsis), wrong.err);
+  assert.deepEqual(usage.asked, []);
+
+  const help = await checkedLv(["--help"], usage.runner);
+  assert.equal(help.code, EXIT_OK);
+  assert.equal(help.out, CHECK_LV_PROGRAM.help);
+  assert.ok(help.out.startsWith("Usage: lvrtc check-lv [--all | --suite <name> | --suites <a,b,...>]"));
+  assert.match(help.out, /npm run verify:real runs the same check\.\n$/);
+  assert.match((await verified(["--help"], usage.runner)).out, /lvrtc check-lv runs the same check\.\n$/);
+  assert.deepEqual(usage.asked, []);
+});
+
+test("bin/lvrtc.mjs check-lv refuses, before any check, a machine where LensVisualizer and optiland point nowhere", () => {
+  const env = {
+    ...process.env,
+    LVRTC_LV_PATH: "/nonexistent/lv",
+    LVRTC_OPTILAND_PYTHON: "/nonexistent/python",
+  };
+  const child = spawnSync(process.execPath, [LVRTC_BIN, "check-lv"], { cwd: REPO_ROOT, env, encoding: "utf8" });
+  assert.equal(child.status, EXIT_USAGE, child.stderr + child.stdout);
+  assert.match(child.stdout, /^lvrtc check-lv: 2 checks, one at a time, of /m);
+  assert.match(child.stderr, /^lvrtc check-lv: refused: LensVisualizer is not at \/nonexistent\/lv: /m);
+  assert.match(child.stderr, /^lvrtc check-lv: refused: optiland's interpreter \/nonexistent\/python does not run$/m);
+  assert.match(child.stderr, /^lvrtc check-lv: nothing was checked; lvrtc doctor shows the machine as it is$/m);
   assert.doesNotMatch(child.stdout, /checking/);
 });

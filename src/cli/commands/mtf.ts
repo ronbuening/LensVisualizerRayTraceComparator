@@ -68,6 +68,9 @@ import {
   lensProfileSuiteName,
 } from "../benchmarkProfile.ts";
 import { REPORT_JSON_FILE, REPORT_MARKDOWN_FILE, renderReport } from "../../report/index.ts";
+import { JOBS_OPTIONS, ROOT_OPTION, checkNames, checksByKind, helpText, options, paragraph, wrap } from "../help.ts";
+import type { OptionRow } from "../help.ts";
+import { verdictLabel } from "../../vocabulary/index.ts";
 
 /** What `lvrtc mtf` is wired to, injected so that tests choose all three. */
 export interface MtfCommandInputs {
@@ -90,54 +93,56 @@ const SYNOPSIS = [
   `                 [--aperture wide-open|f/${LV_TAB_COMPARISON_F_NUMBER}] [--root <dir>] [--jobs <n>] [--memory-budget <GiB>] [--json]`,
   "",
 ].join("\n");
-const HELP = [
+const BENCHMARK_KINDS = checksByKind(lensProfileRungs(BENCHMARK_PROFILE, []));
+const TABS_KINDS = checksByKind(lensProfileRungs(TABS_PROFILE, []));
+const HELP = helpText([
   SYNOPSIS,
-  "Asks each engine for its own MTF of a LensVisualizer lens (the quantity mtf.native) as a profile requests it, and",
-  "prints what each answered: a row per field with the image height, the field angle, the status and the sagittal",
-  "and tangential MTF at the frequencies the profile shows, then the focus shift the engine applied, the aperture it",
-  "traced, the lines it computed with and its notes. The request, the case and the answers are written to",
-  "<runsDir>/mtf/<profile>/<run>/mtf.json; an answer the result store already holds is not computed again.",
-  "",
-  "A zoom is asked about at both ends unless --zoom names one position: the wide end (zoom 0) and then the tele end",
-  "(zoom 1), each with its own request, its own table, labelled wide or tele, and its own run directory.",
-  "",
-  `  --engines <ids>   the engines to ask (default: ${DEFAULT_ENGINES.join(",")})`,
-  `  --profile <name>  the request to make (default: ${LV_TAB_PROFILE}). ${LV_TAB_PROFILE} is the request of`,
-  "                    LensVisualizer's MTF tab as it opens: its default method, spectrum, focus, grid cap, fields",
-  "                    and frequencies, with the stop and pupil radii of its own hook.",
-  `                    ${BENCHMARK_PROFILE} is no one request: the lens wide open and at the tab's f/8, at its design`,
-  "                    plane and at LensVisualizer's best axial focus, on the reference line and on the photopic",
-  "                    lines (eight runs; --aperture names one aperture, four runs), run and compared on the named",
-  "                    engines as a suite is: rungs r4, r4f and r6a judged, r6b recorded and, where optiland is",
-  "                    named, r5, r5g and r6c recorded. It prints the MTF report of that run (lvrtc mtf <lensKey>",
-  `                    --profile ${BENCHMARK_PROFILE} --engines lv,ref,optiland) and writes the run to`,
-  "                    <runsDir>/mtf-<lensKey>/, with mtf.md and mtf.json; lvrtc compare and lvrtc report read it",
-  "                    as the run of a suite named mtf-<lensKey>. Progress is on the error stream: the engines'",
-  "                    own MTF of a fast lens wide open takes minutes a run.",
-  `                    ${TABS_PROFILE} is the same conditions with the rungs of LensVisualizer's other tabs: r0 and r1,`,
-  "                    the gated rays of the coma and bokeh, axial, chief-ray, field-curve and vignetting tabs",
-  "                    (r7a to r11a), and those tabs and the summary beside an engine's own analysis (r7b to r12b,",
-  "                    recorded, each asked of its own engines). It prints the report of that run and writes the run",
-  "                    to <runsDir>/tabs-<lensKey>/, with report.md and report.json",
-  "  --zoom <t>        one zoom position from 0 (wide) to 1 (tele), in place of both ends of a zoom; a prime has",
-  "                    no zoom position",
-  `  --aperture <a>    wide-open (default), or f/${LV_TAB_COMPARISON_F_NUMBER}: the tab's own comparison at f/8`,
-  "  --root <dir>      the directory that holds lvrtc.config.json (default: this repository)",
-  "  --jobs <n>        benchmark, tabs: concurrent jobs in isolated processes (default: 1, serial)",
-  "  --memory-budget <GiB>  replica RSS budget (default: 25% of installed RAM minus 2 GiB);",
-  "                         jobs are capped at 2.5 GiB each, 4 GiB when R6c is selected",
-  "  --json            print one JSON object in place of the lines: the record of the run, or, for both ends of",
-  "                    a zoom, an object with the record of each end under wide and tele",
-  "",
-  `With --profile ${BENCHMARK_PROFILE} or ${TABS_PROFILE} --json prints the report as one JSON object, and the exit code is`,
-  "1 also when a pair of engines is FAIL or ERROR.",
-  "",
-  "Exit code: 0 when every engine answered (unsupported is an answer, not a failure); 1 when an engine ended in an",
-  "error, when the lens has no case in a state that was asked about (each reason is printed with its code) or when",
-  "LensVisualizer cannot be loaded; 2 when the command line cannot be used as given, which includes a key that is",
-  "not in the catalog.",
-  "",
-].join("\n");
+  ...paragraph(
+    "Asks each engine for its own MTF of a LensVisualizer lens as a profile requests it, and prints what each answered: a row per field with the image height, the field angle, the status and the sagittal and tangential MTF at the frequencies the profile shows, then the focus shift the engine applied, the aperture it traced, the wavelengths it computed with and its notes. The request, the lens state and the answers are written to <runsDir>/mtf/<profile>/<run>/mtf.json; an answer already in the result cache is not computed again.",
+  ),
+  ...paragraph(
+    "A zoom is asked about at both ends unless --zoom names one position: the wide end (zoom 0), then the tele end (zoom 1), each with its own request, its own table, labelled wide or tele, and its own run directory.",
+  ),
+  ...options([
+    ["--engines <ids>", `the engines to ask (default: ${DEFAULT_ENGINES.join(",")})`],
+    [
+      "--profile <name>",
+      `the request to make (default: ${LV_TAB_PROFILE}). ${LV_TAB_PROFILE} is the request of LensVisualizer's MTF tab as it opens: its default method, wavelengths, focus, sampling, fields and frequencies, with the stop and pupil of the tab itself.`,
+      (column) => [
+        ...wrap(
+          `${BENCHMARK_PROFILE} is no one request but a comparison of the lens's MTF: the lens wide open and at the tab's f/8, at its design image plane and at LensVisualizer's best axial focus, at its reference wavelength and in white light (eight runs, a zoom sixteen; --aperture keeps one aperture, half as many), run and compared on the named engines as a suite is. The checks held to a limit are ${checkNames(BENCHMARK_KINDS.limit)}; side by side, ${checkNames(BENCHMARK_KINDS.sideBySide)}, and where optiland is named ${checkNames(OWN_MTF_RUNGS)}. It prints the MTF report of that run (lvrtc mtf <lensKey> --profile ${BENCHMARK_PROFILE} --engines lv,ref,optiland) and writes the run to <runsDir>/mtf-<lensKey>/, with mtf.md and mtf.json; lvrtc compare and lvrtc report read it as the run of a suite named mtf-<lensKey>. Progress is on the error stream: the engines' own MTF of a fast lens wide open takes minutes a run.`,
+          column,
+          " ".repeat(column),
+        ),
+        ...wrap(
+          `${TABS_PROFILE} is the same conditions with the checks of LensVisualizer's other tabs: held to a limit, ${checkNames(TABS_KINDS.limit)}; side by side, each asked of its own engines, ${checkNames(TABS_KINDS.sideBySide)}. It prints the report of that run and writes it to <runsDir>/tabs-<lensKey>/, with report.md and report.json.`,
+          column,
+          " ".repeat(column),
+        ),
+      ],
+    ],
+    [
+      "--zoom <t>",
+      "one zoom position from 0 (wide) to 1 (tele), in place of both ends of a zoom; a prime has no zoom position",
+    ],
+    [
+      "--aperture <a>",
+      `wide-open (default), or f/${LV_TAB_COMPARISON_F_NUMBER}: the tab's own comparison at f/${LV_TAB_COMPARISON_F_NUMBER}`,
+    ],
+    ROOT_OPTION,
+    ...JOBS_OPTIONS.map(([name, description]): OptionRow => [
+      name,
+      `${BENCHMARK_PROFILE} and ${TABS_PROFILE}: ${description}`,
+    ]),
+    [
+      "--json",
+      `print one JSON object in place of the lines: the record of the run, or, for both ends of a zoom, an object with the record of each end under wide and tele; with --profile ${BENCHMARK_PROFILE} or ${TABS_PROFILE}, the report`,
+    ],
+  ]),
+  ...paragraph(
+    `Exit code: 0 when every engine answered (an answer that something is not computed is an answer, not a failure); 1 when an engine ended in an error, when the lens has no lens state at a position that was asked about (each reason is printed with its code), when LensVisualizer cannot be loaded, and, with --profile ${BENCHMARK_PROFILE} or ${TABS_PROFILE}, when a pair of engines is "${verdictLabel("FAIL")}" or "${verdictLabel("ERROR")}"; 2 when the command line cannot be used as given, which includes a key that is not in the catalog.`,
+  ),
+]);
 
 const VALUE_OPTIONS = ["--engines", "--profile", "--zoom", "--aperture", "--root", "--jobs", "--memory-budget"];
 
@@ -498,7 +503,7 @@ async function runBenchmark(
 export function createMtfCommand(inputs: MtfCommandInputs): CliCommand {
   return {
     name: "mtf",
-    summary: "Ask engines for their own MTF of a lens, as LensVisualizer's MTF tab requests it",
+    summary: "Print a lens's MTF as LensVisualizer's MTF tab asks for it, or compare it across engines",
     run: async (args, io) => {
       if (args.includes("-h") || args.includes("--help")) {
         io.stdout(HELP);

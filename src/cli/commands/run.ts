@@ -21,6 +21,7 @@ import { createEngineRegistry } from "../../engines/registry.ts";
 import type { EngineRegistry } from "../../engines/registry.ts";
 import { assertJobs, jobsOption, memoryBudgetOption, suiteJobEstimate } from "../jobs.ts";
 import { parseArguments } from "../arguments.ts";
+import { JOBS_OPTIONS, ROOT_OPTION, checkListLines, engineListLines, helpText, options, paragraph } from "../help.ts";
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "../command.ts";
 import type { CliCommand } from "../command.ts";
 
@@ -36,58 +37,38 @@ export interface RunCommandInputs {
 }
 
 const SYNOPSIS =
-  "Usage: lvrtc run <suite.json> [--root <dir>] [--engines <id,...>] [--rungs <id,...>] [--jobs <n>] [--memory-budget <GiB>] [--json]\n";
-const HELP = [
+  "Usage: lvrtc run <suite.json> [--root <dir>] [--engines <id,...>] [--checks <id,...>] [--jobs <n>] [--memory-budget <GiB>] [--json]\n";
+const HELP = helpText([
   SYNOPSIS,
-  "Runs every run of the suite on each selected engine, asking an engine only for what the result store does not",
-  "hold, and writes <runsDir>/<suite name>/manifest.json with the cases beside it. A run that names a",
-  "LensVisualizer lens has its case built from the configured checkout (lvPath).",
-  "",
-  "A run of a LensVisualizer zoom lens that states no zoom position (state.zoomT) is run at both ends, as two",
-  "runs: <name>-wide at zoom 0 and <name>-tele at zoom 1. A run that states a position is that one state.",
-  "",
-  "  --root <dir>     the directory that holds lvrtc.config.json (default: this repository)",
-  "  --engines <ids>  engines for every run, in place of the run's own list and of every configured engine;",
-  "                   a built-in engine (lv, ref, optiland) is run only where it is named",
-  "  --rungs <ids>    rungs for every run, in place of the run's own list and of every rung: selftest, r0, r1,",
-  "                   r2, r3, r4, r4f, r6a and r6b; r2, r3 and r4 trace each run's ray sets, and share one answer",
-  "                   per engine and set; r4f is asked of lv and of replay, the replay of its MTF sampling, and",
-  "                   r6b of lv and of wave, whatever is named. r5 is run only where it is named: it is asked",
-  "                   of lv, optiland and wave, and asks optiland once more, at 512 rays, for a run whose",
-  "                   figures are outside their band. r5g is run only where it is named: the geometric MTF of",
-  "                   lv, optiland and replay, with the same second asking of optiland for a run on one line",
-  "                   r6c is named-only: lv, wave, optiland FFT and the comparator OTF of optiland",
-  "                   wavefronts (optiland-wave), with R5 bands and no automatic second asking. r7a traces",
-  "                   the rays LensVisualizer's coma and bokeh tabs launch and compares their spots and fans;",
-  "                   r7b is named-only: lv's coma and bokeh tabs beside optiland's own spot and ray fan.",
-  "                   r8a traces the rays LensVisualizer's spherical-aberration and axial-colour sections",
-  "                   launch and compares where each crosses the axis; r8b is named-only: lv's two sections",
-  "                   beside optiland's own real rays and paraxial focus at each line. r9a traces the chief rays",
-  "                   LensVisualizer's distortion, pupils and lateral-colour tabs launch and compares where they",
-  "                   land; r9b is named-only: lv's three tabs beside optiland's own distortion and chief rays.",
-  "                   r10a traces the rays LensVisualizer's field-curve sections launch and compares each field's",
-  "                   tangential and sagittal focus; r10b is named-only: lv's field curves beside optiland's own",
-  "                   FieldCurvature. r11a traces the beams LensVisualizer's vignetting tab traces over each",
-  "                   field's stop lattice and each field's stop-centre ray, and compares which rays get through,",
-  "                   the flux into the image and where the stop-centre rays land; r11b is named-only: lv's vignetting",
-  "                   tab beside the comparator's flux on its own lattices. r12b is named-only: lv's summary tab",
-  "                   and aperture control beside optiland's paraxial accessors and its working f-number. r13b is",
-  "                   named-only: the comparator's Seidel sums (ref-seidel) beside optiland's; r14b is named-only:",
-  "                   optiland's Zernike fit of its wavefront beside the comparator's fit of the same samples.",
-  "  --jobs <n>      concurrent jobs in isolated processes (default: 1, serial)",
-  "  --memory-budget <GiB>  replica RSS budget (default: 25% of installed RAM minus 2 GiB);",
-  "                         jobs are capped at 2.5 GiB each, 4 GiB when R6c is selected",
-  "  --json           print one JSON object in place of the lines",
-  "",
-  "Exit code: 0 when no job ended as an error (unsupported is an answer, not a failure), every run could be",
-  "started and LensVisualizer did not change under the run; 1 otherwise; 2 when nothing was run because the suite",
-  "file, an engine or a rung cannot be used as asked. A field that has no rays is reported and fails nothing.",
-  "",
-].join("\n");
+  ...paragraph(
+    "Runs a suite: every run of the suite file on each of its engines, asking an engine only for what the result cache (the store directory under the runs directory) does not already hold. It writes a run record of the suite, the lens states and the jobs into <runsDir>/<suite name>/, where lvrtc compare and lvrtc report read it. A run that names a LensVisualizer lens has its lens state exported from the configured LensVisualizer checkout (lvPath).",
+  ),
+  ...paragraph(
+    "A LensVisualizer zoom lens run without a zoom position (state.zoomT) is run at both ends, as two runs: <name>-wide at zoom 0 and <name>-tele at zoom 1. A run that states a position is that one state.",
+  ),
+  ...options([
+    ROOT_OPTION,
+    [
+      "--engines <ids>",
+      "the engines of every run, in place of the run's own list and of every configured engine. A built-in engine is run only where it is named; the built-in engines are:",
+      (column) => engineListLines(column + 2),
+    ],
+    [
+      "--checks <ids>",
+      "the checks of every run, in place of the run's own list (--rungs is the older spelling of this option). Without it every check runs but those run only where named. A check asked of engines of its own is asked of them whatever --engines names. lvrtc checks <id> says what each compares. The checks are:",
+      (column) => checkListLines(column + 2),
+    ],
+    ...JOBS_OPTIONS,
+    ["--json", "print one JSON object in place of the lines"],
+  ]),
+  ...paragraph(
+    "Exit code: 0 when no job ended in an error (an engine that answers that it does not compute something has answered, and has not failed), every run could be started and LensVisualizer did not change during the run; 1 otherwise; 2 when nothing was run because the suite file, an engine or a check cannot be used as asked. A field that has no rays is reported and fails nothing.",
+  ),
+]);
 
 const STATUSES: readonly ResultStatus[] = ["ok", "unsupported", "error", "pending"];
 const SOURCES: readonly JobSource[] = ["computed", "cached", "negotiated", "unavailable"];
-const VALUE_OPTIONS = ["--root", "--engines", "--rungs", "--jobs", "--memory-budget"] as const;
+const VALUE_OPTIONS = ["--root", "--engines", "--checks", "--rungs", "--jobs", "--memory-budget"] as const;
 type ValueOption = (typeof VALUE_OPTIONS)[number];
 
 /** The command line of `lvrtc run`, read. */
@@ -112,12 +93,15 @@ function readArguments(args: readonly string[]): RunArguments {
     if (ids?.includes("")) throw new UsageError(`${option} needs ids separated by commas, got "${values.get(option)}"`);
     return ids;
   };
+  if (values.has("--checks") && values.has("--rungs")) {
+    throw new UsageError("--checks and --rungs are two spellings of one option: give one of them");
+  }
   const memoryBudgetGiB = memoryBudgetOption(values.get("--memory-budget"));
   return {
     suite: files[0],
     root: values.get("--root"),
     engines: list("--engines"),
-    rungs: list("--rungs"),
+    rungs: list("--checks") ?? list("--rungs"),
     jobs: jobsOption(values.get("--jobs"), memoryBudgetGiB),
     memoryBudgetGiB,
     json: flags.has("--json"),
@@ -246,7 +230,7 @@ function jsonText(result: SuiteRunResult): string {
 export function createRunCommand(inputs: RunCommandInputs): CliCommand {
   return {
     name: "run",
-    summary: "Run a suite on the configured engines, reusing stored results",
+    summary: "Run a suite on its engines, reusing answers already in the result cache",
     run: async (args, io) => {
       if (args.includes("-h") || args.includes("--help")) {
         io.stdout(HELP);
