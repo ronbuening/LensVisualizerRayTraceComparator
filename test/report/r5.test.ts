@@ -196,7 +196,7 @@ test("the report of the stand-ins is its golden file, claims nothing it may not,
   // The table is of the shown frequencies; the model holds them all.
   assert.match(
     report.markdown,
-    /^\| 0 \| sagittal \| 50 \| 0\.5000 \| 0\.4961 \| 0\.4961 \| 0\.5000 \| 3\.91e-3 \| ATTENTION \| method \|$/m,
+    /^\| 0 \| sagittal \| 50 \| 0\.5000 \| 0\.4961 \| 0\.4961 \| 0\.5000 \| 3\.91e-3 \| Side by side, worth a look \| the methods differ \|$/m,
   );
   assert.doesNotMatch(report.markdown, /^\| 1 \| tangential \| 70 \|/m);
   assert.match(report.markdown, /^### The engines' own MTF$/m);

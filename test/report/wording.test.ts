@@ -178,6 +178,7 @@ test("what a report may say is accepted: every template, and sentences that only
     "| certified-artificial-focus1 | finite-conjugate-unavailable: focus position 1 at zoom 0 is not a station whose " +
       "object distance LensVisualizer certifies; only infinity focus and its documented stations can be exported |",
     "# Validation statement",
+    "A review band is a width for attention, not a limit.",
     // A consensus and its outliers, said with the words a pair's verdicts support, and a claim of error of no
     // consensus or outlier.
     "`fake-far` is an outlier: beyond the gates of every engine of the consensus.",

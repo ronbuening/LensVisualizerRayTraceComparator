@@ -217,9 +217,9 @@ test("the sentence under a matrix names the consensus and its outliers, or why t
   ];
   assert.equal(
     sentences[0],
-    "Consensus: `a`, `b`, every two of them within the gates of each other; outlier: `c`, beyond the gates of every " +
-      "engine of the consensus; apart: `d`, outside the consensus and not beyond the gates of all of it; not placed: " +
-      "`e`, with no pair within or beyond the gates.",
+    "Consensus: `a`, `b`, every two of them within the limits of each other; outlier: `c`, beyond the limits of every " +
+      "engine of the consensus; apart: `d`, outside the consensus and not beyond the limits of all of it; not placed: " +
+      "`e`, with no pair within or beyond the limits.",
   );
   assert.match(sentences[2], /^No consensus: the largest set .*; not placed: `x`, `y`, with no pair /);
   for (const sentence of sentences) assert.deepEqual(wordingProblems(sentence), [], sentence);
@@ -315,13 +315,16 @@ test("a report counts, over its sections, where each engine of the run stands", 
   const markdown = renderMarkdown(model);
   assert.match(markdown, /\n## Verdict summary\n[^#]*\n## Consensus\n[^#]*\n## Support matrix\n/);
   assert.match(markdown, /^Of 3 requests with a consensus to look for, 2 have one\.$/m);
-  assert.match(markdown, /^\| no consensus: split \| 1 \|$/m);
+  assert.match(
+    markdown,
+    /^\| No consensus: the engines within the limits of each other split into two or more largest sets \| 1 \|$/m,
+  );
   assert.match(markdown, /^\| c \| 1 \| 0 \| 1 \| 1 \| 0 \|$/m);
   assert.match(
     markdown,
-    /^Consensus: `a`, `b`, `c`, every two of them within the gates of each other; outlier: `d`, /m,
+    /^Consensus: `a`, `b`, `c`, every two of them within the limits of each other; outlier: `d`, /m,
   );
-  assert.match(markdown, /^No consensus: the engines within the gates of each other split into two or more /m);
+  assert.match(markdown, /^No consensus: the engines within the limits of each other split into two or more /m);
   assert.deepEqual(wordingProblems(markdown), []);
 });
 

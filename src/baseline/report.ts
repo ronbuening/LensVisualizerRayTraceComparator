@@ -1,6 +1,6 @@
 // The report of a baseline: what is committed beside it under `reports/<suite>/`. It is rendered from the baseline
 // alone, never from a live run, so that it can be made anew, byte for byte, with no engine at hand.
-import { numberText, whereText } from "../compare/metricText.ts";
+import { numberText } from "../compare/metricText.ts";
 import { VERDICTS } from "../contract/comparison.ts";
 import type { ParticipantStatus, Verdict } from "../contract/comparison.ts";
 import type {
@@ -16,6 +16,26 @@ import { formatFixed } from "../core/numeric/format.ts";
 import { sha256Hex } from "../core/numeric/hash.ts";
 import { COUNT_UNITS } from "../report/floor.ts";
 import { escapeCell } from "../report/markdown.ts";
+import { checkName, figureName, placeText, quantityName, unitName } from "../report/names.ts";
+import { HOW_TO_READ_TEXT, REPORT_TEXT } from "../report/wording.ts";
+import {
+  ENGINE_DETAIL_TEXT,
+  FIELD_ANGLE_QUANTITIES,
+  FIELD_FRACTION_QUANTITIES,
+  FIELD_TEXT,
+  IDENTIFYING_DETAILS,
+  SORTING_LIMITS,
+  PLACE_MEANING,
+  RAY_OUTCOME_TEXT,
+  SUPPORT_STATUS_TEXT,
+  VERDICT_TEXT,
+  checkOf,
+  engineName,
+  engineOf,
+  runNameParts,
+  valueLabel,
+  verdictShort,
+} from "../vocabulary/index.ts";
 import { baselineText } from "./build.ts";
 
 /** The names of a baseline's two report files, inside `reports/<suite>/`. */
@@ -270,7 +290,7 @@ export function count(value: number): string {
 }
 
 function verdictText(verdicts: readonly BaselineVerdictCount[]): string {
-  return verdicts.map(({ verdict, count: pairs }) => `${count(pairs)} ${verdict}`).join(", ") || "—";
+  return verdicts.map(({ verdict, count: pairs }) => `${count(pairs)} ${verdictShort(verdict)}`).join("; ") || "—";
 }
 
 /** How another report of a baseline lays out what `renderBaselineMarkdown` writes; the rays report gives none. */
@@ -283,110 +303,268 @@ export interface BaselineReportLayout {
   readonly byRun?: (rung: ReportRung) => boolean;
   /** The lines that end the section of a rung. */
   readonly afterRung?: (rung: ReportRung) => readonly string[];
-  /** The lines that end the report. */
+  /** The lines that end the results, before "How to read this". */
   readonly tail?: readonly string[];
-}
-
-function metricHeading(metric: BaselineMetric): string {
-  const unit = metric.unit === "1" ? "" : ` ${metric.unit}`;
-  if (metric.tolerance === undefined) return unit === "" ? metric.name : `${metric.name} [${unit.trim()}]`;
-  return `${metric.name} (≤ ${numberText(metric.tolerance)}${unit})`;
+  /** The lines that end "How to read this", before "Identifiers". */
+  readonly howToRead?: readonly string[];
+  /**
+   * The legend of the wavelengths by index, where the baseline keeps them (in place of the sentence that it does
+   * not), placed after the legend of places.
+   */
+  readonly wavelengths?: readonly string[];
+  /** The review bands and sorting limits of a side-by-side check, by metric, where the baseline keeps them. */
+  readonly bands?: (rung: ReportRung) => Readonly<Record<string, number>>;
+  /** The places of `where` the layout's own lines name, beside the report's metrics, for the legend of places. */
+  readonly places?: readonly { readonly key: string; readonly quantity: string }[];
 }
 
 function valueText(value: number | null): string {
-  return value === null ? "not finite" : numberText(value);
+  return value === null ? REPORT_TEXT.notFinite : numberText(value);
 }
 
+/** A figure's limit as its column shows it: `≤` a limit, a review band, or `—` for none. */
+function limitText(metric: BaselineMetric, bands: Readonly<Record<string, number>>): string {
+  if (metric.tolerance !== undefined) return REPORT_TEXT.limitAtMost(numberText(metric.tolerance));
+  // A sorting limit is the table's to state, which may take another for several wavelengths: none is shown here.
+  if (!Object.hasOwn(bands, metric.name) || SORTING_LIMITS.includes(metric.name)) return "—";
+  return REPORT_TEXT.reviewBand(numberText(bands[metric.name]));
+}
+
+/** What an engine states of itself, in words (`ENGINE_DETAIL_TEXT`), without what identifies its code. */
 function detailText(details: BaselineEngine["details"]): string {
   const said = Object.keys(details)
     .sort()
-    .map((key) => `${key} ${String(details[key])}`);
+    .filter((key) => !Object.hasOwn(IDENTIFYING_DETAILS, key))
+    .map((key) =>
+      Object.hasOwn(ENGINE_DETAIL_TEXT, key)
+        ? ENGINE_DETAIL_TEXT[key](String(details[key]))
+        : `${key} ${String(details[key])}`,
+    );
+  return said.join(", ") || "—";
+}
+
+/** What identifies an engine's code beside its hashes: its commit, the hash of its sources, its distribution. */
+function identifyingText(details: BaselineEngine["details"]): string {
+  const said = Object.keys(details)
+    .sort()
+    .filter((key) => Object.hasOwn(IDENTIFYING_DETAILS, key))
+    .map((key) => `${IDENTIFYING_DETAILS[key]} ${String(details[key])}`);
   return said.join(", ") || "—";
 }
 
 function worstText(verdict: Verdict, worst: WorstFigure | undefined, requests?: number): string {
   // With the requests of the run: in how many of them the figure was measured, and that a pair has none.
-  if (worst === undefined) return requests === undefined ? verdict : `${verdict}: no judged figure`;
-  const unit = worst.unit === "1" ? "" : ` ${worst.unit}`;
+  const label = verdictShort(verdict);
+  if (worst === undefined) return requests === undefined ? label : `${label}: ${REPORT_TEXT.noJudgedFigure}`;
+  const unit = worst.unit === "1" ? "" : ` ${unitName(worst.unit)}`;
   const of =
     requests === undefined || worst.measured === undefined ? "" : ` (${count(worst.measured)} of ${count(requests)})`;
-  return `${verdict}: ${worst.name} ${valueText(worst.value)}${worst.value === null ? "" : unit}${of}`;
+  return `${label}: ${worst.name} ${valueText(worst.value)}${worst.value === null ? "" : unit}${of}`;
+}
+
+/** The verdicts a report names, in the order of `VERDICTS`. */
+function verdictsOf(report: BaselineReport): Verdict[] {
+  const named = new Set(
+    report.rungs.flatMap((rung) => [
+      ...rung.pairs.flatMap((pair) => [...pair.verdicts, ...pair.runs].map(({ verdict }) => verdict)),
+      ...rung.rows.flatMap((row) => row.pairs.map((pair) => pair.verdict)),
+    ]),
+  );
+  return VERDICTS.filter((verdict) => named.has(verdict));
 }
 
 /**
- * The report as Markdown. A pure function of the report: equal reports give equal text, with LF line endings and
- * one newline at the end.
- *
- * The sections, in order: the inputs (suite, policy, each engine with its hashes and what it says of itself, each
- * run with the hash of its case); the summary, with for each rung the pairs of engines by verdict; the support
- * matrix; and for each rung the worst of every metric of every pair over the suite, then a row per run with each
- * pair's verdict and worst figure and how the rays of each engine ended.
+ * The "How to read this" section of a report of a baseline: the legend of the verdicts, checks, engines and places
+ * the report names and of the forms of its run names, each chosen from the report, so from the baseline alone.
  */
-export function renderBaselineMarkdown(report: BaselineReport, layout: BaselineReportLayout = {}): string {
-  const lines: string[] = [
-    ...(layout.head ?? [
-      `# Baseline of ${report.suite.name}`,
-      "",
-      "What the engines below agreed on, rung by rung, as the committed baseline of the suite records it: for every",
-      "run as it was run (a zoom at each end) and every pair of engines the verdict and the largest value of each",
-      "metric over the requests of the run (its fields and lines). A metric counted in rays or elements is added up.",
-      "This file is rendered from the baseline alone (`lvrtc verify` makes it anew and fails on a byte of difference):",
-      "it holds results, counts, names and hashes, and nothing an engine traced. The hash of a run's case says what",
-      "its figures are of; `lvrtc baseline check` says whether the case and the engines are still those.",
-      "",
-      "FLOOR is a pass that is counted apart: a metric above its tolerance by the known numerical floor of one engine,",
-      "which is within the policy's floor limit of the arbiter while no other engine sides with it against the arbiter.",
-    ]),
-    "",
-    "## Inputs",
-    "",
+function howToReadLines(report: BaselineReport, layout: BaselineReportLayout): string[] {
+  const t = HOW_TO_READ_TEXT;
+  const lines = [`## ${t.heading}`, "", `### ${t.verdicts}`, "", ...t.verdictsIntro, ""];
+  lines.push(
     ...table(
-      ["Input", "Value"],
-      [
-        ["Suite", report.suite.name],
-        ["Suite hash", report.suite.hash],
-        ["Baseline hash", report.baseline],
-        ["Contract version", report.contract],
-        ["Policy", `rungs v${count(report.policy.version)}`],
-        ["Policy hash", report.policy.hash],
-      ],
+      t.verdictColumns,
+      verdictsOf(report).map((verdict) => [
+        VERDICT_TEXT[verdict].label,
+        `\`${verdict}\``,
+        VERDICT_TEXT[verdict].meaning,
+      ]),
     ),
     "",
+    `### ${t.checks}`,
+    "",
+    ...t.checksIntro,
+    "",
     ...table(
-      ["Engine", "Version", "Fingerprint", "Adapter revision", "Taken at"],
-      report.engines.map(({ id, version, fingerprint, adapterRevision, details }) => [
+      t.checkColumns,
+      report.rungs.map((rung) => {
+        const check = checkOf(rung.rung);
+        return [
+          check?.title ?? rung.rung,
+          `\`${rung.rung}\``,
+          check === undefined ? "—" : t.kind[check.kind],
+          check === undefined ? "—" : `${check.compares}.`,
+        ];
+      }),
+    ),
+    "",
+    `### ${t.engines}`,
+    "",
+    t.enginesIntro,
+    "",
+    ...table(
+      t.engineColumns,
+      report.engines.map(({ id }) => [`\`${id}\``, engineOf(id)?.description ?? id]),
+    ),
+    "",
+    `### ${t.figures}`,
+    "",
+    ...t.figuresIntro,
+  );
+  if (layout.measured === true) lines.push("", t.measured);
+  const rays = report.rungs.some((rung) => rung.rows.some((row) => row.rays !== undefined));
+  if (rays) lines.push("", RAY_OUTCOME_TEXT);
+  // The places the report names, each once, with the quantity whose field it is.
+  const places = [
+    ...report.rungs.flatMap((rung) =>
+      rung.pairs.flatMap((pair) =>
+        pair.metrics.flatMap((metric) =>
+          Object.keys(metric.where ?? {}).map((key) => ({ key, quantity: rung.quantity })),
+        ),
+      ),
+    ),
+    ...(layout.places ?? []),
+  ];
+  const keys = [...new Set(places.map((place) => place.key))].sort();
+  if (keys.length > 0) {
+    const fieldKinds = new Set(
+      places
+        .filter((place) => place.key === "field")
+        .map((place) =>
+          FIELD_ANGLE_QUANTITIES.includes(place.quantity)
+            ? "angle"
+            : FIELD_FRACTION_QUANTITIES.includes(place.quantity)
+              ? "requested"
+              : "other",
+        ),
+    );
+    lines.push(
+      "",
+      `### ${t.places}`,
+      "",
+      t.placesIntro,
+      "",
+      ...table(
+        t.placeColumns,
+        keys.flatMap((key) =>
+          key === "field"
+            ? (["angle", "requested", "other"] as const)
+                .filter((kind) => fieldKinds.has(kind))
+                .map((kind) => [`\`field\``, FIELD_TEXT[kind]])
+            : [[`\`${key}\``, PLACE_MEANING[key] ?? key]],
+        ),
+      ),
+    );
+  }
+  if (layout.wavelengths !== undefined && layout.wavelengths.length > 0) lines.push("", ...layout.wavelengths);
+  else if (keys.includes("line")) lines.push("", t.noWavelengths);
+  const parts = runNameParts(report.runs.map((run) => run.name));
+  if (parts.length > 0) {
+    lines.push(
+      "",
+      `### ${t.runNames}`,
+      "",
+      t.runNamesIntro,
+      "",
+      ...table(
+        t.runNameColumns,
+        parts.map((part) => [`\`${part.part}\``, part.meaning]),
+      ),
+    );
+  }
+  lines.push(...(layout.howToRead ?? []));
+  return lines;
+}
+
+/** The "Identifiers" section: the hashes of the suite, the baseline, the limits file, the engines and the runs. */
+function identifierLines(report: BaselineReport): string[] {
+  const t = HOW_TO_READ_TEXT;
+  return [
+    `## ${t.identifiers}`,
+    "",
+    ...t.identifiersIntro,
+    "",
+    ...table(t.identifierColumns, [
+      [t.suiteFile, report.suite.hash],
+      [t.baselineFile, report.baseline],
+      [t.limitsFile, report.policy.hash],
+      [t.contract, report.contract],
+    ]),
+    "",
+    ...table(
+      t.engineIdentifierColumns,
+      report.engines.map(({ id, fingerprint, adapterRevision, details }) => [
         id,
-        version,
         fingerprint,
         adapterRevision ?? "—",
-        detailText(details),
+        identifyingText(details),
       ]),
     ),
     "",
     ...table(
-      ["Run", "Case"],
+      t.runIdentifierColumns,
       report.runs.map((run) => [run.name, run.caseId ?? "—"]),
+    ),
+  ];
+}
+
+/**
+ * The report as Markdown. A pure function of the report: equal reports give equal text, with LF line endings and
+ * one newline at the end. Every sentence is a template of `src/report/wording.ts`.
+ *
+ * The sections, in order: the inputs (suite, contract, limits file, each engine with what it says of itself); the
+ * runs with a problem, if any; the summary, with for each check the pairs of engines by verdict; the support matrix;
+ * for each check the worst of every figure of every pair over the suite, then a row per run with each pair's verdict
+ * and worst figure and how the rays of each engine ended; the layout's tail; how to read the report; and the
+ * identifiers: every hash, of the suite, the baseline, the limits file, the engines and the runs' lens states.
+ */
+export function renderBaselineMarkdown(report: BaselineReport, layout: BaselineReportLayout = {}): string {
+  const r = REPORT_TEXT;
+  const floor = verdictsOf(report).includes("FLOOR");
+  const lines: string[] = [
+    ...(layout.head ?? [`# ${r.raysTitle(report.suite.name)}`, "", ...r.raysIntro(report.suite.name)]),
+    ...(floor ? ["", ...r.floor] : []),
+    "",
+    `## ${r.inputs}`,
+    "",
+    ...table(r.inputColumns, [
+      [r.suite, report.suite.name],
+      [r.limitsFile, r.limitsFileVersion(count(report.policy.version))],
+    ]),
+    "",
+    ...table(
+      r.engineColumns,
+      report.engines.map(({ id, version, details }) => [id, engineName(id), version, detailText(details)]),
     ),
     "",
     ...(report.runs.some((run) => run.problems?.length)
       ? [
-          "## Run problems",
+          `## ${r.runProblems}`,
           "",
           ...table(
-            ["Run", "Problem"],
+            r.runProblemColumns,
             report.runs.flatMap((run) => (run.problems ?? []).map((problem) => [run.name, problem])),
           ),
           "",
         ]
       : []),
-    "## Summary",
+    `## ${r.summary}`,
     "",
     ...table(
-      ["Rung", "Quantity", "Runs", "Requests", "Pair", "Runs by verdict", "Requests by verdict"],
+      r.summaryColumns,
       report.rungs.flatMap((rung) =>
         rung.pairs.map((pair) => [
-          rung.rung,
-          rung.quantity,
+          checkName(rung.rung),
+          `\`${rung.quantity}\``,
           count(rung.runs),
           count(rung.requests),
           `${pair.a} – ${pair.b}`,
@@ -396,21 +574,20 @@ export function renderBaselineMarkdown(report: BaselineReport, layout: BaselineR
       ),
     ),
     "",
-    "## Support",
+    `## ${r.support}`,
     "",
-    "In how many runs the jobs of an engine ended in each way. An engine that cannot answer says so (unsupported),",
-    "with the code and the item it names; that is an answer and not a failure.",
+    ...r.supportIntro,
     "",
     ...table(
-      ["Rung", "Engine", "Runs by status"],
+      r.supportColumns,
       report.rungs.flatMap((rung) =>
         rung.support.map(({ engine, statuses }) => [
-          rung.rung,
+          checkName(rung.rung),
           engine,
           statuses
             .map(
               ({ status, runs, details }) =>
-                `${count(runs)} ${status}${details === undefined ? "" : ` (${details.join("; ")})`}`,
+                `${count(runs)} ${valueLabel(SUPPORT_STATUS_TEXT, status)}${details === undefined ? "" : ` (${details.join("; ")})`}`,
             )
             .join(", "),
         ]),
@@ -418,27 +595,33 @@ export function renderBaselineMarkdown(report: BaselineReport, layout: BaselineR
     ),
   ];
   for (const rung of report.rungs) {
+    const check = checkOf(rung.rung);
     lines.push(
       "",
-      `## ${rung.rung}`,
+      `## ${checkName(rung.rung)}`,
       "",
-      `Quantity \`${rung.quantity}\`. The worst of every metric over the suite:`,
+      ...(check === undefined
+        ? []
+        : [r.checkLine(check.compares, HOW_TO_READ_TEXT.kind[check.kind], quantityName(rung.quantity)), ""]),
+      r.worstIntro,
       "",
     );
     const measured = layout.measured === true;
     lines.push(
       ...table(
-        ["Pair", "Metric", "Worst, or total", ...(measured ? ["Requests measured"] : []), "Run", "Where"],
+        r.worstColumns(measured),
         rung.pairs.flatMap((pair) =>
           pair.metrics.map((metric) => [
             `${pair.a} – ${pair.b}`,
-            metricHeading(metric),
+            figureName(metric.name),
+            unitName(metric.unit),
+            limitText(metric, layout.bands?.(rung) ?? {}),
             valueText(metric.value),
             ...(measured
               ? [metric.measured === undefined ? "—" : `${count(metric.measured)} of ${count(rung.requests)}`]
               : []),
             metric.run ?? "—",
-            whereText(metric.where).replace(/^ at /, "") || "—",
+            placeText(metric.where, rung.quantity) || "—",
           ]),
         ),
       ),
@@ -451,14 +634,14 @@ export function renderBaselineMarkdown(report: BaselineReport, layout: BaselineR
     const rayEngines = [...new Set(rung.rows.flatMap((row) => (row.rays ?? []).map((rays) => rays.engine)))].sort();
     lines.push(
       "",
-      `By run, each pair with its verdict and the judged metric that is largest against its tolerance${measured ? ", with the number of the run's requests it was measured in" : ""}:`,
+      r.byRunIntro(measured),
       "",
       ...table(
         [
-          "Run",
-          "Requests",
+          r.byRunRun,
+          r.byRunRequests,
           ...pairNames.map(([a, b]) => `${a} – ${b}`),
-          ...rayEngines.map((engine) => `${engine} rays ok / blocked / failed`),
+          ...rayEngines.map((engine) => r.rays(engine)),
         ],
         rung.rows.map((row) => [
           row.run,
@@ -477,6 +660,7 @@ export function renderBaselineMarkdown(report: BaselineReport, layout: BaselineR
     lines.push(...(layout.afterRung?.(rung) ?? []));
   }
   lines.push(...(layout.tail ?? []));
+  lines.push("", ...howToReadLines(report, layout), "", ...identifierLines(report));
   return `${lines.join("\n")}\n`;
 }
 

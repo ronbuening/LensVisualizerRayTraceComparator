@@ -1,35 +1,309 @@
-# MTF baseline of features
+# Baseline of features: the MTF checks
 
-What the committed MTF baseline of the suite holds, rung by rung, for every run as it was run (a zoom at
-each end). A gated rung has a tolerance: for every pair of engines the verdict and the largest value of each
-metric over the requests of the run, with the number of requests the metric was measured in, since a rung
-measures a figure only where its sampling can arbitrate. A rung of two methods has no tolerance: its figures
-are written down beside an attention band, and its tables set the estimates side by side.
+This file is the committed record of the MTF checks of the suite features, as its MTF baseline holds them, for
+every run (one lens state; a zoom lens is run at each end of its range wherever no zoom position is named). A
+check held to a limit gives, for every pair of engines, the verdict and the largest value of each figure over
+the requests of the run, with the number of requests the figure was measured in, since some checks measure a
+figure only where their sampling settled. A side-by-side check has no limit: its figures are written down beside
+a review band, and its tables set the engines' own estimates side by side.
 
-This file is rendered from the baseline alone (`lvrtc verify` makes it anew and fails on a byte of
-difference): it holds results, counts, names and hashes, and nothing an engine traced. The hash of a run's
-case says what its figures are of; `lvrtc baseline check --mtf` says whether the case and the engines are
-still those, and what moved.
+The file is rendered from the baseline alone, so `lvrtc verify` can render it anew and compare it byte for byte:
+it holds results, counts, names and hashes, and no ray an engine traced. `lvrtc baseline check --mtf` runs the
+engines again and says whether the lens states and the engines are still those of the baseline, and what moved.
+How to read this, near the end, says what each label and column means.
 
 ## Inputs
 
 | Input | Value |
 |---|---|
 | Suite | features |
-| Suite hash | dffbfdd11f2bc3e6c9203e4afe99e207eb441a73417d2fd4ba3d1f95e2183b1e |
-| Baseline hash | 4f3865164b85849e141ca33c7b46dc3a21eff2f2c4280fc7fd575ae27fd9b3d2 |
-| Contract version | 1.1 |
-| Policy | rungs v24 |
-| Policy hash | be3e032669e5859702174ce5c6ea63cd00f44850c893b09e005c0d8a407c4889 |
+| Limits file | v24 |
 
-| Engine | Version | Fingerprint | Adapter revision | Taken at |
+| Engine | Name | Version | What the engine states of itself |
+|---|---|---|---|
+| lv | LensVisualizer | 1 | clean checkout, 184 engine files |
+| optiland | optiland | 0.6.2.post117+g4e893f53 | backend numpy, checkout with uncommitted changes, JIT compilation on, Numba 0.65.1, NumPy 2.3.5, precision float64, Python 3.14.8, SciPy 1.16.3, 534 source files |
+| ref | Reference tracer | 1 | 13 source files |
+| replay | Replay of LensVisualizer's MTF | 1 | clean checkout, 184 engine files |
+
+## Summary
+
+| Check | Quantity | Runs | Requests | Pair | Runs by verdict | Requests by verdict |
+|---|---|---|---|---|---|---|
+| Geometric MTF of the same rays — `r4` | `rays.trace` | 18 | 54 | lv – optiland | 18 Pass | 54 Pass |
+| Geometric MTF of the same rays — `r4` | `rays.trace` | 18 | 54 | lv – ref | 18 Pass | 54 Pass |
+| Geometric MTF of the same rays — `r4` | `rays.trace` | 18 | 54 | optiland – ref | 18 Pass | 54 Pass |
+| LensVisualizer's MTF sampling, replayed — `r4f` | `mtf.native` | 18 | 18 | lv – replay | 18 Pass | 18 Pass |
+| Wave MTF of the same rays — `r6a` | `rays.trace` | 18 | 54 | lv – optiland | 18 Pass | 54 Pass |
+| Wave MTF of the same rays — `r6a` | `rays.trace` | 18 | 54 | lv – ref | 18 Pass | 54 Pass |
+| Wave MTF of the same rays — `r6a` | `rays.trace` | 18 | 54 | optiland – ref | 18 Pass | 54 Pass |
+
+## Support
+
+In how many runs the jobs of an engine ended in each way. An engine that cannot compute what was asked says so
+(not computed), with the code and the item it names; that is an answer and not a failure.
+
+| Check | Engine | Runs by status |
+|---|---|---|
+| Geometric MTF of the same rays — `r4` | lv | 18 answered |
+| Geometric MTF of the same rays — `r4` | optiland | 18 answered |
+| Geometric MTF of the same rays — `r4` | ref | 18 answered |
+| LensVisualizer's MTF sampling, replayed — `r4f` | lv | 18 answered |
+| LensVisualizer's MTF sampling, replayed — `r4f` | replay | 18 answered |
+| Wave MTF of the same rays — `r6a` | lv | 18 answered |
+| Wave MTF of the same rays — `r6a` | optiland | 18 answered |
+| Wave MTF of the same rays — `r6a` | ref | 18 answered |
+
+## Geometric MTF of the same rays — `r4`
+
+Compares: This tool's geometric MTF of identical rays, as each engine traces them. Kind: held to a limit. Quantity asked of the engines: ray trace (`rays.trace`).
+
+The worst of every figure over the suite:
+
+| Pair | Figure | Unit | Limit | Worst, or total | Requests measured | Run | Where |
+|---|---|---|---|---|---|---|---|
+| lv – optiland | Largest difference of an MTF value — `mtf.maxAbs` | (no unit) | ≤ 1.00e-7 | 1.70e-12 | 54 of 54 | stop-inside-element-ref | cut tangential, field 5.53e1 deg, frequencyPerMm 56 |
+| lv – optiland | Rays both engines traced through — `rays.compared` | rays | — | 142434 | 54 of 54 | — | — |
+| lv – optiland | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | 54 of 54 | — | — |
+| lv – optiland | Wavelengths compared — `lines.compared` | wavelengths | — | 5 | 54 of 54 | odd-asphere-photopic | — |
+| lv – ref | Largest difference of an MTF value — `mtf.maxAbs` | (no unit) | ≤ 1.00e-7 | 6.91e-12 | 54 of 54 | flat-base-asphere-ref | cut sagittal, field 0 deg, frequencyPerMm 100 |
+| lv – ref | Rays both engines traced through — `rays.compared` | rays | — | 142434 | 54 of 54 | — | — |
+| lv – ref | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | 54 of 54 | — | — |
+| lv – ref | Wavelengths compared — `lines.compared` | wavelengths | — | 5 | 54 of 54 | odd-asphere-photopic | — |
+| optiland – ref | Largest difference of an MTF value — `mtf.maxAbs` | (no unit) | ≤ 1.00e-7 | 7.22e-12 | 54 of 54 | flat-base-asphere-ref | cut tangential, field 0 deg, frequencyPerMm 100 |
+| optiland – ref | Rays both engines traced through — `rays.compared` | rays | — | 142434 | 54 of 54 | — | — |
+| optiland – ref | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | 54 of 54 | — | — |
+| optiland – ref | Wavelengths compared — `lines.compared` | wavelengths | — | 5 | 54 of 54 | odd-asphere-photopic | — |
+
+By run, each pair with its verdict and the judged figure that is largest against its limit, with the number of the run's requests it was measured in:
+
+| Run | Requests | lv – optiland | lv – ref | optiland – ref |
 |---|---|---|---|---|
-| lv | 1 | 4669921bae7179c7eddd220fa367e696eae7acec3a5a788d0ca90da632d3eb6b | afad9cb89bd9a25fbfa5ee0ec335b1e315481414b7ba41da2f906c28856010c5 | commit 25f65d4b4213a21392cbae92680134906049b2ad, dirty false, engineFileCount 184 |
-| optiland | 0.6.2.post117+g4e893f53 | bcfbf3916c1103b3b3b49a93117d3346a0bd6921ec35f01feb99bc1a2a6e39eb | 98f36151b0cdd2d3d3f82013841899de85309b22012967de64bbba662217fbcb | backend numpy, commit 4e893f53aee1312f2d091680b93dd2279711e197, dirty true, distVersion 0.6.2.post117+g4e893f53, jit true, numba 0.65.1, numpy 2.3.5, precision float64, python 3.14.8, scipy 1.16.3, sourceFiles 534, sourceHash 279af5c55d8ebe1610686b9dad3e6eeb22b1822037d59a0e5f148c2fb8937f38 |
-| ref | 1 | b7d0684b593261d14a1dfebb903774775bbe481a07ae2955689644dc0ffd919e | 2225e342b4fd8539480e933e59a3ca95a8ae2beeb24f45972b55fd4e4a59d357 | sourceFiles 13 |
-| replay | 1 | 4669921bae7179c7eddd220fa367e696eae7acec3a5a788d0ca90da632d3eb6b | 99024448fdb11f7eb293d0e54cf8281dc5272c57c468beeb30d66bb53ecf3409 | commit 25f65d4b4213a21392cbae92680134906049b2ad, dirty false, engineFileCount 184 |
+| odd-asphere-ref | 3 | Pass: mtf.maxAbs 4.03e-13 (3 of 3) | Pass: mtf.maxAbs 1.38e-12 (3 of 3) | Pass: mtf.maxAbs 1.75e-12 (3 of 3) |
+| odd-asphere-photopic | 3 | Pass: mtf.maxAbs 5.54e-13 (3 of 3) | Pass: mtf.maxAbs 7.99e-13 (3 of 3) | Pass: mtf.maxAbs 9.57e-13 (3 of 3) |
+| e-line-ref | 3 | Pass: mtf.maxAbs 7.08e-13 (3 of 3) | Pass: mtf.maxAbs 4.90e-13 (3 of 3) | Pass: mtf.maxAbs 7.35e-13 (3 of 3) |
+| e-line-photopic | 3 | Pass: mtf.maxAbs 5.16e-13 (3 of 3) | Pass: mtf.maxAbs 7.05e-13 (3 of 3) | Pass: mtf.maxAbs 5.18e-13 (3 of 3) |
+| asphere-a20-ref | 3 | Pass: mtf.maxAbs 8.84e-13 (3 of 3) | Pass: mtf.maxAbs 6.43e-12 (3 of 3) | Pass: mtf.maxAbs 7.19e-12 (3 of 3) |
+| asphere-a20-photopic | 3 | Pass: mtf.maxAbs 1.29e-12 (3 of 3) | Pass: mtf.maxAbs 5.40e-12 (3 of 3) | Pass: mtf.maxAbs 6.25e-12 (3 of 3) |
+| flat-base-asphere-ref | 3 | Pass: mtf.maxAbs 1.12e-12 (3 of 3) | Pass: mtf.maxAbs 6.91e-12 (3 of 3) | Pass: mtf.maxAbs 7.22e-12 (3 of 3) |
+| flat-base-asphere-photopic | 3 | Pass: mtf.maxAbs 4.60e-13 (3 of 3) | Pass: mtf.maxAbs 6.80e-12 (3 of 3) | Pass: mtf.maxAbs 6.48e-12 (3 of 3) |
+| rear-plate-rim-ref | 3 | Pass: mtf.maxAbs 1.35e-12 (3 of 3) | Pass: mtf.maxAbs 4.25e-12 (3 of 3) | Pass: mtf.maxAbs 5.55e-12 (3 of 3) |
+| rear-plate-rim-photopic | 3 | Pass: mtf.maxAbs 7.40e-13 (3 of 3) | Pass: mtf.maxAbs 3.24e-12 (3 of 3) | Pass: mtf.maxAbs 3.77e-12 (3 of 3) |
+| fixed-iris-zoom-ref-wide | 3 | Pass: mtf.maxAbs 3.17e-13 (3 of 3) | Pass: mtf.maxAbs 4.18e-12 (3 of 3) | Pass: mtf.maxAbs 3.92e-12 (3 of 3) |
+| fixed-iris-zoom-ref-tele | 3 | Pass: mtf.maxAbs 4.73e-13 (3 of 3) | Pass: mtf.maxAbs 9.72e-13 (3 of 3) | Pass: mtf.maxAbs 1.20e-12 (3 of 3) |
+| fixed-iris-zoom-photopic-wide | 3 | Pass: mtf.maxAbs 2.07e-13 (3 of 3) | Pass: mtf.maxAbs 2.17e-12 (3 of 3) | Pass: mtf.maxAbs 2.10e-12 (3 of 3) |
+| fixed-iris-zoom-photopic-tele | 3 | Pass: mtf.maxAbs 2.61e-13 (3 of 3) | Pass: mtf.maxAbs 9.45e-13 (3 of 3) | Pass: mtf.maxAbs 7.93e-13 (3 of 3) |
+| zero-asphere-ref | 3 | Pass: mtf.maxAbs 9.61e-13 (3 of 3) | Pass: mtf.maxAbs 3.46e-13 (3 of 3) | Pass: mtf.maxAbs 1.14e-12 (3 of 3) |
+| zero-asphere-photopic | 3 | Pass: mtf.maxAbs 3.43e-13 (3 of 3) | Pass: mtf.maxAbs 1.36e-13 (3 of 3) | Pass: mtf.maxAbs 2.94e-13 (3 of 3) |
+| stop-inside-element-ref | 3 | Pass: mtf.maxAbs 1.70e-12 (3 of 3) | Pass: mtf.maxAbs 6.00e-13 (3 of 3) | Pass: mtf.maxAbs 1.11e-12 (3 of 3) |
+| stop-inside-element-photopic | 3 | Pass: mtf.maxAbs 8.78e-13 (3 of 3) | Pass: mtf.maxAbs 5.89e-13 (3 of 3) | Pass: mtf.maxAbs 7.69e-13 (3 of 3) |
 
-| Run | Case |
+## LensVisualizer's MTF sampling, replayed — `r4f`
+
+Compares: LensVisualizer's geometric MTF beside a replay of its own sampling. Kind: held to a limit. Quantity asked of the engines: an engine's own MTF (`mtf.native`).
+
+The worst of every figure over the suite:
+
+| Pair | Figure | Unit | Limit | Worst, or total | Requests measured | Run | Where |
+|---|---|---|---|---|---|---|---|
+| lv – replay | Largest difference of an MTF value — `mtf.maxAbs` | (no unit) | ≤ 1.00e-9 | 1.19e-14 | 18 of 18 | zero-asphere-ref | cut sagittal, field 1 of the image height, frequencyPerMm 8 |
+| lv – replay | Sampling grids, ray counts and ray outcomes that differ — `sampling.mismatches` | elements | ≤ 0 | 0 | 18 of 18 | — | — |
+| lv – replay | Fields whose outcome differs — `fields.mismatches` | elements | ≤ 0 | 0 | 18 of 18 | — | — |
+
+By run, each pair with its verdict and the judged figure that is largest against its limit, with the number of the run's requests it was measured in:
+
+| Run | Requests | lv – replay |
+|---|---|---|
+| odd-asphere-ref | 1 | Pass: mtf.maxAbs 5.00e-15 (1 of 1) |
+| odd-asphere-photopic | 1 | Pass: mtf.maxAbs 4.00e-15 (1 of 1) |
+| e-line-ref | 1 | Pass: mtf.maxAbs 8.44e-15 (1 of 1) |
+| e-line-photopic | 1 | Pass: mtf.maxAbs 4.22e-15 (1 of 1) |
+| asphere-a20-ref | 1 | Pass: mtf.maxAbs 8.22e-15 (1 of 1) |
+| asphere-a20-photopic | 1 | Pass: mtf.maxAbs 3.22e-15 (1 of 1) |
+| flat-base-asphere-ref | 1 | Pass: mtf.maxAbs 5.55e-15 (1 of 1) |
+| flat-base-asphere-photopic | 1 | Pass: mtf.maxAbs 5.33e-15 (1 of 1) |
+| rear-plate-rim-ref | 1 | Pass: mtf.maxAbs 7.11e-15 (1 of 1) |
+| rear-plate-rim-photopic | 1 | Pass: mtf.maxAbs 1.78e-15 (1 of 1) |
+| fixed-iris-zoom-ref-wide | 1 | Pass: mtf.maxAbs 8.55e-15 (1 of 1) |
+| fixed-iris-zoom-ref-tele | 1 | Pass: mtf.maxAbs 8.77e-15 (1 of 1) |
+| fixed-iris-zoom-photopic-wide | 1 | Pass: mtf.maxAbs 6.99e-15 (1 of 1) |
+| fixed-iris-zoom-photopic-tele | 1 | Pass: mtf.maxAbs 3.11e-15 (1 of 1) |
+| zero-asphere-ref | 1 | Pass: mtf.maxAbs 1.19e-14 (1 of 1) |
+| zero-asphere-photopic | 1 | Pass: mtf.maxAbs 3.11e-15 (1 of 1) |
+| stop-inside-element-ref | 1 | Pass: mtf.maxAbs 5.33e-15 (1 of 1) |
+| stop-inside-element-photopic | 1 | Pass: mtf.maxAbs 2.66e-15 (1 of 1) |
+
+## Wave MTF of the same rays — `r6a`
+
+Compares: This tool's wave MTF of identical rays, as each engine traces them, in fields whose sampling settled. Kind: held to a limit. Quantity asked of the engines: ray trace (`rays.trace`).
+
+The worst of every figure over the suite:
+
+| Pair | Figure | Unit | Limit | Worst, or total | Requests measured | Run | Where |
+|---|---|---|---|---|---|---|---|
+| lv – optiland | Largest difference of a wave MTF value, on the finest lattice — `waveMtf.maxAbs` | (no unit) | ≤ 2.00e-8 | 8.00e-11 | 30 of 54 | flat-base-asphere-ref | cut tangential, field 3.17e1 deg, frequencyPerMm 70 |
+| lv – optiland | Largest phase step between neighbouring cells of the lattice that carry light — `phaseStep.waves` | waves | — | 6.37e0 | 54 of 54 | e-line-photopic | field 2.34e1 deg, line 1, ray 1091 |
+| lv – optiland | Largest move of a wave MTF value from the coarser lattice to the finer — `convergence.maxAbs` | (no unit) | — | 7.18e-2 | 54 of 54 | e-line-ref | cut tangential, field 2.34e1 deg, frequencyPerMm 90 |
+| lv – optiland | Cells across the finest lattice — `lattice.columns` | cells | — | 64 | 54 of 54 | odd-asphere-ref | — |
+| lv – optiland | Rays both engines traced through — `rays.compared` | rays | — | 569990 | 54 of 54 | — | — |
+| lv – optiland | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | 54 of 54 | — | — |
+| lv – optiland | Wavelengths compared — `lines.compared` | wavelengths | — | 5 | 54 of 54 | odd-asphere-photopic | — |
+| lv – optiland | Largest difference of a wave MTF value, in fields whose sampling did not settle (shown, not judged) — `waveMtf.flagged` | (no unit) | — | 9.74e-11 | 24 of 54 | flat-base-asphere-photopic | cut tangential, field 3.17e1 deg, frequencyPerMm 70 |
+| lv – ref | Largest difference of a wave MTF value, on the finest lattice — `waveMtf.maxAbs` | (no unit) | ≤ 2.00e-8 | 6.94e-10 | 30 of 54 | fixed-iris-zoom-photopic-tele | cut tangential, field 1.48e1 deg, frequencyPerMm 60 |
+| lv – ref | Largest phase step between neighbouring cells of the lattice that carry light — `phaseStep.waves` | waves | — | 6.37e0 | 54 of 54 | e-line-photopic | field 2.34e1 deg, line 1, ray 1091 |
+| lv – ref | Largest move of a wave MTF value from the coarser lattice to the finer — `convergence.maxAbs` | (no unit) | — | 7.18e-2 | 54 of 54 | e-line-ref | cut tangential, field 2.34e1 deg, frequencyPerMm 90 |
+| lv – ref | Cells across the finest lattice — `lattice.columns` | cells | — | 64 | 54 of 54 | odd-asphere-ref | — |
+| lv – ref | Rays both engines traced through — `rays.compared` | rays | — | 569990 | 54 of 54 | — | — |
+| lv – ref | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | 54 of 54 | — | — |
+| lv – ref | Wavelengths compared — `lines.compared` | wavelengths | — | 5 | 54 of 54 | odd-asphere-photopic | — |
+| lv – ref | Largest difference of a wave MTF value, in fields whose sampling did not settle (shown, not judged) — `waveMtf.flagged` | (no unit) | — | 4.00e-10 | 24 of 54 | flat-base-asphere-ref | cut tangential, field 0 deg, frequencyPerMm 60 |
+| optiland – ref | Largest difference of a wave MTF value, on the finest lattice — `waveMtf.maxAbs` | (no unit) | ≤ 2.00e-8 | 6.97e-10 | 30 of 54 | fixed-iris-zoom-photopic-tele | cut tangential, field 1.48e1 deg, frequencyPerMm 60 |
+| optiland – ref | Largest phase step between neighbouring cells of the lattice that carry light — `phaseStep.waves` | waves | — | 6.37e0 | 54 of 54 | e-line-photopic | field 2.34e1 deg, line 1, ray 1091 |
+| optiland – ref | Largest move of a wave MTF value from the coarser lattice to the finer — `convergence.maxAbs` | (no unit) | — | 7.18e-2 | 54 of 54 | e-line-ref | cut tangential, field 2.34e1 deg, frequencyPerMm 90 |
+| optiland – ref | Cells across the finest lattice — `lattice.columns` | cells | — | 64 | 54 of 54 | odd-asphere-ref | — |
+| optiland – ref | Rays both engines traced through — `rays.compared` | rays | — | 569990 | 54 of 54 | — | — |
+| optiland – ref | Rays only one engine traced through, left out of both sums — `rays.dropped` | rays | — | 0 | 54 of 54 | — | — |
+| optiland – ref | Wavelengths compared — `lines.compared` | wavelengths | — | 5 | 54 of 54 | odd-asphere-photopic | — |
+| optiland – ref | Largest difference of a wave MTF value, in fields whose sampling did not settle (shown, not judged) — `waveMtf.flagged` | (no unit) | — | 4.03e-10 | 24 of 54 | flat-base-asphere-ref | cut tangential, field 0 deg, frequencyPerMm 60 |
+
+By run, each pair with its verdict and the judged figure that is largest against its limit, with the number of the run's requests it was measured in:
+
+| Run | Requests | lv – optiland | lv – ref | optiland – ref |
+|---|---|---|---|---|
+| odd-asphere-ref | 3 | Pass: waveMtf.maxAbs 3.74e-11 (3 of 3) | Pass: waveMtf.maxAbs 4.51e-11 (3 of 3) | Pass: waveMtf.maxAbs 8.07e-11 (3 of 3) |
+| odd-asphere-photopic | 3 | Pass: waveMtf.maxAbs 3.06e-12 (1 of 3) | Pass: waveMtf.maxAbs 6.37e-11 (1 of 3) | Pass: waveMtf.maxAbs 6.66e-11 (1 of 3) |
+| e-line-ref | 3 | Pass: no judged figure | Pass: no judged figure | Pass: no judged figure |
+| e-line-photopic | 3 | Pass: no judged figure | Pass: no judged figure | Pass: no judged figure |
+| asphere-a20-ref | 3 | Pass: waveMtf.maxAbs 3.80e-12 (2 of 3) | Pass: waveMtf.maxAbs 4.25e-10 (2 of 3) | Pass: waveMtf.maxAbs 4.28e-10 (2 of 3) |
+| asphere-a20-photopic | 3 | Pass: waveMtf.maxAbs 4.43e-12 (2 of 3) | Pass: waveMtf.maxAbs 3.50e-10 (2 of 3) | Pass: waveMtf.maxAbs 3.48e-10 (2 of 3) |
+| flat-base-asphere-ref | 3 | Pass: waveMtf.maxAbs 8.00e-11 (2 of 3) | Pass: waveMtf.maxAbs 3.26e-10 (2 of 3) | Pass: waveMtf.maxAbs 3.33e-10 (2 of 3) |
+| flat-base-asphere-photopic | 3 | Pass: waveMtf.maxAbs 4.37e-12 (2 of 3) | Pass: waveMtf.maxAbs 3.31e-10 (2 of 3) | Pass: waveMtf.maxAbs 3.34e-10 (2 of 3) |
+| rear-plate-rim-ref | 3 | Pass: waveMtf.maxAbs 1.37e-11 (2 of 3) | Pass: waveMtf.maxAbs 2.46e-10 (2 of 3) | Pass: waveMtf.maxAbs 2.38e-10 (2 of 3) |
+| rear-plate-rim-photopic | 3 | Pass: waveMtf.maxAbs 6.92e-12 (2 of 3) | Pass: waveMtf.maxAbs 1.51e-10 (2 of 3) | Pass: waveMtf.maxAbs 1.51e-10 (2 of 3) |
+| fixed-iris-zoom-ref-wide | 3 | Pass: waveMtf.maxAbs 9.36e-12 (2 of 3) | Pass: waveMtf.maxAbs 2.02e-10 (2 of 3) | Pass: waveMtf.maxAbs 2.07e-10 (2 of 3) |
+| fixed-iris-zoom-ref-tele | 3 | Pass: waveMtf.maxAbs 1.14e-11 (3 of 3) | Pass: waveMtf.maxAbs 6.55e-10 (3 of 3) | Pass: waveMtf.maxAbs 6.62e-10 (3 of 3) |
+| fixed-iris-zoom-photopic-wide | 3 | Pass: waveMtf.maxAbs 6.47e-12 (2 of 3) | Pass: waveMtf.maxAbs 1.86e-10 (2 of 3) | Pass: waveMtf.maxAbs 1.82e-10 (2 of 3) |
+| fixed-iris-zoom-photopic-tele | 3 | Pass: waveMtf.maxAbs 5.51e-12 (3 of 3) | Pass: waveMtf.maxAbs 6.94e-10 (3 of 3) | Pass: waveMtf.maxAbs 6.97e-10 (3 of 3) |
+| zero-asphere-ref | 3 | Pass: no judged figure | Pass: no judged figure | Pass: no judged figure |
+| zero-asphere-photopic | 3 | Pass: no judged figure | Pass: no judged figure | Pass: no judged figure |
+| stop-inside-element-ref | 3 | Pass: waveMtf.maxAbs 4.17e-12 (2 of 3) | Pass: waveMtf.maxAbs 6.26e-12 (2 of 3) | Pass: waveMtf.maxAbs 4.88e-12 (2 of 3) |
+| stop-inside-element-photopic | 3 | Pass: waveMtf.maxAbs 1.65e-12 (2 of 3) | Pass: waveMtf.maxAbs 2.41e-12 (2 of 3) | Pass: waveMtf.maxAbs 3.80e-12 (2 of 3) |
+
+## Worth a look
+
+Every request of a side-by-side check whose two engines differ by more than a review band, or whose chief rays
+land further apart than a sorting limit, with each such figure. A review band is a width for attention, and a
+sorting limit tells two image points apart; nothing here is a failure.
+
+No request is worth a look by its review bands.
+
+## Not covered
+
+What this comparison does not show, whatever its verdicts:
+
+- optiland's FFT and Huygens MTF take no injected rays. An MTF of optiland's own is on optiland's own pupil grid, reference sphere and frequency axes, so check r5 sets two methods side by side and holds them to no limit.
+- A polychromatic curve of optiland's FFT class. It gives the modulus at one wavelength, so a run of several wavelengths has no FFT row in checks r5 or r6c. The external counterpart in check r6c is this tool's complex sum of optiland's raw wavefronts; its proof on synthetic sums checks the declared weighting and phase convention, not physical spectral fidelity.
+- optiland's geometric MTF takes no injected rays either. Its rays are an even grid on the stop surface, out to the clip radius; LensVisualizer's are a lattice across the entrance beam; neither is weighted by direction cosine. Check r5g sets the two side by side and holds them to no limit: a difference of the two pupil samplings is written down, not explained.
+- The bins of optiland's geometric MTF. At one wavelength optiland's curve is of landings counted into bins, and a field whose bins move a value by more than its convergence band (0.005 on the axis, 0.01 off it) has no optiland curve. At several wavelengths the sum over optiland's landings is this tool's, without bins, about the axis point of the image plane; LensVisualizer's is about a chief ray's landing.
+- Dispersion and white-light weighting. Every engine is handed the refractive indices and the wavelength weights LensVisualizer states; no glass catalog and no spectrum is checked against another.
+- The choice of focus. A best-focus plane is LensVisualizer's own, handed to every engine as a plane; no engine searches for one of its own.
+- The sizing of the stop. The stop radius, wide open and stopped down, is LensVisualizer's, by its own rule.
+- Models of vignetting. Each engine clips rays at the apertures it is handed; how an engine's own MTF fills, samples and calibrates a clipped pupil is its method, and a difference that comes of it is written down, not explained.
+- Zoom and focus positions other than the lens states a run names, and the catalog beyond these suites.
+- Fields that an engine's own convergence test did not pass. Their figures are shown apart and enter no review band.
+
+## How to read this
+
+### Verdicts
+
+A verdict is of one pair of engines: of one request, or, in a table by run, the worst over the requests of the
+run. A table shows the label; the stored value is what the baseline file holds.
+
+| Label | Stored value | Meaning |
+|---|---|---|
+| Pass: within limit | `PASS` | A check held to a limit: every judged figure is at or below its limit. |
+
+### Checks
+
+A check held to a limit judges two engines' answers to the same input against the limits of the limits file. A
+side-by-side check sets two methods beside each other with no limit, and fails nothing. A section of this file
+is headed by a check's title, with the id the baseline file stores it under.
+
+| Check | Id | Kind | Compares |
+|---|---|---|---|
+| Geometric MTF of the same rays | `r4` | held to a limit | This tool's geometric MTF of identical rays, as each engine traces them. |
+| LensVisualizer's MTF sampling, replayed | `r4f` | held to a limit | LensVisualizer's geometric MTF beside a replay of its own sampling. |
+| Wave MTF of the same rays | `r6a` | held to a limit | This tool's wave MTF of identical rays, as each engine traces them, in fields whose sampling settled. |
+
+### Engines
+
+A pair is named by the ids of its two engines:
+
+| Id | Engine |
+|---|---|
+| `lv` | LensVisualizer itself, loaded from a local checkout, asked for each figure as its own tabs ask for it, and made to trace the very rays every engine is handed in the checks held to a limit. |
+| `optiland` | optiland, an open-source optical design library in Python, run by this tool in a worker process of its own. |
+| `ref` | The reference tracer: a small exact ray tracer written in this repository from the optics alone, never from LensVisualizer's or optiland's code. |
+| `replay` | LensVisualizer's own MTF sampling, repeated step by step, with the geometric MTF summed by this tool. |
+
+### Figures
+
+A figure is named by its label, then the key the baseline file stores it under. The Limit column gives, for a
+check held to a limit, the largest value a pair may have (`≤`); for a side-by-side check, the review band a
+difference is set beside. A figure without either is shown and not judged; a chief-ray landing of a side-by-side
+check is held to the sorting limit its tables state. Numbers have three significant digits, and a whole number,
+such as a count, is written in full. `not finite` marks a number that is NaN or infinite, and `—` a place with
+nothing to show.
+
+Requests measured: in how many requests a pair has a value of the figure; a check measures some figures only where its sampling settled.
+
+### Where
+
+The place of a figure's largest value, as the requests name it:
+
+| Place | Meaning |
+|---|---|
+| `cut` | the sagittal or the tangential cut of an MTF |
+| `field` | in a check of the ray-trace quantity: the field angle of the set of rays, in degrees (shown with deg) |
+| `field` | in a check of an engine's own MTF: the field as the request states it, a fraction of the image height, 0 on the axis and 1 at the edge of the image (shown with "of the image height"); an MTF table gives the angle beside it where the answers record one |
+| `frequencyPerMm` | the spatial frequency, in cycles per millimetre |
+| `line` | the index of a wavelength in the lens state's list of wavelengths, 0 being the first |
+| `ray` | the index of a ray in its set |
+
+This baseline does not keep the wavelengths themselves: a place names a wavelength by its index in the lens state alone.
+
+### Run names
+
+A run's name is the name the suite gives it, usually a lens key (in the features suite, the feature it exercises; in the catalog, `catalog-` then the lens key), then the parts below that apply. They are the naming of the committed suites; a lens key may hold the same letters as a part of its own.
+
+| Part | Meaning |
+|---|---|
+| `-ref` | the lens state at the lens's reference wavelength alone |
+| `-photopic` | the lens state on several wavelengths, weighted by the eye's daylight (photopic) response |
+| `-wide, -tele` | a zoom lens at the short or the long end of its zoom range |
+
+## Identifiers
+
+The hashes that tell one version from another: of the suite file, of this baseline file and of the limits file;
+of each engine's code and of this tool's code behind it, with the commit and sources it states; and of each
+run's lens state. `lvrtc baseline check` compares them with what the engines and LensVisualizer give today. The
+contract version is that of the file format the baseline is written in.
+
+| Identifier | Value |
+|---|---|
+| Suite file | dffbfdd11f2bc3e6c9203e4afe99e207eb441a73417d2fd4ba3d1f95e2183b1e |
+| Baseline file | 4f3865164b85849e141ca33c7b46dc3a21eff2f2c4280fc7fd575ae27fd9b3d2 |
+| Limits file | be3e032669e5859702174ce5c6ea63cd00f44850c893b09e005c0d8a407c4889 |
+| Contract version of the baseline file | 1.1 |
+
+| Engine | Engine code | This tool's code behind it | Commit and sources |
+|---|---|---|---|
+| lv | 4669921bae7179c7eddd220fa367e696eae7acec3a5a788d0ca90da632d3eb6b | afad9cb89bd9a25fbfa5ee0ec335b1e315481414b7ba41da2f906c28856010c5 | commit 25f65d4b4213a21392cbae92680134906049b2ad |
+| optiland | bcfbf3916c1103b3b3b49a93117d3346a0bd6921ec35f01feb99bc1a2a6e39eb | 98f36151b0cdd2d3d3f82013841899de85309b22012967de64bbba662217fbcb | commit 4e893f53aee1312f2d091680b93dd2279711e197, distribution version 0.6.2.post117+g4e893f53, source hash 279af5c55d8ebe1610686b9dad3e6eeb22b1822037d59a0e5f148c2fb8937f38 |
+| ref | b7d0684b593261d14a1dfebb903774775bbe481a07ae2955689644dc0ffd919e | 2225e342b4fd8539480e933e59a3ca95a8ae2beeb24f45972b55fd4e4a59d357 | — |
+| replay | 4669921bae7179c7eddd220fa367e696eae7acec3a5a788d0ca90da632d3eb6b | 99024448fdb11f7eb293d0e54cf8281dc5272c57c468beeb30d66bb53ecf3409 | commit 25f65d4b4213a21392cbae92680134906049b2ad |
+
+| Run | Lens state |
 |---|---|
 | odd-asphere-ref | d24ce91f200b115d1ef919d9fdb14b4db87b5d67f8e38b63efca3cfd91ddf4af |
 | odd-asphere-photopic | 7806b61397ee501f285caf4f1cee9bf1c6520ae4c3d7c7ed0d00d64d1330b84c |
@@ -49,182 +323,3 @@ still those, and what moved.
 | zero-asphere-photopic | 82a3b8c74b22a95f865dccbbc82d17404a7b7cd6724f9071ccd2b0c31d629bd1 |
 | stop-inside-element-ref | 9c90996c1ae092730c28de5e63b2d67f0ea5f3045e60138260d88992481de51a |
 | stop-inside-element-photopic | f8181409b90487e9e7a2dd156ecc9ec1d021232fbd2a806a52ab5cefaff96377 |
-
-## Summary
-
-| Rung | Quantity | Runs | Requests | Pair | Runs by verdict | Requests by verdict |
-|---|---|---|---|---|---|---|
-| r4 | rays.trace | 18 | 54 | lv – optiland | 18 PASS | 54 PASS |
-| r4 | rays.trace | 18 | 54 | lv – ref | 18 PASS | 54 PASS |
-| r4 | rays.trace | 18 | 54 | optiland – ref | 18 PASS | 54 PASS |
-| r4f | mtf.native | 18 | 18 | lv – replay | 18 PASS | 18 PASS |
-| r6a | rays.trace | 18 | 54 | lv – optiland | 18 PASS | 54 PASS |
-| r6a | rays.trace | 18 | 54 | lv – ref | 18 PASS | 54 PASS |
-| r6a | rays.trace | 18 | 54 | optiland – ref | 18 PASS | 54 PASS |
-
-## Support
-
-In how many runs the jobs of an engine ended in each way. An engine that cannot answer says so (unsupported),
-with the code and the item it names; that is an answer and not a failure.
-
-| Rung | Engine | Runs by status |
-|---|---|---|
-| r4 | lv | 18 ok |
-| r4 | optiland | 18 ok |
-| r4 | ref | 18 ok |
-| r4f | lv | 18 ok |
-| r4f | replay | 18 ok |
-| r6a | lv | 18 ok |
-| r6a | optiland | 18 ok |
-| r6a | ref | 18 ok |
-
-## r4
-
-Quantity `rays.trace`. The worst of every metric over the suite:
-
-| Pair | Metric | Worst, or total | Requests measured | Run | Where |
-|---|---|---|---|---|---|
-| lv – optiland | mtf.maxAbs (≤ 1.00e-7) | 1.70e-12 | 54 of 54 | stop-inside-element-ref | cut tangential, field 5.53e1, frequencyPerMm 56 |
-| lv – optiland | rays.compared [rays] | 142434 | 54 of 54 | — | — |
-| lv – optiland | rays.dropped [rays] | 0 | 54 of 54 | — | — |
-| lv – optiland | lines.compared [lines] | 5 | 54 of 54 | odd-asphere-photopic | — |
-| lv – ref | mtf.maxAbs (≤ 1.00e-7) | 6.91e-12 | 54 of 54 | flat-base-asphere-ref | cut sagittal, field 0, frequencyPerMm 100 |
-| lv – ref | rays.compared [rays] | 142434 | 54 of 54 | — | — |
-| lv – ref | rays.dropped [rays] | 0 | 54 of 54 | — | — |
-| lv – ref | lines.compared [lines] | 5 | 54 of 54 | odd-asphere-photopic | — |
-| optiland – ref | mtf.maxAbs (≤ 1.00e-7) | 7.22e-12 | 54 of 54 | flat-base-asphere-ref | cut tangential, field 0, frequencyPerMm 100 |
-| optiland – ref | rays.compared [rays] | 142434 | 54 of 54 | — | — |
-| optiland – ref | rays.dropped [rays] | 0 | 54 of 54 | — | — |
-| optiland – ref | lines.compared [lines] | 5 | 54 of 54 | odd-asphere-photopic | — |
-
-By run, each pair with its verdict and the judged metric that is largest against its tolerance, with the number of the run's requests it was measured in:
-
-| Run | Requests | lv – optiland | lv – ref | optiland – ref |
-|---|---|---|---|---|
-| odd-asphere-ref | 3 | PASS: mtf.maxAbs 4.03e-13 (3 of 3) | PASS: mtf.maxAbs 1.38e-12 (3 of 3) | PASS: mtf.maxAbs 1.75e-12 (3 of 3) |
-| odd-asphere-photopic | 3 | PASS: mtf.maxAbs 5.54e-13 (3 of 3) | PASS: mtf.maxAbs 7.99e-13 (3 of 3) | PASS: mtf.maxAbs 9.57e-13 (3 of 3) |
-| e-line-ref | 3 | PASS: mtf.maxAbs 7.08e-13 (3 of 3) | PASS: mtf.maxAbs 4.90e-13 (3 of 3) | PASS: mtf.maxAbs 7.35e-13 (3 of 3) |
-| e-line-photopic | 3 | PASS: mtf.maxAbs 5.16e-13 (3 of 3) | PASS: mtf.maxAbs 7.05e-13 (3 of 3) | PASS: mtf.maxAbs 5.18e-13 (3 of 3) |
-| asphere-a20-ref | 3 | PASS: mtf.maxAbs 8.84e-13 (3 of 3) | PASS: mtf.maxAbs 6.43e-12 (3 of 3) | PASS: mtf.maxAbs 7.19e-12 (3 of 3) |
-| asphere-a20-photopic | 3 | PASS: mtf.maxAbs 1.29e-12 (3 of 3) | PASS: mtf.maxAbs 5.40e-12 (3 of 3) | PASS: mtf.maxAbs 6.25e-12 (3 of 3) |
-| flat-base-asphere-ref | 3 | PASS: mtf.maxAbs 1.12e-12 (3 of 3) | PASS: mtf.maxAbs 6.91e-12 (3 of 3) | PASS: mtf.maxAbs 7.22e-12 (3 of 3) |
-| flat-base-asphere-photopic | 3 | PASS: mtf.maxAbs 4.60e-13 (3 of 3) | PASS: mtf.maxAbs 6.80e-12 (3 of 3) | PASS: mtf.maxAbs 6.48e-12 (3 of 3) |
-| rear-plate-rim-ref | 3 | PASS: mtf.maxAbs 1.35e-12 (3 of 3) | PASS: mtf.maxAbs 4.25e-12 (3 of 3) | PASS: mtf.maxAbs 5.55e-12 (3 of 3) |
-| rear-plate-rim-photopic | 3 | PASS: mtf.maxAbs 7.40e-13 (3 of 3) | PASS: mtf.maxAbs 3.24e-12 (3 of 3) | PASS: mtf.maxAbs 3.77e-12 (3 of 3) |
-| fixed-iris-zoom-ref-wide | 3 | PASS: mtf.maxAbs 3.17e-13 (3 of 3) | PASS: mtf.maxAbs 4.18e-12 (3 of 3) | PASS: mtf.maxAbs 3.92e-12 (3 of 3) |
-| fixed-iris-zoom-ref-tele | 3 | PASS: mtf.maxAbs 4.73e-13 (3 of 3) | PASS: mtf.maxAbs 9.72e-13 (3 of 3) | PASS: mtf.maxAbs 1.20e-12 (3 of 3) |
-| fixed-iris-zoom-photopic-wide | 3 | PASS: mtf.maxAbs 2.07e-13 (3 of 3) | PASS: mtf.maxAbs 2.17e-12 (3 of 3) | PASS: mtf.maxAbs 2.10e-12 (3 of 3) |
-| fixed-iris-zoom-photopic-tele | 3 | PASS: mtf.maxAbs 2.61e-13 (3 of 3) | PASS: mtf.maxAbs 9.45e-13 (3 of 3) | PASS: mtf.maxAbs 7.93e-13 (3 of 3) |
-| zero-asphere-ref | 3 | PASS: mtf.maxAbs 9.61e-13 (3 of 3) | PASS: mtf.maxAbs 3.46e-13 (3 of 3) | PASS: mtf.maxAbs 1.14e-12 (3 of 3) |
-| zero-asphere-photopic | 3 | PASS: mtf.maxAbs 3.43e-13 (3 of 3) | PASS: mtf.maxAbs 1.36e-13 (3 of 3) | PASS: mtf.maxAbs 2.94e-13 (3 of 3) |
-| stop-inside-element-ref | 3 | PASS: mtf.maxAbs 1.70e-12 (3 of 3) | PASS: mtf.maxAbs 6.00e-13 (3 of 3) | PASS: mtf.maxAbs 1.11e-12 (3 of 3) |
-| stop-inside-element-photopic | 3 | PASS: mtf.maxAbs 8.78e-13 (3 of 3) | PASS: mtf.maxAbs 5.89e-13 (3 of 3) | PASS: mtf.maxAbs 7.69e-13 (3 of 3) |
-
-## r4f
-
-Quantity `mtf.native`. The worst of every metric over the suite:
-
-| Pair | Metric | Worst, or total | Requests measured | Run | Where |
-|---|---|---|---|---|---|
-| lv – replay | mtf.maxAbs (≤ 1.00e-9) | 1.19e-14 | 18 of 18 | zero-asphere-ref | cut sagittal, field 1, frequencyPerMm 8 |
-| lv – replay | sampling.mismatches (≤ 0 elements) | 0 | 18 of 18 | — | — |
-| lv – replay | fields.mismatches (≤ 0 elements) | 0 | 18 of 18 | — | — |
-
-By run, each pair with its verdict and the judged metric that is largest against its tolerance, with the number of the run's requests it was measured in:
-
-| Run | Requests | lv – replay |
-|---|---|---|
-| odd-asphere-ref | 1 | PASS: mtf.maxAbs 5.00e-15 (1 of 1) |
-| odd-asphere-photopic | 1 | PASS: mtf.maxAbs 4.00e-15 (1 of 1) |
-| e-line-ref | 1 | PASS: mtf.maxAbs 8.44e-15 (1 of 1) |
-| e-line-photopic | 1 | PASS: mtf.maxAbs 4.22e-15 (1 of 1) |
-| asphere-a20-ref | 1 | PASS: mtf.maxAbs 8.22e-15 (1 of 1) |
-| asphere-a20-photopic | 1 | PASS: mtf.maxAbs 3.22e-15 (1 of 1) |
-| flat-base-asphere-ref | 1 | PASS: mtf.maxAbs 5.55e-15 (1 of 1) |
-| flat-base-asphere-photopic | 1 | PASS: mtf.maxAbs 5.33e-15 (1 of 1) |
-| rear-plate-rim-ref | 1 | PASS: mtf.maxAbs 7.11e-15 (1 of 1) |
-| rear-plate-rim-photopic | 1 | PASS: mtf.maxAbs 1.78e-15 (1 of 1) |
-| fixed-iris-zoom-ref-wide | 1 | PASS: mtf.maxAbs 8.55e-15 (1 of 1) |
-| fixed-iris-zoom-ref-tele | 1 | PASS: mtf.maxAbs 8.77e-15 (1 of 1) |
-| fixed-iris-zoom-photopic-wide | 1 | PASS: mtf.maxAbs 6.99e-15 (1 of 1) |
-| fixed-iris-zoom-photopic-tele | 1 | PASS: mtf.maxAbs 3.11e-15 (1 of 1) |
-| zero-asphere-ref | 1 | PASS: mtf.maxAbs 1.19e-14 (1 of 1) |
-| zero-asphere-photopic | 1 | PASS: mtf.maxAbs 3.11e-15 (1 of 1) |
-| stop-inside-element-ref | 1 | PASS: mtf.maxAbs 5.33e-15 (1 of 1) |
-| stop-inside-element-photopic | 1 | PASS: mtf.maxAbs 2.66e-15 (1 of 1) |
-
-## r6a
-
-Quantity `rays.trace`. The worst of every metric over the suite:
-
-| Pair | Metric | Worst, or total | Requests measured | Run | Where |
-|---|---|---|---|---|---|
-| lv – optiland | waveMtf.maxAbs (≤ 2.00e-8) | 8.00e-11 | 30 of 54 | flat-base-asphere-ref | cut tangential, field 3.17e1, frequencyPerMm 70 |
-| lv – optiland | phaseStep.waves [waves] | 6.37e0 | 54 of 54 | e-line-photopic | field 2.34e1, line 1, ray 1091 |
-| lv – optiland | convergence.maxAbs | 7.18e-2 | 54 of 54 | e-line-ref | cut tangential, field 2.34e1, frequencyPerMm 90 |
-| lv – optiland | lattice.columns [cells] | 64 | 54 of 54 | odd-asphere-ref | — |
-| lv – optiland | rays.compared [rays] | 569990 | 54 of 54 | — | — |
-| lv – optiland | rays.dropped [rays] | 0 | 54 of 54 | — | — |
-| lv – optiland | lines.compared [lines] | 5 | 54 of 54 | odd-asphere-photopic | — |
-| lv – optiland | waveMtf.flagged | 9.74e-11 | 24 of 54 | flat-base-asphere-photopic | cut tangential, field 3.17e1, frequencyPerMm 70 |
-| lv – ref | waveMtf.maxAbs (≤ 2.00e-8) | 6.94e-10 | 30 of 54 | fixed-iris-zoom-photopic-tele | cut tangential, field 1.48e1, frequencyPerMm 60 |
-| lv – ref | phaseStep.waves [waves] | 6.37e0 | 54 of 54 | e-line-photopic | field 2.34e1, line 1, ray 1091 |
-| lv – ref | convergence.maxAbs | 7.18e-2 | 54 of 54 | e-line-ref | cut tangential, field 2.34e1, frequencyPerMm 90 |
-| lv – ref | lattice.columns [cells] | 64 | 54 of 54 | odd-asphere-ref | — |
-| lv – ref | rays.compared [rays] | 569990 | 54 of 54 | — | — |
-| lv – ref | rays.dropped [rays] | 0 | 54 of 54 | — | — |
-| lv – ref | lines.compared [lines] | 5 | 54 of 54 | odd-asphere-photopic | — |
-| lv – ref | waveMtf.flagged | 4.00e-10 | 24 of 54 | flat-base-asphere-ref | cut tangential, field 0, frequencyPerMm 60 |
-| optiland – ref | waveMtf.maxAbs (≤ 2.00e-8) | 6.97e-10 | 30 of 54 | fixed-iris-zoom-photopic-tele | cut tangential, field 1.48e1, frequencyPerMm 60 |
-| optiland – ref | phaseStep.waves [waves] | 6.37e0 | 54 of 54 | e-line-photopic | field 2.34e1, line 1, ray 1091 |
-| optiland – ref | convergence.maxAbs | 7.18e-2 | 54 of 54 | e-line-ref | cut tangential, field 2.34e1, frequencyPerMm 90 |
-| optiland – ref | lattice.columns [cells] | 64 | 54 of 54 | odd-asphere-ref | — |
-| optiland – ref | rays.compared [rays] | 569990 | 54 of 54 | — | — |
-| optiland – ref | rays.dropped [rays] | 0 | 54 of 54 | — | — |
-| optiland – ref | lines.compared [lines] | 5 | 54 of 54 | odd-asphere-photopic | — |
-| optiland – ref | waveMtf.flagged | 4.03e-10 | 24 of 54 | flat-base-asphere-ref | cut tangential, field 0, frequencyPerMm 60 |
-
-By run, each pair with its verdict and the judged metric that is largest against its tolerance, with the number of the run's requests it was measured in:
-
-| Run | Requests | lv – optiland | lv – ref | optiland – ref |
-|---|---|---|---|---|
-| odd-asphere-ref | 3 | PASS: waveMtf.maxAbs 3.74e-11 (3 of 3) | PASS: waveMtf.maxAbs 4.51e-11 (3 of 3) | PASS: waveMtf.maxAbs 8.07e-11 (3 of 3) |
-| odd-asphere-photopic | 3 | PASS: waveMtf.maxAbs 3.06e-12 (1 of 3) | PASS: waveMtf.maxAbs 6.37e-11 (1 of 3) | PASS: waveMtf.maxAbs 6.66e-11 (1 of 3) |
-| e-line-ref | 3 | PASS: no judged figure | PASS: no judged figure | PASS: no judged figure |
-| e-line-photopic | 3 | PASS: no judged figure | PASS: no judged figure | PASS: no judged figure |
-| asphere-a20-ref | 3 | PASS: waveMtf.maxAbs 3.80e-12 (2 of 3) | PASS: waveMtf.maxAbs 4.25e-10 (2 of 3) | PASS: waveMtf.maxAbs 4.28e-10 (2 of 3) |
-| asphere-a20-photopic | 3 | PASS: waveMtf.maxAbs 4.43e-12 (2 of 3) | PASS: waveMtf.maxAbs 3.50e-10 (2 of 3) | PASS: waveMtf.maxAbs 3.48e-10 (2 of 3) |
-| flat-base-asphere-ref | 3 | PASS: waveMtf.maxAbs 8.00e-11 (2 of 3) | PASS: waveMtf.maxAbs 3.26e-10 (2 of 3) | PASS: waveMtf.maxAbs 3.33e-10 (2 of 3) |
-| flat-base-asphere-photopic | 3 | PASS: waveMtf.maxAbs 4.37e-12 (2 of 3) | PASS: waveMtf.maxAbs 3.31e-10 (2 of 3) | PASS: waveMtf.maxAbs 3.34e-10 (2 of 3) |
-| rear-plate-rim-ref | 3 | PASS: waveMtf.maxAbs 1.37e-11 (2 of 3) | PASS: waveMtf.maxAbs 2.46e-10 (2 of 3) | PASS: waveMtf.maxAbs 2.38e-10 (2 of 3) |
-| rear-plate-rim-photopic | 3 | PASS: waveMtf.maxAbs 6.92e-12 (2 of 3) | PASS: waveMtf.maxAbs 1.51e-10 (2 of 3) | PASS: waveMtf.maxAbs 1.51e-10 (2 of 3) |
-| fixed-iris-zoom-ref-wide | 3 | PASS: waveMtf.maxAbs 9.36e-12 (2 of 3) | PASS: waveMtf.maxAbs 2.02e-10 (2 of 3) | PASS: waveMtf.maxAbs 2.07e-10 (2 of 3) |
-| fixed-iris-zoom-ref-tele | 3 | PASS: waveMtf.maxAbs 1.14e-11 (3 of 3) | PASS: waveMtf.maxAbs 6.55e-10 (3 of 3) | PASS: waveMtf.maxAbs 6.62e-10 (3 of 3) |
-| fixed-iris-zoom-photopic-wide | 3 | PASS: waveMtf.maxAbs 6.47e-12 (2 of 3) | PASS: waveMtf.maxAbs 1.86e-10 (2 of 3) | PASS: waveMtf.maxAbs 1.82e-10 (2 of 3) |
-| fixed-iris-zoom-photopic-tele | 3 | PASS: waveMtf.maxAbs 5.51e-12 (3 of 3) | PASS: waveMtf.maxAbs 6.94e-10 (3 of 3) | PASS: waveMtf.maxAbs 6.97e-10 (3 of 3) |
-| zero-asphere-ref | 3 | PASS: no judged figure | PASS: no judged figure | PASS: no judged figure |
-| zero-asphere-photopic | 3 | PASS: no judged figure | PASS: no judged figure | PASS: no judged figure |
-| stop-inside-element-ref | 3 | PASS: waveMtf.maxAbs 4.17e-12 (2 of 3) | PASS: waveMtf.maxAbs 6.26e-12 (2 of 3) | PASS: waveMtf.maxAbs 4.88e-12 (2 of 3) |
-| stop-inside-element-photopic | 3 | PASS: waveMtf.maxAbs 1.65e-12 (2 of 3) | PASS: waveMtf.maxAbs 2.41e-12 (2 of 3) | PASS: waveMtf.maxAbs 3.80e-12 (2 of 3) |
-
-## Marked
-
-Every request of a rung that is only written down whose two engines differ by more than an attention band,
-with each figure above its band. A band is a width for attention; nothing here is a failure.
-
-No request is marked.
-
-## Not covered
-
-What this comparison does not show, whatever its verdicts:
-
-- optiland's FFT and Huygens MTF take no injected rays. An MTF of optiland's own is on optiland's own pupil grid, reference sphere and frequency axes, so rung R5 is recorded and never gated: it sets two methods side by side.
-- A polychromatic curve of optiland's FFT class. It gives a one-line modulus, so several lines have no FFT row in R5 or R6c. R6c's external counterpart is the comparator's complex sum of optiland's raw wavefronts; its synthetic sum proof checks the declared weighting and phase convention, not physical spectral fidelity.
-- optiland's geometric MTF takes no injected rays either. Its rays are an even grid on the stop surface, out to the clip radius; LensVisualizer's are a lattice across the entrance beam; neither is weighted by direction cosine. Rung R5g is recorded and never gated: a difference of the two pupil samplings is written down, not explained.
-- The bins of optiland's geometric MTF. On one line optiland's curve is of landings counted into bins, and a field whose bins move a value by more than a band has no optiland curve. On several lines the sum over optiland's landings is the worker's, without bins, about the axis point of the image plane; LensVisualizer's is about a chief ray's landing.
-- Dispersion and white-light weighting. Every engine is handed the indices and the line weights LensVisualizer states; no glass catalog and no spectrum is checked against another.
-- The choice of focus. A best-focus plane is LensVisualizer's own, handed to every engine as a plane; no engine searches for one of its own.
-- The sizing of the stop. The stop radius, wide open and stopped down, is LensVisualizer's, by its own rule.
-- Models of vignetting. Each engine clips rays at the apertures it is handed; how an engine's own MTF fills, samples and calibrates a clipped pupil is its method, and a difference that comes of it is written down, not explained.
-- Zoom and focus positions other than the states a run names, and the catalog beyond these suites.
-- Fields that an engine's own convergence test did not pass. Their figures are shown apart and enter no band.

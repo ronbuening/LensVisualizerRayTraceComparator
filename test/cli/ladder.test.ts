@@ -196,7 +196,7 @@ test("the report shows the mismatching surface in R0, and the blocked R1 as a ro
 
   // The failures are R0's; a blocked pair is counted and is not one of them.
   assert.equal(model.failing, 3);
-  assert.match(markdown, /^3 of 20 pairs are FAIL or ERROR\.$/m);
+  assert.match(markdown, /^3 of 20 pairs are Fail or Error\.$/m);
   assert.match(markdown, /^\| FAIL \| 1 \| 2 \|$/m);
   assert.match(markdown, /^\| BLOCKED \| 1 \| 2 \|$/m);
 
@@ -215,7 +215,10 @@ test("the report shows the mismatching surface in R0, and the blocked R1 as a ro
     markdown,
     /^\| ref-twin \| 0 \| 0 \| 0 \| 0 at sample 0, surface 0 \| 0 at sample 0, surface 0 \| 0 \| PASS \| {2}\|$/m,
   );
-  assert.match(markdown, /^Quantity `system\.describe`, compared direct, gated\. /m);
+  assert.match(
+    markdown,
+    /^Quantity `system\.describe`: numbers of each engine set against each other; held to a limit\. /m,
+  );
 
   // R1: the worst quantity and its line for the pair that was judged, and the blocked pair with why.
   // The radius and the position of a pupil have two columns each: on the scale of the pupil's distance, which is

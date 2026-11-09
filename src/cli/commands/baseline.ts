@@ -57,10 +57,44 @@ import {
   reasonsText,
   verdictLabel,
   verdictShort,
+  LIMIT_KIND_TEXT,
+  MOVED_TEXT,
+  SORTING_LIMITS,
+  SORTING_LIMIT_LABEL,
 } from "../../vocabulary/index.ts";
 import { codeLines, columns, countsText, engineIdentifierLines, legendLines } from "../output.ts";
 
 /** What `lvrtc baseline` is wired to, injected so that tests choose it. */
+
+/**
+ * What moved in a record, as a line shows it: the words `checkBaseline` states (`--json` keeps them as they are), with
+ * each verdict by its short label, lists of verdicts separated by "; " (a label may hold a comma), "— now" between
+ * what was and what is, and each limit by what it is: `limit` for a tolerance, `review band` for a band, `sorting
+ * limit` for a band of a metric that sorts a field (`SORTING_LIMITS`). A text of another form is returned unchanged.
+ */
+export function movedText(moved: string): string {
+  const verdicts = (list: string): string =>
+    list
+      .split(", ")
+      .map((each) => each.replace(/^(\d+) (\S+)$/, (_, n: string, verdict: string) => `${n} ${verdictShort(verdict)}`))
+      .join("; ");
+  const listed = /^verdicts were (.*), are (.*)$/.exec(moved);
+  if (listed !== null) return MOVED_TEXT.verdicts(verdicts(listed[1]), verdicts(listed[2]));
+  const figure = /^(\S+) was (.+), is (.+) \((tolerance|band) ([^)]+)\)$/.exec(moved);
+  if (figure !== null) {
+    const [, name, was, now, kind, limit] = figure;
+    const called =
+      kind === "tolerance"
+        ? LIMIT_KIND_TEXT.tolerance
+        : SORTING_LIMITS.includes(name)
+          ? SORTING_LIMIT_LABEL
+          : LIMIT_KIND_TEXT.attention;
+    return MOVED_TEXT.figure(name, was, now, `${called} ${limit}`);
+  }
+  if (moved === "new, changed or unclassified catalog FAIL") return MOVED_TEXT.catalogFailure;
+  return moved;
+}
+
 export interface BaselineCommandInputs extends RunTargetInputs {
   /** The policy to judge by; the comparator's own (`policy/rungs.v1.json`) unless given. */
   readonly policy?: Policy;
@@ -367,7 +401,7 @@ async function check(
       record.b,
       stateLabel(record),
       record.verdict === undefined ? "" : verdictShort(record.verdict),
-      record.moved.join("; "),
+      record.moved.map(movedText).join(MOVED_TEXT.separator),
     ]);
     for (const line of [...legend, ...columns(rows)]) io.stdout(`${line}\n`);
     for (const error of shownErrors) {

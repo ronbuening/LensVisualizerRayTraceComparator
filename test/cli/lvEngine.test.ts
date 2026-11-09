@@ -329,13 +329,13 @@ test("lvrtc run --rungs r2,r3: lv and ref trace LensVisualizer's own launch rays
   const reported = lvrtc(rootDir, "report", "lv-ladder");
   assert.equal(reported.code, EXIT_OK, reported.err);
   const report = readFileSync(join(rootDir, "runs", "lv-ladder", REPORT_MARKDOWN_FILE), "utf8");
-  assert.match(report, /^#### r2, request 3 of 3$/m);
+  assert.match(report, /^#### Ray trace — `r2`, request 3 of 3$/m);
   assert.match(report, /\| direction\.maxAbs \(≤ 1\.00e-9\) \|/);
   assert.match(report, /\| hits\.maxDistance \(≤ 1\.00e-8 mm\) \|/);
   assert.match(report, /\| mask\.mismatches \(≤ 0 rays\) \|/);
   assert.match(report, /\| opd\.maxAbs \(≤ 2\.00e-5 waves\) \|/);
   assert.match(report, /^\| rays\.ok\[0\] \| \d+ \| \d+ \|$/m);
-  assert.match(report, /^\| Engine \| Status \| Version \| Fingerprint \| Adapter revision \|$/m);
+  assert.match(report, /^\| Engine \| Status \| Version \| Engine code \| This tool's code behind it \|$/m);
 });
 
 /** Makes the tracer of a root's LensVisualizer meet every surface `offset` mm behind where the surface is. */
@@ -396,7 +396,7 @@ test("a synthetic policy grants FLOOR for fake LV hits 3e-8 mm off, counted apar
   const reported = await floorCommand(rootDir, "report", "lv-ladder", "--floor", join(rootDir, "digest"));
   assert.equal(reported.code, EXIT_OK, reported.err);
   const report = readFileSync(join(rootDir, "runs", "lv-ladder", REPORT_MARKDOWN_FILE), "utf8");
-  assert.match(report, /^No pair is FAIL or ERROR, of 40 compared\.$/m);
+  assert.match(report, /^No pair is Fail or Error, of 40 compared\.$/m);
   assert.match(report, new RegExp(`^\\| FLOOR \\| ${floor / 2} \\| ${floor / 2} \\|$`, "m"));
   // The reference is lv, the first engine by id that answered: the row is ref's, and the floor is still lv's.
   assert.match(report, /^\| ref \| [^|]+ \| [^|]+ \| [^|]+ \| 0 \| 0 \| \d+ \| FLOOR \| hits\.maxDistance /m);

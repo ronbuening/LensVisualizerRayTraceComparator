@@ -14,6 +14,17 @@ export const UNIT_TEXT: Readonly<Record<string, string>> = {
   lines: "a count of wavelengths",
 };
 
+/** A stored unit as a column or a sentence of a report shows it, where the stored word would mislead. */
+export const UNIT_SHORT: Readonly<Record<string, string>> = {
+  "1": "(no unit)",
+  lines: "wavelengths",
+};
+
+/** The unit of a figure as a report shows it: `UNIT_SHORT`'s word, else the stored unit. */
+export function unitLabel(unit: string): string {
+  return Object.hasOwn(UNIT_SHORT, unit) ? UNIT_SHORT[unit] : unit;
+}
+
 /** One figure: its label, and the unit it is in (a key of `UNIT_TEXT`). */
 export interface MetricText {
   readonly label: string;

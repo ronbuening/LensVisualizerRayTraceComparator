@@ -356,7 +356,7 @@ test("report refuses comparisons judged by another policy than the one it is giv
   assert.equal(await runCli(["compare", "fake-pair"], { ...io, stderr: () => {} }, [compare]), EXIT_OK);
   assert.equal(await runCli(["report", "fake-pair"], io, [command]), EXIT_OK);
   const written = readFileSync(join(runsDir, "fake-pair", REPORT_MARKDOWN_FILE), "utf8");
-  assert.ok(written.includes(`\n| Policy | rungs v${policy.version} |\n`), written);
+  assert.ok(written.includes(`\n| Limits file | v${policy.version} |\n`), written);
 });
 
 test("the report is the same bytes each time it is written, and report.json is canonical", async (t) => {

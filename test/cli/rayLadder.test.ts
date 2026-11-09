@@ -128,8 +128,11 @@ test("ref against a faithful copy passes R2 and R3 with no difference at all; a 
   const reported = await lvrtc(rootDir, "report", "rays");
   assert.equal(reported.code, EXIT_OK, reported.err);
   const markdown = readFileSync(join(rootDir, "runs", "rays", REPORT_MARKDOWN_FILE), "utf8");
-  assert.match(markdown, /^#### r2, request 1 of 2$/m);
-  assert.match(markdown, /^Quantity `rays\.trace`, compared identical-rays, gated\. /m);
+  assert.match(markdown, /^#### Ray trace — `r2`, request 1 of 2$/m);
+  assert.match(
+    markdown,
+    /^Quantity `rays\.trace`: one estimator on each engine's trace of the same rays; held to a limit\. /m,
+  );
   assert.match(markdown, /^\| ref-bent \| — \| — \| — \| — \| — \| — \| BLOCKED \| not judged: rung r0 failed /m);
   assert.match(markdown, /^\| rays\.blocked\[0\] \| \d+ \| \d+ \| \d+ \|$/m);
   // The real policy has no floor: requesting a digest is refused explicitly.

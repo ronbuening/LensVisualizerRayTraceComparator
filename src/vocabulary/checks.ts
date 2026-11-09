@@ -103,7 +103,7 @@ export const CHECKS: readonly CheckText[] = [
     newId: "geometric-mtf",
     title: "Geometric MTF of the same rays",
     kind: "limit",
-    compares: "Comparator geometric MTF on identical rays",
+    compares: "This tool's geometric MTF of identical rays, as each engine traces them",
     shows:
       "That one geometric MTF calculation of this tool, applied to each engine's trace of the same rays, gives curves within the limit of each other.",
     doesNotShow:
@@ -117,7 +117,7 @@ export const CHECKS: readonly CheckText[] = [
     newId: "lv-mtf-replay",
     title: "LensVisualizer's MTF sampling, replayed",
     kind: "limit",
-    compares: "LV geometric MTF beside replay with LV's own sampling",
+    compares: "LensVisualizer's geometric MTF beside a replay of its own sampling",
     shows:
       "That LensVisualizer's geometric MTF is, within the limit, the sum this tool forms of LensVisualizer's own sampled rays, with the same sampling grids, ray counts and field outcomes.",
     doesNotShow:
@@ -131,7 +131,8 @@ export const CHECKS: readonly CheckText[] = [
     newId: "mtf-vs-optiland-fft",
     title: "MTF beside optiland's FFT MTF",
     kind: "side-by-side",
-    compares: "LV diffraction MTF beside optiland FFT and the LV-ray wave estimate",
+    compares:
+      "LensVisualizer's diffraction MTF beside optiland's FFT MTF and the wave estimate of LensVisualizer's rays",
     shows:
       "LensVisualizer's diffraction MTF set beside optiland's FFT MTF and this tool's wave estimate on LensVisualizer's rays, field by field, each difference sorted by its cause before it is shown.",
     doesNotShow:
@@ -159,7 +160,7 @@ export const CHECKS: readonly CheckText[] = [
     newId: "wave-mtf",
     title: "Wave MTF of the same rays",
     kind: "limit",
-    compares: "Comparator wave MTF on identical rays, in fields whose sampling settled",
+    compares: "This tool's wave MTF of identical rays, as each engine traces them, in fields whose sampling settled",
     shows:
       "That one wave-optics MTF calculation of this tool, applied to each engine's optical paths of the same rays, gives curves within the limit of each other, in fields whose sampling settled.",
     doesNotShow:
@@ -173,7 +174,7 @@ export const CHECKS: readonly CheckText[] = [
     newId: "mtf-vs-wave-estimate",
     title: "MTF beside the wave estimate of LensVisualizer's rays",
     kind: "side-by-side",
-    compares: "LV sheared diffraction MTF beside comparator wave OTF on LV rays",
+    compares: "LensVisualizer's sheared diffraction MTF beside this tool's wave OTF of LensVisualizer's rays",
     shows:
       "LensVisualizer's diffraction MTF set beside this tool's wave estimate on the rays LensVisualizer launches, field by field.",
     doesNotShow:
@@ -187,7 +188,8 @@ export const CHECKS: readonly CheckText[] = [
     newId: "mtf-vs-optiland-wavefront",
     title: "MTF beside the OTF of optiland's wavefront",
     kind: "side-by-side",
-    compares: "LV, LV-ray wave OTF and FFT beside comparator OTF of optiland raw wavefronts",
+    compares:
+      "LensVisualizer's MTF, the wave OTF of its rays and optiland's FFT MTF beside this tool's OTF of optiland's raw wavefronts",
     shows:
       "LensVisualizer's diffraction MTF and the wave estimate set beside optiland's FFT MTF and this tool's OTF of optiland's raw wavefront samples, field by field.",
     doesNotShow:
@@ -215,7 +217,7 @@ export const CHECKS: readonly CheckText[] = [
     newId: "spot-vs-optiland",
     title: "Spots and fans beside optiland's",
     kind: "side-by-side",
-    compares: "LV's coma and bokeh tabs beside optiland's SpotDiagram and RayFan",
+    compares: "LensVisualizer's coma and bokeh tabs beside optiland's SpotDiagram and RayFan",
     shows: "LensVisualizer's spot and ray-fan figures set beside optiland's own spot diagram and ray fan of the field.",
     doesNotShow:
       "Which spot is nearer the lens: the two engines sample the pupil on different rings, so the spot figures have no review band; only the fan figure has one.",
@@ -241,7 +243,7 @@ export const CHECKS: readonly CheckText[] = [
     newId: "axial-vs-optiland",
     title: "Spherical aberration and axial colour beside optiland's",
     kind: "side-by-side",
-    compares: "LV's spherical-aberration and axial-colour sections beside optiland's own rays and focus",
+    compares: "LensVisualizer's spherical-aberration and axial-colour sections beside optiland's own rays and focus",
     shows:
       "LensVisualizer's spherical-aberration and axial-colour figures set beside those of optiland's own rays, aimed at the same points of the stop.",
     doesNotShow: "Which figure is nearer the lens; the colour figures have no review band.",
@@ -267,7 +269,8 @@ export const CHECKS: readonly CheckText[] = [
     newId: "chief-vs-optiland",
     title: "Distortion, pupils and lateral colour beside optiland's",
     kind: "side-by-side",
-    compares: "LV's distortion, pupils and lateral-colour tabs beside optiland's distortion, chief rays and pupils",
+    compares:
+      "LensVisualizer's distortion, pupils and lateral-colour tabs beside optiland's distortion, chief rays and pupils",
     shows:
       "LensVisualizer's distortion curve, pupils and lateral colour set beside optiland's own distortion model, chief rays and pupils.",
     doesNotShow: "Which figure is nearer the lens; no figure of this comparison has a review band.",
@@ -294,7 +297,7 @@ export const CHECKS: readonly CheckText[] = [
     newId: "field-curve-vs-optiland",
     title: "Field curves beside optiland's",
     kind: "side-by-side",
-    compares: "LV's field-curve sections beside optiland's FieldCurvature",
+    compares: "LensVisualizer's field-curve sections beside optiland's FieldCurvature",
     shows:
       "LensVisualizer's tangential and sagittal focus shifts and astigmatism set beside optiland's own field-curvature analysis.",
     doesNotShow:
@@ -323,7 +326,7 @@ export const CHECKS: readonly CheckText[] = [
     newId: "vignetting-vs-flux-estimate",
     title: "Vignetting beside the flux estimate",
     kind: "side-by-side",
-    compares: "LV's vignetting tab beside flux, the comparator's estimate on LV's lattices",
+    compares: "LensVisualizer's vignetting tab beside this tool's flux estimate on LensVisualizer's lattices",
     shows:
       "LensVisualizer's geometric transmission and relative illumination set beside this tool's flux estimate on LensVisualizer's own lattices.",
     doesNotShow:
@@ -337,7 +340,8 @@ export const CHECKS: readonly CheckText[] = [
     newId: "summary-vs-optiland",
     title: "Summary beside optiland's",
     kind: "side-by-side",
-    compares: "LV's summary tab and aperture control beside optiland's paraxial accessors and working f-number",
+    compares:
+      "LensVisualizer's summary tab and aperture control beside optiland's paraxial accessors and working f-number",
     shows:
       "LensVisualizer's focal length, entrance pupil, stop, f-numbers and track set beside optiland's own paraxial values and working f-number.",
     doesNotShow:
@@ -351,7 +355,7 @@ export const CHECKS: readonly CheckText[] = [
     newId: "seidel-vs-optiland",
     title: "Seidel sums beside optiland's",
     kind: "side-by-side",
-    compares: "The comparator's Seidel sums (ref-seidel) beside optiland's",
+    compares: "This tool's Seidel sums of the reference model beside optiland's",
     shows:
       "The third-order Seidel sums of this tool's reference model set beside optiland's own, surface by surface and in total.",
     doesNotShow:
@@ -365,7 +369,7 @@ export const CHECKS: readonly CheckText[] = [
     newId: "zernike-vs-optiland",
     title: "Zernike fit beside optiland's",
     kind: "side-by-side",
-    compares: "optiland's Zernike fit beside the comparator's fit of the same raw wavefront samples (optiland-wave)",
+    compares: "optiland's Zernike fit beside this tool's fit of the same raw wavefront samples",
     shows:
       "optiland's Zernike fit set beside this tool's fit of the same raw wavefront samples, coefficient by coefficient.",
     doesNotShow:

@@ -1849,11 +1849,11 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
 
 - **The validation matrix is baseline-only** (`src/report/matrix.ts`, `lvrtc matrix [--root <dir>]`): rendered from
   `baselines/benchmark.json` and `benchmark.mtf.json` alone into `reports/benchmark/validation-matrix.{json,md}`, a row
-  per LensVisualizer tab, a foundation row (R0–R3) and a row of what LV has no tab of (`MATRIX_ROWS` in `wording.ts`,
-  every sentence a linted template). A baselined rung gets counts in the statement's units (configurations,
+  per LensVisualizer tab, a foundation row (R0–R3) and a row of what LV has no tab of (`MATRIX_ROWS`, in
+  `src/vocabulary/matrix.ts` and re-exported by `wording.ts`, every sentence a linted template). A baselined rung gets counts in the statement's units (configurations,
   configuration pairs, request pairs), R4 counted once (its duplicates must agree but for MTF's `measured`). A recorded
   rung in no baseline (R7b–R14b, `UNBASELINED_RUNGS`, held to `RUNGS` by a test) gets its quantity and engines and no
-  figure; a baseline that holds one is refused. A row's "no attention band" sentence is held to the policy by a test.
+  figure; a baseline that holds one is refused. A row's "no review band" sentence is held to the policy by a test.
   `lvrtc verify` holds both files byte for byte when both benchmark baselines exist or either matrix file does;
   `verify --write` regenerates them. Its synthetic golden is written only by `node test/report/writeGolden.ts`. It
   claims no agreement on a recorded rung and leaves the statement and its signed sentence unchanged.
@@ -1999,7 +1999,7 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   a section `consensus: null` (as for fewer than three), so `buildReport` never fails for size. `ReportModel.groups`
   counts, per engine of the run, the sections that place it in the consensus, as an outlier, apart, placed without one
   or not placed; null when no section has a consensus to look for. No command or file of its own: `lvrtc report` carries it.
-- **A consensus says which answers are within the gates of each other, never which is right**: every sentence of it
+- **A consensus says which answers are within the limits of each other, never which is right**: every sentence of it
   is a template of `src/report/wording.ts` (`consensusSentence` under a pairwise matrix; "## Consensus" after the
   verdict summary), and the banned claim `consensus-correct` rejects a consensus, outlier or majority named beside
   correct, right, wrong, true value, in error, accurate and the like. Its golden is `fake-group` (`fake-a`,
@@ -2251,7 +2251,38 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
 - The ratchet's `DASHBOARD` surface reads every page `server.test.ts` lints (`everyPage` in
   `test/dashboard/support.ts`, plus `/control`), a lens page with its golden's curves and a run-control job page (its
   `<pre>` output, the command's own words, left out), by kind of page, visible and `<title>` text with Identifiers
-  removed. What remains is shared report text (`NOT_COVERED`, `CONSENSUS_SECTION`, Stage 9.5's) and the limits
-  file's JSON pointers in chart tooltips. `SORTING_METRICS` (`src/dashboard/compare.ts`) is the vocabulary's
-  `SORTING_LIMITS` (R13b's `invariant.maxAbs` and R14b's `fitCondition.max` reach no card today, but are limits of a
-  sorting too).
+  removed. What remains is the limits file's JSON pointers in chart tooltips (`/rungs/...`). `SORTING_METRICS`
+  (`src/dashboard/compare.ts`) is the vocabulary's `SORTING_LIMITS` (R13b's `invariant.maxAbs` and R14b's
+  `fitCondition.max` reach no card today, but are limits of a sorting too).
+- **What a report says** (Stage 9.5): every committed report is re-rendered from its unchanged baselines (no byte
+  under `baselines/` moves; `rays.json` is unchanged; a JSON twin changes only in its prose: `notCovered`, the
+  statement's `z50Attribution`, the matrix's `compares`, `about` and `notCovered`). Names come from
+  `src/report/names.ts`: a check is its title, a dash, then its id in code (`checkName`; never a parenthesis after a
+  title that may end in one), a figure its label, a dash, then its key (`figureName`), a unit `unitName` (`(no unit)`
+  for "1", `wavelengths` for "lines"), a place `placeText` (a field of `rays.trace` with `deg`, a field of
+  `mtf.native`, an image-height fraction as the rungs request it, with "of the image height"). Verdicts, row statuses
+  and classes show their labels (`verdictShort`, `rowStatusLabel`, `classLabel`), the stored value in the legend;
+  reason codes, comparator reasons, problem codes and `known-failures.json` commands (`--rungs`) stay as stored. The
+  Limit column shows `≤` a limit, or the review band a side-by-side figure has (`mtfReportBands`); a chief-landing
+  limit (`SORTING_LIMITS`) is a sorting limit, never a band: the statement and the "Worth a look" rows call it one,
+  and the Limit column leaves it to the table, which may hold another for several wavelengths. optiland's binning band
+  and the grid-doubling band are convergence bands (0.005 on the axis, 0.01 off it), never review bands. Every
+  heading, column label and sentence is a template of `src/report/wording.ts` (`REPORT_TEXT`, `HOW_TO_READ_TEXT`,
+  `RUN_REPORT_TEXT`, `MTF_TABLE_TEXT`, `MTF_COMPARISON_TEXT`, `STATEMENT_LABELS`, `MATRIX_LABELS`, `CATALOG_LABELS`)
+  or of the vocabulary (`src/vocabulary/reports.ts`: run-name parts, places, field meanings, engine details;
+  `matrix.ts`: `MATRIX_ROWS`, which `wording.ts` re-exports). A baseline's report, the statement and the matrix end
+  with "Identifiers": every hash (suite, baseline and limits files, engine code and this tool's code behind it, the
+  commit and source hash an engine states, each lens state) and the contract version; Inputs keep what an engine
+  states of itself in words (`ENGINE_DETAIL_TEXT`). A baseline's report has "How to read this" before Identifiers,
+  with legends chosen from the baseline alone: the verdicts, checks, engines and places it names, the run-name parts
+  its runs have (`runNameParts`), and wavelengths by index only where the baseline keeps them (the MTF baselines' `lv`
+  `lineWavelengthNm`, `mtfReportSpectra`; never in `mtf.json`); a rays baseline says it keeps none. The FLOOR
+  paragraph, legend row and `floor ≤` sentence are printed only where a floor exists: a baseline with a FLOOR pair,
+  or a run whose limits file gives a metric a floor limit (`renderMarkdown`'s `floor`, which also hides a summary row
+  of zero FLOORs). The owner-signed sentence is shown as it is. The catalog's census counts the lens states that carry
+  a code, compared or not. `lvrtc baseline check` shows what moved by labels (`movedText`, held form by form in
+  `test/baseline/check.test.ts`) while `--json` keeps `checkBaseline`'s words. A test that a heading is absent matches
+  it by its id (`/^## .*`r6c`$/m`), never by a title. After a change that moves a report:
+  `node test/report/writeGolden.ts`, `lvrtc verify --write`, `statement`, `matrix`, `report catalog --catalog`; then
+  every changed report holds the same hashes, and the same numbers but for those the change states (a legend, a
+  band now shown, a unit "1" now in words).

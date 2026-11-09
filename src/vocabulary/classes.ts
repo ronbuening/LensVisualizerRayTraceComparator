@@ -34,7 +34,7 @@ export const CLASS_TEXT: { readonly [kind in (typeof DIFFERENCE_CLASSES)[number]
   method: {
     label: "the methods differ",
     meaning:
-      "Two methods, each standing by its own answer; the difference is held to the review band, if there is one.",
+      "Two methods, each standing by its own answer; the difference is set beside the review band, if there is one.",
   },
 };
 

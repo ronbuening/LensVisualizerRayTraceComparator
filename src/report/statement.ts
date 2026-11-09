@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { baselineText, parseBaseline } from "../baseline/build.ts";
-import { numberText, whereText } from "../compare/metricText.ts";
+import { numberText } from "../compare/metricText.ts";
 import type { Baseline, BaselineMetric, BaselineRun, BaselineRung } from "../contract/baseline.ts";
 import { VERDICTS } from "../contract/comparison.ts";
 import type { Verdict } from "../contract/comparison.ts";
@@ -13,8 +13,11 @@ import { sha256Hex } from "../core/numeric/hash.ts";
 import { escapeCell } from "./markdown.ts";
 import { buildMtfComparison } from "./mtfComparison.ts";
 import type { MtfComparisonRow } from "./mtfComparison.ts";
+import { SORTING_LIMITS, checkTitle, classLabel, rowStatusLabel, verdictShort } from "../vocabulary/index.ts";
+import { checkName, placeText, unitName } from "./names.ts";
 import {
   NOT_COVERED,
+  STATEMENT_LABELS,
   STATEMENT_TEXT,
   STATEMENT_RUNGS,
   STATEMENT_Z50_ATTRIBUTION,
@@ -88,10 +91,17 @@ function largest<T extends Figure>(figures: readonly T[], scaled = false): T | n
     null,
   );
 }
-function figureText(figure: Figure | null): string {
-  return figure === null
-    ? "not measured"
-    : `${figure.name} ${figure.value === null ? "nonfinite" : numberText(figure.value)} ${figure.unit}; ${figure.suite} / ${figure.run}; ${figure.a} / ${figure.b}${whereText(figure.where)}`;
+/** Counts by stored value as words: each count with the value's label and the stored value, in the order of the keys. */
+function countsText(counts: Readonly<Record<string, number>>, label: (value: string) => string): string {
+  const keys = Object.keys(counts).sort();
+  return keys.map((key) => `${counts[key]} ${label(key)} (\`${key}\`)`).join("; ") || "none";
+}
+
+/** A figure as words: its value with its unit, where it is, and the place, a field with its unit (`placeText`). */
+function figureText(figure: Figure | null, quantity: string): string {
+  if (figure === null) return "not measured";
+  const place = placeText(figure.where, quantity);
+  return `${figure.name} ${figure.value === null ? "nonfinite" : numberText(figure.value)} ${unitName(figure.unit)}; ${figure.suite} / ${figure.run}; ${figure.a} / ${figure.b}${place === "" ? "" : ` at ${place}`}`;
 }
 
 function nativePolicy(rung: BaselineRung): RungPolicy {
@@ -380,17 +390,25 @@ export type ValidationStatement = ReturnType<typeof buildStatement>;
 
 /** Both deterministic texts; every prose sentence lives in wording.ts. */
 export function renderStatement(inputs: readonly StatementInput[]) {
+  const L = STATEMENT_LABELS;
   const statement = buildStatement(inputs);
+  // The quantity of each check, as the baselines state it: what a field of a figure is (an angle or a fraction).
+  const quantities = new Map(
+    inputs.flatMap(({ baseline }) =>
+      baseline.runs.flatMap((run) => run.rungs.map((rung) => [rung.rung, rung.quantity])),
+    ),
+  );
+  const quantityOf = (rung: string): string => quantities.get(rung) ?? "";
   const lines: string[] = [
     "# Validation statement",
     "",
     STATEMENT_TEXT.intro,
     "",
-    "## Supportable sentence",
+    `## ${L.supportable}`,
     "",
     statement.supportable,
     "",
-    "## Rungs",
+    `## ${L.checks}`,
     "",
     STATEMENT_TEXT.counts,
     "",
@@ -398,71 +416,75 @@ export function renderStatement(inputs: readonly StatementInput[]) {
     "",
     STATEMENT_TEXT.population,
     "",
-    "| Rung | Compares | Mode | Configurations | Configuration pairs | Request pairs | Verdicts | Worst residual |",
-    "|---|---|---|---:|---:|---:|---|---|",
+    `| ${L.checkColumns.join(" | ")} |`,
+    "|---|---|---|---|---:|---:|---:|---|---|",
   ];
   const row = (cells: readonly unknown[]) => `| ${cells.map((cell) => escapeCell(String(cell))).join(" | ")} |`;
   for (const rung of statement.rungs)
     lines.push(
       row([
-        rung.rung,
+        checkTitle(rung.rung),
+        `\`${rung.rung}\``,
         rung.compares,
-        rung.mode,
+        L.kind[rung.mode] ?? rung.mode,
         rung.configurations,
         rung.configurationPairs,
         rung.requestPairs,
-        rung.verdicts.map((v) => `${v.count} ${v.verdict}`).join(", "),
-        figureText(rung.worst),
+        rung.verdicts.map((v) => `${v.count} ${verdictShort(v.verdict)}`).join("; "),
+        figureText(rung.worst, quantityOf(rung.rung)),
       ]),
     );
-  lines.push("", "### Limits and metric maxima", "");
+  lines.push("", `### ${L.limits}`, "");
   for (const rung of statement.rungs) {
     lines.push(
-      `#### ${rung.rung}`,
+      `#### ${checkName(rung.rung)}`,
       "",
       ...rung.limits.map(
-        (limit) => `- ${limit.kind}: ${limit.metric} ${numberText(limit.value)}${limit.unit ? ` ${limit.unit}` : ""}`,
+        (limit) =>
+          `- ${L.limitKind[limit.kind === "attention" && SORTING_LIMITS.includes(limit.metric) ? "sorting" : limit.kind] ?? limit.kind}: ${limit.metric} ${numberText(limit.value)}${limit.unit ? ` ${unitName(limit.unit)}` : ""}`,
       ),
-      ...rung.metrics.map((m) => `- ${figureText(m.worst)}; measured request pairs ${m.measuredRequests}`),
+      ...rung.metrics.map(
+        (m) => `- ${figureText(m.worst, quantityOf(rung.rung))}; measured request pairs ${m.measuredRequests}`,
+      ),
       ...Object.entries(rung.diagnostics).map(([name, count]) => `- ${name}: ${count}`),
       "",
     );
   }
   lines.push(
-    "## External diffraction counterparts",
+    `## ${L.counterparts}`,
     "",
     STATEMENT_TEXT.counterparts,
     ...(statement.z50Attribution === null ? [] : ["", statement.z50Attribution]),
     "",
-    "| Rung | Counterpart | Configurations | Rows | Classes | Worst in band | Worst set aside |",
+    `| ${L.counterpartColumns.join(" | ")} |`,
     "|---|---|---:|---:|---|---|---|",
   );
   for (const c of statement.counterparts)
     lines.push(
       row([
-        c.rung,
+        checkName(c.rung),
         c.engine,
         c.configurations,
         c.rows,
-        canonicalJson(c.classes),
-        figureText(c.worstBanded),
-        figureText(c.worstSetAside),
+        countsText(c.classes, classLabel),
+        figureText(c.worstBanded, quantityOf(c.rung)),
+        figureText(c.worstSetAside, quantityOf(c.rung)),
       ]),
     );
   for (const c of statement.counterparts) {
     lines.push(
       "",
-      `### ${c.rung}: ${c.engine}`,
+      `### ${checkName(c.rung)}: ${c.engine}`,
       "",
-      `- LV requested lines (nm): ${c.linesNm.join(", ")}`,
-      `- Counterpart answered lines (nm): ${c.counterpartLinesNm.join(", ")}`,
-      `- Requested fields: ${c.fields.join(", ")}`,
-      `- Configurations with banded rows: ${c.bandedConfigurations}`,
-      `- Selected chief-landing sorting limits (mm): ${c.sortingLimitsMm.map(numberText).join(", ")}`,
-      `- Frequencies (cycles/mm): ${c.frequenciesPerMm.join(", ")}`,
-      `- Row statuses: ${canonicalJson(c.statuses)}`,
+      `- ${L.requestedLines}: ${c.linesNm.join(", ")}`,
+      `- ${L.answeredLines}: ${c.counterpartLinesNm.join(", ")}`,
+      `- ${L.fields}: ${c.fields.join(", ")}`,
+      `- ${L.bandedConfigurations}: ${c.bandedConfigurations}`,
+      `- ${L.sortingLimits}: ${c.sortingLimitsMm.map(numberText).join(", ")}`,
+      `- ${L.frequencies}: ${c.frequenciesPerMm.join(", ")}`,
+      `- ${L.rowStatuses}: ${countsText(c.statuses, rowStatusLabel)}`,
       "",
-      "| Suite | State / request | LV lines (nm) | Counterpart lines (nm) | Fields / classes / reasons | Landing sorting limit (mm) | Verdict |",
+      `| ${L.coverageColumns.join(" | ")} |`,
       "|---|---|---|---|---|---|---|",
     );
     for (const entry of c.coverage)
@@ -474,25 +496,25 @@ export function renderStatement(inputs: readonly StatementInput[]) {
           entry.counterpartLinesNm.join(", "),
           entry.fields.map((f) => `${f.field}: ${f.class ?? "unclassified"} / ${f.reason ?? "none"}`).join("; "),
           entry.bands.chiefLandingMm === null ? "none" : numberText(entry.bands.chiefLandingMm),
-          entry.verdict,
+          entry.verdict === null ? "none" : verdictShort(entry.verdict),
         ]),
       );
   }
-  lines.push("", "## States by suite", "", STATEMENT_TEXT.states, "");
+  lines.push("", `## ${L.states}`, "", STATEMENT_TEXT.states, "");
   for (const suite of statement.suites) {
     lines.push(
       `### ${suite.suite}`,
       "",
-      `- Declared: ${suite.declared}; configurations: ${suite.configurations}; refused: ${suite.declared - suite.configurations}`,
+      L.declared(suite.declared, suite.configurations, suite.declared - suite.configurations),
       "",
-      "| Named state | Case SHA-256 / refusal | Measured on R2/R3/R4/R6a for both LV/external pairs |",
+      `| ${L.stateColumns.join(" | ")} |`,
       "|---|---|---|",
     );
     for (const state of suite.states)
       lines.push(
         row([
           state.run,
-          state.caseId ?? state.problems.join("; "),
+          state.caseId === null ? state.problems.join("; ") : "—",
           statement.agreementStates.some((eligible) => eligible.suite === suite.suite && eligible.run === state.run)
             ? "yes"
             : "no",
@@ -501,12 +523,22 @@ export function renderStatement(inputs: readonly StatementInput[]) {
     lines.push("");
   }
   lines.push(
-    "## Not covered",
+    `## ${L.notCovered}`,
     "",
     ...statement.notCovered.flatMap((sentence) => [`- ${sentence}`, ""]),
-    "## Sources",
+    `## ${L.identifiers}`,
     "",
-    ...statement.sources.map((source) => `- ${source.file}: ${source.sha256}`),
+    L.identifiersIntro,
+    "",
+    `| ${L.sourceColumns.join(" | ")} |`,
+    "|---|---|",
+    ...statement.sources.map((source) => row([source.file, source.sha256])),
+    "",
+    `| ${L.stateIdentifierColumns.join(" | ")} |`,
+    "|---|---|---|",
+    ...statement.suites.flatMap((suite) =>
+      suite.states.flatMap((state) => (state.caseId === null ? [] : [row([suite.suite, state.run, state.caseId])])),
+    ),
     "",
   );
   const markdown = lines.join("\n");

@@ -12,7 +12,9 @@ import { canonicalJson } from "../core/numeric/canonicalJson.ts";
 import { sha256Hex } from "../core/numeric/hash.ts";
 import { escapeCell } from "./markdown.ts";
 import type { StatementInput } from "./statement.ts";
-import { MATRIX_ROWS, MATRIX_RUNGS, MATRIX_TEXT, NOT_COVERED, wordingProblems } from "./wording.ts";
+import { ENGINE_DETAIL_TEXT, SUPPORT_STATUS_TEXT, engineName, valueLabel, verdictShort } from "../vocabulary/index.ts";
+import { checkName } from "./names.ts";
+import { MATRIX_LABELS, MATRIX_ROWS, MATRIX_RUNGS, MATRIX_TEXT, NOT_COVERED, wordingProblems } from "./wording.ts";
 
 /** The matrix reads the benchmark's rays and MTF baselines, and nothing else. */
 export const MATRIX_SUITE = "benchmark";
@@ -185,10 +187,11 @@ export type ValidationMatrix = ReturnType<typeof buildMatrix>;
 type MatrixRung = ValidationMatrix["rows"][number]["gated"][number];
 
 const verdictText = (verdicts: readonly { verdict: Verdict; count: number }[]) =>
-  verdicts.length === 0 ? "none" : verdicts.map((v) => `${v.count} ${v.verdict}`).join(", ");
+  verdicts.length === 0 ? "none" : verdicts.map((v) => `${v.count} ${verdictShort(v.verdict)}`).join("; ");
 
 /** Both deterministic texts; every prose sentence lives in wording.ts. */
 export function renderMatrix(inputs: readonly StatementInput[]) {
+  const L = MATRIX_LABELS;
   const matrix = buildMatrix(inputs);
   const row = (cells: readonly unknown[]) => `| ${cells.map((cell) => escapeCell(String(cell))).join(" | ")} |`;
   const lv = matrix.lensVisualizer;
@@ -198,34 +201,30 @@ export function renderMatrix(inputs: readonly StatementInput[]) {
     "",
     MATRIX_TEXT.intro,
     "",
-    "## Inputs",
+    `## ${L.inputs}`,
     "",
-    "| Input | Value |",
+    row(L.inputColumns),
     "|---|---|",
-    row(["Suite", matrix.suite.name]),
-    row(["Suite hash", matrix.suite.hash]),
-    row(["Policy", `rungs v${matrix.policy.version}`]),
-    row(["Policy hash", matrix.policy.hash]),
-    row(["LensVisualizer commit", detail("commit")]),
-    row(["LensVisualizer dirty", detail("dirty")]),
-    row(["LensVisualizer engine closure", lv === null ? "none" : lv.fingerprint]),
-    row(["LensVisualizer engine files", detail("engineFileCount")]),
-    row(["Declared runs", matrix.declared]),
-    row(["Configurations", matrix.configurations]),
+    row([L.suite, matrix.suite.name]),
+    row([L.limitsFile, `v${matrix.policy.version}`]),
+    row([L.lvDirty, lv === null ? "none" : ENGINE_DETAIL_TEXT.dirty(detail("dirty"))]),
+    row([L.lvFiles, detail("engineFileCount")]),
+    row([L.declared, matrix.declared]),
+    row([L.configurations, matrix.configurations]),
     "",
-    "| Engine | Version | Fingerprint | Adapter revision |",
-    "|---|---|---|---|",
-    ...matrix.engines.map((e) => row([e.id, e.version, e.fingerprint, e.adapterRevision ?? "none"])),
+    row(L.engineColumns),
+    "|---|---|---|",
+    ...matrix.engines.map((e) => row([e.id, engineName(e.id), e.version])),
     "",
-    "## Rows",
+    `## ${L.rows}`,
     "",
-    "| Row | Gated rungs | Recorded rungs |",
+    row(L.rowColumns),
     "|---|---|---|",
     ...matrix.rows.map((r) =>
       row([
         r.title,
-        r.gated.map((g) => g.rung).join(", ") || "none",
-        r.recorded.map((g) => g.rung).join(", ") || "none",
+        r.gated.map((g) => `\`${g.rung}\``).join(", ") || "none",
+        r.recorded.map((g) => `\`${g.rung}\``).join(", ") || "none",
       ]),
     ),
     "",
@@ -240,7 +239,7 @@ export function renderMatrix(inputs: readonly StatementInput[]) {
   ];
   const countedRow = (r: Extract<MatrixRung, { inBaseline: true }>) =>
     row([
-      r.rung,
+      checkName(r.rung),
       r.compares,
       r.quantity,
       r.engines.join(", "),
@@ -252,19 +251,19 @@ export function renderMatrix(inputs: readonly StatementInput[]) {
       r.support
         .filter((s) => s.statuses.some((status) => status.status !== "ok"))
         .map(
-          (s) => `${s.engine}: ${s.statuses.map((status) => `${status.configurations} ${status.status}`).join(", ")}`,
+          (s) =>
+            `${s.engine}: ${s.statuses.map((status) => `${status.configurations} ${valueLabel(SUPPORT_STATUS_TEXT, status.status)}`).join(", ")}`,
         )
-        .join("; ") || "every engine ok",
+        .join("; ") || L.everyEngine,
       r.baselines.join(", "),
     ]);
-  const header =
-    "| Rung | Compares | Quantity | Engines | Configurations | Configuration pairs | Request pairs | Request-pair counts | Configuration-pair counts | Engines not ok | Baselines |";
+  const header = row(L.countedColumns);
   const rule = "|---|---|---|---|---:|---:|---:|---|---|---|---|";
   for (const r of matrix.rows) {
     lines.push(`## ${r.title}`, "", r.about, "");
     for (const [heading, rungs] of [
-      ["Gated", r.gated],
-      ["Recorded", r.recorded],
+      [L.gated, r.gated],
+      [L.recorded, r.recorded],
     ] as const) {
       if (rungs.length === 0) continue;
       lines.push(`### ${heading}`, "");
@@ -273,27 +272,39 @@ export function renderMatrix(inputs: readonly StatementInput[]) {
       const named = rungs.filter((g) => !g.inBaseline);
       if (named.length > 0)
         lines.push(
-          "| Rung | Compares | Quantity | Engines | Baselines |",
+          row(L.namedColumns),
           "|---|---|---|---|---|",
           ...named.map((g) =>
             "quantity" in g
-              ? row([g.rung, g.compares, g.quantity, g.engines.join(", "), MATRIX_TEXT.inNoBaseline])
-              : row([g.rung, g.compares, "none", "none", MATRIX_TEXT.absent]),
+              ? row([checkName(g.rung), g.compares, g.quantity, g.engines.join(", "), MATRIX_TEXT.inNoBaseline])
+              : row([checkName(g.rung), g.compares, "none", "none", MATRIX_TEXT.absent]),
           ),
           "",
         );
     }
-    lines.push("### Not covered", "", ...r.notCovered.flatMap((sentence) => [`- ${sentence}`, ""]));
+    lines.push(`### ${L.notCovered}`, "", ...r.notCovered.flatMap((sentence) => [`- ${sentence}`, ""]));
   }
   lines.push(
-    "## Not covered",
+    `## ${L.notCovered}`,
     "",
     MATRIX_TEXT.notCovered,
     "",
     ...matrix.notCovered.flatMap((sentence) => [`- ${sentence}`, ""]),
-    "## Sources",
+    `## ${L.identifiers}`,
     "",
-    ...matrix.sources.map((source) => `- ${source.file}: ${source.sha256}`),
+    L.identifiersIntro,
+    "",
+    row(L.identifierColumns),
+    "|---|---|",
+    row([L.suiteHash, matrix.suite.hash]),
+    row([L.limitsFileHash, matrix.policy.hash]),
+    row([L.lvCommit, detail("commit")]),
+    row([L.lvCode, lv === null ? "none" : lv.fingerprint]),
+    ...matrix.sources.map((source) => row([source.file, source.sha256])),
+    "",
+    row(L.engineIdentifierColumns),
+    "|---|---|---|",
+    ...matrix.engines.map((e) => row([e.id, e.fingerprint, e.adapterRevision ?? "none"])),
     "",
   );
   const markdown = lines.join("\n");

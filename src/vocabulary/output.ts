@@ -326,3 +326,16 @@ export const PLACE_TEXT: Readonly<Record<string, string>> = {
   cut: "cut",
   frequencyPerMm: "frequency (cycles/mm)",
 };
+
+/**
+ * What `lvrtc baseline check` prints of what moved in a record (`CheckRecord.moved`, whose words `--json` keeps): a
+ * verdict list by labels, "— now" between what was and what is, and a limit by what it is.
+ */
+export const MOVED_TEXT = {
+  verdicts: (was: string, now: string): string => `verdicts were ${was} — now ${now}`,
+  figure: (name: string, was: string, now: string, limit: string): string =>
+    `${name} was ${was} — now ${now} (${limit})`,
+  catalogFailure: "a catalog Fail that docs/known-failures.json does not list as it is (new, changed or unclassified)",
+  /** Between two things that moved in one record. */
+  separator: " | ",
+} as const;

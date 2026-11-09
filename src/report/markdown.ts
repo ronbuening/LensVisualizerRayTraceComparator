@@ -5,13 +5,29 @@ import type { ComparisonMetric } from "../contract/comparison.ts";
 import { formatFixed, formatSci } from "../core/numeric/format.ts";
 import { NO_CONSENSUS_REASONS } from "./consensus.ts";
 import type { MtfComparison } from "./mtfComparison.ts";
+import { checkName, unitName } from "./names.ts";
 import type { GroupSummary, MetricColumn, ReportModel, ReportSection, SupportCell } from "./model.ts";
+import {
+  CLASS_KIND,
+  CLASS_TEXT,
+  DIFFERENCE_CLASSES,
+  ROW_STATUS_TEXT,
+  classLabel,
+  rowStatusLabel,
+  VERDICT_TEXT,
+  METHOD_TEXT,
+  valueLabel,
+  verdictShort,
+} from "../vocabulary/index.ts";
 import {
   CONSENSUS_SECTION,
   CONSENSUS_TABLES,
+  HOW_TO_READ_TEXT,
+  MTF_COMPARISON_TEXT,
+  REPORT_TEXT,
+  RUN_REPORT_TEXT,
   consensusCounts,
   consensusSentence,
-  DIFFERENCE_CLASS_TEXT,
   FIELD_REASON_TEXT,
   GEOMETRIC_SAMPLING,
   GEOMETRIC_SEVERAL_LINES,
@@ -20,7 +36,6 @@ import {
   MTF_COMPARISON_INTROS,
   MTF_COMPARISON_OUTRO,
   MTF_ROW_STATUSES,
-  MTF_ROW_STATUS_TEXT,
   WAVEFRONT_HEADING,
 } from "./wording.ts";
 
@@ -65,7 +80,7 @@ function metricText(metric: ComparisonMetric): string {
 
 /** The heading of a metric column: the name, with its limit, a unit other than 1 and its floor limit, if any. */
 function columnText(column: MetricColumn): string {
-  const unit = column.unit === null || column.unit === "1" ? "" : ` ${column.unit}`;
+  const unit = column.unit === null || column.unit === "1" ? "" : ` ${unitName(column.unit)}`;
   if (column.limit === undefined) return unit === "" ? column.name : `${column.name} [${unit.trim()}]`;
   const sign = column.limitKind === "attention" ? "band" : "≤";
   const floor = column.floorLimit === undefined ? "" : `; floor ≤ ${numberText(column.floorLimit)}`;
@@ -101,24 +116,20 @@ export function mtfComparisonLines(mtf: MtfComparison, intro = MTF_COMPARISON_IN
     mtf.kind === "wavefront" || judged.length !== 2 ? `${pair.a} − ${pair.b}` : `${judged[0]} − ${judged[1]}`;
   const peers = mtf.peers ?? [];
   const bandText = (value: number | null): string => (value === null ? "none" : numberText(value));
+  const m = MTF_COMPARISON_TEXT;
   const lines = [
     "",
-    `${OWN_MTF_HEADING[mtf.kind]} The difference of a row is ${difference}.`,
+    m.difference(OWN_MTF_HEADING[mtf.kind], difference),
     ...intro,
     "",
-    `Attention bands: ${bandText(bands.onAxis)} on the axis, ${bandText(bands.offAxis)} off it. Two chief rays that land`,
-    `more than ${bandText(bands.chiefLandingMm)} mm apart are of two fields.`,
+    ...m.bands(bandText(bands.onAxis), bandText(bands.offAxis), bandText(bands.chiefLandingMm)),
     "",
   ];
-  if (pair.verdict === null) lines.push(`\`${pair.a}\` and \`${pair.b}\` were not both asked.`, "");
+  if (pair.verdict === null) lines.push(m.notBothAsked(pair.a, pair.b), "");
   else if (pair.verdict === "UNSUPPORTED" || pair.verdict === "ERROR") {
-    lines.push(`\`${pair.a}\` against \`${pair.b}\` is ${pair.verdict}: ${pair.reason ?? "no reason was given"}.`, "");
+    lines.push(m.noResult(pair.a, pair.b, verdictShort(pair.verdict), pair.reason ?? m.noReason), "");
   } else {
-    lines.push(
-      `Over every frequency of the request \`${pair.a}\` against \`${pair.b}\` is ${pair.verdict}; a row below has the`,
-      "status of its own frequency.",
-      "",
-    );
+    lines.push(...m.overall(pair.a, pair.b, verdictShort(pair.verdict)), "");
   }
   // The rim rays are of a method that calibrates its frequency axes with them; a geometric MTF has none.
   const rim = mtf.kind === "diffraction";
@@ -140,11 +151,11 @@ export function mtfComparisonLines(mtf: MtfComparison, intro = MTF_COMPARISON_IN
           field.rimLandingSpreadMm === null ? NOTHING : numberText(field.rimLandingSpreadMm),
         ]
       : []),
-    field.class ?? NOTHING,
+    field.class === null ? NOTHING : classLabel(field.class),
     field.reason === null ? NOTHING : `${field.reason}: ${FIELD_REASON_TEXT[field.reason]}`,
     ...peers.flatMap((peer) => {
       const other = peer.fields.find((f) => f.field === field.field);
-      return [other?.class ?? "unsupported", other?.reason ?? peer.pair.reason ?? "no-curve"];
+      return [classLabel(other?.class ?? "unsupported"), other?.reason ?? peer.pair.reason ?? "no-curve"];
     }),
   ]);
   lines.push(
@@ -180,22 +191,22 @@ export function mtfComparisonLines(mtf: MtfComparison, intro = MTF_COMPARISON_IN
       String(row.frequencyPerMm),
       ...row.values.map((value) => (value === null ? NOTHING : formatFixed(value, MTF_DECIMALS))),
       row.difference === null ? NOTHING : numberText(row.difference),
-      row.status,
-      row.class ?? NOTHING,
+      rowStatusLabel(row.status),
+      row.class === null ? NOTHING : classLabel(row.class),
       ...peers.flatMap((peer) => {
         const other = peer.rows.find(
           (r) => r.field === row.field && r.cut === row.cut && r.frequencyPerMm === row.frequencyPerMm,
         );
         return [
           other?.difference == null ? NOTHING : numberText(other.difference),
-          other?.status ?? "UNSUPPORTED",
-          other?.class ?? "unsupported",
+          rowStatusLabel(other?.status ?? "UNSUPPORTED"),
+          classLabel(other?.class ?? "unsupported"),
         ];
       }),
     ]);
   lines.push(
     ...(rows.length === 0
-      ? ["No shown frequency is one of the request."]
+      ? [MTF_COMPARISON_TEXT.noFrequency]
       : table(
           [
             "Field",
@@ -216,15 +227,19 @@ export function mtfComparisonLines(mtf: MtfComparison, intro = MTF_COMPARISON_IN
 }
 
 function sectionLines(section: ReportSection): string[] {
-  const heading = section.request === null ? section.rung : `${section.rung}, ${section.request}`;
+  const check = checkName(section.rung);
+  const heading = section.request === null ? check : `${check}, ${section.request}`;
   const judged =
     section.mode === null || section.class === null
-      ? "the policy has no entry for this rung"
-      : `compared ${section.mode}, ${section.class}`;
+      ? RUN_REPORT_TEXT.noPolicyEntry
+      : RUN_REPORT_TEXT.judged(
+          valueLabel(METHOD_TEXT, section.mode),
+          HOW_TO_READ_TEXT.kind[CLASS_KIND[section.class] ?? ""] ?? section.class,
+        );
   const lines = [
     `#### ${heading}`,
     "",
-    `Quantity \`${section.quantity}\`, ${judged}. Request \`${section.requestId}\`.`,
+    RUN_REPORT_TEXT.sectionLine(`\`${section.quantity}\``, judged, section.requestId),
   ];
 
   if (section.referenceVsEach !== null) {
@@ -308,70 +323,50 @@ function consensusLines(groups: GroupSummary): string[] {
   ];
 }
 
-const HOW_TO_READ: readonly string[] = [
-  "## How to read this",
-  "",
-  "Each pair of engines that answered one request gets one verdict.",
-  "",
-  ...table(
-    ["Verdict", "Meaning"],
-    [
-      ["PASS", "A gated rung: every judged metric is at or below its tolerance."],
-      [
-        "FLOOR",
-        "A gated rung: a judged metric is above its tolerance by the known numerical floor of one of the two " +
-          "engines. That engine is within the floor limit of the rung's arbiter, and no other engine sides with " +
-          "it against the arbiter; the note gives the figures, and names a witness that did not corroborate the " +
-          "arbiter. It counts as a pass.",
-      ],
-      ["FAIL", "A gated rung: a judged metric is above its tolerance, or is not a number."],
-      ["RECORDED", "A recorded rung: the difference is written down. It is not a failure."],
-      [
-        "ATTENTION",
-        "A recorded rung: a metric is outside its attention band. It is worth a look and is not a failure.",
-      ],
-      ["UNSUPPORTED", "One of the two engines cannot answer the request. That is an answer, not a failure."],
-      [
-        "BLOCKED",
-        "Both engines answered and the pair is not judged: an earlier rung, on which this one rests, failed for the " +
-          "same two engines on the same case. The failure is that rung's, and the note names it.",
-      ],
-      ["ERROR", "One of the two engines gave no result, or the two results cannot be compared."],
-    ],
-  ),
-  "",
-  "Only FAIL and ERROR fail a comparison. FLOOR is a pass that is counted apart from PASS. RECORDED and ATTENTION",
-  "are not failures: a recorded rung compares methods that are expected to differ, and its numbers are kept to be",
-  "read, not to be gated. BLOCKED is not a second failure: two engines that built different systems would differ",
-  "in every rung after that one.",
-  "",
-  "A limit is shown in the heading of its metric: `≤` is the tolerance of a gated rung, `band` the attention band",
-  "of a recorded one, and `floor ≤` how far the engine with a floor may be from the arbiter for a FLOOR. A metric",
-  "without a limit is shown and not judged. Where its name begins as a judged one's does, it stands beside that",
-  "one: `pupilZ.maxAbs`, the plain difference, beside `pupilZ.maxScaled`, the one on the scale that is judged.",
-  `Numbers have ${METRIC_DIGITS} significant digits, and a whole number, such as a count, is written in full.`,
-  `A recorded value has ${RECORDED_DIGITS} significant digits, or is a whole number in full, and is named with the index of its`,
-  `element. \`${NOTHING}\` marks a place with nothing to compare, and \`not finite\` a number that is a NaN or an infinity.`,
-  "The reference-vs-each table and the pairwise matrix judge a pair alike, so a pair that is in both has the same",
-  "verdict in both.",
-];
+/**
+ * How to read a run's report: the verdicts with their labels and meanings, and how a limit and a number are shown. A
+ * floor is named only where the limits file grants one (`floor`): a metric with a floor limit, or a pair that is
+ * FLOOR.
+ */
+function howToRead(floor: boolean): string[] {
+  const t = RUN_REPORT_TEXT;
+  return [
+    `## ${t.howToRead}`,
+    "",
+    ...t.howToReadIntro,
+    "",
+    ...table(
+      t.verdictColumns,
+      VERDICTS.filter((verdict) => floor || verdict !== "FLOOR").map((verdict) => [
+        VERDICT_TEXT[verdict].label,
+        `\`${verdict}\``,
+        VERDICT_TEXT[verdict].meaning,
+      ]),
+    ),
+    "",
+    ...t.failing(floor),
+    "",
+    ...t.limits(floor),
+    ...t.digits(METRIC_DIGITS, RECORDED_DIGITS, NOTHING),
+  ];
+}
 
 /** How to read a table of the engines' own MTF: what a row's status and a field's class say. Templates only. */
 export const HOW_TO_READ_MTF: readonly string[] = [
-  "### The engines' own MTF",
+  `### ${HOW_TO_READ_TEXT.ownMtf}`,
   "",
-  "A row of such a table is one field, cut and frequency, and has a status of its own:",
+  HOW_TO_READ_TEXT.ownMtfRows,
   "",
   ...table(
-    ["Status", "Meaning"],
-    MTF_ROW_STATUSES.map((status) => [status, MTF_ROW_STATUS_TEXT[status]]),
+    HOW_TO_READ_TEXT.ownMtfStatusColumns,
+    MTF_ROW_STATUSES.map((status) => [ROW_STATUS_TEXT[status].label, `\`${status}\``, ROW_STATUS_TEXT[status].meaning]),
   ),
   "",
-  "A field has the class of its difference, decided in this order, and the reason beside it:",
+  HOW_TO_READ_TEXT.ownMtfClasses,
   "",
   ...table(
-    ["Class", "Meaning"],
-    Object.entries(DIFFERENCE_CLASS_TEXT).map(([kind, text]) => [kind, text]),
+    HOW_TO_READ_TEXT.ownMtfClassColumns,
+    DIFFERENCE_CLASSES.map((kind) => [CLASS_TEXT[kind].label, `\`${kind}\``, CLASS_TEXT[kind].meaning]),
   ),
 ];
 
@@ -388,18 +383,20 @@ export const HOW_TO_READ_MTF: readonly string[] = [
  * what the comparison does not cover, always; and how to read the verdicts.
  */
 export function renderMarkdown(model: ReportModel): string {
-  const lines: string[] = [`# Comparison report: ${model.suite.name}`, "", "## Inputs", ""];
+  const t = RUN_REPORT_TEXT;
+  // A floor is named where the limits file grants one to a figure shown, or a pair came to it.
+  const floor =
+    model.summary.some(({ counts }) => counts.FLOOR > 0) ||
+    model.sections.some((section) => section.columns.some((column) => column.floorLimit !== undefined));
+  const lines: string[] = [`# ${t.title(model.suite.name)}`, "", `## ${REPORT_TEXT.inputs}`, ""];
   lines.push(
-    ...table(
-      ["Input", "Value"],
-      [
-        ["Suite", model.suite.name],
-        ["Suite hash", model.suite.hash],
-        ["Contract version", model.contract],
-        ["Policy", `rungs v${count(model.policy.version)}`],
-        ["Policy hash", model.policy.hash],
-      ],
-    ),
+    ...table(REPORT_TEXT.inputColumns, [
+      [REPORT_TEXT.suite, model.suite.name],
+      [t.suiteHash, model.suite.hash],
+      [REPORT_TEXT.contract, model.contract],
+      [REPORT_TEXT.limitsFile, REPORT_TEXT.limitsFileVersion(count(model.policy.version))],
+      [t.limitsFileHash, model.policy.hash],
+    ]),
     "",
     "### Engines",
     "",
@@ -419,42 +416,36 @@ export function renderMarkdown(model: ReportModel): string {
         ]
       : [engine.id, `unavailable: ${engine.code}`, NOTHING, NOTHING, ...(adapters ? [NOTHING] : [])],
   );
-  lines.push(
-    ...(engineRows.length === 0
-      ? ["No engine was run."]
-      : table(["Engine", "Status", "Version", "Fingerprint", ...(adapters ? ["Adapter revision"] : [])], engineRows)),
-  );
+  lines.push(...(engineRows.length === 0 ? ["No engine was run."] : table(t.engineColumns(adapters), engineRows)));
   lines.push("", "### Runs", "");
   const runRows = model.runs.map((run) => [
     run.name,
     run.caseId ?? NOTHING,
     run.problems.length === 0 ? "run" : `not started: ${run.problems.join("; ")}`,
   ]);
-  lines.push(...table(["Run", "Case", "Status"], runRows));
+  lines.push(...table(t.runColumns, runRows));
 
-  lines.push("", "## Verdict summary", "");
+  lines.push("", `## ${t.verdictSummary}`, "");
   const pairs = model.summary.reduce(
     (total, { counts }) => total + VERDICTS.reduce((sum, verdict) => sum + counts[verdict], 0),
     0,
   );
-  lines.push(
-    model.failing === 0
-      ? `No pair is FAIL or ERROR, of ${count(pairs)} compared.`
-      : `${count(model.failing)} of ${count(pairs)} pairs are FAIL or ERROR.`,
-    "",
-  );
+  lines.push(model.failing === 0 ? t.noFailure(count(pairs)) : t.failures(count(model.failing), count(pairs)), "");
   const countsOf = (mode: string, verdict: (typeof VERDICTS)[number]): string =>
     count(model.summary.find((entry) => entry.mode === mode)?.counts[verdict] ?? 0);
   lines.push(
     ...table(
       ["Verdict", ...COMPARISON_MODES],
-      VERDICTS.map((verdict) => [verdict, ...COMPARISON_MODES.map((mode) => countsOf(mode, verdict))]),
+      VERDICTS.filter((verdict) => floor || verdict !== "FLOOR").map((verdict) => [
+        verdict,
+        ...COMPARISON_MODES.map((mode) => countsOf(mode, verdict)),
+      ]),
     ),
   );
 
   if (model.groups !== null) lines.push("", ...consensusLines(model.groups));
 
-  lines.push("", "## Support matrix", "");
+  lines.push("", `## ${t.supportMatrix}`, "");
   const engineIds = model.engines.map((engine) => engine.id);
   const supportRows = model.support.map((row) => [
     row.run,
@@ -464,7 +455,7 @@ export function renderMarkdown(model: ReportModel): string {
   lines.push(
     ...(supportRows.length === 0
       ? ["No engine was asked anything."]
-      : table(["Run", "Rung", ...engineIds], supportRows)),
+      : table([...t.supportColumns, ...engineIds], supportRows)),
   );
 
   lines.push("", "## Results");
@@ -475,9 +466,9 @@ export function renderMarkdown(model: ReportModel): string {
     run = section.run;
     lines.push("", ...sectionLines(section));
   }
-  lines.push("", "## Not covered", "", "What this comparison does not show, whatever its verdicts:", "");
+  lines.push("", `## ${REPORT_TEXT.notCovered}`, "", REPORT_TEXT.notCoveredIntro, "");
   lines.push(...model.notCovered.map((sentence) => `- ${sentence}`));
-  lines.push("", ...HOW_TO_READ);
+  lines.push("", ...howToRead(floor));
   if (model.sections.some((section) => section.mtf !== undefined)) lines.push("", ...HOW_TO_READ_MTF);
   return `${lines.join("\n")}\n`;
 }

@@ -136,7 +136,10 @@ test("lvrtc run --rungs r4f: the replay of a sampled MTF passes, and a product t
   const reported = lvrtc(rootDir, "report", "fidelity");
   assert.equal(reported.code, EXIT_OK, reported.err);
   const markdown = readFileSync(join(rootDir, "runs", "fidelity", REPORT_MARKDOWN_FILE), "utf8");
-  assert.match(markdown, /^#### r4f\n\nQuantity `mtf\.native`, compared direct, gated\./m);
+  assert.match(
+    markdown,
+    /^#### LensVisualizer's MTF sampling, replayed — `r4f`\n\nQuantity `mtf\.native`: numbers of each engine set against each other; held to a limit\./m,
+  );
   assert.match(
     markdown,
     /^\| Engine \| fields\.mismatches \(≤ 0 elements\) \| mtf\.maxAbs \(≤ 1\.00e-9\) \| sampling\.mismatches \(≤ 0 elements\) \| Verdict \| Note \|$/m,
@@ -184,11 +187,11 @@ test("a baseline may hold R4f: written from a run with it, it checks clean, and 
       run.name,
     );
   }
-  // The report rendered from it has the rung's section, with its three judged figures.
+  // The report rendered from it has the check's section, with its three judged figures.
   const report = readFileSync(join(rootDir, "reports", "held", "rays.md"), "utf8");
-  assert.match(report, /^## r4f$/m);
-  assert.match(report, /^Quantity `mtf\.native`\./m);
-  assert.match(report, /mtf\.maxAbs \(≤ 1\.00e-9\)/);
+  assert.match(report, /^## LensVisualizer's MTF sampling, replayed — `r4f`$/m);
+  assert.match(report, /^Compares: .* Quantity asked of the engines: an engine.s own MTF \(`mtf\.native`\)\.$/m);
+  assert.match(report, / — `mtf\.maxAbs` \| \(no unit\) \| ≤ 1\.00e-9 \|/);
 
   // Checked against the engines again: the same six records, each OK. The baseline names the replay, and the check
   // names it for no rung of the run's engines: nothing is new, and nothing unsupported.
@@ -258,7 +261,7 @@ test("an MTF baseline: write --mtf, verify and check --mtf hold it and its repor
     }
   }
   const report = readFileSync(at("reports", "held", "mtf.md"), "utf8");
-  assert.match(report, /^# MTF baseline of held$/m);
+  assert.match(report, /^# Baseline of held: the MTF checks$/m);
   assert.match(report, /^## Not covered$/m);
 
   // The rays baseline of the same run is written beside it, as it always was, and both are verified.
@@ -287,7 +290,7 @@ test("an MTF baseline: write --mtf, verify and check --mtf hold it and its repor
 
   // A report edited by hand is not what the baseline renders; --write makes it anew.
   const markdown = at("reports", "held", "mtf.md");
-  writeFileSync(markdown, report.replace("8 PASS", "9 PASS").replace("2 PASS", "3 PASS"));
+  writeFileSync(markdown, report.replace("8 Pass", "9 Pass").replace("2 Pass", "3 Pass"));
   assert.notEqual(readFileSync(markdown, "utf8"), report);
   const edited = lvrtc(rootDir, "verify");
   assert.equal(edited.code, 1);

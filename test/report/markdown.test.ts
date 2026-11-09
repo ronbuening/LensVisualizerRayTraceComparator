@@ -60,10 +60,9 @@ test("the Markdown has LF line endings, one newline at the end, and its sections
       "## How to read this",
     ],
   );
-  assert.match(
-    MARKDOWN,
-    /^Only FAIL and ERROR fail a comparison\. FLOOR is a pass that is counted apart from PASS\. /m,
-  );
+  assert.match(MARKDOWN, /^Only Fail \(`FAIL`\) and Error \(`ERROR`\) fail a comparison\.$/m);
+  // The limits file of the hand-built report grants no floor, so a floor is not named.
+  assert.doesNotMatch(MARKDOWN, /FLOOR|floor/);
 });
 
 test("every table row has as many cells as its header, whatever text its cells hold", () => {
@@ -97,7 +96,7 @@ test("the inputs name the suite, the contract version and the policy version", (
   assert.deepEqual(rowsStarting(MARKDOWN, "Suite"), [["Suite", "hand-built"]]);
   assert.deepEqual(rowsStarting(MARKDOWN, "Suite hash"), [["Suite hash", "5".repeat(64)]]);
   assert.deepEqual(rowsStarting(MARKDOWN, "Contract version"), [["Contract version", "1.0"]]);
-  assert.deepEqual(rowsStarting(MARKDOWN, "Policy"), [["Policy", "rungs v3"]]);
+  assert.deepEqual(rowsStarting(MARKDOWN, "Limits file"), [["Limits file", "v3"]]);
   assert.deepEqual(MODEL.policy, { version: 3, hash: COMPARISONS.policy });
 });
 
@@ -114,14 +113,14 @@ test("the summary counts the pairs of each mode by verdict, and says how many fa
   ]);
   // A blocked pair is counted, and is not one of the failures: the rung that blocks it is.
   assert.equal(MODEL.failing, 3);
-  assert.match(MARKDOWN, /^3 of 7 pairs are FAIL or ERROR\.$/m);
+  assert.match(MARKDOWN, /^3 of 7 pairs are Fail or Error\.$/m);
   assert.deepEqual(rowsStarting(MARKDOWN, "ATTENTION")[0], ["ATTENTION", "1", "1"]);
   assert.deepEqual(rowsStarting(MARKDOWN, "BLOCKED")[0], ["BLOCKED", "1", "0"]);
   assert.deepEqual(rowsStarting(MARKDOWN, "ERROR")[0], ["ERROR", "1", "2"]);
 
   const clean: ComparisonFile = { ...COMPARISONS, comparisons: COMPARISONS.comparisons.slice(2, 3) };
   const markdown = renderMarkdown(buildReport(MANIFEST, clean, POLICY));
-  assert.match(markdown, /^No pair is FAIL or ERROR, of 1 compared\.$/m);
+  assert.match(markdown, /^No pair is Fail or Error, of 1 compared\.$/m);
 });
 
 test("the support matrix has a row per request and a cell per engine, from the manifest alone", () => {
@@ -150,9 +149,9 @@ test("a section has the policy's metrics by name, then any other, each with its 
   );
   assert.deepEqual([first.request, second.request, third.request], ["request 1 of 2", "request 2 of 2", null]);
   assert.deepEqual([first.mode, first.class], ["independent-method", "recorded"]);
-  // A rung the policy has no entry for is shown without limits, and says so.
+  // A check the limits file has no entry for is shown without limits, and says so.
   assert.deepEqual([third.mode, third.class, third.columns], [null, null, []]);
-  assert.match(MARKDOWN, /^Quantity `system\.describe`, the policy has no entry for this rung\. /m);
+  assert.match(MARKDOWN, /^Quantity `system\.describe`: the limits file has no entry for this check\. /m);
   assert.match(MARKDOWN, /^Reference vs each, against `lv`:\n\nNo other engine was compared\.$/m);
 });
 
@@ -216,7 +215,7 @@ test("a figure that is shown and not judged stands beside the judged figure of t
   ]);
   assert.match(
     markdown,
-    /^\| Engine \| firstOrder\.maxAbs \(≤ 1\.00e-9 mm\) \| pupilRadius\.maxScaled \(≤ 1\.00e-9 mm\) \| pupilRadius\.maxAbs \[mm\] \| pupilZ\.maxScaled \(≤ 1\.00e-9 mm\) \| pupilZ\.maxAbs \[mm\] \| lines\.compared \[lines\] \| Verdict \| Note \|$/m,
+    /^\| Engine \| firstOrder\.maxAbs \(≤ 1\.00e-9 mm\) \| pupilRadius\.maxScaled \(≤ 1\.00e-9 mm\) \| pupilRadius\.maxAbs \[mm\] \| pupilZ\.maxScaled \(≤ 1\.00e-9 mm\) \| pupilZ\.maxAbs \[mm\] \| lines\.compared \[wavelengths\] \| Verdict \| Note \|$/m,
   );
   // The plain figures are above 1e-9 mm in a pair that passes: they are shown beside what is judged, with where.
   // (A row of each engine is in the table of engines, then in the consensus's: the gated rung has three engines.)
@@ -324,13 +323,13 @@ test("a floor is a verdict of its own: counted apart from PASS, no failure, with
     ],
   );
   assert.equal(model.failing, 0);
-  assert.match(markdown, /^No pair is FAIL or ERROR, of 2 compared\.$/m);
+  assert.match(markdown, /^No pair is Fail or Error, of 2 compared\.$/m);
   assert.deepEqual(rowsStarting(markdown, "PASS")[0], ["PASS", "0", "0"]);
   assert.deepEqual(rowsStarting(markdown, "FLOOR")[0], ["FLOOR", "1", "1"]);
-  assert.match(
-    markdown,
-    /^\| FLOOR \| A gated rung: a judged metric is above its tolerance by the known numerical floor /m,
-  );
+  // The limits file grants a floor, so the legend names it, and how its limit is shown.
+  assert.match(markdown, /^\| Within a known numerical floor \| `FLOOR` \| A check held to a limit: a judged figure /m);
+  assert.match(markdown, /^Within a known numerical floor \(`FLOOR`\) is a pass that is counted apart from Pass/m);
+  assert.match(markdown, /`floor ≤` how far the engine with a floor may be from the arbiter/);
   // The pairwise matrix names the metric furthest past its tolerance.
   assert.deepEqual(rowsStarting(markdown, "lv")[2], [
     "lv",
@@ -341,7 +340,7 @@ test("a floor is a verdict of its own: counted apart from PASS, no failure, with
 });
 
 test("an engine of the comparator's own is listed with its adapter revision; a report without one has no column", () => {
-  assert.deepEqual(rowsStarting(MARKDOWN, "Engine")[0], ["Engine", "Status", "Version", "Fingerprint"]);
+  assert.deepEqual(rowsStarting(MARKDOWN, "Engine")[0], ["Engine", "Status", "Version", "Engine code"]);
   assert.ok(MODEL.engines.every((engine) => !Object.hasOwn(engine, "adapterRevision")));
   const [lv, ...others] = MANIFEST.engines;
   const adapted = { ...MANIFEST, engines: [{ ...lv, adapterRevision: "a".repeat(64) }, ...others] };
@@ -358,8 +357,8 @@ test("an engine of the comparator's own is listed with its adapter revision; a r
     "Engine",
     "Status",
     "Version",
-    "Fingerprint",
-    "Adapter revision",
+    "Engine code",
+    "This tool's code behind it",
   ]);
   assert.deepEqual(rowsStarting(markdown, "lv")[0], ["lv", "available", "0.9 \\| dev", "f".repeat(64), "a".repeat(64)]);
   // An engine without one, and one that could not be used, have nothing to state there.
@@ -448,7 +447,7 @@ test("a blocked pair is a row with its reason, and no metric", () => {
     "BLOCKED",
     "not judged: rung r0 failed for lv and optiland on this case",
   ]);
-  assert.match(MARKDOWN, /^\| BLOCKED \| Both engines answered and the pair is not judged: /m);
+  assert.match(MARKDOWN, /^\| Not judged \(an earlier check failed\) \| `BLOCKED` \| The pair is not judged/m);
 });
 
 test("recorded values are listed side by side: a row per element, a column per engine, nothing judged", () => {

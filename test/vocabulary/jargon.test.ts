@@ -3,9 +3,8 @@
 // no longer uses: the lists only shrink, each to empty, as the plain-language stages land.
 //
 // The commands' own output joins the ratchet here (`CLI_OUTPUT`): what they print on a temporary root of fake
-// engines, the Markdown a report or the MTF profile prints aside (Stage 9.5's). The dashboard joins it too
-// (`DASHBOARD`): the visible text and the <title> text of every page its wording test renders, by kind of page.
-// MATRIX_ROWS' about and notCovered text moves into the vocabulary in Stage 9.5, when the report wording changes.
+// engines. The dashboard joins it too (`DASHBOARD`): the visible text and the <title> text of every page its wording
+// test renders, by kind of page.
 import assert from "node:assert/strict";
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
@@ -62,54 +61,23 @@ const CLI_OUTPUT: Allowlist = {
 /** The README, a reviewer's first page: it uses none of the tool's own words. */
 const README: Allowlist = {};
 
-/** Every committed `reports/**\/*.md`, by its path under reports/. */
+/**
+ * Every committed `reports/**\/*.md`, by its path under reports/. The catalog's statistics list each classified
+ * failure with the command that reproduces it, as `docs/known-failures.json` stores it: `--rungs`, the older spelling
+ * of `--checks`, until the catalog is refreshed.
+ */
 const REPORTS: Allowlist = {
-  "benchmark/mtf.md": ["rung", "gravest", "adapter revision", "fingerprint"],
-  "benchmark/rays.md": ["rung", "adapter revision", "fingerprint"],
-  "benchmark/validation-matrix.md": ["rung", "gravest", "adapter revision", "fingerprint"],
-  "catalog.md": ["rung", "gravest"],
-  "catalog/mtf.md": ["rung", "adapter revision", "fingerprint"],
-  "catalog/rays.md": ["rung", "adapter revision", "fingerprint"],
-  "diffractive/rays.md": ["rung", "adapter revision", "fingerprint"],
-  "features/mtf.md": ["rung", "adapter revision", "fingerprint"],
-  "features/rays.md": ["rung", "adapter revision", "fingerprint"],
-  "focus-stations/mtf.md": ["rung", "adapter revision", "fingerprint"],
-  "focus-stations/rays.md": ["rung", "adapter revision", "fingerprint"],
-  "folded/rays.md": ["rung", "adapter revision", "fingerprint"],
-  "states/mtf.md": ["rung", "adapter revision", "fingerprint"],
-  "states/rays.md": ["rung", "adapter revision", "fingerprint"],
-  "validation-statement.md": ["rung"],
+  "catalog.md": ["rung"],
 };
 
-/** Every golden `test/fixtures/golden/**\/*.md`, by its path under the golden directory. */
+/**
+ * Every golden `test/fixtures/golden/**\/*.md`, by its path under the golden directory. The catalog's stand-in keeps
+ * its reproducer commands as the committed one does, and a blocked pair's reason is the comparison's own, as
+ * `comparisons.json` stores it ("not judged: rung r0 failed ...").
+ */
 const GOLDENS: Allowlist = {
-  "catalog.md": ["rung", "gravest"],
-  "fake-3-engines-ts.report.md": ["rung", "fingerprint"],
-  "fake-3-engines.report.md": ["rung", "fingerprint"],
-  "fake-faults.report.md": ["rung", "fingerprint"],
-  "fake-group.report.md": ["rung", "fingerprint"],
-  "hand-built.report.md": ["rung", "fingerprint"],
-  "r10a-stand-ins.report.md": ["rung", "adapter revision", "fingerprint"],
-  "r10b-stand-ins.report.md": ["rung", "fingerprint"],
-  "r11a-stand-ins.report.md": ["rung", "adapter revision", "fingerprint"],
-  "r11b-stand-ins.report.md": ["rung", "fingerprint"],
-  "r12b-stand-ins.report.md": ["rung", "fingerprint"],
-  "r13b-stand-ins.report.md": ["rung", "fingerprint"],
-  "r14b-stand-ins.report.md": ["rung", "fingerprint"],
-  "r5-stand-ins.mtf.md": ["rung", "gravest", "adapter revision", "fingerprint"],
-  "r5-stand-ins.report.md": ["rung", "fingerprint"],
-  "r5g-stand-ins.mtf.md": ["rung", "gravest", "adapter revision", "fingerprint"],
-  "r5g-stand-ins.report.md": ["rung", "fingerprint"],
-  "r6c-stand-ins.mtf.md": ["rung", "adapter revision", "fingerprint"],
-  "r6c-stand-ins.report.md": ["rung", "fingerprint"],
-  "r7a-stand-ins.report.md": ["rung", "adapter revision", "fingerprint"],
-  "r7b-stand-ins.report.md": ["rung", "fingerprint"],
-  "r8a-stand-ins.report.md": ["rung", "adapter revision", "fingerprint"],
-  "r8b-stand-ins.report.md": ["rung", "fingerprint"],
-  "r9a-stand-ins.report.md": ["rung", "adapter revision", "fingerprint"],
-  "r9b-stand-ins.report.md": ["rung", "fingerprint"],
-  "validation-matrix.md": ["rung", "gravest", "adapter revision", "fingerprint"],
-  "validation-statement.md": ["rung"],
+  "catalog.md": ["rung"],
+  "hand-built.report.md": ["rung"],
 };
 
 /**
@@ -306,7 +274,7 @@ function commandsOf(rootDir: string): CliCommand[] {
   ];
 }
 
-/** Everything a command line printed, on both streams; the Markdown of a report is left aside (Stage 9.5's). */
+/** Everything a command line printed, on both streams. */
 async function printed(rootDir: string, args: readonly string[]): Promise<string> {
   let text = "";
   const io = { stdout: (chunk: string) => void (text += chunk), stderr: (chunk: string) => void (text += chunk) };
@@ -348,13 +316,11 @@ test("what the commands print uses no more of the tool's own words than its allo
 
 /**
  * The dashboard's pages, by kind of page: every page of a kind read together. What remains is not the dashboard's own
- * words: a run page ends with the reports' Not covered block (`NOT_COVERED`), a section page shows the reports'
- * Consensus prose (`CONSENSUS_SECTION`), both rewritten with the reports (Stage 9.5); and a chart's tooltip names the
- * source of each limit it draws, a JSON pointer into the limits file, whose member is `rungs`. Beside the pages the
- * wording test reads, a lens page (bare, and with its golden's curves) and a job page of run control are read.
+ * words: a chart's tooltip names the source of each limit it draws, a JSON pointer into the limits file, whose member
+ * is `rungs`. Beside the pages the wording test reads, a lens page (bare, and with its golden's curves) and a job page
+ * of run control are read.
  */
 const DASHBOARD: Allowlist = {
-  run: ["rung"],
   section: ["rung"],
   "compare tab": ["rung"],
   lens: ["rung"],

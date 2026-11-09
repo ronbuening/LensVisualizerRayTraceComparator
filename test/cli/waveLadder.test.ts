@@ -164,13 +164,16 @@ test("R6a compares a field on both lattices at every line as one set: a faithful
   const reported = await inProcess(rootDir, "report", "wave");
   assert.equal(reported.code, EXIT_OK, reported.err);
   const markdown = readFileSync(join(rootDir, "runs", "wave", REPORT_MARKDOWN_FILE), "utf8");
-  assert.match(markdown, /^#### r6a, request 1 of 4\n\nQuantity `rays\.trace`, compared identical-rays, gated\./m);
+  assert.match(
+    markdown,
+    /^#### Wave MTF of the same rays — `r6a`, request 1 of 4\n\nQuantity `rays\.trace`: one estimator on each engine's trace of the same rays; held to a limit\./m,
+  );
   // The figure that is judged, then the one that is only written down, then what the lattice says of itself.
   assert.match(
     markdown,
     /^\| Engine \| waveMtf\.maxAbs \(≤ 2\.00e-8\) \| waveMtf\.flagged \| phaseStep\.waves \[waves\] \| convergence\.maxAbs \| /m,
   );
-  assert.doesNotMatch(markdown, /^#### r6a, request 2 of 4$/m);
+  assert.doesNotMatch(markdown, /^#### .*`r6a`, request 2 of 4$/m);
 });
 
 test("the finer lattice is asked of R6a alone: R2 to R4 trace the run's own sets, and R6a finds them in the store", async (t) => {
@@ -284,7 +287,10 @@ test("lvrtc run --rungs r6b: LensVisualizer's diffraction MTF beside the wave es
   const reported = lvrtc(rootDir, "report", "wave");
   assert.equal(reported.code, EXIT_OK, reported.err);
   const markdown = readFileSync(join(rootDir, "runs", "wave", REPORT_MARKDOWN_FILE), "utf8");
-  assert.match(markdown, /^#### r6b\n\nQuantity `mtf\.native`, compared independent-method, recorded\./m);
+  assert.match(
+    markdown,
+    /^#### MTF beside the wave estimate of LensVisualizer's rays — `r6b`\n\nQuantity `mtf\.native`: each engine's own method; side by side, no limit\./m,
+  );
   assert.match(
     markdown,
     /^\| Engine \| mtfOffAxis\.maxAbs \(band 1\.00e-2\) \| mtfOnAxis\.maxAbs \(band 5\.00e-3\) \| mtfFlagged\.maxAbs \| /m,

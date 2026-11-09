@@ -174,13 +174,16 @@ test("R4 compares a field at every line as one set: a faithful copy differs by n
   const reported = await lvrtc(rootDir, "report", "mtf");
   assert.equal(reported.code, EXIT_OK, reported.err);
   const markdown = readFileSync(join(rootDir, "runs", "mtf", REPORT_MARKDOWN_FILE), "utf8");
-  assert.match(markdown, /^#### r4, request 1 of 4$/m);
-  assert.match(markdown, /^#### r4, request 3 of 4$/m);
-  assert.doesNotMatch(markdown, /^#### r4, request 2 of 4$/m);
-  assert.match(markdown, /^Quantity `rays\.trace`, compared identical-rays, gated\. /m);
+  assert.match(markdown, /^#### Geometric MTF of the same rays — `r4`, request 1 of 4$/m);
+  assert.match(markdown, /^#### Geometric MTF of the same rays — `r4`, request 3 of 4$/m);
+  assert.doesNotMatch(markdown, /^#### .*`r4`, request 2 of 4$/m);
   assert.match(
     markdown,
-    /^\| Engine \| mtf\.maxAbs \(≤ 1\.00e-7\) \| rays\.compared \[rays\] \| rays\.dropped \[rays\] \| lines\.compared \[lines\] \| Verdict \| Note \|$/m,
+    /^Quantity `rays\.trace`: one estimator on each engine's trace of the same rays; held to a limit\. /m,
+  );
+  assert.match(
+    markdown,
+    /^\| Engine \| mtf\.maxAbs \(≤ 1\.00e-7\) \| rays\.compared \[rays\] \| rays\.dropped \[rays\] \| lines\.compared \[wavelengths\] \| Verdict \| Note \|$/m,
   );
   assert.match(
     markdown,

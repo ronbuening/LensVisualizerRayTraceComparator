@@ -335,7 +335,7 @@ test("the report of the stand-ins is its golden file, says whose rays and whose 
   assert.equal(count(MTF_COMPARISON_INTROS.geometric.join("\n")), 3);
   assert.equal(count(MTF_COMPARISON_INTROS.diffraction.join("\n")), 0);
   assert.equal(count(GEOMETRIC_SAMPLING.join("\n")), 3);
-  // Only the run of several lines says that the sum is the worker's.
+  // Only the run of several wavelengths says that the sum is this tool's.
   assert.equal(count(GEOMETRIC_SEVERAL_LINES.join("\n")), 1);
   assert.ok(report.markdown.indexOf(GEOMETRIC_SEVERAL_LINES[0]) > report.markdown.indexOf("### polychromatic"));
   // A geometric MTF has no rim rays, and the table no column of them.
@@ -346,14 +346,16 @@ test("the report of the stand-ins is its golden file, says whose rays and whose 
   );
   assert.match(
     report.markdown,
-    /^\| 0 \| 0\.000 \| ok \| ok \| ok \| ok \| 64 \| 1\.95e-3 \| 512 \| 4\.88e-4 \| 0 \| method \|/m,
+    /^\| 0 \| 0\.000 \| ok \| ok \| ok \| ok \| 64 \| 1\.95e-3 \| 512 \| 4\.88e-4 \| 0 \| the methods differ \|/m,
   );
   assert.match(
     report.markdown,
-    /^\| 0 \| sagittal \| 50 \| 0\.5000 \| 0\.4961 \| 0\.4961 \| 0\.5000 \| 3\.91e-3 \| ATTENTION \| method \|$/m,
+    /^\| 0 \| sagittal \| 50 \| 0\.5000 \| 0\.4961 \| 0\.4961 \| 0\.5000 \| 3\.91e-3 \| Side by side, worth a look \| the methods differ \|$/m,
   );
   for (const sentence of NOT_COVERED) assert.ok(report.markdown.includes(`- ${sentence}\n`), sentence);
-  assert.ok(NOT_COVERED.some((sentence) => /Rung R5g is recorded and never gated/.test(sentence)));
+  assert.ok(
+    NOT_COVERED.some((sentence) => /Check r5g sets the two side by side and holds them to no limit/.test(sentence)),
+  );
 });
 
 test("the lint takes a sentence about R5g as one of a recorded row", () => {

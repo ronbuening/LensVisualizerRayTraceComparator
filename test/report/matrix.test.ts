@@ -88,7 +88,7 @@ test("synthetic matrix golden, both files; fixed ordering, no engines or environ
   assert.equal(m.lensVisualizer?.details.commit, "c".repeat(40));
   assert.match(
     rendered.markdown,
-    /^\| r7b \| .* \| spot\.native \| lv, optiland \| in no baseline; run only where named \|$/m,
+    /^\| Spots and fans beside optiland's — `r7b` \| .* \| spot\.native \| lv, optiland \| in no baseline; run only where named \|$/m,
   );
 });
 
@@ -143,7 +143,7 @@ test("the rows name every rung of the policy, each by the mode, quantity and eng
   for (const row of MATRIX_ROWS) for (const sentence of [row.about, ...row.notCovered]) assert.match(sentence, /\.$/);
 });
 
-test("a figure a row says has no attention band has none in the policy at hand", () => {
+test("a figure a row says has no review band has none in the policy at hand", () => {
   const rungs = loadPolicy().rungs;
   const sentence = (tab: string, text: string): void =>
     assert.ok(
@@ -154,18 +154,18 @@ test("a figure a row says has no attention band has none in the policy at hand",
     for (const metric of metrics)
       assert.equal(rungs[rung].metrics?.[metric]?.attention, undefined, `${rung} ${metric}`);
   };
-  sentence("coma-bokeh", "The spot figures of R7b have no attention band");
+  sentence("coma-bokeh", "The spot figures of check r7b have no review band");
   unbanded("r7b", ["spotCentroid.maxAbs", "spotRmsRadius.maxAbs"]);
   assert.notEqual(rungs.r7b.metrics?.["fanError.maxAbs"]?.attention, undefined, "only its fan figure has one");
-  sentence("axial", "The colour figures of R8b have no attention band");
+  sentence("axial", "The colour figures of check r8b have no review band");
   unbanded("r8b", ["lineFocus.maxAbs", "relativeFocus.maxAbs"]);
   // R9b's one limit is the landing it sorts fields by, which is no band on a figure.
-  sentence("chief", "The figures of R9b have no attention band");
+  sentence("chief", "The figures of check r9b have no review band");
   unbanded(
     "r9b",
     Object.keys(rungs.r9b.metrics ?? {}).filter((metric) => metric !== "chiefLanding.maxAbs"),
   );
-  sentence("vignetting", "The relative illumination and the falloff of R11b have no attention band");
+  sentence("vignetting", "The relative illumination and the falloff of check r11b have no review band");
   unbanded("r11b", ["relativeIllumination.maxAbs", "falloff.maxAbs"]);
 });
 

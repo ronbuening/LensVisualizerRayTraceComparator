@@ -92,7 +92,7 @@ A check held to a limit hands two engines the same input and passes or fails. A 
 
 - Id: `r4`, to be renamed `geometric-mtf`.
 - Kind: held to a limit.
-- Compares: Comparator geometric MTF on identical rays.
+- Compares: This tool's geometric MTF of identical rays, as each engine traces them.
 - Shows: That one geometric MTF calculation of this tool, applied to each engine's trace of the same rays, gives curves within the limit of each other.
 - Does not show: What LensVisualizer's own MTF tab computes, or how a geometric MTF stands beside a diffraction MTF: other checks set those side by side.
 
@@ -100,7 +100,7 @@ A check held to a limit hands two engines the same input and passes or fails. A 
 
 - Id: `r4f`, to be renamed `lv-mtf-replay`.
 - Kind: held to a limit.
-- Compares: LV geometric MTF beside replay with LV's own sampling.
+- Compares: LensVisualizer's geometric MTF beside a replay of its own sampling.
 - Shows: That LensVisualizer's geometric MTF is, within the limit, the sum this tool forms of LensVisualizer's own sampled rays, with the same sampling grids, ray counts and field outcomes.
 - Does not show: Whether LensVisualizer's sampling is fine enough for the lens: the replay repeats LensVisualizer's choices and does not test them.
 
@@ -108,7 +108,7 @@ A check held to a limit hands two engines the same input and passes or fails. A 
 
 - Id: `r5`, to be renamed `mtf-vs-optiland-fft`.
 - Kind: side by side, no limit.
-- Compares: LV diffraction MTF beside optiland FFT and the LV-ray wave estimate.
+- Compares: LensVisualizer's diffraction MTF beside optiland's FFT MTF and the wave estimate of LensVisualizer's rays.
 - Shows: LensVisualizer's diffraction MTF set beside optiland's FFT MTF and this tool's wave estimate on LensVisualizer's rays, field by field, each difference sorted by its cause before it is shown.
 - Does not show: Which curve is nearer the lens: each engine uses its own pupil sampling, reference sphere and frequency axis, so a difference is written down and fails nothing. optiland's FFT gives one wavelength at a time, so a white-light run has no FFT row.
 
@@ -124,7 +124,7 @@ A check held to a limit hands two engines the same input and passes or fails. A 
 
 - Id: `r6a`, to be renamed `wave-mtf`.
 - Kind: held to a limit.
-- Compares: Comparator wave MTF on identical rays, in fields whose sampling settled.
+- Compares: This tool's wave MTF of identical rays, as each engine traces them, in fields whose sampling settled.
 - Shows: That one wave-optics MTF calculation of this tool, applied to each engine's optical paths of the same rays, gives curves within the limit of each other, in fields whose sampling settled.
 - Does not show: Fields whose sampling did not settle (a phase step above a quarter wave, or a move when the grid is doubled), which are set aside and not judged; nor what LensVisualizer's own diffraction MTF gives.
 
@@ -132,7 +132,7 @@ A check held to a limit hands two engines the same input and passes or fails. A 
 
 - Id: `r6b`, to be renamed `mtf-vs-wave-estimate`.
 - Kind: side by side, no limit.
-- Compares: LV sheared diffraction MTF beside comparator wave OTF on LV rays.
+- Compares: LensVisualizer's sheared diffraction MTF beside this tool's wave OTF of LensVisualizer's rays.
 - Shows: LensVisualizer's diffraction MTF set beside this tool's wave estimate on the rays LensVisualizer launches, field by field.
 - Does not show: Which estimate is nearer the lens: the two sample the pupil on grids of their own, so a difference is written down and fails nothing.
 
@@ -140,7 +140,7 @@ A check held to a limit hands two engines the same input and passes or fails. A 
 
 - Id: `r6c`, to be renamed `mtf-vs-optiland-wavefront`.
 - Kind: side by side, no limit.
-- Compares: LV, LV-ray wave OTF and FFT beside comparator OTF of optiland raw wavefronts.
+- Compares: LensVisualizer's MTF, the wave OTF of its rays and optiland's FFT MTF beside this tool's OTF of optiland's raw wavefronts.
 - Shows: LensVisualizer's diffraction MTF and the wave estimate set beside optiland's FFT MTF and this tool's OTF of optiland's raw wavefront samples, field by field.
 - Does not show: Which column is nearer the lens: no column is taken as the reference for another. The reference-sphere model and the FFT axes remain choices of each method.
 
@@ -156,7 +156,7 @@ A check held to a limit hands two engines the same input and passes or fails. A 
 
 - Id: `r7b`, to be renamed `spot-vs-optiland`.
 - Kind: side by side, no limit.
-- Compares: LV's coma and bokeh tabs beside optiland's SpotDiagram and RayFan.
+- Compares: LensVisualizer's coma and bokeh tabs beside optiland's SpotDiagram and RayFan.
 - Shows: LensVisualizer's spot and ray-fan figures set beside optiland's own spot diagram and ray fan of the field.
 - Does not show: Which spot is nearer the lens: the two engines sample the pupil on different rings, so the spot figures have no review band; only the fan figure has one.
 
@@ -172,7 +172,7 @@ A check held to a limit hands two engines the same input and passes or fails. A 
 
 - Id: `r8b`, to be renamed `axial-vs-optiland`.
 - Kind: side by side, no limit.
-- Compares: LV's spherical-aberration and axial-colour sections beside optiland's own rays and focus.
+- Compares: LensVisualizer's spherical-aberration and axial-colour sections beside optiland's own rays and focus.
 - Shows: LensVisualizer's spherical-aberration and axial-colour figures set beside those of optiland's own rays, aimed at the same points of the stop.
 - Does not show: Which figure is nearer the lens; the colour figures have no review band.
 
@@ -188,7 +188,7 @@ A check held to a limit hands two engines the same input and passes or fails. A 
 
 - Id: `r9b`, to be renamed `chief-vs-optiland`.
 - Kind: side by side, no limit.
-- Compares: LV's distortion, pupils and lateral-colour tabs beside optiland's distortion, chief rays and pupils.
+- Compares: LensVisualizer's distortion, pupils and lateral-colour tabs beside optiland's distortion, chief rays and pupils.
 - Shows: LensVisualizer's distortion curve, pupils and lateral colour set beside optiland's own distortion model, chief rays and pupils.
 - Does not show: Which figure is nearer the lens; no figure of this comparison has a review band.
 
@@ -204,7 +204,7 @@ A check held to a limit hands two engines the same input and passes or fails. A 
 
 - Id: `r10b`, to be renamed `field-curve-vs-optiland`.
 - Kind: side by side, no limit.
-- Compares: LV's field-curve sections beside optiland's FieldCurvature.
+- Compares: LensVisualizer's field-curve sections beside optiland's FieldCurvature.
 - Shows: LensVisualizer's tangential and sagittal focus shifts and astigmatism set beside optiland's own field-curvature analysis.
 - Does not show: Which focus is nearer the lens: LensVisualizer's foci are of a 0.01 mm pencil and optiland's of an infinitesimal one.
 
@@ -220,7 +220,7 @@ A check held to a limit hands two engines the same input and passes or fails. A 
 
 - Id: `r11b`, to be renamed `vignetting-vs-flux-estimate`.
 - Kind: side by side, no limit.
-- Compares: LV's vignetting tab beside flux, the comparator's estimate on LV's lattices.
+- Compares: LensVisualizer's vignetting tab beside this tool's flux estimate on LensVisualizer's lattices.
 - Shows: LensVisualizer's geometric transmission and relative illumination set beside this tool's flux estimate on LensVisualizer's own lattices.
 - Does not show: An external engine's view: optiland has no vignetting analysis, so the other side is this tool's own estimate. The relative illumination and the falloff have no review band.
 
@@ -228,7 +228,7 @@ A check held to a limit hands two engines the same input and passes or fails. A 
 
 - Id: `r12b`, to be renamed `summary-vs-optiland`.
 - Kind: side by side, no limit.
-- Compares: LV's summary tab and aperture control beside optiland's paraxial accessors and working f-number.
+- Compares: LensVisualizer's summary tab and aperture control beside optiland's paraxial accessors and working f-number.
 - Shows: LensVisualizer's focal length, entrance pupil, stop, f-numbers and track set beside optiland's own paraxial values and working f-number.
 - Does not show: The stop and the track as the work of two engines: optiland reads them back from the lens state, so they hold the tab to the lens state alone.
 
@@ -236,7 +236,7 @@ A check held to a limit hands two engines the same input and passes or fails. A 
 
 - Id: `r13b`, to be renamed `seidel-vs-optiland`.
 - Kind: side by side, no limit.
-- Compares: The comparator's Seidel sums (ref-seidel) beside optiland's.
+- Compares: This tool's Seidel sums of the reference model beside optiland's.
 - Shows: The third-order Seidel sums of this tool's reference model set beside optiland's own, surface by surface and in total.
 - Does not show: LensVisualizer, which shows no Seidel sums; nor optiland's chromatic sums, which optiland does not state.
 
@@ -244,7 +244,7 @@ A check held to a limit hands two engines the same input and passes or fails. A 
 
 - Id: `r14b`, to be renamed `zernike-vs-optiland`.
 - Kind: side by side, no limit.
-- Compares: optiland's Zernike fit beside the comparator's fit of the same raw wavefront samples (optiland-wave).
+- Compares: optiland's Zernike fit beside this tool's fit of the same raw wavefront samples.
 - Shows: optiland's Zernike fit set beside this tool's fit of the same raw wavefront samples, coefficient by coefficient.
 - Does not show: LensVisualizer, which shows no wavefront or Zernike coefficients. Both fits are of optiland's own wavefront, so neither tests optiland's tracing.
 
@@ -329,7 +329,7 @@ A side-by-side comparison sorts each difference by its cause before it shows it,
 | the inputs differ | `data` | The two answers are not of the same input (another field point or other wavelengths), so no difference is shown. |
 | a convention differs | `convention` | A declared transform between the two engines' conventions is missing. |
 | not converged | `numerical` | An engine says that its own sampling did not settle (in the Zernike comparison: the fit is ill-conditioned); the difference is shown apart, in no review band. |
-| the methods differ | `method` | Two methods, each standing by its own answer; the difference is held to the review band, if there is one. |
+| the methods differ | `method` | Two methods, each standing by its own answer; the difference is set beside the review band, if there is one. |
 
 | Label | Stored | Meaning |
 | --- | --- | --- |

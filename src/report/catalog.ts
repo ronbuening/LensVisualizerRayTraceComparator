@@ -8,7 +8,10 @@ import { gravestVerdict } from "../contract/baseline.ts";
 import { canonicalJson } from "../core/numeric/canonicalJson.ts";
 import { sha256Hex } from "../core/numeric/hash.ts";
 import { escapeCell } from "./markdown.ts";
-import { CATALOG_TEXT, NOT_COVERED, wordingProblems } from "./wording.ts";
+import { VERDICTS } from "../contract/comparison.ts";
+import { VERDICT_TEXT, checkOf, checkTitle, classLabel, verdictShort } from "../vocabulary/index.ts";
+import { checkName } from "./names.ts";
+import { CATALOG_LABELS, CATALOG_TEXT, NOT_COVERED, wordingProblems } from "./wording.ts";
 
 export const CATALOG_FILES = ["catalog.json", "catalog.mtf.json"] as const;
 export const CATALOG_JSON = "reports/catalog.json";
@@ -26,6 +29,11 @@ export function readCatalogInputs(root: string): CatalogInput[] {
     return [{ file, baseline: read.baseline }];
   });
 }
+/** Counts of verdicts as words: each count with the verdict's short label, in the order of `VERDICTS`. */
+const verdictCounts = (counted: Readonly<Record<string, number>>): string =>
+  VERDICTS.filter((verdict) => Object.hasOwn(counted, verdict))
+    .map((verdict) => `${counted[verdict]} ${verdictShort(verdict)}`)
+    .join("; ") || "none";
 const counts = (values: readonly string[]) =>
   Object.fromEntries([...new Set(values)].sort().map((key) => [key, values.filter((v) => v === key).length]));
 const codeOf = (problem: string) => problem.split(":", 1)[0];
@@ -215,71 +223,92 @@ export function renderCatalog(inputs: readonly CatalogInput[]) {
     metrics,
     failures,
   };
+  const L = CATALOG_LABELS;
   const lines = [
-    "# Catalog statistics",
+    `# ${L.title}`,
+    "",
+    CATALOG_TEXT.intro,
     "",
     report.complete ? CATALOG_TEXT.complete : CATALOG_TEXT.pending,
     "",
     CATALOG_TEXT.units,
     "",
-    "## Status counts",
+    `## ${L.statusCounts}`,
     "",
-    row(["Scope", "States", "State statuses", "Pair statuses"]),
+    row(L.statusColumns),
     "|---|---|---|---|",
-    row(["catalog", report.states, JSON.stringify(report.statuses), JSON.stringify(report.pairs)]),
+    row(["catalog", report.states, verdictCounts(report.statuses), verdictCounts(report.pairs)]),
   ];
   for (const [kind, groups] of [
-    ["Feature", report.byFeature],
-    ["Census reason", report.byCensusReason],
+    [L.feature, report.byFeature],
+    [L.censusReason, report.byCensusReason],
   ] as const)
     for (const [name, g] of Object.entries(groups))
-      lines.push(row([`${kind}: ${name}`, g.states, JSON.stringify(g.statuses), JSON.stringify(g.pairs)]));
-  lines.push(
-    "",
-    "## Unsupported census",
-    "",
-    CATALOG_TEXT.census,
-    "",
-    row(["Code", "Source states", "Engine rungs"]),
-    "|---|---|---|",
-  );
+      lines.push(row([kind(name), g.states, verdictCounts(g.statuses), verdictCounts(g.pairs)]));
+  lines.push("", `## ${L.census}`, "", CATALOG_TEXT.census, "", row(L.censusColumns), "|---|---|---|");
   for (const code of [
     ...new Set([...Object.keys(report.unsupported.source), ...Object.keys(report.unsupported.engineRungs)]),
   ].sort())
     lines.push(row([code, report.unsupported.source[code] ?? 0, report.unsupported.engineRungs[code] ?? 0]));
-  lines.push("", "## Gated pair figures", "", CATALOG_TEXT.quantiles, "");
+  lines.push("", `## ${L.figures}`, "", CATALOG_TEXT.quantiles, "");
   for (const metric of metrics) {
     lines.push(
-      `### ${metric.rung} / ${metric.name} (${metric.unit})`,
+      `### ${L.figure(checkName(metric.rung), metric.name, metric.unit)}`,
       "",
-      row(["Pairs", "Nonfinite", "Min", "Median", "p90", "p99", "Max"]),
+      row(L.quantileColumns),
       "|---|---|---|---|---|---|---|",
       row([metric.pairs, metric.nonfinite, ...Object.values(metric.quantiles)]),
       "",
-      row(["Run", "Engines", "Value"]),
+      row(L.worstColumns),
       "|---|---|---|",
     );
     for (const f of metric.worst) lines.push(row([f.run, f.engines.join(" / "), f.value]));
     lines.push("");
   }
-  lines.push(
-    "## Classified FAILs",
-    "",
-    CATALOG_TEXT.failures,
-    "",
-    row(["Run", "Rung", "Engines", "Metric", "Class", "Gotcha", "Reproducer"]),
-    "|---|---|---|---|---|---|---|",
-  );
+  lines.push(`## ${L.failures}`, "", CATALOG_TEXT.failures, "", row(L.failureColumns), "|---|---|---|---|---|---|---|");
   for (const f of failures)
     for (const c of f.classifications)
       lines.push(row([f.run, f.rung, f.engines.join(" / "), c.metric, c.class, c.gotcha, c.reproducer]));
+  // The verdicts and checks the statistics name, each with its label: the legend of what the tables show.
+  const groups = [...Object.values(report.byFeature), ...Object.values(report.byCensusReason)];
+  const named = new Set(
+    [report.statuses, report.pairs, ...groups.flatMap((g) => [g.statuses, g.pairs])].flatMap((g) => Object.keys(g)),
+  );
+  const verdicts = VERDICTS.filter((verdict) => named.has(verdict));
+  const checks = [...new Set([...metrics.map((m) => m.rung), ...failures.map((f) => f.rung)])];
   lines.push(
     "",
-    "## Sources",
+    `## ${L.howToRead}`,
+    "",
+    ...L.howToReadIntro,
+    "",
+    row(L.verdictColumns),
+    "|---|---|---|",
+    ...verdicts.map((verdict) => row([VERDICT_TEXT[verdict].label, `\`${verdict}\``, VERDICT_TEXT[verdict].meaning])),
+    "",
+    L.checksIntro,
+    "",
+    row(L.checkColumns),
+    "|---|---|---|",
+    ...checks.map((id) => row([checkTitle(id), `\`${id}\``, `${checkOf(id)?.compares ?? id}.`])),
+    "",
+    ...(failures.length === 0
+      ? []
+      : [
+          L.failuresIntro,
+          "",
+          row(L.classColumns),
+          "|---|---|",
+          ...[...new Set(failures.flatMap((f) => f.classifications.map((c) => c.class)))]
+            .sort()
+            .map((kind) => row([classLabel(kind), `\`${kind}\``])),
+          "",
+        ]),
+    `## ${L.sources}`,
     "",
     ...report.sources.map((s) => `- ${s.file}: ${s.sha256}`),
     "",
-    "## Not covered",
+    `## ${L.notCovered}`,
     "",
     ...NOT_COVERED.flatMap((t) => [`- ${t}`, ""]),
   );

@@ -196,9 +196,12 @@ test("write, then verify: the baseline is valid, canonical and keyed on run name
     for (const absent of ["$nd", rootDir, REPO_ROOT, "/Users/", "/home/", "\r", "T00:"])
       assert.ok(!file.includes(absent), absent);
   }
-  assert.match(markdown, /^# Baseline of pair$/m);
-  assert.match(markdown, /^\| selftest \| selftest\.echo \| 2 \| 2 \| fake-a – fake-near \| 2 PASS \| 2 PASS \|$/m);
-  assert.match(markdown, /^\| singlet \| 1 \| PASS: (sum\.abs|values\.maxAbs) \d\.\d\de-1\d \|$/m);
+  assert.match(markdown, /^# Baseline of pair: the ray checks$/m);
+  assert.match(
+    markdown,
+    /^\| Pipeline echo \(a test of this tool\) — `selftest` \| `selftest\.echo` \| 2 \| 2 \| fake-a – fake-near \| 2 Pass \| 2 Pass \|$/m,
+  );
+  assert.match(markdown, /^\| singlet \| 1 \| Pass: (sum\.abs|values\.maxAbs) \d\.\d\de-1\d \|$/m);
   assert.equal(JSON.parse(json).kind, "baseline-report");
 
   const verified = await lvrtc(rootDir, ["verify"]);
@@ -336,7 +339,7 @@ test("check: an engine whose answers moved past the tolerance is DRIFT, stale or
   assert.equal(lines.code, EXIT_FAILURE);
   assert.match(
     lines.out,
-    /^singlet +selftest +fake-a +fake-near +Changed beyond limits \(engine code changed\) +Fail +verdicts were 1 PASS, are 1 FAIL; /m,
+    /^singlet +selftest +fake-a +fake-near +Changed beyond limits \(engine code changed\) +Fail +verdicts were 1 Pass — now 1 Fail \| .*\(limit 1\.00e-12\)/m,
   );
   assert.match(lines.out, /^ {2}Changed beyond limits: in a check held to a limit a verdict changed/m);
   assert.match(lines.out, /^ {2}A pair fails, or ends in an error, today\.$/m);
@@ -452,7 +455,7 @@ test("verify fails on a report edited by hand, a baseline that is no baseline, a
     assert.equal((await lvrtc(rootDir, ["verify"])).code, EXIT_OK);
   };
 
-  writeFileSync(paths.markdown, good.markdown.replace("2 PASS", "3 PASS"));
+  writeFileSync(paths.markdown, good.markdown.replace("2 Pass", "3 Pass"));
   await failing(
     /^lvrtc verify: reports\/pair\/rays\.md: it is not what baselines\/pair\.json renders: it was edited by hand/m,
   );
