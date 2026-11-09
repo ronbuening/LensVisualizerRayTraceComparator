@@ -36,6 +36,7 @@ import { waveFrequencies } from "./mtfRecipe.ts";
 import type { MtfRecipe } from "./mtfRecipe.ts";
 import { canonicalJson } from "./numeric/canonicalJson.ts";
 import { encodeF8 } from "./numeric/ndarray.ts";
+import { LEGACY_CHECK_IDS, aliasCheckId } from "./legacyIds.ts";
 import { UsageError } from "./usageError.ts";
 
 /**
@@ -932,15 +933,19 @@ export const RUNGS: readonly RungDefinition[] = Object.freeze([
 /**
  * The rungs that `ids` name, in the order of `rungs` and each once, however `ids` orders or repeats them. When
  * `ids` is undefined, as for a run that states none: every rung but those that are run only where they are named
- * (`RungDefinition.onlyWhereNamed`). Throws a `UsageError` naming every id that is not
- * a rung, and for an empty list, which asks for nothing.
+ * (`RungDefinition.onlyWhereNamed`). An id that no rung of `rungs` has, but a rung had before it was renamed
+ * (`legacy`, `LEGACY_CHECK_IDS`), names the rung under its new id, and the command says so once (`aliasCheckId`). Throws a `UsageError` naming every id that
+ * is not a rung, and for an empty list, which asks for nothing.
  */
 export function selectRungs(
-  ids: readonly string[] | undefined,
+  asked: readonly string[] | undefined,
   rungs: readonly RungDefinition[] = RUNGS,
+  legacy: Readonly<Record<string, string>> = LEGACY_CHECK_IDS,
 ): RungDefinition[] {
-  if (ids === undefined) return rungs.filter((rung) => rung.onlyWhereNamed !== true);
+  if (asked === undefined) return rungs.filter((rung) => rung.onlyWhereNamed !== true);
   const known = rungs.map((rung) => rung.id);
+  // Only an id the ladder does not know is read as an old one: a rung of that very id (a test's stand-in) keeps it.
+  const ids = asked.map((id) => (known.includes(id) ? id : aliasCheckId(id, legacy)));
   const unknown = [...new Set(ids)].filter((id) => !known.includes(id));
   if (unknown.length > 0) {
     const named = unknown.map((id) => JSON.stringify(id)).join(", ");

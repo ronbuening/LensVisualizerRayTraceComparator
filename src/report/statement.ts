@@ -10,6 +10,8 @@ import type { Verdict } from "../contract/comparison.ts";
 import type { RungPolicy } from "../contract/policy.ts";
 import { canonicalJson } from "../core/numeric/canonicalJson.ts";
 import { sha256Hex } from "../core/numeric/hash.ts";
+import { LEGACY_IDS, currentIds } from "../core/legacyIds.ts";
+import type { LegacyMaps } from "../core/legacyIds.ts";
 import { escapeCell } from "./markdown.ts";
 import { buildMtfComparison } from "./mtfComparison.ts";
 import type { MtfComparisonRow } from "./mtfComparison.ts";
@@ -35,6 +37,11 @@ export const STATEMENT_MARKDOWN = "reports/validation-statement.md";
 export interface StatementInput {
   readonly file: string;
   readonly baseline: Baseline;
+}
+
+/** The inputs with every baseline under the ids of today (`currentIds`): a baseline may predate a rename. */
+function atCurrentIds(inputs: readonly StatementInput[], maps: LegacyMaps): StatementInput[] {
+  return inputs.map((input) => ({ ...input, baseline: currentIds(input.baseline, maps) }));
 }
 
 /** Reads only baselines, refusing incomplete inventories before anything is written. */
@@ -180,13 +187,15 @@ function counterpart(records: readonly RecordRung[], id: "r5" | "r6c", engine: s
 }
 
 /** Reduces sources in fixed order, deduplicating R4 in rays/MTF by suite and run, with MTF's measured counts. */
-export function buildStatement(inputs: readonly StatementInput[]) {
+export function buildStatement(inputs: readonly StatementInput[], maps: LegacyMaps = LEGACY_IDS) {
   if (
     inputs.length !== STATEMENT_FILES.length ||
     STATEMENT_FILES.some((file) => inputs.filter((i) => i.file === file).length !== 1)
   )
     throw new Error("statement needs exactly the eight suite baselines");
-  const sources = STATEMENT_FILES.map((file) => inputs.find((input) => input.file === file)!);
+  // Each baseline as its file holds it, for its hash, and under the ids of today for everything else (`currentIds`).
+  const files = STATEMENT_FILES.map((file) => inputs.find((input) => input.file === file)!);
+  const sources = atCurrentIds(files, maps);
   const policy = sources[0].baseline.policy;
   const records: RecordRung[] = [];
   const suites = STATEMENT_SUITES.map((suite) => {
@@ -361,7 +370,7 @@ export function buildStatement(inputs: readonly StatementInput[]) {
     .every((r) => r.verdicts.every((v) => v.verdict === "PASS" || v.verdict === "UNSUPPORTED"));
   const statement = {
     kind: "validation-statement",
-    sources: sources.map(({ file, baseline }) => ({
+    sources: files.map(({ file, baseline }) => ({
       file: `baselines/${file}`,
       sha256: sha256Hex(baselineText(baseline)),
     })),
@@ -389,12 +398,12 @@ export function buildStatement(inputs: readonly StatementInput[]) {
 export type ValidationStatement = ReturnType<typeof buildStatement>;
 
 /** Both deterministic texts; every prose sentence lives in wording.ts. */
-export function renderStatement(inputs: readonly StatementInput[]) {
+export function renderStatement(inputs: readonly StatementInput[], maps: LegacyMaps = LEGACY_IDS) {
   const L = STATEMENT_LABELS;
-  const statement = buildStatement(inputs);
+  const statement = buildStatement(inputs, maps);
   // The quantity of each check, as the baselines state it: what a field of a figure is (an angle or a fraction).
   const quantities = new Map(
-    inputs.flatMap(({ baseline }) =>
+    atCurrentIds(inputs, maps).flatMap(({ baseline }) =>
       baseline.runs.flatMap((run) => run.rungs.map((rung) => [rung.rung, rung.quantity])),
     ),
   );

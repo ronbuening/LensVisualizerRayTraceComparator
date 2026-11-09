@@ -3,14 +3,17 @@
 // ids stay in the lines, because they are what a user types.
 import {
   CHECKS,
+  ERROR_OUTPUT_TEXT,
   IDENTIFIERS_TEXT,
   LEGEND_TEXT,
   MODE_TEXT,
+  OLD_ID_TEXT,
   checkTitle,
   engineCodeTextOf,
   engineOf,
 } from "../vocabulary/index.ts";
 import { wrap } from "./help.ts";
+import type { AliasRead } from "../core/legacyIds.ts";
 
 /** Ids in the order of first appearance, each once. */
 export function distinct(ids: Iterable<string>): string[] {
@@ -146,4 +149,25 @@ export function engineIdentifierLines(engines: readonly IdentifiedEngine[], inde
           ],
     ),
   ).map((line) => `${" ".repeat(indent)}${line}`);
+}
+
+/**
+ * The one note of a command that read checks or engines under the ids they had before they were renamed: each old id
+ * with its new one, and what to write instead. Empty when it read none.
+ */
+export function aliasNoteLines(read: readonly AliasRead[]): string[] {
+  if (read.length === 0) return [];
+  const t = OLD_ID_TEXT;
+  const said = read.map((each) => `${t[each.kind]} ${each.old} ${t.isNow} ${each.now}`).join("; ");
+  return [`${t.note}: ${said}; ${t.advice}`];
+}
+
+/**
+ * What a usage error's code means and what to do, as lines to print under its message: empty for an error without a
+ * code the vocabulary knows (every usage error but a few).
+ */
+export function usageErrorMeans(error: unknown): string {
+  const code = (error as { readonly code?: unknown } | null)?.code;
+  const means = codeLines(typeof code === "string" ? code : null);
+  return means.length === 0 ? "" : `${ERROR_OUTPUT_TEXT.fix}:\n${means.join("\n")}\n`;
 }

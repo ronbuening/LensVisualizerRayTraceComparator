@@ -10,6 +10,8 @@ import { VERDICTS } from "../contract/comparison.ts";
 import type { Verdict } from "../contract/comparison.ts";
 import { canonicalJson } from "../core/numeric/canonicalJson.ts";
 import { sha256Hex } from "../core/numeric/hash.ts";
+import { LEGACY_IDS, currentIds } from "../core/legacyIds.ts";
+import type { LegacyMaps } from "../core/legacyIds.ts";
 import { escapeCell } from "./markdown.ts";
 import type { StatementInput } from "./statement.ts";
 import { ENGINE_DETAIL_TEXT, SUPPORT_STATUS_TEXT, engineName, valueLabel, verdictShort } from "../vocabulary/index.ts";
@@ -88,13 +90,15 @@ function rungCounts(records: readonly RungRecord[]) {
 }
 
 /** Reduces the two baselines in a fixed order, R4 (in both) once, with MTF's measured counts set aside. */
-export function buildMatrix(inputs: readonly StatementInput[]) {
+export function buildMatrix(inputs: readonly StatementInput[], maps: LegacyMaps = LEGACY_IDS) {
   if (
     inputs.length !== MATRIX_FILES.length ||
     MATRIX_FILES.some((file) => inputs.filter((i) => i.file === file).length !== 1)
   )
     throw new Error("the validation matrix needs exactly the benchmark's rays and MTF baselines");
-  const [rays, mtf] = MATRIX_FILES.map((file) => inputs.find((input) => input.file === file)!.baseline);
+  // Each baseline as its file holds it, for its hash, and under the ids of today for everything else (`currentIds`).
+  const files = MATRIX_FILES.map((file) => inputs.find((input) => input.file === file)!.baseline);
+  const [rays, mtf] = files.map((baseline) => currentIds(baseline, maps));
   for (const baseline of [rays, mtf])
     if (baseline.suite.name !== MATRIX_SUITE) throw new Error(`a baseline of ${baseline.suite.name}, not of benchmark`);
   if (
@@ -149,7 +153,7 @@ export function buildMatrix(inputs: readonly StatementInput[]) {
     kind: "validation-matrix",
     sources: MATRIX_FILES.map((file, index) => ({
       file: `baselines/${file}`,
-      sha256: sha256Hex(baselineText([rays, mtf][index])),
+      sha256: sha256Hex(baselineText(files[index])),
     })),
     suite: rays.suite,
     policy: rays.policy,
@@ -190,9 +194,9 @@ const verdictText = (verdicts: readonly { verdict: Verdict; count: number }[]) =
   verdicts.length === 0 ? "none" : verdicts.map((v) => `${v.count} ${verdictShort(v.verdict)}`).join("; ");
 
 /** Both deterministic texts; every prose sentence lives in wording.ts. */
-export function renderMatrix(inputs: readonly StatementInput[]) {
+export function renderMatrix(inputs: readonly StatementInput[], maps: LegacyMaps = LEGACY_IDS) {
   const L = MATRIX_LABELS;
-  const matrix = buildMatrix(inputs);
+  const matrix = buildMatrix(inputs, maps);
   const row = (cells: readonly unknown[]) => `| ${cells.map((cell) => escapeCell(String(cell))).join(" | ")} |`;
   const lv = matrix.lensVisualizer;
   const detail = (name: string) => (lv === null || lv.details[name] === undefined ? "none" : String(lv.details[name]));

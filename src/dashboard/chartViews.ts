@@ -24,6 +24,7 @@ import { DASHBOARD_TEXT } from "../report/wording.ts";
 import { figureAt, optionalFigureAt, pointerOf, resolvePointer } from "./figure.ts";
 import type { Curve, Derived, DocumentName, Figure, Source } from "./figure.ts";
 import type { Loaded } from "./sources.ts";
+import { currentCheckId } from "../core/legacyIds.ts";
 
 const TEXT = DASHBOARD_TEXT.charts;
 
@@ -323,7 +324,7 @@ function limitOf(inputs: SectionChartInputs, onAxis: boolean | null): Pick<MtfDi
   const { policyDocument, policy, rung } = inputs;
   if (policyDocument === null) return { limit: null, limitKind: null };
   const at = (metric: string, kind: "attention" | "tolerance"): Figure | null =>
-    optionalFigureAt(policyDocument, policy, ["rungs", rung, "metrics", metric, kind]);
+    optionalFigureAt(policyDocument, policy, ["rungs", currentCheckId(rung), "metrics", metric, kind]);
   if (onAxis !== null) {
     const attention = at(onAxis ? ON_AXIS_METRIC : OFF_AXIS_METRIC, "attention");
     if (attention !== null) return { limit: attention, limitKind: "attention" };

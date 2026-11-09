@@ -22,7 +22,8 @@ import { verifyCommand } from "./commands/verify.ts";
 import { CLI_TEXT } from "../vocabulary/cli.ts";
 import type { CliGroupEntry } from "../vocabulary/cli.ts";
 import { ERROR_OUTPUT_TEXT } from "../vocabulary/output.ts";
-import { codeLines } from "./output.ts";
+import { aliasNoteLines, codeLines } from "./output.ts";
+import { takeAliases } from "../core/legacyIds.ts";
 import { LvBindingError } from "../engines/lv/errors.ts";
 
 export { EXIT_FAILURE, EXIT_OK, EXIT_USAGE };
@@ -128,6 +129,8 @@ export async function runCli(
     io.stderr(`lvrtc: unknown command "${first}"\n\n${helpText(commands)}`);
     return EXIT_USAGE;
   }
+  // Ids read under their old names before this command are not its own.
+  takeAliases();
   try {
     return await command.run(rest, io);
   } catch (error) {
@@ -142,5 +145,8 @@ export async function runCli(
     );
     if (means.length > 0) io.stderr(`${ERROR_OUTPUT_TEXT.fix}:\n${means.join("\n")}\n`);
     return EXIT_FAILURE;
+  } finally {
+    // One note for the whole command, however often it read an old id.
+    for (const line of aliasNoteLines(takeAliases())) io.stderr(`${line}\n`);
   }
 }

@@ -2286,3 +2286,37 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   `node test/report/writeGolden.ts`, `lvrtc verify --write`, `statement`, `matrix`, `report catalog --catalog`; then
   every changed report holds the same hashes, and the same numbers but for those the change states (a legend, a
   band now shown, a unit "1" now in words).
+- **Legacy ids** (Stage 9.6, `src/core/legacyIds.ts`; imports nothing, in no engine closure): `LEGACY_CHECK_IDS` and
+  `LEGACY_ENGINE_IDS` (old to new, frozen, empty until 9.7 and 9.8), `currentCheckId`, `currentEngineId`,
+  `currentIds(baseline)` (every check and engine id of a baseline renamed, every list the writer sorts by engine
+  sorted again, pairs `a` before `b`; the same object where nothing is old), `legacyIdsOfRun`; every function takes
+  the maps as a parameter, so tests hand synthetic ones. Applied, each a no-op while the maps are empty: input
+  (`selectRungs`, `selectEngines`, `specAtCurrentIds` in `planJobs` for a run's rungs, engines, `referenceEngine` and
+  `sampling.engines` keys, `compare --reference`; an id is read as an old one only where the handed ladder, registry
+  or run does not know it, so a stand-in rung literally named `r5` keeps working; a suite's hash stays that of the
+  file as written; one stderr note per command from `runCli`, `aliasNoteLines` of `OLD_ID_TEXT`), `baseline check`
+  (`checkInIdSpace`: the committed baseline through `currentIds`, so `runEngines` and the rung selection see the new
+  ids; but a dated snapshot, the catalog, stays as written and today's run is read back to its ids by `snapshotIds`,
+  the inverse maps, asserted bijective by `inverseMaps`, before `classifyCatalog` and `checkBaseline`, so a listed
+  FAIL stays OK) and the `--replace` guard, `jobEstimateGiB`, `verifyReal`'s `rungsOf`, the
+  baseline and MTF report renderers (`baselineAtCurrentIds`; the report still names the hash of the file as written),
+  `buildStatement`/`renderStatement` and `buildMatrix`/`renderMatrix` (hashes of the raw files), and the dashboard's
+  policy pointers, `COUNTERPARTS` pairs, `GATED_HEADLINES`, `RUNGS.find`, baseline record lookups and the staleness
+  ask. `compare`, `report` and `baseline write` refuse a run directory whose run record or comparisons name an old
+  id (`refuseOldIds`, code `written-before-id-rename`, words and remedy in `src/vocabulary/codes.ts`);
+  `createEngineRegistry` refuses a configuration that defines an engine under an old id (`OldEngineIdError`,
+  `engine-defined-under-old-id`; not in `src/core/config.ts`, whose edit moves optiland-wave's revision). **Never**
+  map ids in `parseBaseline`, `readCatalogInputs`, `readKnownFailures`, `classifyCatalog`, `unusedKnownFailures`,
+  `baselineGateProblems`, `renderCatalog`, or a catalog baseline's reports (`baselineAtCurrentIds` keeps
+  `SNAPSHOT_BASELINE_SUITES` raw): the catalog keeps its ids until the end-of-project refresh. Guards in `npm test`:
+  `test/core/migrationGuard.test.ts` pins every built-in engine's adapter revision in full (and the worker's, restated
+  in TypeScript and held to `identity.py` where Python is), and the fingerprints of `ref` and `ref-seidel`: in 9.8
+  exactly the six renamed engines move, never `lv` or `optiland`; `test/core/requestSnapshot.test.ts` holds every
+  check's request ids and engine options on the fake LensVisualizer tree to `test/fixtures/request-snapshot.json`,
+  the file's check and engine names read under today's ids and each check's jobs in an order of their own
+  (`heldPart`), so the file stays unchanged through 9.7 and 9.8 (byte for byte only while the maps are empty);
+  rewrite it (`node test/core/writeRequestSnapshot.ts`, read the diff) only at the end-of-project refresh or for a
+  change meant to move a request id or option. No check or engine id is in a request
+  id, a spec or an option (the test asserts it); the store key names the engine id and its adapter revision, never a
+  check id, so 9.7 moves no request id or store key and 9.8 moves store keys only through the six engines' ids and
+  revisions.

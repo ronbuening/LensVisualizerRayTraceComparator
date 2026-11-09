@@ -246,6 +246,15 @@ export const ERROR_OUTPUT_TEXT = {
   fix: "What this means and what to do",
 } as const;
 
+/** The note a command prints once when it read a check or an engine under the id it had before it was renamed. */
+export const OLD_ID_TEXT = {
+  note: "note: some ids were read under their new names",
+  check: "check",
+  engine: "engine",
+  isNow: "is now",
+  advice: "write the new ids; the old ones will stop being read when the catalog is next refreshed",
+} as const;
+
 /** The identifiers `--details` shows: hashes that tell one engine version, lens state or request from another. */
 export const IDENTIFIERS_TEXT = {
   title: "Identifiers",

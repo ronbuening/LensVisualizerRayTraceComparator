@@ -13,7 +13,8 @@ import { REPORT_JSON_FILE, REPORT_MARKDOWN_FILE, renderReport } from "../../repo
 import { reportInputProblems } from "../../report/model.ts";
 import { EXIT_OK, EXIT_USAGE } from "../command.ts";
 import type { CliCommand } from "../command.ts";
-import { parseTargetArguments, resolveRunDirectory } from "../runTarget.ts";
+import { parseTargetArguments, refuseOldIds, resolveRunDirectory } from "../runTarget.ts";
+import { usageErrorMeans } from "../output.ts";
 import type { RunTargetInputs } from "../runTarget.ts";
 import { helpText, options, paragraph } from "../help.ts";
 
@@ -93,6 +94,7 @@ export function createReportCommand(inputs: ReportCommandInputs): CliCommand {
         directory = resolveRunDirectory(asked.target, asked.values.get("--root"), inputs);
         const manifest = readRunManifest(directory);
         const comparisons = readComparisonFile(directory);
+        refuseOldIds(directory, manifest, comparisons, inputs.legacy);
         const policy = inputs.policy ?? loadPolicy();
         const problems = reportInputProblems(manifest, comparisons, policy);
         if (problems.length > 0) throw new UsageError(`${directory}: ${problems.join("; ")}; run lvrtc compare again`);
@@ -108,7 +110,7 @@ export function createReportCommand(inputs: ReportCommandInputs): CliCommand {
         }
       } catch (error) {
         if (!(error instanceof UsageError)) throw error;
-        io.stderr(`lvrtc report: ${error.message}\n${SYNOPSIS}`);
+        io.stderr(`lvrtc report: ${error.message}\n${usageErrorMeans(error)}${SYNOPSIS}`);
         return EXIT_USAGE;
       }
       const jsonPath = join(directory, REPORT_JSON_FILE);

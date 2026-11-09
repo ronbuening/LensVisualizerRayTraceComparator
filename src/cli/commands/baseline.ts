@@ -1,4 +1,5 @@
 import { catalogFeatures, classifyCatalog, readKnownFailures, unclassifiedFailures } from "../../baseline/catalog.ts";
+import type { KnownFailure } from "../../baseline/catalog.ts";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 
@@ -41,7 +42,7 @@ import { reportInputProblems } from "../../report/model.ts";
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "../command.ts";
 import type { CliCommand } from "../command.ts";
 import { assertJobs, jobsOption, memoryBudgetOption } from "../jobs.ts";
-import { parseTargetArguments, resolveRunDirectory } from "../runTarget.ts";
+import { parseTargetArguments, refuseOldIds, resolveRunDirectory } from "../runTarget.ts";
 import type { RunTargetInputs } from "../runTarget.ts";
 import { compareRunDirectoryWithJobs } from "./compare.ts";
 import { prepareSuiteRun } from "./run.ts";
@@ -62,7 +63,9 @@ import {
   SORTING_LIMITS,
   SORTING_LIMIT_LABEL,
 } from "../../vocabulary/index.ts";
-import { codeLines, columns, countsText, engineIdentifierLines, legendLines } from "../output.ts";
+import { codeLines, columns, countsText, engineIdentifierLines, legendLines, usageErrorMeans } from "../output.ts";
+import { LEGACY_IDS, currentIds, snapshotIds } from "../../core/legacyIds.ts";
+import type { LegacyMaps } from "../../core/legacyIds.ts";
 
 /** What `lvrtc baseline` is wired to, injected so that tests choose it. */
 
@@ -195,6 +198,7 @@ async function write(
   const directory = resolveRunDirectory(asked.target, asked.values.get("--root"), inputs);
   const manifest = readRunManifest(directory);
   const comparisons = readComparisonFile(directory);
+  refuseOldIds(directory, manifest, comparisons, inputs.legacy);
   const policy = inputs.policy ?? loadPolicy();
   const stale = reportInputProblems(manifest, comparisons, policy);
   if (stale.length > 0) throw new UsageError(`${directory}: ${stale.join("; ")}; run lvrtc compare again`);
@@ -229,7 +233,10 @@ async function write(
       ...new Set(each.runs.flatMap((run) => run.rungs.map(({ rung }) => rung))),
     ];
     const has = rungsOf(baseline);
-    const lost = rungsOf(before.baseline).filter((rung) => !has.includes(rung));
+    // The baseline written before may name a check by an id it had before it was renamed: the same check.
+    const lost = rungsOf(currentIds(before.baseline, inputs.legacy ?? LEGACY_IDS)).filter(
+      (rung) => !has.includes(rung),
+    );
     if (lost.length > 0) {
       throw new UsageError(
         `${directory}: the run has no check ${lost.join(", ")}, which ${target} has: it is the run of other checks. ` +
@@ -325,11 +332,13 @@ async function check(
     }
     const read = parseBaseline(text);
     if ("problems" in read) throw new UsageError(`${file}: not a baseline: ${read.problems.join("; ")}`);
-    const committed = read.baseline;
+    const maps = inputs.legacy ?? LEGACY_IDS;
+    // What the suite is run on again is named by the ids of today, whatever ids the baseline was written with.
+    const named = currentIds(read.baseline, maps);
     const policy = inputs.policy ?? loadPolicy();
 
     const rungs: string[] = [];
-    for (const run of committed.runs) for (const { rung } of run.rungs) if (!rungs.includes(rung)) rungs.push(rung);
+    for (const run of named.runs) for (const { rung } of run.rungs) if (!rungs.includes(rung)) rungs.push(rung);
     assertJobs(jobs, memoryBudgetGiB, jobEstimateGiB(rungs));
     const result = await runSuite({
       suite,
@@ -337,7 +346,7 @@ async function check(
       jobs,
       runsDir: loaded.config.runsDir,
       sources: prepared.sources,
-      engines: runEngines(committed),
+      engines: runEngines(named),
       rungs,
       followUps: followUpsOf(policy),
     });
@@ -345,9 +354,9 @@ async function check(
     const comparisons = await compareRunDirectoryWithJobs(directory, policy, jobs);
     writeFileAtomic(join(directory, COMPARISONS_FILE), comparisonFileText(comparisons));
     const { manifest } = result;
-    const raw = catalogFeatures(buildBaseline(manifest, comparisons, policy, mtf ? MTF_BASELINE : {}), directory);
-    const fresh = classifyCatalog(raw, raw.suite.name === "catalog" ? readKnownFailures(rootDir) : []);
-    const records = checkBaseline(committed, fresh, policy);
+    const built = catalogFeatures(buildBaseline(manifest, comparisons, policy, mtf ? MTF_BASELINE : {}), directory);
+    const known = built.suite.name === "catalog" ? readKnownFailures(rootDir) : [];
+    const { committed, records } = checkInIdSpace(read.baseline, built, known, policy, maps);
     const changes = summarizeChanges(records);
 
     // What kept the suite from running as the baseline's did: each is an error of the check, whatever the records say.
@@ -456,6 +465,27 @@ async function check(
 }
 
 /**
+ * The records of a committed baseline against the baseline of today's run (`built`, not yet classified), each in the
+ * id space they can be held in together. A dated snapshot (`SNAPSHOT_BASELINE_SUITES`, the catalog) stays as written,
+ * and today's baseline is read back under the ids the snapshot and its known failures were written with
+ * (`snapshotIds`) before it is classified (`classifyCatalog`) and checked: a listed FAIL is then the same FAIL, its
+ * evidence hashed over the same pair. Any other baseline is read under the ids of today (`currentIds`). Returns the
+ * two baselines as held and the records. A pure function.
+ */
+export function checkInIdSpace(
+  file: Baseline,
+  built: Baseline,
+  known: readonly KnownFailure[],
+  policy: Policy,
+  maps: LegacyMaps = LEGACY_IDS,
+): { readonly committed: Baseline; readonly fresh: Baseline; readonly records: CheckRecord[] } {
+  const snapshot = SNAPSHOT_BASELINE_SUITES.includes(file.suite.name);
+  const committed = snapshot ? file : currentIds(file, maps);
+  const fresh = classifyCatalog(snapshot ? snapshotIds(built, maps) : built, known);
+  return { committed, fresh, records: checkBaseline(committed, fresh, policy) };
+}
+
+/**
  * The engines a baseline's suite is run on again: those the baseline names for a rung that compares the engines
  * of a run. A rung that is about engines of its own (`RungDefinition.engines`) asks those itself, whatever a run
  * names, so an engine that only such a rung has (the replay, for `r4f`) is named for no other rung, and no rung is
@@ -511,7 +541,7 @@ export function createBaselineCommand(inputs: BaselineCommandInputs): CliCommand
         throw new UsageError(`unknown action "${action}": the actions are write and check`);
       } catch (error) {
         if (!(error instanceof UsageError)) throw error;
-        io.stderr(`lvrtc baseline: ${error.message}\n${SYNOPSIS}`);
+        io.stderr(`lvrtc baseline: ${error.message}\n${usageErrorMeans(error)}${SYNOPSIS}`);
         return EXIT_USAGE;
       }
     },

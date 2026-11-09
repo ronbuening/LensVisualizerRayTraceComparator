@@ -22,6 +22,8 @@ import { hashCanonical } from "./numeric/hash.ts";
 import { orderedMap } from "./orderedMap.ts";
 import { profileAsync, profileStart } from "./profile.ts";
 import { UsageError } from "./usageError.ts";
+import { LEGACY_IDS, aliasCheckId, aliasEngineId } from "./legacyIds.ts";
+import type { LegacyMaps } from "./legacyIds.ts";
 
 /** What a case source makes of one run: the case of its lens, or every reason why there is none. */
 export type CaseResolution =
@@ -243,6 +245,55 @@ export interface LoadSuiteOptions {
   readonly rootDir: string;
   /** The case source of each lens kind. Without it, fixtures are read from `rootDir` and no other kind has one. */
   readonly sources?: CaseSources;
+}
+
+/** The check and engine ids a run's ids are read against: what the ladder and the registry know. */
+export interface KnownIds {
+  readonly checks: readonly string[];
+  readonly engines: readonly string[];
+}
+
+/**
+ * A RunSpec with every check and engine it names by an id that has been renamed under its new id: its rungs, its
+ * engines, its reference engine and the keys of `sampling.engines`. Only an id that `known` does not hold is read
+ * through the maps: a ladder or a registry that has an engine or a rung of that very id (a test's stand-in) keeps it.
+ * The command says once which ids it read so (`aliasCheckId`, `aliasEngineId`). The same object where it names none.
+ * Throws a `UsageError` for options stated for one engine under both of its ids.
+ */
+export function specAtCurrentIds(spec: RunSpec, known: KnownIds, maps: LegacyMaps = LEGACY_IDS): RunSpec {
+  const oldCheck = (id: string): boolean => !known.checks.includes(id) && Object.hasOwn(maps.checks, id);
+  const oldEngine = (id: string): boolean => !known.engines.includes(id) && Object.hasOwn(maps.engines, id);
+  const optioned = Object.keys(spec.sampling?.engines ?? {});
+  const names =
+    (spec.rungs ?? []).some(oldCheck) ||
+    (spec.engines ?? []).some(oldEngine) ||
+    (spec.referenceEngine !== undefined && oldEngine(spec.referenceEngine)) ||
+    optioned.some(oldEngine);
+  if (!names) return spec;
+  const check = (id: string): string => (oldCheck(id) ? aliasCheckId(id, maps.checks) : id);
+  const engine = (id: string): string => (oldEngine(id) ? aliasEngineId(id, maps.engines) : id);
+  const options = spec.sampling?.engines;
+  let engineOptions: NonNullable<RunSpec["sampling"]>["engines"] | undefined;
+  if (options !== undefined) {
+    const renamed: Record<string, (typeof options)[string]> = {};
+    for (const id of optioned) {
+      const now = engine(id);
+      if (Object.hasOwn(renamed, now)) {
+        throw new UsageError(`sampling.engines states options for ${now} under two ids`);
+      }
+      renamed[now] = options[id];
+    }
+    engineOptions = renamed;
+  }
+  return {
+    ...spec,
+    ...(spec.rungs === undefined ? {} : { rungs: spec.rungs.map(check) }),
+    ...(spec.engines === undefined ? {} : { engines: spec.engines.map(engine) }),
+    ...(spec.referenceEngine === undefined ? {} : { referenceEngine: engine(spec.referenceEngine) }),
+    ...(spec.sampling === undefined || engineOptions === undefined
+      ? {}
+      : { sampling: { ...spec.sampling, engines: engineOptions } }),
+  };
 }
 
 /**

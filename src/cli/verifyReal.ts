@@ -16,6 +16,7 @@ import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "./command.ts";
 import type { CliIo } from "./command.ts";
 import type { DoctorReport } from "./commands/doctor.ts";
 import { maxJobs } from "./jobs.ts";
+import { currentCheckId } from "../core/legacyIds.ts";
 import { helpText, options, paragraph } from "./help.ts";
 import { CHECK_LV_OUTPUT_TEXT, IDENTIFIERS_TEXT, STALE_REASON_TEXT, outcomeLabel } from "../vocabulary/index.ts";
 import { countsText, legendLines } from "./output.ts";
@@ -195,7 +196,10 @@ function baselineOf(rootDir: string, suite: string, kind: BaselineKind): string 
   return kind === "mtf" ? mtfBaselineFile(rootDir, suite) : baselineFile(rootDir, suite);
 }
 
-/** The rungs a baseline file has, in the order it first names them. */
+/**
+ * The rungs a baseline file has, in the order it first names them, each by its id of today: a baseline committed
+ * before a check was renamed names it by its old id (`currentCheckId`).
+ */
 function rungsOf(file: string): string[] {
   let runs: unknown;
   try {
@@ -206,7 +210,11 @@ function rungsOf(file: string): string[] {
   if (!Array.isArray(runs)) throw new UsageError(`${file}: not a baseline: it has no runs`);
   const rungs: string[] = [];
   for (const run of runs as { rungs?: { rung?: unknown }[] }[]) {
-    for (const { rung } of run.rungs ?? []) if (typeof rung === "string" && !rungs.includes(rung)) rungs.push(rung);
+    for (const { rung } of run.rungs ?? []) {
+      if (typeof rung !== "string") continue;
+      const now = currentCheckId(rung);
+      if (!rungs.includes(now)) rungs.push(now);
+    }
   }
   return rungs;
 }

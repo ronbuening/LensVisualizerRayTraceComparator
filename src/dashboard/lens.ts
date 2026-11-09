@@ -31,6 +31,7 @@ import type {
 import { caseDocument, figureAt, optionalFigureAt } from "./figure.ts";
 import type { Curve, Derived, DocumentName, Figure } from "./figure.ts";
 import type { CaseSummary, Loaded } from "./sources.ts";
+import { currentCheckId } from "../core/legacyIds.ts";
 
 const TEXT = DASHBOARD_TEXT.lens;
 const CHARTS = DASHBOARD_TEXT.charts;
@@ -386,7 +387,7 @@ function fieldOf(answer: Answer, element: number): { id: string; kind: string; f
 /** The rungs in the order of the ladder, those it does not know after them, sorted. */
 function ladderOrder(rungs: readonly string[]): string[] {
   const place = (rung: string): number => {
-    const at = RUNGS.findIndex((each) => each.id === rung);
+    const at = RUNGS.findIndex((each) => each.id === currentCheckId(rung));
     return at < 0 ? RUNGS.length : at;
   };
   return [...rungs].sort((a, b) => place(a) - place(b) || (a < b ? -1 : a > b ? 1 : 0));

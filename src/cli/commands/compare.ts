@@ -16,14 +16,15 @@ import { canonicalJson } from "../../core/numeric/canonicalJson.ts";
 import { STORE_DIRECTORY, createResultStore } from "../../core/resultStore.ts";
 import { profileAsync } from "../../core/profile.ts";
 import { UsageError } from "../../core/usageError.ts";
+import { aliasEngineId } from "../../core/legacyIds.ts";
 import { jobsOption, memoryBudgetOption } from "../jobs.ts";
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "../command.ts";
 import type { CliCommand } from "../command.ts";
-import { parseTargetArguments, resolveRunDirectory } from "../runTarget.ts";
+import { parseTargetArguments, refuseOldIds, resolveRunDirectory } from "../runTarget.ts";
 import type { RunTargetInputs } from "../runTarget.ts";
 import { helpText, options, paragraph } from "../help.ts";
 import { COMPARE_OUTPUT_TEXT, verdictLabel, verdictShort, modeLabel } from "../../vocabulary/index.ts";
-import { columns, countsText, legendLines } from "../output.ts";
+import { columns, countsText, legendLines, usageErrorMeans } from "../output.ts";
 
 /** What `lvrtc compare` is wired to, injected so that tests choose it. */
 export interface CompareCommandInputs extends RunTargetInputs {
@@ -179,14 +180,19 @@ export function createCompareCommand(inputs: CompareCommandInputs): CliCommand {
           throw new UsageError(`--mode ${mode}: the modes are ${Object.keys(MODE_CHOICES).join(", ")}`);
         }
         json = asked.flags.has("--json");
+        const reference = asked.values.get("--reference");
         const directory = resolveRunDirectory(asked.target, asked.values.get("--root"), inputs);
+        const manifest = readRunManifest(directory);
+        refuseOldIds(directory, manifest, null, inputs.legacy);
+        // An engine the run does not have by the id given, but had before a rename, is that engine (`aliasEngineId`).
+        const known = reference === undefined || manifest.engines.some((engine) => engine.id === reference);
         file = await profileAsync("compare", () =>
           compareRunDirectoryWithJobs(
             directory,
             inputs.policy ?? loadPolicy(),
             jobsOption(asked.values.get("--jobs"), memoryBudgetOption(asked.values.get("--memory-budget"))),
             {
-              reference: asked.values.get("--reference"),
+              reference: known ? reference : aliasEngineId(reference, inputs.legacy?.engines),
               modes: MODE_CHOICES[mode],
             },
           ),
@@ -194,7 +200,7 @@ export function createCompareCommand(inputs: CompareCommandInputs): CliCommand {
         path = join(directory, COMPARISONS_FILE);
       } catch (error) {
         if (!(error instanceof UsageError)) throw error;
-        io.stderr(`lvrtc compare: ${error.message}\n${SYNOPSIS}`);
+        io.stderr(`lvrtc compare: ${error.message}\n${usageErrorMeans(error)}${SYNOPSIS}`);
         return EXIT_USAGE;
       }
       writeFileAtomic(path, comparisonFileText(file));

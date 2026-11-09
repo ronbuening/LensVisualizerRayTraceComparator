@@ -6,6 +6,8 @@ import { isAbsolute, join, resolve } from "node:path";
 import { loadConfig } from "../core/config.ts";
 import { MANIFEST_FILE } from "../core/manifest.ts";
 import { UsageError } from "../core/usageError.ts";
+import { LEGACY_IDS, LEGACY_RUN_CODE, legacyIdsOfRun } from "../core/legacyIds.ts";
+import type { LegacyMaps } from "../core/legacyIds.ts";
 import { parseArguments } from "./arguments.ts";
 
 /** What a command that reads a run directory is wired to, injected so that tests choose all three. */
@@ -15,6 +17,28 @@ export interface RunTargetInputs {
   readonly env: Readonly<Record<string, string | undefined>>;
   /** The directory that a run directory and `--root` are relative to. */
   readonly cwd: string;
+  /** The ids renamed since a run may have been written (`LEGACY_IDS` unless a test gives others). */
+  readonly legacy?: LegacyMaps;
+}
+
+/** A run directory written before a check or an engine was renamed: a usage error with a code the vocabulary explains. */
+export class OldIdsRunError extends UsageError {
+  readonly code: string = LEGACY_RUN_CODE;
+}
+
+/**
+ * Refuses a run directory whose run record (or comparisons, when given) names a check or an engine by an id it had
+ * before it was renamed: `lvrtc compare`, `report` and `baseline write` read only a run written with the ids of today,
+ * so that nothing they write keeps an old id. Throws an `OldIdsRunError` naming each old id.
+ */
+export function refuseOldIds(
+  directory: string,
+  manifest: Parameters<typeof legacyIdsOfRun>[0],
+  comparisons: Parameters<typeof legacyIdsOfRun>[1],
+  maps: LegacyMaps = LEGACY_IDS,
+): void {
+  const old = legacyIdsOfRun(manifest, comparisons, maps);
+  if (old.length > 0) throw new OldIdsRunError(`${LEGACY_RUN_CODE}: ${directory}: it names ${old.join(", ")}`);
 }
 
 /** A command line read: the one target it names, the value of each option that takes one, and the flags set. */

@@ -244,6 +244,14 @@ export const CODES: Readonly<Record<string, CodeText>> = {
   "lines.polychromatic": {
     sentence: "optiland's FFT MTF is of one wavelength, so a lens state of several wavelengths has no FFT answer.",
     remedy: "",
+  }, // A run directory or a configuration that names a check or an engine by the id it had before it was renamed.
+  "written-before-id-rename": {
+    sentence: "The run was written before some check or engine ids were renamed, so its records name the old ids.",
+    remedy: "Run the suite again: the new run is written with the new ids.",
+  },
+  "engine-defined-under-old-id": {
+    sentence: "The configuration defines an engine under an id that has been renamed.",
+    remedy: "Rename the engine's entry under engines in lvrtc.config.json or lvrtc.local.json to its new id.",
   },
 };
 

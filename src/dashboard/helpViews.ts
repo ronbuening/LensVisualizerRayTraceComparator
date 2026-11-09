@@ -18,6 +18,7 @@ import type { CheckKind } from "../vocabulary/index.ts";
 import { figureAt, optionalFigureAt } from "./figure.ts";
 import type { DocumentName, Figure } from "./figure.ts";
 import type { Loaded, PolicyAtHand } from "./sources.ts";
+import { currentCheckId } from "../core/legacyIds.ts";
 
 /** A label as a page shows it, the value the files store, and what it means. */
 export interface LabelEntry {
@@ -109,7 +110,7 @@ export function buildChecksView(policy: Loaded<PolicyAtHand>): ChecksView {
     const limitOf = (metric: string, member: string): Figure | null =>
       atHand === null || document === null
         ? null
-        : optionalFigureAt(document, atHand.policy, ["rungs", check.id, "metrics", metric, member]);
+        : optionalFigureAt(document, atHand.policy, ["rungs", currentCheckId(check.id), "metrics", metric, member]);
     return {
       id: json.id,
       newId: json.newId,

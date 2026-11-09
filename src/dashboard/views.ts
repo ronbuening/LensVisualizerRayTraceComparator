@@ -38,6 +38,7 @@ import type { CompareSummary } from "./compare.ts";
 import { caseNowOf, recordStaleness, stalenessBasis } from "./staleness.ts";
 import type { StalenessBasis } from "./staleness.ts";
 import type { Loaded, PolicyAtHand } from "./sources.ts";
+import { currentCheckId } from "../core/legacyIds.ts";
 
 /** How the numbers a view computes are derived, in the words the pages show on hover. */
 const DERIVATIONS = DASHBOARD_TEXT.derivations;
@@ -744,7 +745,13 @@ function mtfOf(context: SectionContext, setIndex: number, rung: string, table: M
   const band = (metric: string): Figure | null =>
     context.policyDocument === null
       ? null
-      : optionalFigureAt(context.policyDocument, context.policy, ["rungs", rung, "metrics", metric, "attention"]);
+      : optionalFigureAt(context.policyDocument, context.policy, [
+          "rungs",
+          currentCheckId(rung),
+          "metrics",
+          metric,
+          "attention",
+        ]);
   const onAxis = band(ON_AXIS_METRIC);
   const offAxis = band(OFF_AXIS_METRIC);
   const policyLanding = band(CHIEF_LANDING_METRIC);
@@ -866,7 +873,7 @@ export function buildSectionView(
   const mtf = section.mtf === undefined ? null : mtfOf(context, indices[0], section.rung, section.mtf);
 
   const columns = section.columns.map((column): ColumnView => {
-    const metric = ["rungs", section.rung, "metrics", column.name];
+    const metric = ["rungs", currentCheckId(section.rung), "metrics", column.name];
     const chief = column.name === CHIEF_LANDING_METRIC && mtf !== null && mtf.bands.chiefLandingMm !== null;
     const limit =
       column.limit === undefined || context.policyDocument === null

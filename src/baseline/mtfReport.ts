@@ -27,7 +27,9 @@ import {
 } from "../report/wording.ts";
 import type { MtfComparisonKind, MtfRowStatus } from "../report/wording.ts";
 import { checkName, placeText } from "../report/names.ts";
-import { buildBaselineReport, count, renderBaselineMarkdown, table } from "./report.ts";
+import { baselineAtCurrentIds, buildBaselineReport, count, renderBaselineMarkdown, table } from "./report.ts";
+import { LEGACY_IDS } from "../core/legacyIds.ts";
+import type { LegacyMaps } from "../core/legacyIds.ts";
 import type { BaselineReport, ReportRung } from "./report.ts";
 
 /** The names of an MTF baseline's two report files, inside `reports/<suite>/`. */
@@ -147,9 +149,10 @@ function aboveBand(
  * rung the support, the pairs and a row per run), and beside it the later steps of the engines, every request of a
  * recorded rung that is `ATTENTION` with the figures above their bands, and for each rung that keeps its requests
  * the table of the engines' own MTF (`buildMtfComparison`, from the kept values and the kept bands) at the shown
- * frequencies, a row per run, field and cut. A pure function of the baseline.
+ * frequencies, a row per run, field and cut. `source` is the baseline as its file holds it, whose hash the report
+ * names (`buildBaselineReport`). A pure function of the baseline.
  */
-export function buildMtfBaselineReport(baseline: Baseline): MtfBaselineReport {
+export function buildMtfBaselineReport(baseline: Baseline, source: Baseline = baseline): MtfBaselineReport {
   const wavefrontTables: { run: string; table: MtfComparison }[] = [];
   const steps: (BaselineStep & { rung: string; run: string })[] = [];
   const attention: MtfAttentionRow[] = [];
@@ -294,7 +297,7 @@ export function buildMtfBaselineReport(baseline: Baseline): MtfBaselineReport {
       });
     }
   }
-  const { kind: _kind, ...report } = buildBaselineReport(baseline);
+  const { kind: _kind, ...report } = buildBaselineReport(baseline, source);
   return {
     ...report,
     // The version the baseline states: that of the members this report is made from.
@@ -598,14 +601,17 @@ export function mtfReportSpectra(baseline: Baseline): MtfReportSpectrum[] {
 }
 
 /**
- * The MTF report of a baseline as the texts of its two files: the report (`buildMtfBaselineReport`) as canonical
- * JSON and a newline, and `renderMtfBaselineMarkdown` of it. A pure function: equal baselines give equal texts.
+ * The MTF report of a baseline as the texts of its two files: the report (`buildMtfBaselineReport`) of it under its
+ * ids of today (`baselineAtCurrentIds`) as canonical JSON and a newline, and `renderMtfBaselineMarkdown` of it. A pure
+ * function: equal baselines give equal texts.
  */
 export function renderMtfBaselineReport(
-  baseline: Baseline,
+  source: Baseline,
   head?: readonly string[],
+  maps: LegacyMaps = LEGACY_IDS,
 ): { json: string; markdown: string } {
-  const report = buildMtfBaselineReport(baseline);
+  const baseline = baselineAtCurrentIds(source, maps);
+  const report = buildMtfBaselineReport(baseline, source);
   return {
     json: `${canonicalJson(report)}\n`,
     markdown: renderMtfBaselineMarkdown(report, head, mtfReportSpectra(baseline), mtfReportBands(baseline)),

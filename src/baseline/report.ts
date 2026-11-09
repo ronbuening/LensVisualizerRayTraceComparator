@@ -37,6 +37,9 @@ import {
   verdictShort,
 } from "../vocabulary/index.ts";
 import { baselineText } from "./build.ts";
+import { SNAPSHOT_BASELINE_SUITES } from "../compare/policyFile.ts";
+import { LEGACY_IDS, currentIds } from "../core/legacyIds.ts";
+import type { LegacyMaps } from "../core/legacyIds.ts";
 
 /** The names of a baseline's two report files, inside `reports/<suite>/`. */
 export const BASELINE_REPORT_JSON = "rays.json";
@@ -197,9 +200,10 @@ function takeWorstValue(into: Map<string, WorstMetric>, metric: BaselineMetric, 
  * Builds the report of a baseline: its inputs, and for each rung, in the order the baseline first has it, the
  * support of each engine over the runs, every pair of engines over the runs (verdicts by request and by run, and
  * the worst of each metric with the run it occurs in), and a row per run with each pair's verdict and worst
- * figure. A pure function of the baseline.
+ * figure. `source` is the baseline as its file holds it, whose hash the report names, where `baseline` is that with
+ * its ids of today (`baselineAtCurrentIds`). A pure function of the baseline.
  */
-export function buildBaselineReport(baseline: Baseline): BaselineReport {
+export function buildBaselineReport(baseline: Baseline, source: Baseline = baseline): BaselineReport {
   const order: string[] = [];
   for (const run of baseline.runs) for (const { rung } of run.rungs) if (!order.includes(rung)) order.push(rung);
 
@@ -269,7 +273,7 @@ export function buildBaselineReport(baseline: Baseline): BaselineReport {
   return {
     contract: CONTRACT_VERSION,
     kind: "baseline-report",
-    baseline: sha256Hex(baselineText(baseline)),
+    baseline: sha256Hex(baselineText(source)),
     suite: baseline.suite,
     policy: baseline.policy,
     engines: baseline.engines,
@@ -665,10 +669,23 @@ export function renderBaselineMarkdown(report: BaselineReport, layout: BaselineR
 }
 
 /**
- * The report of a baseline as the texts of its two files: the report (`buildBaselineReport`) as canonical JSON and
- * a newline, and `renderBaselineMarkdown` of it. A pure function: equal baselines give equal texts, byte for byte.
+ * A baseline as a report shows it: with every check and engine under its id of today (`currentIds`), but for a dated
+ * snapshot (`SNAPSHOT_BASELINE_SUITES`, the catalog), whose reports keep the ids it was written with until it is
+ * refreshed.
  */
-export function renderBaselineReport(baseline: Baseline): { json: string; markdown: string } {
-  const report = buildBaselineReport(baseline);
+export function baselineAtCurrentIds(baseline: Baseline, maps: LegacyMaps = LEGACY_IDS): Baseline {
+  return SNAPSHOT_BASELINE_SUITES.includes(baseline.suite.name) ? baseline : currentIds(baseline, maps);
+}
+
+/**
+ * The report of a baseline as the texts of its two files: the report (`buildBaselineReport`) of it under its ids of
+ * today (`baselineAtCurrentIds`) as canonical JSON and a newline, and `renderBaselineMarkdown` of it. A pure function:
+ * equal baselines give equal texts, byte for byte.
+ */
+export function renderBaselineReport(
+  baseline: Baseline,
+  maps: LegacyMaps = LEGACY_IDS,
+): { json: string; markdown: string } {
+  const report = buildBaselineReport(baselineAtCurrentIds(baseline, maps), baseline);
   return { json: `${canonicalJson(report)}\n`, markdown: renderBaselineMarkdown(report) };
 }

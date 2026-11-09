@@ -31,6 +31,7 @@ import { caseDocument, figureAt, optionalFigureAt } from "./figure.ts";
 import type { DocumentName, Figure } from "./figure.ts";
 import type { LensRunRef } from "./lens.ts";
 import type { CaseSummary, Loaded } from "./sources.ts";
+import { currentCheckId, currentEngineId } from "../core/legacyIds.ts";
 
 const TEXT = DASHBOARD_TEXT.compare;
 
@@ -80,13 +81,15 @@ export interface CompareTab {
 
 /** Whether a recorded rung sets LensVisualizer beside a counterpart: its own engines name one. */
 function hasCounterpart(rung: string): boolean {
-  const engines = RUNGS.find((each) => each.id === rung)?.engines ?? [];
+  const engines = RUNGS.find((each) => each.id === currentCheckId(rung))?.engines ?? [];
   return engines.includes(LV_ENGINE) && engines.some((engine) => COUNTERPARTS.includes(engine));
 }
 
 /** The counterparts of LensVisualizer that some of `rungs` are asked of, in the order of `COUNTERPARTS`. */
 function counterpartsOf(rungs: readonly string[]): string[] {
-  const engines = new Set(rungs.flatMap((rung) => RUNGS.find((each) => each.id === rung)?.engines ?? []));
+  const engines = new Set(
+    rungs.flatMap((rung) => RUNGS.find((each) => each.id === currentCheckId(rung))?.engines ?? []),
+  );
   return COUNTERPARTS.filter((engine) => engines.has(engine));
 }
 
@@ -101,9 +104,12 @@ export const COMPARE_TABS: readonly CompareTab[] = Object.freeze(
   })),
 );
 
-/** Whether a pair is of LensVisualizer and a counterpart. */
+/** Whether a pair is of LensVisualizer and a counterpart, either named by an id it had before a rename or by today's. */
 function counterpartPair(a: string, b: string): boolean {
-  return (a === LV_ENGINE && COUNTERPARTS.includes(b)) || (b === LV_ENGINE && COUNTERPARTS.includes(a));
+  const [first, second] = [currentEngineId(a), currentEngineId(b)];
+  return (
+    (first === LV_ENGINE && COUNTERPARTS.includes(second)) || (second === LV_ENGINE && COUNTERPARTS.includes(first))
+  );
 }
 
 // ── Inputs ───────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -543,7 +549,7 @@ function gatedLine(
   caseIds: readonly string[],
   rung: string,
 ): GatedLine {
-  const metric = GATED_HEADLINES[rung] ?? null;
+  const metric = GATED_HEADLINES[currentCheckId(rung)] ?? null;
   const byPair = new Map<string, { a: string; b: string; verdicts: { verdict: Verdict; count: number }[] }>();
   const candidates: { a: string; b: string; value: Figure }[] = [];
   const add = (a: string, b: string, verdicts: readonly { verdict: Verdict; count: number }[]): void => {
@@ -576,7 +582,8 @@ function gatedLine(
     for (const { stem, baseline, runsOfCase } of inputs.baselines) {
       for (const caseId of caseIds) {
         for (const place of runsOfCase.get(caseId) ?? []) {
-          const rungAt = baseline.runs[place].rungs.findIndex((each) => each.rung === rung);
+          // A baseline committed before a rename names the check by its old id.
+          const rungAt = baseline.runs[place].rungs.findIndex((each) => currentCheckId(each.rung) === rung);
           if (rungAt < 0) continue;
           if (!stems.includes(stem)) stems.push(stem);
           baseline.runs[place].rungs[rungAt].pairs.forEach((record, pairAt) => {
@@ -654,7 +661,13 @@ function metricViews(
     const attention =
       inputs.policy === null
         ? null
-        : optionalFigureAt(inputs.policy.document, inputs.policy.policy, ["rungs", rung, "metrics", name, "attention"]);
+        : optionalFigureAt(inputs.policy.document, inputs.policy.policy, [
+            "rungs",
+            currentCheckId(rung),
+            "metrics",
+            name,
+            "attention",
+          ]);
     const sorting = SORTING_METRICS.includes(name);
     out.push({ name, unit, value, band: sorting ? null : attention, limit: sorting ? attention : null });
   });
@@ -731,7 +744,7 @@ function recordedLines(
     for (const caseId of caseIds) {
       for (const place of runsOfCase.get(caseId) ?? []) {
         const run = baseline.runs[place];
-        const rungAt = run.rungs.findIndex((each) => each.rung === rung);
+        const rungAt = run.rungs.findIndex((each) => currentCheckId(each.rung) === rung);
         if (rungAt < 0) continue;
         run.rungs[rungAt].pairs.forEach((record, pairAt) => {
           if (!counterpartPair(record.a, record.b)) return;

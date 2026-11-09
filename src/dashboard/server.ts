@@ -68,6 +68,7 @@ import {
   runReport,
   runSummary,
 } from "./views.ts";
+import { currentEngineId } from "../core/legacyIds.ts";
 
 /** The port `lvrtc serve` listens on unless `--port` names another. */
 export const DEFAULT_PORT = 8077;
@@ -159,7 +160,8 @@ export function baselineEngineIds(sources: DashboardSources): string[] {
   const ids = new Set<string>();
   for (const stem of sources.baselineStems()) {
     const loaded = sources.baseline(stem);
-    if (loaded.state === "ok") for (const engine of loaded.value.engines) ids.add(engine.id);
+    // Asked by the id of today: a baseline committed before a rename names an engine by its old id.
+    if (loaded.state === "ok") for (const engine of loaded.value.engines) ids.add(currentEngineId(engine.id));
   }
   return [...ids].sort();
 }
