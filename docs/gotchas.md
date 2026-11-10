@@ -4,6 +4,12 @@ Behaviours of an engine that a comparison must know about, each with where it li
 it does to a comparison, and how the comparator deals with it. An entry is here because an engine really does
 this, not because a tolerance was hard to meet: no gate is loosened for any of them.
 
+**Identifiers.** The entries below keep the ids of their time: rungs R0 to R14b (`r2`, `--rungs`) and the engines
+`ref`, `ref-seidel`, `replay`, `wave`, `flux` and `optiland-wave`, each a name of the same check or engine as its
+id today (Stages 9.7 and 9.8: R2 is the check `ray-trace`, `ref` the engine `reference-tracer`). The table of old and
+new ids is in [REFERENCE.md](REFERENCE.md#identifiers); `lvrtc glossary <old id>` says what one is now. A heading
+`docs/known-failures.json` links is kept as it is.
+
 Each entry has a **class**, the one the plan's ladder uses when two answers differ:
 
 | Class | The difference comes from |

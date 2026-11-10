@@ -5,38 +5,36 @@
 | Input | Value |
 |---|---|
 | Suite | r9a-stand-ins |
-| Suite hash | 6cb480ef6b12d1f5a11a74209c19f2938e4df149a64720e4bef1d619e9394ec4 |
 | Contract version | 1.0 |
 | Limits file | v1 |
-| Limits file hash | ef14bfca5bca920713f866546fba5af46d7a0bd33c277b6975aaedf61a54e2ab |
 
 ### Engines
 
-| Engine | Status | Version | Engine code | This tool's code behind it |
-|---|---|---|---|---|
-| moved | available | 1 | 1285061cefc83b4538eba70d6a45fc6f0186be2b876f122a3721e150c5a34ed3 | 49ce9a07661a4cb64d5850ff62a4c3ac138b08fee37d05c86596498dcd7db117 |
-| reference-tracer | available | 1 | 1285061cefc83b4538eba70d6a45fc6f0186be2b876f122a3721e150c5a34ed3 | 49ce9a07661a4cb64d5850ff62a4c3ac138b08fee37d05c86596498dcd7db117 |
-| stopped | available | 1 | 1285061cefc83b4538eba70d6a45fc6f0186be2b876f122a3721e150c5a34ed3 | 49ce9a07661a4cb64d5850ff62a4c3ac138b08fee37d05c86596498dcd7db117 |
+| Engine | Status | Version |
+|---|---|---|
+| moved | available | 1 |
+| reference-tracer | available | 1 |
+| stopped | available | 1 |
 
 ### Runs
 
-| Run | Lens state | Status |
-|---|---|---|
-| lens | 5e86575ae0af7493b28942da1d0fa71b4683e02ce17743e04724058ddd28addd | run |
+| Run | Status |
+|---|---|
+| lens | run |
 
 ## Verdict summary
 
 5 of 5 pairs are Fail or Error.
 
-| Verdict | reference-vs-each | pairwise |
+| Verdict | against the reference | every pair |
 |---|---|---|
-| PASS | 0 | 0 |
-| FAIL | 2 | 3 |
-| RECORDED | 0 | 0 |
-| ATTENTION | 0 | 0 |
-| UNSUPPORTED | 0 | 0 |
-| BLOCKED | 0 | 0 |
-| ERROR | 0 | 0 |
+| Pass: within limit | 0 | 0 |
+| Fail: beyond limit | 2 | 3 |
+| Side by side | 0 | 0 |
+| Side by side, worth a look | 0 | 0 |
+| Not computed | 0 | 0 |
+| Not judged (an earlier check failed) | 0 | 0 |
+| Error | 0 | 0 |
 
 ## Consensus
 
@@ -76,7 +74,7 @@ Of 1 request with a consensus to look for, 0 have one.
 
 #### Chief rays (distortion, pupils, lateral colour) — `chief-rays`, request 1 of 2
 
-Quantity `rays.trace`: one estimator on each engine's trace of the same rays; held to a limit. Request `add1a7c3107bb0766d1c4d60bc944e33b6a4e4831df3a7320ad908eb8c5bc7b4`.
+Quantity `rays.trace`: one estimator on each engine's trace of the same rays; held to a limit.
 
 Reference vs each, against `reference-tracer`:
 
@@ -125,8 +123,8 @@ What this comparison does not show, whatever its verdicts:
 
 ## How to read this
 
-Each pair of engines that answered one request gets one verdict. A table of this report shows its stored value;
-this is its label and what it means:
+Each pair of engines that answered one request gets one verdict. The verdict summary shows its label; the other
+tables of this report show its stored value. This is each label, its stored value and what it means:
 
 | Label | Stored value | Meaning |
 |---|---|---|
@@ -153,3 +151,28 @@ A value written down has 9 significant digits, or is a whole number in full, and
 element. `—` marks a place with nothing to compare, and `not finite` a number that is a NaN or an infinity.
 The reference-vs-each table and the pairwise matrix judge a pair alike, so a pair that is in both has the same
 verdict in both.
+
+## Identifiers
+
+The hashes that tell one version from another: of the suite file and of the limits file; of each engine's code
+and, for an engine of this tool's own, of this tool's code behind it; of each run's lens state; and of each
+request a section of the results is of.
+
+| Identifier | Value |
+|---|---|
+| Suite file | 6cb480ef6b12d1f5a11a74209c19f2938e4df149a64720e4bef1d619e9394ec4 |
+| Limits file | ef14bfca5bca920713f866546fba5af46d7a0bd33c277b6975aaedf61a54e2ab |
+
+| Engine | Engine code | This tool's code behind it |
+|---|---|---|
+| moved | 1285061cefc83b4538eba70d6a45fc6f0186be2b876f122a3721e150c5a34ed3 | 49ce9a07661a4cb64d5850ff62a4c3ac138b08fee37d05c86596498dcd7db117 |
+| reference-tracer | 1285061cefc83b4538eba70d6a45fc6f0186be2b876f122a3721e150c5a34ed3 | 49ce9a07661a4cb64d5850ff62a4c3ac138b08fee37d05c86596498dcd7db117 |
+| stopped | 1285061cefc83b4538eba70d6a45fc6f0186be2b876f122a3721e150c5a34ed3 | 49ce9a07661a4cb64d5850ff62a4c3ac138b08fee37d05c86596498dcd7db117 |
+
+| Run | Lens state |
+|---|---|
+| lens | 5e86575ae0af7493b28942da1d0fa71b4683e02ce17743e04724058ddd28addd |
+
+| Run | Check | Request |
+|---|---|---|
+| lens | chief-rays, request 1 of 2 | add1a7c3107bb0766d1c4d60bc944e33b6a4e4831df3a7320ad908eb8c5bc7b4 |

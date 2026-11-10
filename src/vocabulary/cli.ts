@@ -93,6 +93,8 @@ export const DOCTOR_TEXT = {
     "runs the Python engines a configuration defines, such as the demonstration engines under test/fixtures/fake-root; checking LensVisualizer does not need it (optiland has an interpreter of its own)",
   python: REMEDIES.python,
   optilandPython: REMEDIES.optilandPython,
+  noLocalConfig:
+    "There is no lvrtc.local.json yet: make it by copying lvrtc.local.example.json, then set the key in it.",
   optilandNotImportable:
     "The interpreter runs but cannot import optiland: install optiland into it, as the README says, or set engines.optiland.python in lvrtc.local.json (or LVRTC_OPTILAND_PYTHON) to an interpreter that can import it.",
   ready: {

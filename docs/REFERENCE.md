@@ -1,10 +1,50 @@
 # Reference
 
 Everything the [README](../README.md) leaves out: every command's options and exit codes, how LensVisualizer is
-loaded and exported, the engines, the rungs with their gates and measured results, the result store, configuration
+loaded and exported, the engines, the checks (once called rungs) with their limits and measured results, the result store, configuration
 and workers. The contract itself is in [contract/CONTRACT.md](../contract/CONTRACT.md), the plan in
 [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md), and what an engine does that a comparison has to know about in
 [gotchas.md](gotchas.md).
+
+## Identifiers
+
+Stage 9.7 renamed the checks (once called rungs) and Stage 9.8 the engines this tool builds, so that each id says
+what it compares or computes. **This file keeps the ids of its time** (R0 to R14b, `r2`, `--rungs r0,r1`, `ref`,
+`replay`, `wave`, `flux`, `ref-seidel`, `optiland-wave`): each is a name of the same check or engine as its new id
+below. Code, suites other than the catalog's, the limits file (`policy/rungs.v1.json`, version 25) and new run
+directories use the new ids; files written before the rename keep theirs, and lvrtc reads an old id as the new one
+with one note per command until the end-of-project catalog refresh (`lvrtc glossary r2`, `lvrtc checks r2`). The
+catalog snapshot (its baselines, reports, suite files, reproducers and `docs/known-failures.json`) keeps the old ids
+and is checked in them. [gotchas.md](gotchas.md) and [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) point here.
+
+| Old check id | New check id | Old check id | New check id |
+|---|---|---|---|
+| selftest | `pipeline-echo` | r5 | `mtf-vs-optiland-fft` |
+| r0 | `built-system` | r5g | `geometric-mtf-vs-optiland` |
+| r1 | `first-order` | r6b | `mtf-vs-wave-estimate` |
+| r2 | `ray-trace` | r6c | `mtf-vs-optiland-wavefront` |
+| r3 | `optical-path` | r7b | `spot-vs-optiland` |
+| r4 | `geometric-mtf` | r8b | `axial-vs-optiland` |
+| r4f | `lv-mtf-replay` | r9b | `chief-vs-optiland` |
+| r6a | `wave-mtf` | r10b | `field-curve-vs-optiland` |
+| r7a | `spot-rays` | r11b | `vignetting-vs-flux-estimate` |
+| r8a | `axial-rays` | r12b | `summary-vs-optiland` |
+| r9a | `chief-rays` | r13b | `seidel-vs-optiland` |
+| r10a | `field-curve-rays` | r14b | `zernike-vs-optiland` |
+| r11a | `vignetting-rays` | | |
+
+| Old engine id | New engine id |
+|---|---|
+| ref | `reference-tracer` |
+| ref-seidel | `reference-seidel` |
+| replay | `replay-of-lv-mtf` |
+| wave | `wave-mtf-of-lv-rays` |
+| flux | `flux-of-lv-rays` |
+| optiland-wave | `otf-of-optiland-wavefront` |
+
+`lv` and `optiland` kept their ids. The map is `src/core/legacyIds.ts` (`LEGACY_CHECK_IDS`, `LEGACY_ENGINE_IDS`);
+`lvrtc checks` and [GLOSSARY.md](GLOSSARY.md) show each old id beside its new one. The command-line option
+`--rungs` is the older spelling of `--checks`.
 
 ## Validation statement (Stage 4.5)
 

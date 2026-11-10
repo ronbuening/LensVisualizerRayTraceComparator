@@ -5,37 +5,35 @@
 | Input | Value |
 |---|---|
 | Suite | r11b-stand-ins |
-| Suite hash | 5a90f384b839ddb495826ab1d059dc585ea1ea4ecd0f76cb7847a0c348c03aed |
 | Contract version | 1.0 |
 | Limits file | v1 |
-| Limits file hash | 3b976037ab80523f01669ab055d17a0994989e10e3d47c15e5c85de438db8fd6 |
 
 ### Engines
 
-| Engine | Status | Version | Engine code |
-|---|---|---|---|
-| flux-of-lv-rays | available | 1 | a6d5e4d989d61448861d92742dc08908830fd0dd875ecd09ab3469ad9b2892f9 |
-| lv | available | 1 | e446589a9d2d1f032334b5e798670d49c6268734494645c2a0f45c4a5bc007a2 |
+| Engine | Status | Version |
+|---|---|---|
+| flux-of-lv-rays | available | 1 |
+| lv | available | 1 |
 
 ### Runs
 
-| Run | Lens state | Status |
-|---|---|---|
-| lens | 3ea92f50c52c5a9fa2f6ddf5d09f3f540cefe04d71869a24615e9faeb50a7f1c | run |
+| Run | Status |
+|---|---|
+| lens | run |
 
 ## Verdict summary
 
 No pair is Fail or Error, of 2 compared.
 
-| Verdict | reference-vs-each | pairwise |
+| Verdict | against the reference | every pair |
 |---|---|---|
-| PASS | 0 | 0 |
-| FAIL | 0 | 0 |
-| RECORDED | 0 | 0 |
-| ATTENTION | 1 | 1 |
-| UNSUPPORTED | 0 | 0 |
-| BLOCKED | 0 | 0 |
-| ERROR | 0 | 0 |
+| Pass: within limit | 0 | 0 |
+| Fail: beyond limit | 0 | 0 |
+| Side by side | 0 | 0 |
+| Side by side, worth a look | 1 | 1 |
+| Not computed | 0 | 0 |
+| Not judged (an earlier check failed) | 0 | 0 |
+| Error | 0 | 0 |
 
 ## Support matrix
 
@@ -49,7 +47,7 @@ No pair is Fail or Error, of 2 compared.
 
 #### Vignetting beside the flux estimate — `vignetting-vs-flux-estimate`
 
-Quantity `vignetting.native`: each engine's own method; side by side, no limit. Request `0367c7aa3b0b3c519764c40ad79da45fc9d382906565eba0da30f413f2189d96`.
+Quantity `vignetting.native`: each engine's own method; side by side, no limit.
 
 Reference vs each, against `flux-of-lv-rays`:
 
@@ -122,8 +120,8 @@ What this comparison does not show, whatever its verdicts:
 
 ## How to read this
 
-Each pair of engines that answered one request gets one verdict. A table of this report shows its stored value;
-this is its label and what it means:
+Each pair of engines that answered one request gets one verdict. The verdict summary shows its label; the other
+tables of this report show its stored value. This is each label, its stored value and what it means:
 
 | Label | Stored value | Meaning |
 |---|---|---|
@@ -150,3 +148,27 @@ A value written down has 9 significant digits, or is a whole number in full, and
 element. `—` marks a place with nothing to compare, and `not finite` a number that is a NaN or an infinity.
 The reference-vs-each table and the pairwise matrix judge a pair alike, so a pair that is in both has the same
 verdict in both.
+
+## Identifiers
+
+The hashes that tell one version from another: of the suite file and of the limits file; of each engine's code
+and, for an engine of this tool's own, of this tool's code behind it; of each run's lens state; and of each
+request a section of the results is of.
+
+| Identifier | Value |
+|---|---|
+| Suite file | 5a90f384b839ddb495826ab1d059dc585ea1ea4ecd0f76cb7847a0c348c03aed |
+| Limits file | 3b976037ab80523f01669ab055d17a0994989e10e3d47c15e5c85de438db8fd6 |
+
+| Engine | Engine code |
+|---|---|
+| flux-of-lv-rays | a6d5e4d989d61448861d92742dc08908830fd0dd875ecd09ab3469ad9b2892f9 |
+| lv | e446589a9d2d1f032334b5e798670d49c6268734494645c2a0f45c4a5bc007a2 |
+
+| Run | Lens state |
+|---|---|
+| lens | 3ea92f50c52c5a9fa2f6ddf5d09f3f540cefe04d71869a24615e9faeb50a7f1c |
+
+| Run | Check | Request |
+|---|---|---|
+| lens | vignetting-vs-flux-estimate | 0367c7aa3b0b3c519764c40ad79da45fc9d382906565eba0da30f413f2189d96 |

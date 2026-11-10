@@ -2,7 +2,7 @@ import { existsSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 import packageJson from "../../../package.json" with { type: "json" };
-import { CONFIG_KEYS, REPO_ROOT, configValue, loadConfig } from "../../core/config.ts";
+import { CONFIG_KEYS, LOCAL_CONFIG_FILE, REPO_ROOT, configValue, loadConfig } from "../../core/config.ts";
 import type { ConfigKey, ConfigLayer, LoadedConfig } from "../../core/config.ts";
 import { commandSucceeded as succeeded, runSystemCommand } from "../../core/systemCommand.ts";
 import type { CommandResult } from "../../core/systemCommand.ts";
@@ -318,8 +318,24 @@ function readySection(report: DoctorReport): string {
   ].join("\n");
 }
 
-/** The human-readable report: a pure function of the report, with no timestamps; the hashes only under `details`. */
-export function renderDoctorText(report: DoctorReport, details = false): string {
+/**
+ * A fix line that names lvrtc.local.json, with how to make the file where there is none yet: the other fix lines are
+ * as they are.
+ */
+function withLocalConfigHint(rows: readonly Row[]): Row[] {
+  return rows.map(([label, value]) =>
+    label === DOCTOR_TEXT.fix && value.includes(LOCAL_CONFIG_FILE)
+      ? [label, `${value} ${DOCTOR_TEXT.noLocalConfig}`]
+      : [label, value],
+  );
+}
+
+/**
+ * The human-readable report: a pure function of the report, with no timestamps; the hashes only under `details`.
+ * `localConfig` says whether the root has an lvrtc.local.json; where it has none, a fix line that names the file says
+ * how to make it.
+ */
+export function renderDoctorText(report: DoctorReport, details = false, localConfig = true): string {
   const { node, config, lensVisualizer, python, optiland } = report;
 
   const lvRows: Row[] = [["status", lensVisualizer.status]];
@@ -372,9 +388,9 @@ export function renderDoctorText(report: DoctorReport, details = false): string 
       "Config",
       CONFIG_KEYS.map((key) => [key, `${config[key].value ?? "(not set)"}  [${config[key].source}]`]),
     ),
-    section("LensVisualizer", lvRows),
-    section("Python", pythonRows),
-    section("optiland", optilandRows),
+    section("LensVisualizer", localConfig ? lvRows : withLocalConfigHint(lvRows)),
+    section("Python", localConfig ? pythonRows : withLocalConfigHint(pythonRows)),
+    section("optiland", localConfig ? optilandRows : withLocalConfigHint(optilandRows)),
     readySection(report),
   ];
   return `${sections.join("\n\n")}\n`;
@@ -427,7 +443,8 @@ export function createDoctorCommand(inputs: DoctorInputs): CliCommand {
       }
       const loaded = loadConfig({ rootDir, env: inputs.env });
       const report = await collectDoctorReport(loaded, inputs.probe);
-      io.stdout(json ? renderDoctorJson(report) : renderDoctorText(report, details));
+      const localConfig = existsSync(join(rootDir, LOCAL_CONFIG_FILE));
+      io.stdout(json ? renderDoctorJson(report) : renderDoctorText(report, details, localConfig));
       if (report.node.ok) return EXIT_OK;
       io.stderr(`lvrtc doctor: Node ${report.node.version} is outside the supported range ${report.node.required}\n`);
       return EXIT_FAILURE;

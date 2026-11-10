@@ -133,7 +133,7 @@ test("ref against a faithful copy passes R2 and R3 with no difference at all; a 
   assert.match(markdown, /^#### Ray trace — `ray-trace`, request 1 of 2$/m);
   assert.match(
     markdown,
-    /^Quantity `rays\.trace`: one estimator on each engine's trace of the same rays; held to a limit\. /m,
+    /^Quantity `rays\.trace`: one estimator on each engine's trace of the same rays; held to a limit\.$/m,
   );
   assert.match(
     markdown,

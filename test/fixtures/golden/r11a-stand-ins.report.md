@@ -5,39 +5,37 @@
 | Input | Value |
 |---|---|
 | Suite | r11a-stand-ins |
-| Suite hash | e3ac095fb9768cb02d38054d6437a462fa96f040d8e4fab01334cea1a16fcf09 |
 | Contract version | 1.0 |
 | Limits file | v1 |
-| Limits file hash | 21e282855578d12bb18027b74636778507dee2136c676e6b5aefc11b23626e9a |
 
 ### Engines
 
-| Engine | Status | Version | Engine code | This tool's code behind it |
-|---|---|---|---|---|
-| moved | available | 1 | 1285061cefc83b4538eba70d6a45fc6f0186be2b876f122a3721e150c5a34ed3 | 49ce9a07661a4cb64d5850ff62a4c3ac138b08fee37d05c86596498dcd7db117 |
-| reference-tracer | available | 1 | 1285061cefc83b4538eba70d6a45fc6f0186be2b876f122a3721e150c5a34ed3 | 49ce9a07661a4cb64d5850ff62a4c3ac138b08fee37d05c86596498dcd7db117 |
-| stopped | available | 1 | 1285061cefc83b4538eba70d6a45fc6f0186be2b876f122a3721e150c5a34ed3 | 49ce9a07661a4cb64d5850ff62a4c3ac138b08fee37d05c86596498dcd7db117 |
-| turned | available | 1 | 1285061cefc83b4538eba70d6a45fc6f0186be2b876f122a3721e150c5a34ed3 | 49ce9a07661a4cb64d5850ff62a4c3ac138b08fee37d05c86596498dcd7db117 |
+| Engine | Status | Version |
+|---|---|---|
+| moved | available | 1 |
+| reference-tracer | available | 1 |
+| stopped | available | 1 |
+| turned | available | 1 |
 
 ### Runs
 
-| Run | Lens state | Status |
-|---|---|---|
-| lens | 3ea92f50c52c5a9fa2f6ddf5d09f3f540cefe04d71869a24615e9faeb50a7f1c | run |
+| Run | Status |
+|---|---|
+| lens | run |
 
 ## Verdict summary
 
 9 of 9 pairs are Fail or Error.
 
-| Verdict | reference-vs-each | pairwise |
+| Verdict | against the reference | every pair |
 |---|---|---|
-| PASS | 0 | 0 |
-| FAIL | 3 | 6 |
-| RECORDED | 0 | 0 |
-| ATTENTION | 0 | 0 |
-| UNSUPPORTED | 0 | 0 |
-| BLOCKED | 0 | 0 |
-| ERROR | 0 | 0 |
+| Pass: within limit | 0 | 0 |
+| Fail: beyond limit | 3 | 6 |
+| Side by side | 0 | 0 |
+| Side by side, worth a look | 0 | 0 |
+| Not computed | 0 | 0 |
+| Not judged (an earlier check failed) | 0 | 0 |
+| Error | 0 | 0 |
 
 ## Consensus
 
@@ -79,7 +77,7 @@ Of 1 request with a consensus to look for, 0 have one.
 
 #### Vignetting rays — `vignetting-rays`, request 1 of 3
 
-Quantity `rays.trace`: one estimator on each engine's trace of the same rays; held to a limit. Request `1885953b4ac9e4f0ca84da87e19204a6b894b4733c7cc9c18dc05fff88c167c3`.
+Quantity `rays.trace`: one estimator on each engine's trace of the same rays; held to a limit.
 
 Reference vs each, against `reference-tracer`:
 
@@ -140,8 +138,8 @@ What this comparison does not show, whatever its verdicts:
 
 ## How to read this
 
-Each pair of engines that answered one request gets one verdict. A table of this report shows its stored value;
-this is its label and what it means:
+Each pair of engines that answered one request gets one verdict. The verdict summary shows its label; the other
+tables of this report show its stored value. This is each label, its stored value and what it means:
 
 | Label | Stored value | Meaning |
 |---|---|---|
@@ -168,3 +166,29 @@ A value written down has 9 significant digits, or is a whole number in full, and
 element. `—` marks a place with nothing to compare, and `not finite` a number that is a NaN or an infinity.
 The reference-vs-each table and the pairwise matrix judge a pair alike, so a pair that is in both has the same
 verdict in both.
+
+## Identifiers
+
+The hashes that tell one version from another: of the suite file and of the limits file; of each engine's code
+and, for an engine of this tool's own, of this tool's code behind it; of each run's lens state; and of each
+request a section of the results is of.
+
+| Identifier | Value |
+|---|---|
+| Suite file | e3ac095fb9768cb02d38054d6437a462fa96f040d8e4fab01334cea1a16fcf09 |
+| Limits file | 21e282855578d12bb18027b74636778507dee2136c676e6b5aefc11b23626e9a |
+
+| Engine | Engine code | This tool's code behind it |
+|---|---|---|
+| moved | 1285061cefc83b4538eba70d6a45fc6f0186be2b876f122a3721e150c5a34ed3 | 49ce9a07661a4cb64d5850ff62a4c3ac138b08fee37d05c86596498dcd7db117 |
+| reference-tracer | 1285061cefc83b4538eba70d6a45fc6f0186be2b876f122a3721e150c5a34ed3 | 49ce9a07661a4cb64d5850ff62a4c3ac138b08fee37d05c86596498dcd7db117 |
+| stopped | 1285061cefc83b4538eba70d6a45fc6f0186be2b876f122a3721e150c5a34ed3 | 49ce9a07661a4cb64d5850ff62a4c3ac138b08fee37d05c86596498dcd7db117 |
+| turned | 1285061cefc83b4538eba70d6a45fc6f0186be2b876f122a3721e150c5a34ed3 | 49ce9a07661a4cb64d5850ff62a4c3ac138b08fee37d05c86596498dcd7db117 |
+
+| Run | Lens state |
+|---|---|
+| lens | 3ea92f50c52c5a9fa2f6ddf5d09f3f540cefe04d71869a24615e9faeb50a7f1c |
+
+| Run | Check | Request |
+|---|---|---|
+| lens | vignetting-rays, request 1 of 3 | 1885953b4ac9e4f0ca84da87e19204a6b894b4733c7cc9c18dc05fff88c167c3 |

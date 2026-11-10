@@ -40,6 +40,12 @@ export const TERMS: readonly TermText[] = [
       "A width for attention on a side-by-side figure: a difference outside it is worth a look and is not a failure.",
   },
   {
+    term: "sorting limit",
+    replaces: [],
+    definition:
+      "A limit of a side-by-side check that decides, before any difference is taken, whether two answers are of the same field or system, such as the distance between their chief-ray landings. A field beyond it is set aside and its difference enters no review band; no pair passes or fails by it.",
+  },
+  {
     term: "lens state",
     replaces: ["case"],
     definition:

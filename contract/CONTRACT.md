@@ -20,6 +20,15 @@ data they compute it of: `reference-tracer` (formerly `ref`), `reference-seidel`
 historical note keeps the id an engine had when it was written, and documents written before the rename (the
 fixtures among them) keep theirs. An engine id is in no request id or spec; the result store keys an answer by it.
 
+**Check ids.** Since Stage 9.7 the checks, once called rungs, are named after what they compare: `built-system`
+(formerly `r0`), `first-order` (`r1`), `ray-trace` (`r2`), `optical-path` (`r3`), `geometric-mtf` (`r4`), ...; the
+whole table is in [docs/REFERENCE.md](../docs/REFERENCE.md#identifiers). The policy's table and the sections that
+say which check an engine serves name each check by its id of today; a heading or a historical note keeps the rung
+it was written of (R0 to R14b). The members that hold a check id keep their names (`rung`, `rungs`,
+`blocksLaterRungs`), and so does the policy file, `policy/rungs.v1.json`; documents written before the rename (the
+fixtures and the catalog snapshot among them) keep the ids they were written with, and code reads an old id as the
+new one. A check id is in no request id or spec.
+
 ## Conventions
 
 | Subject | Rule |
@@ -614,7 +623,7 @@ with a request spelled out a second time, bit for bit.
 `replay-of-lv-mtf` (formerly `replay`; `src/engines/lv/replayEngine.ts`) is the comparator's own estimators on a replay
 of LensVisualizer's sampling. It is built in, runs on the same LensVisualizer checkout as `lv`, and is no independent
 engine: its rays are LensVisualizer's, launched and traced by LensVisualizer. What is its own is which bundles it asks
-for, what it sums and how: the comparator's reading of LensVisualizer's MTF. Rung `r4f` holds it to `lv`. Its
+for, what it sums and how: the comparator's reading of LensVisualizer's MTF. The check `lv-mtf-replay` holds it to `lv`. Its
 `fingerprint` is LensVisualizer's engine closure, as `lv`'s is; its `adapterRevision` is the hash of the comparator's
 code behind it, in which the replay and the estimator are and which is not `lv`'s.
 
@@ -645,7 +654,7 @@ reason, angle and image height; under `sampling` the same names (`gridSize`, `va
 `footprintExpansions`; `method.name` is `replay-geometric`, and `method.params` hold the request and the `ladder`.
 A value the rounding of a modulus left above 1 is written as 1, the range the contract gives an MTF. A field the
 estimator has no value for is `unavailable` with the reason `estimator-<why>`
-(`OtfUnavailableReason`): it is never left out, and since LensVisualizer has no such reason, rung `r4f` counts it.
+(`OtfUnavailableReason`): it is never left out, and since LensVisualizer has no such reason, the check `lv-mtf-replay` counts it.
 
 ### The engine `wave-mtf-of-lv-rays`
 
@@ -653,7 +662,7 @@ estimator has no value for is `unavailable` with the reason `estimator-<why>`
 LensVisualizer's own rays. It is built in, runs on the same LensVisualizer checkout as `lv`, and is no independent
 engine: its rays are LensVisualizer's, launched and traced by LensVisualizer. What is its own is the estimate, Hopkins'
 autocorrelation of the pupil function from the optical paths (`src/estimators/waveOtf.ts`), and whether a lattice may
-carry it. Rung `r6b` sets it beside `lv`. Its `fingerprint` is LensVisualizer's engine closure; its `adapterRevision` is
+carry it. The check `mtf-vs-wave-estimate` sets it beside `lv`. Its `fingerprint` is LensVisualizer's engine closure; its `adapterRevision` is
 the hash of the comparator's code behind it, in which the estimator is and which is not `lv`'s.
 
 It answers **`mtf.native`** with the method `diffraction`, on the image plane of the case as it is:
@@ -683,15 +692,15 @@ treats it.
 `flux-of-lv-rays` (formerly `flux`; `src/engines/lv/fluxEngine.ts`) is the comparator's flux estimator on
 LensVisualizer's own rays. It is built in, runs on the same LensVisualizer checkout as `lv`, and is no independent
 engine: its rays are LensVisualizer's launch lattices over each field's beam, launched and traced by LensVisualizer.
-What is its own is the estimate (`src/estimators/illumination.ts`) and whether a lattice may carry it. Rung `r11b` sets
-it beside `lv`. Its `fingerprint` is LensVisualizer's engine closure; its `adapterRevision` is the hash of the
+What is its own is the estimate (`src/estimators/illumination.ts`) and whether a lattice may carry it. The check
+`vignetting-vs-flux-estimate` sets it beside `lv`. Its `fingerprint` is LensVisualizer's engine closure; its `adapterRevision` is the hash of the
 comparator's code behind it, in which the estimator is and which is not `lv`'s.
 
 It answers **`vignetting.native`** at any line of the case:
 
 | Step | Is |
 |---|---|
-| the rays of a field | LensVisualizer's aimed lattice on the real stop of the field at the line (`lvFieldRaySets`, the generator of the run's [ray sets](#ray-sets), LV #936), at `bundleGrid` cells across and at twice as many, a field's lattices made once whatever line is asked. `bundleGrid` is the engine option of that name: rung `r11b` hands it twice a run's `sampling.bundleGrid`, where the run states one, so the engine's coarser lattice is never the run's own; 64 without it (`LV_FLUX_DEFAULT_GRID`, twice the run's default of 32) |
+| the rays of a field | LensVisualizer's aimed lattice on the real stop of the field at the line (`lvFieldRaySets`, the generator of the run's [ray sets](#ray-sets), LV #936), at `bundleGrid` cells across and at twice as many, a field's lattices made once whatever line is asked. `bundleGrid` is the engine option of that name: the check `vignetting-vs-flux-estimate` hands it twice a run's `sampling.bundleGrid`, where the run states one, so the engine's coarser lattice is never the run's own; 64 without it (`LV_FLUX_DEFAULT_GRID`, twice the run's default of 32) |
 | the trace | LensVisualizer's own, as `lv` answers [`rays.trace`](#raystrace) (`answerLvRays`): the rays taken are the ones it brings to the image |
 | `geometricTransmission` | the share of the finer lattice's samples of the stop (the cells LensVisualizer has a ray for, but those an engine failed) that reach the image, absolute, as LensVisualizer's tab takes it since #931; a lattice on the launch plane has none, and its field is unavailable (`launch-plane-lattice`) |
 | `relativeIllumination` | the flux of the lit cells into the image, weight times the area each covers in the optical direction cosines `n' (L, M)` of its ray's own exit direction, over the axis's (`cosineFlux`), on the finer lattice: the projected solid angle of the exit pupil, Rimmer's method without the tab's reference-sphere referral, with no law of the field angle |
@@ -724,7 +733,7 @@ takes the comparator's default.
 | `imagePlane?` | object | `{ kind: "design" }`, `{ kind: "shift", mm }` along +z from the design plane, or `{ kind: "lv-best-axial" }`: LensVisualizer's own best axial focus for the stop and the lines of the run, which only a LensVisualizer lens has |
 | `frequenciesPerMm?` | number[] | spatial frequencies, each ≥ 0, no repeats |
 | `sampling?` | object | `lvGridCap?` (32, 64, 128 or 256), `bundleGrid?` (integer ≥ 1), `engines?` (options per engine id) |
-| `rungs?` | string[] | rungs of the comparison ladder to evaluate |
+| `rungs?` | string[] | the checks to evaluate, by id (the member keeps its older name) |
 | `engines?` | string[] | engine ids to run |
 | `referenceEngine?` | string | the engine the others are compared against |
 
@@ -733,7 +742,7 @@ takes the comparator's default.
 For the rays of a run ([ray sets](#ray-sets)), a run without `fields` takes the image-height fractions 0, 0.5 and
 1, and one without `sampling.bundleGrid` 32 cells across the beam. `sampling.lvGridCap` is the largest pupil grid
 LensVisualizer's own MTF may refine to, which the engine `lv` takes as its option `lvGridCap`
-([its product MTF](#lensvisualizers-product-mtf)). The rung `r4f` hands it to its two engines, and the image plane
+([its product MTF](#lensvisualizers-product-mtf)). The check `lv-mtf-replay` hands it to its two engines, and the image plane
 `lv-best-axial` and the MTF recipe of a run are of that cap.
 
 How the stop of `lv-f8-comparison` and the plane of `lv-best-axial` are found is said under
@@ -1292,8 +1301,8 @@ A rung:
 `tolerance` is the largest value a metric of a gated rung may have and pass; `attention` is the largest value a
 metric of a recorded rung may have without the pair being marked for attention. Both are ≥ 0 and in `unit`, which
 is `1` for a number without one. A metric the comparison reports and the policy does not name is shown and not
-judged. Several rungs may compare one quantity, each by metrics of its own: `r2`, `r3` and `r4` all compare
-`rays.trace`, and so does `r6a`.
+judged. Several checks may compare one quantity, each by metrics of its own: `ray-trace`, `optical-path` and
+`geometric-mtf` all compare `rays.trace`, and so does `wave-mtf`.
 
 `attentionSeveralLines` is an optional nonnegative alternate band of a recorded metric that also has
 `attention`. R6c's `chiefLanding.maxAbs` keeps `attention: 1e-7` mm for two one-line answers and uses
@@ -1305,22 +1314,22 @@ MTF baselines retain these recorded limits so their reports need no current poli
 On several lines LV's shared launch and optiland's line-0 chief are different rays; a common reference point
 preserves the modulus, so this limit identifies the field rather than asserting one ray's landing.
 
-The comparator's policy, version 13:
+The comparator's policy, version 13, each check by its id of today (its rung id of then in parentheses):
 
-| Rung | Quantity | Mode | Judged |
+| Check | Quantity | Mode | Judged |
 |---|---|---|---|
-| `selftest` | `selftest.echo` | direct | `sum.abs`, `values.maxAbs` ≤ 1e-12 |
-| `r0` | `system.describe` | direct | every count of mismatches 0; `sag.maxScaled` ≤ 1e-12. Blocks the later rungs |
-| `r1` | `paraxial.first-order` | direct | `firstOrder.maxAbs`, `pupilZ.maxScaled`, `pupilRadius.maxScaled` ≤ 1e-9 mm |
-| `r2` | `rays.trace` | identical-rays | hits and landing ≤ 1e-8 mm, direction ≤ 1e-9, `mask.mismatches` 0; no floor |
-| `r3` | `rays.trace` | identical-rays | the three optical paths ≤ 2e-5 waves; no floor |
-| `r4` | `rays.trace` | identical-rays | `mtf.maxAbs` ≤ 1e-7, of a field at every line of the case; no floor ([`rays.trace`](#raystrace)) |
-| `r4f` | `mtf.native` | direct | `mtf.maxAbs` ≤ 1e-9; `sampling.mismatches` and `fields.mismatches` 0. Of the engines `lv` and `replay-of-lv-mtf` only ([`mtf.native`](#mtfnative)) |
-| `r5` | `mtf.native` | independent-method | recorded: `mtfOnAxis.maxAbs` in a band of 0.005, `mtfOffAxis.maxAbs` of 0.01, `chiefLanding.maxAbs` of 1e-7 mm. Of the engines `lv`, `optiland` and `wave-mtf-of-lv-rays` only, and run only where it is named ([`mtf.native`](#rung-r5-the-engines-own-mtf)) |
-| `r5g` | `mtf.native` | independent-method | recorded: `mtfOnAxis.maxAbs` in a band of 0.005, `mtfOffAxis.maxAbs` of 0.01, `chiefLanding.maxAbs` of 1e-3 mm. Of the engines `lv`, `optiland` and `replay-of-lv-mtf` only, and run only where it is named |
-| `r6a` | `rays.trace` | identical-rays | `waveMtf.maxAbs` ≤ 2e-8, of a field at every line of the case on a lattice that is an arbiter; no floor ([`rays.trace`](#raystrace)) |
-| `r6b` | `mtf.native` | independent-method | recorded: `mtfOnAxis.maxAbs` in a band of 0.005, `mtfOffAxis.maxAbs` of 0.01. Of the engines `lv` and `wave-mtf-of-lv-rays` only ([`mtf.native`](#mtfnative)) |
-| `r6c` | `mtf.native` | independent-method | recorded: R5 sorting and its 0.005 / 0.01 bands, chief landing 1e-7 mm for two one-line answers, 1e-3 mm when either records several lines; reference or photopic, only where named; `lv`, `wave-mtf-of-lv-rays`, `optiland`, `otf-of-optiland-wavefront` |
+| `pipeline-echo` (`selftest`) | `selftest.echo` | direct | `sum.abs`, `values.maxAbs` ≤ 1e-12 |
+| `built-system` (`r0`) | `system.describe` | direct | every count of mismatches 0; `sag.maxScaled` ≤ 1e-12. Blocks the later rungs |
+| `first-order` (`r1`) | `paraxial.first-order` | direct | `firstOrder.maxAbs`, `pupilZ.maxScaled`, `pupilRadius.maxScaled` ≤ 1e-9 mm |
+| `ray-trace` (`r2`) | `rays.trace` | identical-rays | hits and landing ≤ 1e-8 mm, direction ≤ 1e-9, `mask.mismatches` 0; no floor |
+| `optical-path` (`r3`) | `rays.trace` | identical-rays | the three optical paths ≤ 2e-5 waves; no floor |
+| `geometric-mtf` (`r4`) | `rays.trace` | identical-rays | `mtf.maxAbs` ≤ 1e-7, of a field at every line of the case; no floor ([`rays.trace`](#raystrace)) |
+| `lv-mtf-replay` (`r4f`) | `mtf.native` | direct | `mtf.maxAbs` ≤ 1e-9; `sampling.mismatches` and `fields.mismatches` 0. Of the engines `lv` and `replay-of-lv-mtf` only ([`mtf.native`](#mtfnative)) |
+| `mtf-vs-optiland-fft` (`r5`) | `mtf.native` | independent-method | recorded: `mtfOnAxis.maxAbs` in a band of 0.005, `mtfOffAxis.maxAbs` of 0.01, `chiefLanding.maxAbs` of 1e-7 mm. Of the engines `lv`, `optiland` and `wave-mtf-of-lv-rays` only, and run only where it is named ([`mtf.native`](#rung-r5-the-engines-own-mtf)) |
+| `geometric-mtf-vs-optiland` (`r5g`) | `mtf.native` | independent-method | recorded: `mtfOnAxis.maxAbs` in a band of 0.005, `mtfOffAxis.maxAbs` of 0.01, `chiefLanding.maxAbs` of 1e-3 mm. Of the engines `lv`, `optiland` and `replay-of-lv-mtf` only, and run only where it is named |
+| `wave-mtf` (`r6a`) | `rays.trace` | identical-rays | `waveMtf.maxAbs` ≤ 2e-8, of a field at every line of the case on a lattice that is an arbiter; no floor ([`rays.trace`](#raystrace)) |
+| `mtf-vs-wave-estimate` (`r6b`) | `mtf.native` | independent-method | recorded: `mtfOnAxis.maxAbs` in a band of 0.005, `mtfOffAxis.maxAbs` of 0.01. Of the engines `lv` and `wave-mtf-of-lv-rays` only ([`mtf.native`](#mtfnative)) |
+| `mtf-vs-optiland-wavefront` (`r6c`) | `mtf.native` | independent-method | recorded: R5 sorting and its 0.005 / 0.01 bands, chief landing 1e-7 mm for two one-line answers, 1e-3 mm when either records several lines; reference or photopic, only where named; `lv`, `wave-mtf-of-lv-rays`, `optiland`, `otf-of-optiland-wavefront` |
 
 **The floor.** Policy versions 11 and 12 give no rung or metric a floor. At Stage 3.12, LensVisualizer `ab0fd4cf`
 (closure `94778d3d`, 175 files) uses an intersection tolerance of 1e-12 mm; its worst R2/R3 distances from `ref`
@@ -1366,8 +1375,8 @@ said nothing about whose the excess was, and no longer decides it.
 that built different systems would differ in every ray traced through them, and each such difference would be the
 first one again. So where the pair of two engines in that rung is `FAIL` or `ERROR`, their pair in every later
 rung of the same run is `BLOCKED`: not judged, with a `reason` that names the rung. "Later" is the order of the
-ladder, in which a run evaluates its rungs and its manifest lists their jobs: `selftest`, `r0`, `r1`, `r2`, `r3`,
-`r4`, `r4f`.
+ladder, in which a run evaluates its checks and its manifest lists their jobs: `pipeline-echo`, `built-system`,
+`first-order`, `ray-trace`, `optical-path`, `geometric-mtf`, `lv-mtf-replay`.
 Blocking is per pair of engines and per case; two engines that agree on the system are judged whatever a third one
 built.
 

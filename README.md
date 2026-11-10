@@ -91,7 +91,7 @@ lvrtc doctor
 It reports Node, every configuration value and where it was set, the LensVisualizer checkout (its commit, whether
 it has uncommitted changes, whether it loads) and optiland, with a `fix` line under anything that needs fixing,
 and ends with what is ready. Without optiland, `lvrtc lenses`, `export`, `mtf` (LensVisualizer's own MTF) and
-`run ... --engines lv,ref` work; `lvrtc check-lv` and `lvrtc baseline check` need it.
+`run ... --engines lv,reference-tracer` work; `lvrtc check-lv` and `lvrtc baseline check` need it.
 
 ## Try it without LensVisualizer or optiland
 
@@ -102,7 +102,8 @@ lvrtc report fake-3-engines-ts --root test/fixtures/fake-root
 ```
 
 These run a small suite on three fake engines that know no optics, compare their answers, and write
-`test/fixtures/fake-root/runs/fake-3-engines-ts/report.md`. Run them again and the report is the same file, byte
+`test/fixtures/fake-root/runs/fake-3-engines-ts/report.md` (under `$LVRTC_RUNS_DIR/fake-3-engines-ts/` when that is
+set; each command prints the path it wrote). Run them again and the report is the same file, byte
 for byte. With Python, `fake-3-engines.json` adds a fake engine in a Python worker.
 
 ## Check LensVisualizer
@@ -116,8 +117,8 @@ lvrtc check-lv --all              # every committed suite, one after another
 `check-lv` first checks that the machine is ready and refuses, running nothing, unless LensVisualizer is a clean
 git checkout that loads and optiland answers. Then it runs the checks of each committed result again against your
 LensVisualizer and optiland and prints, suite by suite, whether the check is clean and how many records came out
-unchanged (`OK`), out of date but still within limits (`REFRESHABLE`), moved side by side (`MOVED`) or changed
-beyond limits (`DRIFT`). `npm run verify:real` is the same command.
+"Unchanged", "Out of date, still within limits", "Side-by-side figure moved" or "Changed beyond limits" (the
+outcomes are under [Reading the results](#reading-the-results)). `npm run verify:real` is the same command.
 
 Answers already computed are kept in a result cache under `runs/store` and reused, so a second check is much
 faster than the first. From an empty cache, `--suite features` took under a minute when it was first measured
@@ -130,7 +131,7 @@ Closer looks, each with `--help`:
 ```bash
 lvrtc baseline check features                      # one suite, record by record
 lvrtc mtf nikkor-z50f12                            # the MTF LensVisualizer's tab shows
-lvrtc mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optiland   # one lens's MTF, compared
+lvrtc mtf nikkor-z50f12 --profile benchmark --engines lv,reference-tracer,optiland   # one lens's MTF, compared
 lvrtc lenses list                                  # every lens key
 lvrtc serve                                        # a dashboard at http://127.0.0.1:8077/
 ```
@@ -168,6 +169,21 @@ Checking a committed result again gives each record one outcome:
 A record out of date says why: its lens data, an engine's code, or the limits file changed. Every term is in
 [docs/GLOSSARY.md](docs/GLOSSARY.md); `lvrtc glossary <word>` looks one up, including the older words some files
 still use.
+
+### Older ids
+
+The checks and some engines were renamed so that each id says what it compares or computes; `lv` and `optiland`
+kept theirs. Files written before the rename keep the old ids: the catalog's results, `docs/known-failures.json` and
+its reproducer commands, and older run directories. lvrtc still reads an old id as the new one, saying so once per
+command. `lvrtc glossary <old id>` says what an old check or engine id is now, and `lvrtc checks <old id>` shows
+that check in full. `lvrtc checks` lists every check with its old id beside it, and
+[docs/GLOSSARY.md](docs/GLOSSARY.md) every engine with its own.
+
+Until the maintainer writes the committed results again at the new ids, `lvrtc check-lv` says of each suite that
+"the suite file is not the one the committed results name", and its records come out "Out of date, still within
+limits": out of date because the limits file and the code of the renamed engines changed with the ids. That is
+expected, and the check is still clean: the figures were computed again and stayed within their limits. A record
+"Changed beyond limits" is not explained by the rename.
 
 ## Troubleshooting
 

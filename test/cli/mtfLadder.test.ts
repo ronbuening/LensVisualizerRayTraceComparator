@@ -179,7 +179,7 @@ test("R4 compares a field at every line as one set: a faithful copy differs by n
   assert.doesNotMatch(markdown, /^#### .*`geometric-mtf`, request 2 of 4$/m);
   assert.match(
     markdown,
-    /^Quantity `rays\.trace`: one estimator on each engine's trace of the same rays; held to a limit\. /m,
+    /^Quantity `rays\.trace`: one estimator on each engine's trace of the same rays; held to a limit\.$/m,
   );
   assert.match(
     markdown,

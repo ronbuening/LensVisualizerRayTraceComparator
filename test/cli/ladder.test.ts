@@ -204,8 +204,8 @@ test("the report shows the mismatching surface in R0, and the blocked R1 as a ro
   // The failures are R0's; a blocked pair is counted and is not one of them.
   assert.equal(model.failing, 3);
   assert.match(markdown, /^3 of 20 pairs are Fail or Error\.$/m);
-  assert.match(markdown, /^\| FAIL \| 1 \| 2 \|$/m);
-  assert.match(markdown, /^\| BLOCKED \| 1 \| 2 \|$/m);
+  assert.match(markdown, /^\| Fail: beyond limit \| 1 \| 2 \|$/m);
+  assert.match(markdown, /^\| Not judged \(an earlier check failed\) \| 1 \| 2 \|$/m);
 
   // R0: the counts read as counts, the limits as limits, and the place of the mismatch is in its cell. The plain
   // difference of the sag, which is shown and not judged, stands beside the scaled one that is.
@@ -224,7 +224,7 @@ test("the report shows the mismatching surface in R0, and the blocked R1 as a ro
   );
   assert.match(
     markdown,
-    /^Quantity `system\.describe`: numbers of each engine set against each other; held to a limit\. /m,
+    /^Quantity `system\.describe`: numbers of each engine set against each other; held to a limit\.$/m,
   );
 
   // R1: the worst quantity and its line for the pair that was judged, and the blocked pair with why.

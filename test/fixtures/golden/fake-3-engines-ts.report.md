@@ -5,39 +5,37 @@
 | Input | Value |
 |---|---|
 | Suite | fake-3-engines-ts |
-| Suite hash | 7046422087950f18cf58425eaf5495de9e37580514e7b89c4f170df86685976c |
 | Contract version | 1.0 |
 | Limits file | v25 |
-| Limits file hash | 3e6d9a8477bb56df20f310e2184e19169b30a07dc7b373508b746d8211f476ad |
 
 ### Engines
 
-| Engine | Status | Version | Engine code |
-|---|---|---|---|
-| fake-a | available | 1 | f3e820abc00b857d9d3feb859cdb68c43ccc5f95df0ed3c74f0f29ba49fddbe9 |
-| fake-near | available | 1 | e0a6e99cfe0ad98cca9b189c18f39f7f9ed52e2e37ed90f663946633a6cd9191 |
-| fake-none | available | 1 | 3e2ad04f8c76a56bdcbfa850c697863cc99c2912d776c942e4123e79f5d109f5 |
+| Engine | Status | Version |
+|---|---|---|
+| fake-a | available | 1 |
+| fake-near | available | 1 |
+| fake-none | available | 1 |
 
 ### Runs
 
-| Run | Lens state | Status |
-|---|---|---|
-| singlet | 0318018e2bf0d3700b9594802bda35d77b49a9451eba43d7ea4f87bb49d7f1f8 | run |
-| double-gauss | fd9331265b562f1702ee981c3415e32c8d3e89e98546901db15418dec6cac99a | run |
+| Run | Status |
+|---|---|
+| singlet | run |
+| double-gauss | run |
 
 ## Verdict summary
 
 No pair is Fail or Error, of 10 compared.
 
-| Verdict | reference-vs-each | pairwise |
+| Verdict | against the reference | every pair |
 |---|---|---|
-| PASS | 2 | 2 |
-| FAIL | 0 | 0 |
-| RECORDED | 0 | 0 |
-| ATTENTION | 0 | 0 |
-| UNSUPPORTED | 2 | 4 |
-| BLOCKED | 0 | 0 |
-| ERROR | 0 | 0 |
+| Pass: within limit | 2 | 2 |
+| Fail: beyond limit | 0 | 0 |
+| Side by side | 0 | 0 |
+| Side by side, worth a look | 0 | 0 |
+| Not computed | 2 | 4 |
+| Not judged (an earlier check failed) | 0 | 0 |
+| Error | 0 | 0 |
 
 ## Consensus
 
@@ -77,7 +75,7 @@ Of 2 requests with a consensus to look for, 2 have one.
 
 #### Pipeline echo (a test of this tool) — `pipeline-echo`
 
-Quantity `selftest.echo`: numbers of each engine set against each other; held to a limit. Request `e918174eae0474fefef649c6b59cc25b94c18510000301efd103c6fcaf5e55a6`.
+Quantity `selftest.echo`: numbers of each engine set against each other; held to a limit.
 
 Reference vs each, against `fake-a`:
 
@@ -100,7 +98,7 @@ Consensus: `fake-a`, `fake-near`, every two of them within the limits of each ot
 
 #### Pipeline echo (a test of this tool) — `pipeline-echo`
 
-Quantity `selftest.echo`: numbers of each engine set against each other; held to a limit. Request `f3a91e7a8bf5abda55545e9e0542c7b699c703b020b097b11331f217dd74e81c`.
+Quantity `selftest.echo`: numbers of each engine set against each other; held to a limit.
 
 Reference vs each, against `fake-a`:
 
@@ -136,8 +134,8 @@ What this comparison does not show, whatever its verdicts:
 
 ## How to read this
 
-Each pair of engines that answered one request gets one verdict. A table of this report shows its stored value;
-this is its label and what it means:
+Each pair of engines that answered one request gets one verdict. The verdict summary shows its label; the other
+tables of this report show its stored value. This is each label, its stored value and what it means:
 
 | Label | Stored value | Meaning |
 |---|---|---|
@@ -164,3 +162,30 @@ A value written down has 9 significant digits, or is a whole number in full, and
 element. `—` marks a place with nothing to compare, and `not finite` a number that is a NaN or an infinity.
 The reference-vs-each table and the pairwise matrix judge a pair alike, so a pair that is in both has the same
 verdict in both.
+
+## Identifiers
+
+The hashes that tell one version from another: of the suite file and of the limits file; of each engine's code
+and, for an engine of this tool's own, of this tool's code behind it; of each run's lens state; and of each
+request a section of the results is of.
+
+| Identifier | Value |
+|---|---|
+| Suite file | 7046422087950f18cf58425eaf5495de9e37580514e7b89c4f170df86685976c |
+| Limits file | 3e6d9a8477bb56df20f310e2184e19169b30a07dc7b373508b746d8211f476ad |
+
+| Engine | Engine code |
+|---|---|
+| fake-a | f3e820abc00b857d9d3feb859cdb68c43ccc5f95df0ed3c74f0f29ba49fddbe9 |
+| fake-near | e0a6e99cfe0ad98cca9b189c18f39f7f9ed52e2e37ed90f663946633a6cd9191 |
+| fake-none | 3e2ad04f8c76a56bdcbfa850c697863cc99c2912d776c942e4123e79f5d109f5 |
+
+| Run | Lens state |
+|---|---|
+| singlet | 0318018e2bf0d3700b9594802bda35d77b49a9451eba43d7ea4f87bb49d7f1f8 |
+| double-gauss | fd9331265b562f1702ee981c3415e32c8d3e89e98546901db15418dec6cac99a |
+
+| Run | Check | Request |
+|---|---|---|
+| singlet | pipeline-echo | e918174eae0474fefef649c6b59cc25b94c18510000301efd103c6fcaf5e55a6 |
+| double-gauss | pipeline-echo | f3a91e7a8bf5abda55545e9e0542c7b699c703b020b097b11331f217dd74e81c |

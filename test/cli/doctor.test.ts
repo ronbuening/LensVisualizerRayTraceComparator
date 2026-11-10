@@ -14,7 +14,7 @@ import {
   type DoctorProbe,
 } from "../../src/cli/commands/doctor.ts";
 import { COMMANDS, EXIT_FAILURE, EXIT_OK, EXIT_USAGE, runCli } from "../../src/cli/main.ts";
-import { CONFIG_FILE, REPO_ROOT } from "../../src/core/config.ts";
+import { CONFIG_FILE, LOCAL_CONFIG_FILE, REPO_ROOT } from "../../src/core/config.ts";
 import { FAKE_ENGINE_FILES, closureOf, freshLv } from "../engines/lv/support.ts";
 
 const LV = "/checkouts/lv";
@@ -88,12 +88,13 @@ interface Run {
 async function runDoctor(
   t: TestContext,
   machine: Machine,
-  options: { args?: string[]; config?: unknown; env?: Record<string, string> } = {},
+  options: { args?: string[]; config?: unknown; local?: unknown; env?: Record<string, string> } = {},
 ): Promise<Run & { rootDir: string }> {
   const rootDir = realpathSync(mkdtempSync(join(tmpdir(), "lvrtc-doctor-")));
   t.after(() => rmSync(rootDir, { recursive: true, force: true }));
   const config = options.config ?? { lvPath: LV, engines: { optiland: { python: OPTILAND_PYTHON } } };
   writeFileSync(join(rootDir, CONFIG_FILE), typeof config === "string" ? config : JSON.stringify(config));
+  if (options.local !== undefined) writeFileSync(join(rootDir, LOCAL_CONFIG_FILE), JSON.stringify(options.local));
 
   const ran: string[] = [];
   const probe: DoctorProbe = {
@@ -328,6 +329,19 @@ test("LensVisualizer and optiland not configured are reported, not a failure", a
   );
   assert.match(run.out, /^ {2}Not ready to check LensVisualizer: do what the fix lines above say\./m);
   assert.deepEqual(run.ran, ["python3 --version"]);
+  // No lvrtc.local.json yet: the two fix lines that name it say how to make it, and the Ready section is as it was.
+  const flat = (text: string): string => text.replace(/\s+/g, " ");
+  const hint = "There is no lvrtc.local.json yet: make it by copying lvrtc.local.example.json, then set the key in it.";
+  assert.equal(flat(run.out).split(hint).length - 1, 2);
+  assert.ok(!flat(run.out.slice(run.out.indexOf("\nReady\n"))).includes(hint));
+  // With an lvrtc.local.json, the fix lines say nothing of making one.
+  const withLocal = await runDoctor(t, machine, { config: {}, local: {} });
+  assert.equal(withLocal.code, EXIT_OK);
+  assert.ok(!flat(withLocal.out).includes(hint));
+  assert.match(
+    flat(withLocal.out),
+    /fix Set lvPath in lvrtc\.local\.json \(or the environment variable LVRTC_LV_PATH\)/,
+  );
 
   const json = JSON.parse((await runDoctor(t, machine, { args: ["--json"], config: {} })).out);
   assert.deepEqual(json.ready, { checkLv: false, lensVisualizer: false, optiland: false });

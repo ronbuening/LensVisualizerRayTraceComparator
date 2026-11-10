@@ -16,6 +16,7 @@ import {
   rowStatusLabel,
   VERDICT_TEXT,
   METHOD_TEXT,
+  modeLabel,
   valueLabel,
   verdictShort,
 } from "../vocabulary/index.ts";
@@ -236,11 +237,7 @@ function sectionLines(section: ReportSection): string[] {
           valueLabel(METHOD_TEXT, section.mode),
           HOW_TO_READ_TEXT.kind[CLASS_KIND[section.class] ?? ""] ?? section.class,
         );
-  const lines = [
-    `#### ${heading}`,
-    "",
-    RUN_REPORT_TEXT.sectionLine(`\`${section.quantity}\``, judged, section.requestId),
-  ];
+  const lines = [`#### ${heading}`, "", RUN_REPORT_TEXT.sectionLine(`\`${section.quantity}\``, judged)];
 
   if (section.referenceVsEach !== null) {
     const { reference, rows } = section.referenceVsEach;
@@ -351,6 +348,56 @@ function howToRead(floor: boolean): string[] {
   ];
 }
 
+/**
+ * The "Identifiers" section of a run's report: the hashes of the suite file, the limits file, each engine's code (and
+ * this tool's code behind an engine of its own), each run's lens state and each request a section is of.
+ */
+function identifierLines(model: ReportModel): string[] {
+  const t = RUN_REPORT_TEXT;
+  const adapters = model.engines.some(
+    (engine) => engine.status === "available" && engine.adapterRevision !== undefined,
+  );
+  const engineRows = model.engines.map((engine) =>
+    engine.status === "available"
+      ? [engine.id, engine.fingerprint, ...(adapters ? [engine.adapterRevision ?? NOTHING] : [])]
+      : [engine.id, NOTHING, ...(adapters ? [NOTHING] : [])],
+  );
+  const lines = [
+    `## ${t.identifiers}`,
+    "",
+    ...t.identifiersIntro,
+    "",
+    ...table(t.identifierColumns, [
+      [t.suiteFile, model.suite.hash],
+      [t.limitsFile, model.policy.hash],
+    ]),
+  ];
+  if (engineRows.length > 0) lines.push("", ...table(t.engineIdentifierColumns(adapters), engineRows));
+  if (model.runs.length > 0) {
+    lines.push(
+      "",
+      ...table(
+        t.runIdentifierColumns,
+        model.runs.map((run) => [run.name, run.caseId ?? NOTHING]),
+      ),
+    );
+  }
+  if (model.sections.length > 0) {
+    lines.push(
+      "",
+      ...table(
+        t.requestIdentifierColumns,
+        model.sections.map((section) => [
+          section.run,
+          section.request === null ? section.rung : `${section.rung}, ${section.request}`,
+          section.requestId,
+        ]),
+      ),
+    );
+  }
+  return lines;
+}
+
 /** How to read a table of the engines' own MTF: what a row's status and a field's class say. Templates only. */
 export const HOW_TO_READ_MTF: readonly string[] = [
   `### ${HOW_TO_READ_TEXT.ownMtf}`,
@@ -375,12 +422,13 @@ export const HOW_TO_READ_MTF: readonly string[] = [
  * one newline at the end. Every number goes through `src/core/numeric/format.ts`, and every text placed in a table
  * goes through `escapeCell`.
  *
- * The sections, in order: the title and the inputs (suite, contract version, policy version, engines with their
- * fingerprints and, for the comparator's own engines, their adapter revisions, runs); the verdict summary; the
+ * The sections, in order: the title and the inputs (suite, contract version, limits-file version, engines with their
+ * status and version, runs with theirs); the verdict summary, by verdict label and mode label; the
  * consensus over the run, where a section has one to look for; the support matrix; for each run and rung the
  * reference-vs-each table, the pairwise matrix with the group's consensus under it where it has one to look for, for
  * the rung of the engines' own MTF the table of it at the shown frequencies, and the values the answers only record;
- * what the comparison does not cover, always; and how to read the verdicts.
+ * what the comparison does not cover, always; how to read the verdicts; and the identifiers: the hashes of the suite
+ * file, the limits file, the engines' code, the runs' lens states and the sections' requests.
  */
 export function renderMarkdown(model: ReportModel): string {
   const t = RUN_REPORT_TEXT;
@@ -392,35 +440,23 @@ export function renderMarkdown(model: ReportModel): string {
   lines.push(
     ...table(REPORT_TEXT.inputColumns, [
       [REPORT_TEXT.suite, model.suite.name],
-      [t.suiteHash, model.suite.hash],
       [REPORT_TEXT.contract, model.contract],
       [REPORT_TEXT.limitsFile, REPORT_TEXT.limitsFileVersion(count(model.policy.version))],
-      [t.limitsFileHash, model.policy.hash],
     ]),
     "",
     "### Engines",
     "",
   );
-  // The column of adapter revisions is there only where an engine has one: an engine of the comparator's own.
-  const adapters = model.engines.some(
-    (engine) => engine.status === "available" && engine.adapterRevision !== undefined,
-  );
+  // The hashes of the engines' code and of the runs' lens states are under Identifiers, at the end.
   const engineRows = model.engines.map((engine) =>
     engine.status === "available"
-      ? [
-          engine.id,
-          "available",
-          engine.version,
-          engine.fingerprint,
-          ...(adapters ? [engine.adapterRevision ?? NOTHING] : []),
-        ]
-      : [engine.id, `unavailable: ${engine.code}`, NOTHING, NOTHING, ...(adapters ? [NOTHING] : [])],
+      ? [engine.id, "available", engine.version]
+      : [engine.id, `unavailable: ${engine.code}`, NOTHING],
   );
-  lines.push(...(engineRows.length === 0 ? ["No engine was run."] : table(t.engineColumns(adapters), engineRows)));
+  lines.push(...(engineRows.length === 0 ? ["No engine was run."] : table(t.engineColumns, engineRows)));
   lines.push("", "### Runs", "");
   const runRows = model.runs.map((run) => [
     run.name,
-    run.caseId ?? NOTHING,
     run.problems.length === 0 ? "run" : `not started: ${run.problems.join("; ")}`,
   ]);
   lines.push(...table(t.runColumns, runRows));
@@ -435,9 +471,9 @@ export function renderMarkdown(model: ReportModel): string {
     count(model.summary.find((entry) => entry.mode === mode)?.counts[verdict] ?? 0);
   lines.push(
     ...table(
-      ["Verdict", ...COMPARISON_MODES],
+      [t.verdictSummaryColumn, ...COMPARISON_MODES.map(modeLabel)],
       VERDICTS.filter((verdict) => floor || verdict !== "FLOOR").map((verdict) => [
-        verdict,
+        VERDICT_TEXT[verdict].label,
         ...COMPARISON_MODES.map((mode) => countsOf(mode, verdict)),
       ]),
     ),
@@ -470,5 +506,6 @@ export function renderMarkdown(model: ReportModel): string {
   lines.push(...model.notCovered.map((sentence) => `- ${sentence}`));
   lines.push("", ...howToRead(floor));
   if (model.sections.some((section) => section.mtf !== undefined)) lines.push("", ...HOW_TO_READ_MTF);
+  lines.push("", ...identifierLines(model));
   return `${lines.join("\n")}\n`;
 }

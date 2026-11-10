@@ -790,29 +790,21 @@ export const MTF_COMPARISON_TEXT = {
 /** The words of a run's report (`lvrtc report`, `src/report/markdown.ts`) that are its own. */
 export const RUN_REPORT_TEXT = {
   title: (suite: string): string => `Comparison report: ${suite}`,
-  limitsFileHash: "Limits file hash",
-  suiteHash: "Suite hash",
-  engineColumns: (identifiers: boolean): string[] => [
-    "Engine",
-    "Status",
-    "Version",
-    "Engine code",
-    ...(identifiers ? ["This tool's code behind it"] : []),
-  ],
-  runColumns: ["Run", "Lens state", "Status"],
+  engineColumns: ["Engine", "Status", "Version"],
+  runColumns: ["Run", "Status"],
   verdictSummary: "Verdict summary",
+  verdictSummaryColumn: "Verdict",
   noFailure: (pairs: string): string => `No pair is Fail or Error, of ${pairs} compared.`,
   failures: (failing: string, pairs: string): string => `${failing} of ${pairs} pairs are Fail or Error.`,
   supportMatrix: "Support matrix",
   supportColumns: ["Run", "Check"],
-  sectionLine: (quantity: string, judged: string, request: string): string =>
-    `Quantity ${quantity}: ${judged}. Request \`${request}\`.`,
+  sectionLine: (quantity: string, judged: string): string => `Quantity ${quantity}: ${judged}.`,
   judged: (method: string, kind: string): string => `${method}; ${kind}`,
   noPolicyEntry: "the limits file has no entry for this check",
   howToRead: "How to read this",
   howToReadIntro: [
-    "Each pair of engines that answered one request gets one verdict. A table of this report shows its stored value;",
-    "this is its label and what it means:",
+    "Each pair of engines that answered one request gets one verdict. The verdict summary shows its label; the other",
+    "tables of this report show its stored value. This is each label, its stored value and what it means:",
   ],
   verdictColumns: ["Label", "Stored value", "Meaning"],
   failing: (floor: boolean): string[] => [
@@ -836,6 +828,22 @@ export const RUN_REPORT_TEXT = {
     "The reference-vs-each table and the pairwise matrix judge a pair alike, so a pair that is in both has the same",
     "verdict in both.",
   ],
+  identifiers: "Identifiers",
+  identifiersIntro: [
+    "The hashes that tell one version from another: of the suite file and of the limits file; of each engine's code",
+    "and, for an engine of this tool's own, of this tool's code behind it; of each run's lens state; and of each",
+    "request a section of the results is of.",
+  ],
+  identifierColumns: ["Identifier", "Value"],
+  suiteFile: "Suite file",
+  limitsFile: "Limits file",
+  engineIdentifierColumns: (adapters: boolean): string[] => [
+    "Engine",
+    "Engine code",
+    ...(adapters ? ["This tool's code behind it"] : []),
+  ],
+  runIdentifierColumns: ["Run", "Lens state"],
+  requestIdentifierColumns: ["Run", "Check", "Request"],
 } as const;
 
 /** The words of a baseline's table of the engines' own MTF (`src/baseline/mtfReport.ts`). */

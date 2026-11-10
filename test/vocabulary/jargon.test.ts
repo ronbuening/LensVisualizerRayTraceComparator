@@ -1,6 +1,8 @@
 // The jargon ratchet: every user-facing surface is held to the list of the tool's own words it still uses
 // (`JARGON`, `src/vocabulary/jargon.ts`). A word not on a surface's list fails, and so does a listed word the surface
-// no longer uses: the lists only shrink, each to empty, as the plain-language stages land.
+// no longer uses: the lists only shrink. What remains is what must stay, each with its reason beside its list: a name
+// that is stored (a file name, a comparison's reason, a JSON member, the catalog snapshot's ids and its reproducer
+// commands until the end-of-project catalog refresh), or a page that shows an old id or an older word by design.
 //
 // The commands' own output joins the ratchet here (`CLI_OUTPUT`): what they print on a temporary root of fake
 // engines. The dashboard joins it too (`DASHBOARD`): the visible text and the <title> text of every page its wording
@@ -41,10 +43,8 @@ const ROOT = fileURLToPath(new URL("../..", import.meta.url));
 /** The words each surface still uses: a key is a command (`lvrtc` for the top-level help) or a file. */
 type Allowlist = Readonly<Record<string, readonly string[]>>;
 
-/** `lvrtc --help` and `lvrtc <command> --help`. `run` names --rungs, the older spelling of --checks. */
-const CLI_HELP: Allowlist = {
-  run: ["rung"],
-};
+/** `lvrtc --help` and `lvrtc <command> --help`: empty. */
+const CLI_HELP: Allowlist = {};
 
 /**
  * What the commands print on a temporary root of fake engines, by command line. `run` and `baseline check` name the

@@ -5,37 +5,35 @@
 | Input | Value |
 |---|---|
 | Suite | r9b-stand-ins |
-| Suite hash | f468d61f309a985206b26b9271d180cd5d6b8e9e7a30935e9c254d75d5d6e5ff |
 | Contract version | 1.0 |
 | Limits file | v1 |
-| Limits file hash | e433eafea6dfbbbcbf37de7e04a8adc4511b4b77a2e4726b5583737a292ee163 |
 
 ### Engines
 
-| Engine | Status | Version | Engine code |
-|---|---|---|---|
-| lv | available | 1 | e446589a9d2d1f032334b5e798670d49c6268734494645c2a0f45c4a5bc007a2 |
-| optiland | available | 1 | 5b42de3b00b5524489ff7d64c6f9c2d9fd6d53eb0f33fb98439c766aa9b33d31 |
+| Engine | Status | Version |
+|---|---|---|
+| lv | available | 1 |
+| optiland | available | 1 |
 
 ### Runs
 
-| Run | Lens state | Status |
-|---|---|---|
-| lens | 5e86575ae0af7493b28942da1d0fa71b4683e02ce17743e04724058ddd28addd | run |
+| Run | Status |
+|---|---|
+| lens | run |
 
 ## Verdict summary
 
 No pair is Fail or Error, of 6 compared.
 
-| Verdict | reference-vs-each | pairwise |
+| Verdict | against the reference | every pair |
 |---|---|---|
-| PASS | 0 | 0 |
-| FAIL | 0 | 0 |
-| RECORDED | 3 | 3 |
-| ATTENTION | 0 | 0 |
-| UNSUPPORTED | 0 | 0 |
-| BLOCKED | 0 | 0 |
-| ERROR | 0 | 0 |
+| Pass: within limit | 0 | 0 |
+| Fail: beyond limit | 0 | 0 |
+| Side by side | 3 | 3 |
+| Side by side, worth a look | 0 | 0 |
+| Not computed | 0 | 0 |
+| Not judged (an earlier check failed) | 0 | 0 |
+| Error | 0 | 0 |
 
 ## Support matrix
 
@@ -51,7 +49,7 @@ No pair is Fail or Error, of 6 compared.
 
 #### Distortion, pupils and lateral colour beside optiland's — `chief-vs-optiland`, request 1 of 3
 
-Quantity `chief.native`: each engine's own method; side by side, no limit. Request `90ebb95de8e540ba912359d165fae26954ba83d2016cb1430286919cd069c7ee`.
+Quantity `chief.native`: each engine's own method; side by side, no limit.
 
 Reference vs each, against `lv`:
 
@@ -101,7 +99,7 @@ Recorded values, as each engine reports them. They are listed and never judged:
 
 #### Distortion, pupils and lateral colour beside optiland's — `chief-vs-optiland`, request 2 of 3
 
-Quantity `chief.native`: each engine's own method; side by side, no limit. Request `0c61068d14858a01185fad60c86696b6adda44e31272b1e3f326d7ee9c0339c0`.
+Quantity `chief.native`: each engine's own method; side by side, no limit.
 
 Reference vs each, against `lv`:
 
@@ -163,7 +161,7 @@ Recorded values, as each engine reports them. They are listed and never judged:
 
 #### Distortion, pupils and lateral colour beside optiland's — `chief-vs-optiland`, request 3 of 3
 
-Quantity `chief.native`: each engine's own method; side by side, no limit. Request `63564a4046cb3b10c7852becdc8646eb05c4839610a9726b805b38971c00c89b`.
+Quantity `chief.native`: each engine's own method; side by side, no limit.
 
 Reference vs each, against `lv`:
 
@@ -218,8 +216,8 @@ What this comparison does not show, whatever its verdicts:
 
 ## How to read this
 
-Each pair of engines that answered one request gets one verdict. A table of this report shows its stored value;
-this is its label and what it means:
+Each pair of engines that answered one request gets one verdict. The verdict summary shows its label; the other
+tables of this report show its stored value. This is each label, its stored value and what it means:
 
 | Label | Stored value | Meaning |
 |---|---|---|
@@ -246,3 +244,29 @@ A value written down has 9 significant digits, or is a whole number in full, and
 element. `—` marks a place with nothing to compare, and `not finite` a number that is a NaN or an infinity.
 The reference-vs-each table and the pairwise matrix judge a pair alike, so a pair that is in both has the same
 verdict in both.
+
+## Identifiers
+
+The hashes that tell one version from another: of the suite file and of the limits file; of each engine's code
+and, for an engine of this tool's own, of this tool's code behind it; of each run's lens state; and of each
+request a section of the results is of.
+
+| Identifier | Value |
+|---|---|
+| Suite file | f468d61f309a985206b26b9271d180cd5d6b8e9e7a30935e9c254d75d5d6e5ff |
+| Limits file | e433eafea6dfbbbcbf37de7e04a8adc4511b4b77a2e4726b5583737a292ee163 |
+
+| Engine | Engine code |
+|---|---|
+| lv | e446589a9d2d1f032334b5e798670d49c6268734494645c2a0f45c4a5bc007a2 |
+| optiland | 5b42de3b00b5524489ff7d64c6f9c2d9fd6d53eb0f33fb98439c766aa9b33d31 |
+
+| Run | Lens state |
+|---|---|
+| lens | 5e86575ae0af7493b28942da1d0fa71b4683e02ce17743e04724058ddd28addd |
+
+| Run | Check | Request |
+|---|---|---|
+| lens | chief-vs-optiland, request 1 of 3 | 90ebb95de8e540ba912359d165fae26954ba83d2016cb1430286919cd069c7ee |
+| lens | chief-vs-optiland, request 2 of 3 | 0c61068d14858a01185fad60c86696b6adda44e31272b1e3f326d7ee9c0339c0 |
+| lens | chief-vs-optiland, request 3 of 3 | 63564a4046cb3b10c7852becdc8646eb05c4839610a9726b805b38971c00c89b |

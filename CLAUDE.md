@@ -13,7 +13,7 @@ npm run format         # prettier --write
 npm test               # node --test on test/**/*.test.ts, except test/integration
 npm run test:python    # unittest for the Python worker kit and the optiland worker on a fake optiland; part of check
 npm run test:lv        # tests against the real LensVisualizer (test/integration/lv); NOT part of check
-npm run test:optiland  # tests against the real optiland (test/integration/optiland); NOT part of check; the suites, focus stations and catalog sweep need LV too; r2 needs a POSIX shell
+npm run test:optiland  # tests against the real optiland (test/integration/optiland); NOT part of check; the suites, focus stations and catalog sweep need LV too; r2.test.ts needs a POSIX shell
 npm run verify:real    # Stage 5.4: lvrtc doctor, then baseline check benchmark and benchmark --mtf on live LV and optiland, one at a time; NOT part of check
 npm run verify:real -- --all   # the same for every routine committed suite in a fixed order (not the catalog, a dated snapshot: --suite catalog); --suites a,b and --jobs <n> (default 4, a ceiling)
 node bin/lvrtc.mjs     # the CLI: commands grouped for reviewers; lvrtc help <command> prints one command's help
@@ -61,7 +61,7 @@ node bin/lvrtc.mjs run suites/benchmark.json --checks mtf-vs-wave-estimate   # R
 node bin/lvrtc.mjs engine conformance wave-mtf-of-lv-rays   # the conformance kit on the wave MTF of LV's rays (needs LV)
 node bin/lvrtc.mjs run suites/benchmark.json --checks mtf-vs-optiland-fft   # R5: lv, optiland and wave-mtf-of-lv-rays side by side, recorded; run only where named; about 8 min; asks optiland again at 512 rays for a run outside its band
 node bin/lvrtc.mjs run suites/benchmark.json --checks geometric-mtf-vs-optiland   # R5g: LV's geometric MTF beside optiland's own and the replay, recorded; only where named; about 37 min
-node bin/lvrtc.mjs run suites/benchmark.json --engines lv,reference-tracer,optiland --checks geometric-mtf,lv-mtf-replay,mtf-vs-optiland-fft,geometric-mtf-vs-optiland,wave-mtf,mtf-vs-wave-estimate   # the MTF rungs: about 54 min and 15 GB from an empty store
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,reference-tracer,optiland --checks geometric-mtf,lv-mtf-replay,mtf-vs-optiland-fft,geometric-mtf-vs-optiland,wave-mtf,mtf-vs-wave-estimate   # the MTF checks: about 54 min and 15 GB from an empty store
 node bin/lvrtc.mjs baseline write benchmark --mtf   # after that run and compare: baselines/benchmark.mtf.json, reports/benchmark/mtf.*
 node bin/lvrtc.mjs baseline check benchmark --mtf   # needs the engines; minutes on a warm store; MOVED (a recorded rung) fails nothing
 node bin/lvrtc.mjs compare benchmark           # judge that run: exit 1 on FAIL or ERROR; FLOOR is a pass

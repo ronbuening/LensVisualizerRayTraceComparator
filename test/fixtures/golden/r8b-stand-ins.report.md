@@ -5,37 +5,35 @@
 | Input | Value |
 |---|---|
 | Suite | r8b-stand-ins |
-| Suite hash | 1ef05bb587a3687cdceca3e07923c3ca39f1e0489565bac0c154a1a18c9f563f |
 | Contract version | 1.0 |
 | Limits file | v1 |
-| Limits file hash | 2c33b876579870531ff8ec94116d71639f8129e757d3d0cba31d8342ce7b33b4 |
 
 ### Engines
 
-| Engine | Status | Version | Engine code |
-|---|---|---|---|
-| lv | available | 1 | e446589a9d2d1f032334b5e798670d49c6268734494645c2a0f45c4a5bc007a2 |
-| optiland | available | 1 | 5b42de3b00b5524489ff7d64c6f9c2d9fd6d53eb0f33fb98439c766aa9b33d31 |
+| Engine | Status | Version |
+|---|---|---|
+| lv | available | 1 |
+| optiland | available | 1 |
 
 ### Runs
 
-| Run | Lens state | Status |
-|---|---|---|
-| lens | 3ea92f50c52c5a9fa2f6ddf5d09f3f540cefe04d71869a24615e9faeb50a7f1c | run |
+| Run | Status |
+|---|---|
+| lens | run |
 
 ## Verdict summary
 
 No pair is Fail or Error, of 4 compared.
 
-| Verdict | reference-vs-each | pairwise |
+| Verdict | against the reference | every pair |
 |---|---|---|
-| PASS | 0 | 0 |
-| FAIL | 0 | 0 |
-| RECORDED | 1 | 1 |
-| ATTENTION | 1 | 1 |
-| UNSUPPORTED | 0 | 0 |
-| BLOCKED | 0 | 0 |
-| ERROR | 0 | 0 |
+| Pass: within limit | 0 | 0 |
+| Fail: beyond limit | 0 | 0 |
+| Side by side | 1 | 1 |
+| Side by side, worth a look | 1 | 1 |
+| Not computed | 0 | 0 |
+| Not judged (an earlier check failed) | 0 | 0 |
+| Error | 0 | 0 |
 
 ## Support matrix
 
@@ -50,7 +48,7 @@ No pair is Fail or Error, of 4 compared.
 
 #### Spherical aberration and axial colour beside optiland's — `axial-vs-optiland`, request 1 of 2
 
-Quantity `axial.native`: each engine's own method; side by side, no limit. Request `b9e04ea6a0958ec5024aed1f0c408f2392cb4efe2766ac2992dcc97adc39dc8e`.
+Quantity `axial.native`: each engine's own method; side by side, no limit.
 
 Reference vs each, against `lv`:
 
@@ -86,7 +84,7 @@ Recorded values, as each engine reports them. They are listed and never judged:
 
 #### Spherical aberration and axial colour beside optiland's — `axial-vs-optiland`, request 2 of 2
 
-Quantity `axial.native`: each engine's own method; side by side, no limit. Request `4d86ea45b37bb3ad3b714a88df31256288077b97bf6826f923e83dcc557a1539`.
+Quantity `axial.native`: each engine's own method; side by side, no limit.
 
 Reference vs each, against `lv`:
 
@@ -140,8 +138,8 @@ What this comparison does not show, whatever its verdicts:
 
 ## How to read this
 
-Each pair of engines that answered one request gets one verdict. A table of this report shows its stored value;
-this is its label and what it means:
+Each pair of engines that answered one request gets one verdict. The verdict summary shows its label; the other
+tables of this report show its stored value. This is each label, its stored value and what it means:
 
 | Label | Stored value | Meaning |
 |---|---|---|
@@ -168,3 +166,28 @@ A value written down has 9 significant digits, or is a whole number in full, and
 element. `—` marks a place with nothing to compare, and `not finite` a number that is a NaN or an infinity.
 The reference-vs-each table and the pairwise matrix judge a pair alike, so a pair that is in both has the same
 verdict in both.
+
+## Identifiers
+
+The hashes that tell one version from another: of the suite file and of the limits file; of each engine's code
+and, for an engine of this tool's own, of this tool's code behind it; of each run's lens state; and of each
+request a section of the results is of.
+
+| Identifier | Value |
+|---|---|
+| Suite file | 1ef05bb587a3687cdceca3e07923c3ca39f1e0489565bac0c154a1a18c9f563f |
+| Limits file | 2c33b876579870531ff8ec94116d71639f8129e757d3d0cba31d8342ce7b33b4 |
+
+| Engine | Engine code |
+|---|---|
+| lv | e446589a9d2d1f032334b5e798670d49c6268734494645c2a0f45c4a5bc007a2 |
+| optiland | 5b42de3b00b5524489ff7d64c6f9c2d9fd6d53eb0f33fb98439c766aa9b33d31 |
+
+| Run | Lens state |
+|---|---|
+| lens | 3ea92f50c52c5a9fa2f6ddf5d09f3f540cefe04d71869a24615e9faeb50a7f1c |
+
+| Run | Check | Request |
+|---|---|---|
+| lens | axial-vs-optiland, request 1 of 2 | b9e04ea6a0958ec5024aed1f0c408f2392cb4efe2766ac2992dcc97adc39dc8e |
+| lens | axial-vs-optiland, request 2 of 2 | 4d86ea45b37bb3ad3b714a88df31256288077b97bf6826f923e83dcc557a1539 |

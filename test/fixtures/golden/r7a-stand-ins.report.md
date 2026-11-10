@@ -5,38 +5,36 @@
 | Input | Value |
 |---|---|
 | Suite | r7a-stand-ins |
-| Suite hash | c5296d1a42a8c2762d11895c6138c6f2574c525b3e6d2e3c93867c74557a8969 |
 | Contract version | 1.0 |
 | Limits file | v1 |
-| Limits file hash | fcf6955e2dff2e46f8e0a774991d0060b8b93cb35546c9bf1b81c0c2e2bdf3a5 |
 
 ### Engines
 
-| Engine | Status | Version | Engine code | This tool's code behind it |
-|---|---|---|---|---|
-| moved | available | 1 | 1285061cefc83b4538eba70d6a45fc6f0186be2b876f122a3721e150c5a34ed3 | 49ce9a07661a4cb64d5850ff62a4c3ac138b08fee37d05c86596498dcd7db117 |
-| reference-tracer | available | 1 | 1285061cefc83b4538eba70d6a45fc6f0186be2b876f122a3721e150c5a34ed3 | 49ce9a07661a4cb64d5850ff62a4c3ac138b08fee37d05c86596498dcd7db117 |
-| stopped | available | 1 | 1285061cefc83b4538eba70d6a45fc6f0186be2b876f122a3721e150c5a34ed3 | 49ce9a07661a4cb64d5850ff62a4c3ac138b08fee37d05c86596498dcd7db117 |
+| Engine | Status | Version |
+|---|---|---|
+| moved | available | 1 |
+| reference-tracer | available | 1 |
+| stopped | available | 1 |
 
 ### Runs
 
-| Run | Lens state | Status |
-|---|---|---|
-| lens | 3ea92f50c52c5a9fa2f6ddf5d09f3f540cefe04d71869a24615e9faeb50a7f1c | run |
+| Run | Status |
+|---|---|
+| lens | run |
 
 ## Verdict summary
 
 6 of 10 pairs are Fail or Error.
 
-| Verdict | reference-vs-each | pairwise |
+| Verdict | against the reference | every pair |
 |---|---|---|
-| PASS | 2 | 2 |
-| FAIL | 2 | 4 |
-| RECORDED | 0 | 0 |
-| ATTENTION | 0 | 0 |
-| UNSUPPORTED | 0 | 0 |
-| BLOCKED | 0 | 0 |
-| ERROR | 0 | 0 |
+| Pass: within limit | 2 | 2 |
+| Fail: beyond limit | 2 | 4 |
+| Side by side | 0 | 0 |
+| Side by side, worth a look | 0 | 0 |
+| Not computed | 0 | 0 |
+| Not judged (an earlier check failed) | 0 | 0 |
+| Error | 0 | 0 |
 
 ## Consensus
 
@@ -76,7 +74,7 @@ Of 2 requests with a consensus to look for, 2 have one.
 
 #### Spot and fan rays — `spot-rays`, request 1 of 2
 
-Quantity `rays.trace`: one estimator on each engine's trace of the same rays; held to a limit. Request `e3d8c50ac74aa038a63e4e27a58f07253e26af15609da251ef9dcb8584c0effd`.
+Quantity `rays.trace`: one estimator on each engine's trace of the same rays; held to a limit.
 
 Reference vs each, against `reference-tracer`:
 
@@ -108,7 +106,7 @@ Recorded values, as each engine reports them. They are listed and never judged:
 
 #### Spot and fan rays — `spot-rays`, request 2 of 2
 
-Quantity `rays.trace`: one estimator on each engine's trace of the same rays; held to a limit. Request `b9f79561c0293b9ce65b45870e0a13bbcf8d7b187215aefa9aa6e88ee1b54a68`.
+Quantity `rays.trace`: one estimator on each engine's trace of the same rays; held to a limit.
 
 Reference vs each, against `reference-tracer`:
 
@@ -155,8 +153,8 @@ What this comparison does not show, whatever its verdicts:
 
 ## How to read this
 
-Each pair of engines that answered one request gets one verdict. A table of this report shows its stored value;
-this is its label and what it means:
+Each pair of engines that answered one request gets one verdict. The verdict summary shows its label; the other
+tables of this report show its stored value. This is each label, its stored value and what it means:
 
 | Label | Stored value | Meaning |
 |---|---|---|
@@ -183,3 +181,29 @@ A value written down has 9 significant digits, or is a whole number in full, and
 element. `—` marks a place with nothing to compare, and `not finite` a number that is a NaN or an infinity.
 The reference-vs-each table and the pairwise matrix judge a pair alike, so a pair that is in both has the same
 verdict in both.
+
+## Identifiers
+
+The hashes that tell one version from another: of the suite file and of the limits file; of each engine's code
+and, for an engine of this tool's own, of this tool's code behind it; of each run's lens state; and of each
+request a section of the results is of.
+
+| Identifier | Value |
+|---|---|
+| Suite file | c5296d1a42a8c2762d11895c6138c6f2574c525b3e6d2e3c93867c74557a8969 |
+| Limits file | fcf6955e2dff2e46f8e0a774991d0060b8b93cb35546c9bf1b81c0c2e2bdf3a5 |
+
+| Engine | Engine code | This tool's code behind it |
+|---|---|---|
+| moved | 1285061cefc83b4538eba70d6a45fc6f0186be2b876f122a3721e150c5a34ed3 | 49ce9a07661a4cb64d5850ff62a4c3ac138b08fee37d05c86596498dcd7db117 |
+| reference-tracer | 1285061cefc83b4538eba70d6a45fc6f0186be2b876f122a3721e150c5a34ed3 | 49ce9a07661a4cb64d5850ff62a4c3ac138b08fee37d05c86596498dcd7db117 |
+| stopped | 1285061cefc83b4538eba70d6a45fc6f0186be2b876f122a3721e150c5a34ed3 | 49ce9a07661a4cb64d5850ff62a4c3ac138b08fee37d05c86596498dcd7db117 |
+
+| Run | Lens state |
+|---|---|
+| lens | 3ea92f50c52c5a9fa2f6ddf5d09f3f540cefe04d71869a24615e9faeb50a7f1c |
+
+| Run | Check | Request |
+|---|---|---|
+| lens | spot-rays, request 1 of 2 | e3d8c50ac74aa038a63e4e27a58f07253e26af15609da251ef9dcb8584c0effd |
+| lens | spot-rays, request 2 of 2 | b9f79561c0293b9ce65b45870e0a13bbcf8d7b187215aefa9aa6e88ee1b54a68 |

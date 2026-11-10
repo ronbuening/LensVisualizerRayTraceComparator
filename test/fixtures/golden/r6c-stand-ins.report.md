@@ -5,41 +5,39 @@
 | Input | Value |
 |---|---|
 | Suite | r6c-stand-ins |
-| Suite hash | 42859dd104196db2704aaaf6d38ad4e21e94bab0a2b28e1147aa7888ff5fa5d4 |
 | Contract version | 1.0 |
 | Limits file | v1 |
-| Limits file hash | 0f9d1439d5a64ffd54b79fa6e0b75031180841b145ead77f4e660650741e0530 |
 
 ### Engines
 
-| Engine | Status | Version | Engine code |
-|---|---|---|---|
-| lv | available | 1 | e446589a9d2d1f032334b5e798670d49c6268734494645c2a0f45c4a5bc007a2 |
-| optiland | available | 1 | 5b42de3b00b5524489ff7d64c6f9c2d9fd6d53eb0f33fb98439c766aa9b33d31 |
-| otf-of-optiland-wavefront | available | 1 | 45749fab0ee9a0f72877424d177d5552c5a336c1e156521f21c2660dd96b7820 |
-| wave-mtf-of-lv-rays | available | 1 | f726f40bc7f30ada0156f055e3ecc24b6c8a629d916291e451c6ad946abeeb7c |
+| Engine | Status | Version |
+|---|---|---|
+| lv | available | 1 |
+| optiland | available | 1 |
+| otf-of-optiland-wavefront | available | 1 |
+| wave-mtf-of-lv-rays | available | 1 |
 
 ### Runs
 
-| Run | Lens state | Status |
-|---|---|---|
-| edge | 0318018e2bf0d3700b9594802bda35d77b49a9451eba43d7ea4f87bb49d7f1f8 | run |
-| beyond | fd9331265b562f1702ee981c3415e32c8d3e89e98546901db15418dec6cac99a | run |
-| polychromatic | f1a1f1bcf37a53d35013b1e6f15df51172e5291f3a76ec9e05aa5fc8a2d87625 | run |
+| Run | Status |
+|---|---|
+| edge | run |
+| beyond | run |
+| polychromatic | run |
 
 ## Verdict summary
 
 No pair is Fail or Error, of 27 compared.
 
-| Verdict | reference-vs-each | pairwise |
+| Verdict | against the reference | every pair |
 |---|---|---|
-| PASS | 0 | 0 |
-| FAIL | 0 | 0 |
-| RECORDED | 4 | 5 |
-| ATTENTION | 4 | 10 |
-| UNSUPPORTED | 1 | 3 |
-| BLOCKED | 0 | 0 |
-| ERROR | 0 | 0 |
+| Pass: within limit | 0 | 0 |
+| Fail: beyond limit | 0 | 0 |
+| Side by side | 4 | 5 |
+| Side by side, worth a look | 4 | 10 |
+| Not computed | 1 | 3 |
+| Not judged (an earlier check failed) | 0 | 0 |
+| Error | 0 | 0 |
 
 ## Support matrix
 
@@ -55,7 +53,7 @@ No pair is Fail or Error, of 27 compared.
 
 #### MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront`
 
-Quantity `mtf.native`: each engine's own method; side by side, no limit. Request `62b036f845249e3d2d8428a1a806c9aaa438913be7ae4c4dd572741629152c70`.
+Quantity `mtf.native`: each engine's own method; side by side, no limit.
 
 Reference vs each, against `lv`:
 
@@ -162,7 +160,7 @@ The MTF values at every frequency of the request are in `report.json`.
 
 #### MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront`
 
-Quantity `mtf.native`: each engine's own method; side by side, no limit. Request `1a8f8a4b342f975b6dafd04cf4f86ace69a545dd7d72608495f2e3041cab0b02`.
+Quantity `mtf.native`: each engine's own method; side by side, no limit.
 
 Reference vs each, against `lv`:
 
@@ -266,7 +264,7 @@ The MTF values at every frequency of the request are in `report.json`.
 
 #### MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront`
 
-Quantity `mtf.native`: each engine's own method; side by side, no limit. Request `4b1a7a073e8806946d93ff3376dafe90cae86f487c5bb13d18dd24922e129561`.
+Quantity `mtf.native`: each engine's own method; side by side, no limit.
 
 Reference vs each, against `lv`:
 
@@ -388,8 +386,8 @@ What this comparison does not show, whatever its verdicts:
 
 ## How to read this
 
-Each pair of engines that answered one request gets one verdict. A table of this report shows its stored value;
-this is its label and what it means:
+Each pair of engines that answered one request gets one verdict. The verdict summary shows its label; the other
+tables of this report show its stored value. This is each label, its stored value and what it means:
 
 | Label | Stored value | Meaning |
 |---|---|---|
@@ -438,3 +436,33 @@ A field has the class of its difference, decided in this order, and the reason b
 | a convention differs | `convention` | A declared transform between the two engines' conventions is missing. |
 | not converged | `numerical` | An engine says that its own sampling did not settle (in the Zernike comparison: the fit is ill-conditioned); the difference is shown apart, in no review band. |
 | the methods differ | `method` | Two methods, each standing by its own answer; the difference is set beside the review band, if there is one. |
+
+## Identifiers
+
+The hashes that tell one version from another: of the suite file and of the limits file; of each engine's code
+and, for an engine of this tool's own, of this tool's code behind it; of each run's lens state; and of each
+request a section of the results is of.
+
+| Identifier | Value |
+|---|---|
+| Suite file | 42859dd104196db2704aaaf6d38ad4e21e94bab0a2b28e1147aa7888ff5fa5d4 |
+| Limits file | 0f9d1439d5a64ffd54b79fa6e0b75031180841b145ead77f4e660650741e0530 |
+
+| Engine | Engine code |
+|---|---|
+| lv | e446589a9d2d1f032334b5e798670d49c6268734494645c2a0f45c4a5bc007a2 |
+| optiland | 5b42de3b00b5524489ff7d64c6f9c2d9fd6d53eb0f33fb98439c766aa9b33d31 |
+| otf-of-optiland-wavefront | 45749fab0ee9a0f72877424d177d5552c5a336c1e156521f21c2660dd96b7820 |
+| wave-mtf-of-lv-rays | f726f40bc7f30ada0156f055e3ecc24b6c8a629d916291e451c6ad946abeeb7c |
+
+| Run | Lens state |
+|---|---|
+| edge | 0318018e2bf0d3700b9594802bda35d77b49a9451eba43d7ea4f87bb49d7f1f8 |
+| beyond | fd9331265b562f1702ee981c3415e32c8d3e89e98546901db15418dec6cac99a |
+| polychromatic | f1a1f1bcf37a53d35013b1e6f15df51172e5291f3a76ec9e05aa5fc8a2d87625 |
+
+| Run | Check | Request |
+|---|---|---|
+| edge | mtf-vs-optiland-wavefront | 62b036f845249e3d2d8428a1a806c9aaa438913be7ae4c4dd572741629152c70 |
+| beyond | mtf-vs-optiland-wavefront | 1a8f8a4b342f975b6dafd04cf4f86ace69a545dd7d72608495f2e3041cab0b02 |
+| polychromatic | mtf-vs-optiland-wavefront | 4b1a7a073e8806946d93ff3376dafe90cae86f487c5bb13d18dd24922e129561 |

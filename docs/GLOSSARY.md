@@ -15,6 +15,7 @@ The words used on screens and in reports, and the older words of this tool that 
 | limit | The largest value a judged figure may take for a pair to pass. | `tolerance`, `gate` |
 | side by side | A check that sets two methods' answers beside each other with no limit: each engine uses its own method and sampling, so a difference is written down and fails nothing. | `recorded` |
 | review band | A width for attention on a side-by-side figure: a difference outside it is worth a look and is not a failure. | `attention band` |
+| sorting limit | A limit of a side-by-side check that decides, before any difference is taken, whether two answers are of the same field or system, such as the distance between their chief-ray landings. A field beyond it is set aside and its difference enters no review band; no pair passes or fails by it. |  |
 | lens state | One lens as every engine is handed it: the lens at one zoom, focus and stop, with its wavelengths, field angles and image plane. | `case` |
 | wavelength | One of the wavelengths a lens state is evaluated at, with its weight and the refractive index of every glass at it. | `line` |
 | reference wavelength | The wavelength a lens's glasses are specified at: the d line (587.56 nm), or the e line for some lenses. | `reference line` |

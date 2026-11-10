@@ -56,8 +56,11 @@ for (const suite of GOLDEN_SUITES) {
 test("the benchmark trio is a TypeScript reference, the Python fake inside the tolerance and a fake without quantities", () => {
   // Read from the golden file, so the claim holds also where Python is missing and the suite is not run.
   const golden = readFileSync(goldenFile("fake-3-engines"), "utf8");
-  assert.match(golden, /^\| fake-a \| available \| 1 \| [0-9a-f]{64} \|$/m);
-  assert.match(golden, /^\| fake-pyn \| available \| 1 \| fake-pyn fixture 1 \|$/m);
+  assert.match(golden, /^\| fake-a \| available \| 1 \|$/m);
+  assert.match(golden, /^\| fake-pyn \| available \| 1 \|$/m);
+  // Their code, under Identifiers.
+  assert.match(golden, /^\| fake-a \| [0-9a-f]{64} \|$/m);
+  assert.match(golden, /^\| fake-pyn \| fake-pyn fixture 1 \|$/m);
   assert.match(golden, /^Reference vs each, against `fake-a`:$/m);
   // A PASS that is not zero: the two engines differ, and by less than the tolerance.
   assert.match(golden, /^\| fake-pyn \| 6\.04e-14 \| 2\.04e-14 at index 1 \| PASS \| {2}\|$/m);
@@ -83,7 +86,7 @@ test("the Python trio and the all-TypeScript trio report the same numbers", () =
 test("the faults report shows a FAIL beyond tolerance, an engine error, an unavailable engine and a run not started", () => {
   const golden = readFileSync(goldenFile("fake-faults"), "utf8");
   assert.match(golden, /^18 of 18 pairs are Fail or Error\.$/m);
-  assert.match(golden, /^\| fake-absent \| unavailable: load-failed \| — \| — \|$/m);
+  assert.match(golden, /^\| fake-absent \| unavailable: load-failed \| — \|$/m);
   assert.match(golden, /^\| singlet \| pipeline-echo \| ok \| error: load-failed \| error: protocol-error \| ok \|$/m);
   assert.match(
     golden,
@@ -92,7 +95,7 @@ test("the faults report shows a FAIL beyond tolerance, an engine error, an unava
   assert.match(golden, /^\| fake-broken \| — \| — \| ERROR \| fake-broken ended as error \(protocol-error\) \|$/m);
   assert.match(
     golden,
-    /^\| missing \| — \| not started: lens fixture cases\/missing\.json: it cannot be read \(ENOENT\) \|$/m,
+    /^\| missing \| not started: lens fixture cases\/missing\.json: it cannot be read \(ENOENT\) \|$/m,
   );
   // The suite names no reference: the first engine with an ok result is it.
   assert.match(golden, /^Reference vs each, against `fake-a`:$/m);

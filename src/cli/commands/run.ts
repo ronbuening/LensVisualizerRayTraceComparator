@@ -73,7 +73,7 @@ const HELP = helpText([
     ],
     [
       "--checks <ids>",
-      "the checks of every run, in place of the run's own list (--rungs is the older spelling of this option). Without it every check runs but those run only where named. A check asked of engines of its own is asked of them whatever --engines names. lvrtc checks <id> says what each compares. The checks are:",
+      "the checks of every run, in place of the run's own list (the option's older spelling is still read, with a note). Without it every check runs but those run only where named. A check asked of engines of its own is asked of them whatever --engines names. lvrtc checks <id> says what each compares. The checks are:",
       (column) => checkListLines(column + 2),
     ],
     ...JOBS_OPTIONS,

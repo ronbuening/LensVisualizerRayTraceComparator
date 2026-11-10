@@ -5,39 +5,37 @@
 | Input | Value |
 |---|---|
 | Suite | hand-built |
-| Suite hash | 5555555555555555555555555555555555555555555555555555555555555555 |
 | Contract version | 1.0 |
 | Limits file | v3 |
-| Limits file hash | 6f5fbb754d2d10dd36e1c7b3afd705801745bcd0d2eb3a6df3a22a7a294902b4 |
 
 ### Engines
 
-| Engine | Status | Version | Engine code |
-|---|---|---|---|
-| lv | available | 0.9 \| dev | ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff |
-| optiland | available | 0.5.9 | operator<br>build |
-| zemax | unavailable: spawn-failed | — | — |
+| Engine | Status | Version |
+|---|---|---|
+| lv | available | 0.9 \| dev |
+| optiland | available | 0.5.9 |
+| zemax | unavailable: spawn-failed | — |
 
 ### Runs
 
-| Run | Lens state | Status |
-|---|---|---|
-| tele | cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc | run |
-| wide | — | not started: lens fixture a\|b.json: it cannot be read (ENOENT); second<br>problem |
+| Run | Status |
+|---|---|
+| tele | run |
+| wide | not started: lens fixture a\|b.json: it cannot be read (ENOENT); second<br>problem |
 
 ## Verdict summary
 
 3 of 7 pairs are Fail or Error.
 
-| Verdict | reference-vs-each | pairwise |
+| Verdict | against the reference | every pair |
 |---|---|---|
-| PASS | 0 | 0 |
-| FAIL | 0 | 0 |
-| RECORDED | 0 | 0 |
-| ATTENTION | 1 | 1 |
-| UNSUPPORTED | 0 | 1 |
-| BLOCKED | 1 | 0 |
-| ERROR | 1 | 2 |
+| Pass: within limit | 0 | 0 |
+| Fail: beyond limit | 0 | 0 |
+| Side by side | 0 | 0 |
+| Side by side, worth a look | 1 | 1 |
+| Not computed | 0 | 1 |
+| Not judged (an earlier check failed) | 1 | 0 |
+| Error | 1 | 2 |
 
 ## Support matrix
 
@@ -54,7 +52,7 @@
 
 #### MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft`, request 1 of 2
 
-Quantity `mtf.native`: each engine's own method; side by side, no limit. Request `1111111111111111111111111111111111111111111111111111111111111111`.
+Quantity `mtf.native`: each engine's own method; side by side, no limit.
 
 Reference vs each, against `lv`:
 
@@ -73,7 +71,7 @@ Pairwise, the verdict of each two engines and the metric nearest to or furthest 
 
 #### MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft`, request 2 of 2
 
-Quantity `mtf.native`: each engine's own method; side by side, no limit. Request `2222222222222222222222222222222222222222222222222222222222222222`.
+Quantity `mtf.native`: each engine's own method; side by side, no limit.
 
 Pairwise, the verdict of each two engines and the metric nearest to or furthest past its limit:
 
@@ -84,7 +82,7 @@ Pairwise, the verdict of each two engines and the metric nearest to or furthest 
 
 #### Built system — `built-system`
 
-Quantity `system.describe`: the limits file has no entry for this check. Request `1111111111111111111111111111111111111111111111111111111111111111`.
+Quantity `system.describe`: the limits file has no entry for this check.
 
 Reference vs each, against `lv`:
 
@@ -92,7 +90,7 @@ No other engine was compared.
 
 #### First-order data — `first-order`
 
-Quantity `paraxial.first-order`: numbers of each engine set against each other; held to a limit. Request `2222222222222222222222222222222222222222222222222222222222222222`.
+Quantity `paraxial.first-order`: numbers of each engine set against each other; held to a limit.
 
 Reference vs each, against `lv`:
 
@@ -126,8 +124,8 @@ What this comparison does not show, whatever its verdicts:
 
 ## How to read this
 
-Each pair of engines that answered one request gets one verdict. A table of this report shows its stored value;
-this is its label and what it means:
+Each pair of engines that answered one request gets one verdict. The verdict summary shows its label; the other
+tables of this report show its stored value. This is each label, its stored value and what it means:
 
 | Label | Stored value | Meaning |
 |---|---|---|
@@ -154,3 +152,32 @@ A value written down has 9 significant digits, or is a whole number in full, and
 element. `—` marks a place with nothing to compare, and `not finite` a number that is a NaN or an infinity.
 The reference-vs-each table and the pairwise matrix judge a pair alike, so a pair that is in both has the same
 verdict in both.
+
+## Identifiers
+
+The hashes that tell one version from another: of the suite file and of the limits file; of each engine's code
+and, for an engine of this tool's own, of this tool's code behind it; of each run's lens state; and of each
+request a section of the results is of.
+
+| Identifier | Value |
+|---|---|
+| Suite file | 5555555555555555555555555555555555555555555555555555555555555555 |
+| Limits file | 6f5fbb754d2d10dd36e1c7b3afd705801745bcd0d2eb3a6df3a22a7a294902b4 |
+
+| Engine | Engine code |
+|---|---|
+| lv | ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff |
+| optiland | operator<br>build |
+| zemax | — |
+
+| Run | Lens state |
+|---|---|
+| tele | cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc |
+| wide | — |
+
+| Run | Check | Request |
+|---|---|---|
+| tele | mtf-vs-optiland-fft, request 1 of 2 | 1111111111111111111111111111111111111111111111111111111111111111 |
+| tele | mtf-vs-optiland-fft, request 2 of 2 | 2222222222222222222222222222222222222222222222222222222222222222 |
+| tele | built-system | 1111111111111111111111111111111111111111111111111111111111111111 |
+| tele | first-order | 2222222222222222222222222222222222222222222222222222222222222222 |

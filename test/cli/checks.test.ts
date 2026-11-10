@@ -83,7 +83,7 @@ test("every command's help says how it exits, and run lists the checks and engin
     assert.match(run, new RegExp(`^ +${rung.id} +${check?.title.replace(/[()]/g, "\\$&")}`, "m"), rung.id);
   }
   assert.match(run, /--checks <ids> +the checks of every run/);
-  assert.match(run, /--rungs is the older spelling/);
+  assert.match(run, /older spelling is still\s+read, with a note/);
   assert.match(run, /^ +reference-tracer +Reference tracer$/m);
 });
 

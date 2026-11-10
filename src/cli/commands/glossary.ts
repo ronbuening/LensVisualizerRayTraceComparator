@@ -25,7 +25,7 @@ const SYNOPSIS = "Usage: lvrtc glossary [<term>] [--json]\n";
 const HELP = helpText([
   SYNOPSIS,
   ...paragraph(
-    "Prints the glossary: each word used on the screens and in the reports, what it means, and the older words of this tool that it replaces. With a term, prints that entry alone; a term is found by its word or by an older word it replaces (lvrtc glossary tolerance shows limit), and a verdict, an outcome, an engine or a check also by the value stored for it (lvrtc glossary ATTENTION, lvrtc glossary ray-trace); a check is found by the id it had before the ids were renamed too. docs/GLOSSARY.md holds the same words with the checks, engines and suites.",
+    "Prints the glossary: each word used on the screens and in the reports, what it means, and the older words of this tool that it replaces. With a term, prints that entry alone; a term is found by its word or by an older word it replaces (lvrtc glossary tolerance shows limit), and a verdict, an outcome, an engine or a check also by the value stored for it (lvrtc glossary ATTENTION, lvrtc glossary ray-trace); a check or an engine is found by the id it had before the ids were renamed too. docs/GLOSSARY.md holds the same words with the checks, engines and suites.",
   ),
   ...options([
     ["<term>", "the word to look up, in any case"],
