@@ -93,8 +93,8 @@ the powers cancels to the bit, and a focal length of 1e17 mm where rounding left
 
 RECORDED_F_NUMBER = "optilandFNumber"
 """The name under which optiland's paraxial f-number is recorded: ``FNO()``, which for a stop given by its size is
-``f2() / EPD()``, the focal length over the diameter of the entrance pupil whatever the object distance, with the
-sign of that diameter."""
+``|f2()| / EPD()`` (``f2() / EPD()`` up to 4e893f53; #923), the magnitude of the focal length over the diameter of the
+entrance pupil whatever the object distance, with the sign of that diameter."""
 
 RECORDED_MAGNIFICATION = "magnification"
 """The name under which every engine records the paraxial lateral magnification of a finite object."""

@@ -1,14 +1,16 @@
 """``seidel.native``: optiland's own third-order sums of a case at one line.
 
 Asked of optiland's ``aberrations`` of a verified optic of the line whose one field is ``maxFieldDeg``
-(``mtf.field_optic``): ``seidels()``, the five totals S1 to S5, and ``third_order()``, whose per-surface terms of
-transverse aberration (``TSC``, ``CC``, ``TAC``, ``TPC``, ``DC``) optiland sums into them as ``-sum(T) * 2 n' u'``
-(its ``_sum_seidels``: ``n'`` the image space's index, ``u'`` its marginal ray's slope there). Nothing of a sum is
-computed here but two changes optiland states no accessor for, each stated where it is applied:
+(``mtf.field_optic``): ``seidels()``, the five totals S1 to S5, ``seidels_per_surface()`` (since optiland a9e544a2,
+#1107), each surface's, and ``third_order()``, whose per-surface terms of transverse aberration (``TSC``, ``CC``,
+``TAC``, ``TPC``, ``DC``) optiland makes them of: a surface's sum is ``-T * 2 n' u'`` (``n'`` the image space's index,
+``u'`` its marginal ray's slope there), and the totals are the surfaces' sums added up (``_sum_seidels``). Nothing of
+a sum is computed here; what is done to optiland's values is said where it is done:
 
-- a surface's sum is its term times optiland's own factor ``-2 n' u'``, read from ``optic.surfaces.n`` and
-  ``paraxial.marginal_ray()``; the surfaces' sums are held to optiland's total (``SURFACE_SUM_TOLERANCE`` of the sum of
-  their magnitudes), a ``BuildMismatch`` otherwise;
+- each surface's sum, read from ``seidels_per_surface()``, is held to its term of ``third_order()`` times the factor
+  ``2 n' u'`` read from ``optic.surfaces.n`` and ``paraxial.marginal_ray()``, to the bit, and the surfaces' sums to
+  optiland's total (``SURFACE_SUM_TOLERANCE`` of the sum of their magnitudes), a ``BuildMismatch`` otherwise. Up to
+  4e893f53 optiland had no accessor of a surface's sum, and the worker formed that product itself;
 - every sum is negated: OpticStudio's sign (the contract's) is the opposite of optiland's on all five, as optiland's own
   cross-tool test of the Hubble telescope against OpticStudio 2023 R1.02 states (docs/gotchas.md); and optiland's
   Lagrange invariant ``paraxial.invariant()``, ``n (y_chief u_marginal - y_marginal u_chief)``, is the contract's
@@ -25,8 +27,9 @@ Every setting is read back (``seidel_step``), each check with a test that makes 
 (``test_seidel.py``): the builder's optic and the field (``field_optic``), the type and value of the system aperture,
 the wavelength, the image space's index, the largest field, where the marginal ray starts, the chief ray's slope in
 object space (tan(maxFieldDeg)) and its height at the stop (0), the number of surfaces, ``third_order()``'s total
-against ``seidels()``. A system optiland has no first-order data of is an answer ``unavailable`` with the item of
-``first_order``; an exception of optiland, or a sum that is no number, an answer ``unavailable`` with the reason.
+against ``seidels()``, the shape of ``seidels_per_surface()`` and each of its values against ``third_order()``. A
+system optiland has no first-order data of is an answer ``unavailable`` with the item of ``first_order``; an exception
+of optiland, or a sum that is no number, an answer ``unavailable`` with the reason.
 ``FATAL`` exceptions are no answer's.
 
 Nothing of optiland or numpy is imported when this module is.
@@ -47,7 +50,7 @@ from .mtf import FATAL, MtfApi, _Quiet, _numbers, _said, field_optic
 SEIDEL_NATIVE = "seidel.native"
 
 METHOD = "optiland-seidels"
-"""The method of an answer: optiland's ``aberrations.seidels()`` and ``third_order()``."""
+"""The method of an answer: optiland's ``aberrations.seidels()``, ``seidels_per_surface()`` and ``third_order()``."""
 
 SUMS = ("SPHA", "COMA", "ASTI", "FCUR", "DIST")
 """The five sums of third order, in OpticStudio's order: optiland's S1 to S5."""
@@ -63,8 +66,8 @@ APERTURE_TYPE = "float_by_stop_size"
 
 SURFACE_SUM_TOLERANCE = 1e-12
 """How far the surfaces' sums may add up from optiland's own total, against the sum of their magnitudes: the rounding
-of optiland's ``be.sum`` and of the worker's product by the factor, with room; terms of another factor, or of
-another sum, are far beyond it. Which surface a term is of is optiland's order of its surfaces, held by their count."""
+of optiland's ``be.sum`` against the worker's ``math.fsum``, with room; terms of another factor, or of another sum, are
+far beyond it. Which surface a term is of is optiland's order of its surfaces, held by their count."""
 
 SLOPE_TOLERANCE = 4
 """How many units in the last place the chief ray's slope in object space may differ from tan(maxFieldDeg): optiland
@@ -139,6 +142,11 @@ def _hold(what: str, built: Any, expected: Any) -> None:
         raise _mismatch(what, built, expected)
 
 
+def _same(a: float, b: float) -> bool:
+    """Whether two floats are the same number, a NaN the same as a NaN (a sum that is none is the answer's reason)."""
+    return a == b or (math.isnan(a) and math.isnan(b))
+
+
 def _units_apart(a: float, b: float) -> float:
     """How many units in the last place of the larger magnitude two floats lie apart."""
     if a == b:
@@ -191,6 +199,7 @@ def seidel_step(
         yb, ub = (_numbers(api, values) for values in optic.paraxial.chief_ray())
         invariant = _numbers(api, optic.paraxial.invariant())[0]
         totals = _numbers(api, optic.aberrations.seidels())
+        native = api.np.asarray(optic.aberrations.seidels_per_surface(), dtype=api.np.float64)
         third = optic.aberrations.third_order()
     if bool(optic.object_surface.is_infinite):
         _hold("where the marginal ray starts: its height and slope", (ya[0], ua[0]), (entrance / 2.0, 0.0))
@@ -204,14 +213,20 @@ def seidel_step(
     if abs(yb[stop + 1]) > CHIEF_AT_STOP_TOLERANCE * max(1.0, *(abs(value) for value in yb)):
         raise _mismatch("the chief ray's height at the stop, mm", yb[stop + 1], 0.0)
     _hold("third_order()'s total", _numbers(api, third[-1]), totals)
+    _hold("the shape of seidels_per_surface()", tuple(int(size) for size in native.shape), (len(SUMS), len(surfaces)))
     factor = 2.0 * image_index * ua[-1]
     per_surface: list[dict[str, float]] = [{} for _ in surfaces]
-    for name, position in zip(SUMS, (0, 2, 4, 6, 8), strict=True):
+    for at, (name, position) in enumerate(zip(SUMS, (0, 2, 4, 6, 8), strict=True)):
         terms = _numbers(api, third[position])
-        _hold(f"the number of {TERMS[SUMS.index(name)]} terms", len(terms), len(surfaces))
-        # optiland's own per-surface sum, -T 2 n' u', in the contract's sign: negated.
-        values = [term * factor for term in terms]
-        total = -totals[SUMS.index(name)]
+        _hold(f"the number of {TERMS[at]} terms", len(terms), len(surfaces))
+        # optiland's own per-surface sum, -T 2 n' u' (seidels_per_surface()), in the contract's sign: negated. It is
+        # held to the terms of third_order() times the factor, to the bit: the product optiland forms.
+        values = [-value for value in _numbers(api, native[at])]
+        from_terms = [term * factor for term in terms]
+        if not all(_same(value, term) for value, term in zip(values, from_terms, strict=True)):
+            raise _mismatch(f"seidels_per_surface()'s {name} beside third_order()'s {TERMS[at]} times 2 n' u'",
+                            values, from_terms)
+        total = -totals[at]
         scale = math.fsum(abs(value) for value in values)
         if abs(math.fsum(values) - total) > SURFACE_SUM_TOLERANCE * scale + 1e-300:
             raise _mismatch(f"the surfaces' {name} added up", math.fsum(values), total)
@@ -235,7 +250,7 @@ def method_of() -> dict[str, Any]:
         "name": METHOD,
         "params": {
             "totals": "-aberrations.seidels()",
-            "surfaces": "third_order() terms times 2 n' u'",
+            "surfaces": "-aberrations.seidels_per_surface(), held to third_order() terms times 2 n' u'",
             "sign": "OpticStudio's, optiland's negated",
             "chiefSlope": "tan(maxFieldDeg)",
             "aspheric": "conic constant only (terms of power 3 and 4 refused)",

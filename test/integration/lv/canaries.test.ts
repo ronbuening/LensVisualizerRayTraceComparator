@@ -7,7 +7,9 @@
 // zone of four channels, the vignetting tab's stop lattice) were reread at Stage 6.8b, at LV 607ff23ae (closure
 // f016b35b, 184 files). Those LensVisualizer #940 moved (a finite object's chief seed, the end of a lattice that aims
 // nothing) were reread at LV 6287f4393 (closure fc5ae923, 184 files). Those LensVisualizer #942 moved (the rim
-// lands of cuts and vertical extensions) were reread at LV 55ddfb1e1 (closure ff0d938d, 184 files).
+// lands of cuts and vertical extensions) were reread at LV 55ddfb1e1 (closure ff0d938d, 184 files). Those
+// LensVisualizer #960 moved (curved image surfaces: every analysis branches on the lens's image surface, whose flat
+// branch is the old line) were reread at LV 420b47555 (closure c5c5ba6d, 187 files).
 // LensVisualizer exports none of these rules as a function, so the comparator restates them; when LV rewrites
 // one, the canary fails and names what to read again. Whitespace is not compared.
 import assert from "node:assert/strict";
@@ -418,6 +420,20 @@ test(
     const projection =
       "projectToImagePlane in src/estimators/imageProjection.ts lands a ray by the same arithmetic and takes an exit " +
       "point up to 1e-9 mm behind the plane for a point of it";
+    // Since LV #960 the rule is the flat image's branch: a curved image surface lands rays on its shape, which no case
+    // can state, and the exporter refuses such a state (curved-image-surface).
+    assertSource(
+      tracing,
+      `return state.lens.imageSurface === null
+         ? mtfFlatImagePoint(state, trace, imagePlaneZ)
+         : mtfCurvedImagePoint(state, trace, imagePlaneZ);`,
+      "exportCase in src/engines/lv/exportCase.ts refuses a state with a curved image surface",
+    );
+    assertSource(
+      tracing,
+      "function mtfFlatImagePoint(state: PreparedGeometry, trace: EngineTraceResult, imagePlaneZ: number): MtfSpot | null {",
+      projection,
+    );
     assertSource(
       tracing,
       'if (trace.status !== "ok" || Math.abs(trace.terminalDirection[2]) < 1e-12) return null;',
@@ -1008,9 +1024,37 @@ test(
       "with it: the pupil coordinate, the shear, the path to the foot of the perpendicular and the sign of the phase";
     const differs =
       "docs/gotchas.md, 'LensVisualizer has two wave estimates', says how each differs from src/estimators/waveOtf.ts";
-    // What the comparator's estimator shares: optical cosines, a shear of lambda nu, the path, the sign.
-    assertSource(wave, "lattice.cosineX[cell] = ray.trace.finalMedium * ray.trace.terminalDirection[0];", shared);
-    assertSource(wave, "lattice.cosineY[cell] = ray.trace.finalMedium * ray.trace.terminalDirection[1];", shared);
+    // What the comparator's estimator shares: optical cosines, a shear of lambda nu, the path, the sign. Since LV #960
+    // (500ef5992) a cell's cosines are taken along the image surface's tangents, which on a flat image (null, every
+    // state the exporter admits: it refuses a curved one) are the exit direction's x and y times the index, as before.
+    assertSource(wave, "lattice.cosineX[cell] = mtfImageAxisCosine(ray, 0, tangents);", shared);
+    assertSource(wave, "lattice.cosineY[cell] = mtfImageAxisCosine(ray, 1, tangents);", shared);
+    assertSource(
+      wave,
+      `const shape = bundle.imageSurface ?? null;
+       const tangents = shape === null ? null : shape.imageTangentsAt(reference.x, reference.y);`,
+      shared,
+    );
+    assertSource(
+      wave,
+      `const image: Vec3 =
+         lateral === null
+           ? [reference.x, reference.y, imagePlaneZ]
+           : [lateral[0], lateral[1], imagePlaneZ + shape!.sagAt(lateral[0], lateral[1])];`,
+      shared,
+    );
+    assertSource(
+      sheared,
+      `return tangents === null
+         ? ray.trace.finalMedium * ray.trace.terminalDirection[component]
+         : ray.trace.finalMedium * dot(ray.trace.terminalDirection, tangents[component]);`,
+      shared,
+    );
+    assertSource(
+      "src/optics/analysis/mtf/mtfTracing.ts",
+      "if (state.lens.imageSurface !== null) bundle.imageSurface = state.lens.imageSurface;",
+      "a bundle of a flat image carries no image surface, so both estimates take the flat branch",
+    );
     assertSource(wave, "const halfShear = (frequency * wavelengthMm) / 2;", shared);
     assertSource(sheared, "const halfShear = (frequency * wavelengthMm) / 2;", shared);
     assertSource(
@@ -1344,11 +1388,14 @@ test("the MTF still accounts for one field at one grid as the replay restates it
   const tracing = "src/optics/analysis/mtf/mtfTracing.ts";
   const bundle =
     "the replay reads the reference, the counts, the unresolved weights and the open borders off LensVisualizer's bundles";
+  // Since LV #960 a bundle lands its rays by the flat plane's rule or on the curved image surface, chosen once by the
+  // state; every state the exporter admits is flat (it refuses a curved one), so the replay's bundles land flat.
   assertSource(
     tracing,
-    "const chiefPoint = mtfImagePoint(state, chiefTrace, imagePlaneZ) ?? extras.reference;",
+    "const imagePoint = state.lens.imageSurface === null ? mtfFlatImagePoint : mtfCurvedImagePoint;",
     bundle,
   );
+  assertSource(tracing, "const chiefPoint = imagePoint(state, chiefTrace, imagePlaneZ) ?? extras.reference;", bundle);
   assertSource(
     tracing,
     "extras: { reference?: MtfSpot; opticalPath?: boolean; coarse?: AimedStopLattice | null } = {},",
@@ -1683,14 +1730,33 @@ test("a sample of the tabs' pupil is still the aimed launch's ray, traced as the
     "checkSemiDiameter: true, stopSemiDiameter: launch.clipSemiDiameterMm, stopOnClip: true, directionNormalized: true, launchBoundT: launch.launchBoundT, ...spectralTraceOptions(state, spectrum),",
     "test/integration/lv/spotRays.test.ts and its siblings trace a set with prepareAimedPupilTrace",
   );
-  // The bokeh tile's chief ray, intercepted at the tile's plane: bokehChiefLanding in src/engines/lv/spot.ts.
+  // The bokeh tile's chief ray, intercepted at the tile's plane: bokehChiefLanding in src/engines/lv/spot.ts. Since LV
+  // #960 every intercept is handed the lens's image surface, which lands a ray on a curved one and is null (the
+  // straight transfer to the plane, as before) on every state the exporter admits.
   assertSource(
     "src/optics/analysis/bokeh/bokeh.ts",
-    "const chiefDefocused: SkewImagePlaneIntercept | null = skewImagePlaneIntercept( bundle.chiefRay.trace.x, bundle.chiefRay.trace.y, bundle.chiefRay.trace.ux, bundle.chiefRay.trace.uy, geometry.lastSurfZ, sensorZ, );",
-    "bokehChiefLanding in src/engines/lv/spot.ts lands the tile's chief ray so",
+    "const chiefDefocused: SkewImagePlaneIntercept | null = skewImagePlaneIntercept( bundle.chiefRay.trace.x, bundle.chiefRay.trace.y, bundle.chiefRay.trace.ux, bundle.chiefRay.trace.uy, geometry.lastSurfZ, sensorZ, L.imageSurface, );",
+    "bokehChiefLanding in src/engines/lv/spot.ts lands the tile's chief ray so, with lvImageSurface of the state",
+  );
+  const adapters = "src/optics/trace/rayAdapters.ts";
+  assertSource(
+    adapters,
+    `imageSurface: ImageSurfaceShape | null,
+     ): SkewImagePlaneIntercept | null {
+       if (imageSurface !== null) {`,
+    "every caller of skewImagePlaneIntercept hands it lvImageSurface of the state: an undefined is taken for a shape",
+  );
+  assertSource(
+    adapters,
+    `const dz = imagePlaneZ - lastSurfZ;
+     const imagePoint = {
+       x: x + ux * dz,
+       y: y + uy * dz,
+     };
+     return isFinite(imagePoint.x) && isFinite(imagePoint.y) ? imagePoint : null;`,
+    "the flat image's intercept, which the spot, chief and curvature tests restate, is the straight transfer, with no z",
   );
   // The skew launch of the chief sets and of the curvature sets' parabasal rays (lvSkewLaunch).
-  const adapters = "src/optics/trace/rayAdapters.ts";
   const skew = "lvSkewLaunch in src/engines/lv/spotRaySets.ts restates the skew launch";
   assertSource(adapters, "const lead = state.lens.constants.rayLead ?? 0;", skew);
   assertSource(adapters, "const skewFirstZ = scalarSkewState.z[0] ?? 0;", skew);
@@ -1837,7 +1903,13 @@ test("the sections' reading of a ray is still the one the axial sets' figures re
     definition,
   );
   assertSource("src/optics/chromatic/chromaticTrace.ts", "axialIntercepts[ch] = rayZ - ray.y / ray.u;", definition);
-  assertSource("src/optics/chromatic/chromaticTrace.ts", "imagePlaneHeights[ch] = ray.y + dz * ray.u;", definition);
+  // Since LV #960 a height on a plane is the flat image's branch; a curved one lands the ray on its shape (refused by
+  // the exporter, curved-image-surface).
+  assertSource(
+    "src/optics/chromatic/chromaticTrace.ts",
+    "if (imageSurface === null) { imagePlaneHeights[ch] = ray.y + dz * ray.u; } else {",
+    definition,
+  );
   // The least-squares focus of the profile's pairs: sum u^2 z / sum u^2 (leastSquaresFocus), and the RMS about the axis.
   const focus = "leastSquaresFocus in src/estimators/axialIntercept.ts is this focus and RMS";
   assertSource(
@@ -1850,15 +1922,24 @@ test("the sections' reading of a ray is still the one the axial sets' figures re
     "return sum + hit.slope * hit.slope * referenceZ - hit.coordinate * hit.slope;",
     focus,
   );
+  // Since LV #960 the section's heights at a plane are handed the lens's image surface: null, a plane at the focus as
+  // before, on every state the exporter admits.
   assertSource(
     "src/optics/analysis/aberration/spherical.ts",
-    "const bestFocusRmsMm = rmsAtPlane(hits, lastSurfZ, bestFocusZ);",
+    "const bestFocusRmsMm = rmsAtPlane(hits, lastSurfZ, bestFocusZ, L.imageSurface);",
     focus,
   );
   assertSource(
     "src/optics/analysis/aberration/spherical.ts",
-    "transverseSaMm: transverseCoordinateAtPlane(plusHit, lastSurfZ, bestFocusZ) - nearAxisHeightAtBestFocus,",
+    "transverseSaMm: transverseCoordinateAtPlane(plusHit, lastSurfZ, bestFocusZ, L.imageSurface) - nearAxisHeightAtBestFocus,",
     "sphericalFigures' profile is each zone's plus ray at the focus less the near-axis plus ray's",
+  );
+  assertSource(
+    "src/optics/analysis/aberration/shared.ts",
+    `return landing ? meridionalImageHeight(imageSurface, landing.y) : NaN;
+     }
+     return hit.coordinate + hit.slope * (planeZ - (hit.referenceZ ?? lastSurfZ));`,
+    "axialIntercept's heights at a plane are the flat image's branch of transverseCoordinateAtPlane",
   );
 });
 
@@ -2036,7 +2117,15 @@ test("the distortion tab still traces the probe, the edge and its samples the ch
     ": prepareRayTraceForState(stateWithZ(state, zPos), { ghost: true }).ray(solve.yLaunch, launch.uField);",
     curve,
   );
-  assertSource(image, "return trace.y + trace.u * imagePlaneTransfer;", plotted);
+  // Since LV #960 the height is carried to the image by imageHeightAfterTransfer: the straight transfer to a flat image
+  // (every state the exporter admits), a landing on a curved one.
+  assertSource(image, "return imageHeightAfterTransfer(state, trace.y, trace.u, imagePlaneTransfer);", plotted);
+  assertSource(
+    image,
+    `const shape = state.lens.imageSurface;
+     if (shape === null) return y + u * transfer;`,
+    plotted,
+  );
   // Since 5ba17c20c every chief ray but the axis's is solved through the stop's centre, below one degree too, to a
   // tolerance that shrinks with the field there; the axis is 0, unsolved. The probe above stays a paraxial launch.
   const solve = "src/optics/field/chiefRaySolve.ts";
@@ -2393,15 +2482,34 @@ test("the aberrations tab still presents the field curves the engine answers cur
   assertSource(hook, "analysisContext?.request ??", answer);
   assertSource(hook, "const bundle = context.computeFieldCurvatureBundle();", answer);
   assertSource(hook, "chromaticFieldCurvatureResult: bundle.chromaticFieldCurvature,", answer);
-  // The shifts are from the design plane, + aft; the Petzval shift is paraxial, of the chief ray's landing.
+  // The shifts are from the design plane, + aft; the Petzval shift is paraxial, of the chief ray's landing. Since LV
+  // #960 both are from the image surface where the chief ray lands: the flat intercept states no z, so on every state
+  // the exporter admits (it refuses a curved image) they are from the design plane, and the Petzval shift has no sag.
   const curvature = "src/optics/analysis/aberration/fieldCurvature.ts";
-  assertSource(curvature, "const tangentialShiftMm = tangentialBestFocusZ - geometry.imagePlaneZ;", answer);
-  assertSource(curvature, "const sagittalShiftMm = sagittalBestFocusZ - geometry.imagePlaneZ;", answer);
-  assertSource(curvature, "chiefImageHeight: chiefRay.imagePoint.y,", answer);
   assertSource(
     curvature,
-    "const petzvalShiftMm = petzvalShiftAtImageHeight(chiefImageHeight, L.petzvalSum) ?? 0;",
-    "the Petzval shift lv states in sampling is paraxial: no rung compares it",
+    `const imageZ = chiefRay.imagePoint.z ?? geometry.imagePlaneZ;
+     const tangentialShiftMm = tangentialBestFocusZ - imageZ;
+     const sagittalShiftMm = sagittalBestFocusZ - imageZ;`,
+    answer,
+  );
+  assertSource(curvature, "chiefImageHeight: chiefRay.imagePoint.y,", answer);
+  const petzval = "the Petzval shift lv states in sampling is paraxial: no rung compares it";
+  assertSource(
+    curvature,
+    `const petzvalSagMm =
+       petzvalShiftAtImageHeight(standardizedFieldFocus.chiefLateralHeightMm ?? chiefImageHeight, L.petzvalSum) ?? 0;
+     const imageSurfaceSagMm = standardizedFieldFocus.imageSurfaceSagMm;
+     const petzvalShiftMm = imageSurfaceSagMm === undefined ? petzvalSagMm : petzvalSagMm - imageSurfaceSagMm;`,
+    petzval,
+  );
+  assertSource(
+    curvature,
+    `...(chiefRay.imagePoint.z === undefined
+       ? {}
+       : {
+           imageSurfaceSagMm: chiefRay.imagePoint.z - geometry.imagePlaneZ,`,
+    petzval,
   );
 });
 
@@ -2468,11 +2576,18 @@ test(
       "the sets' cells: BEAM_GRID_CELLS with no count of the drawer's",
     );
     assertSource(vignetting, "return Math.max(Math.round(cellsAcross), MIN_BEAM_GRID_CELLS);", setup);
-    assertSource(vignetting, "const mirrored = mirrorSymmetricAboutMeridian(state);", setup);
+    // Since LV #960 the half is mirrored where the image surface is mirror-symmetric too: only an obliquely turned
+    // cylinder is not, and a flat image (every state the exporter admits) is, so the rule is the surfaces' as before.
+    assertSource(vignetting, "const mirrored = imageMirrorSymmetricAboutMeridian(state);", setup);
     assertSource(
       "src/optics/analysis/mtf/mtfTracing.ts",
-      "export function mtfMirrorSymmetric(state: PreparedGeometry): boolean { return mirrorSymmetricAboutMeridian(state); }",
-      "lvVignettingSetup asks mtfMirrorSymmetric, which hands mirrorSymmetricAboutMeridian on",
+      "export function mtfMirrorSymmetric(state: PreparedGeometry): boolean { return imageMirrorSymmetricAboutMeridian(state); }",
+      "lvVignettingSetup asks mtfMirrorSymmetric, which hands imageMirrorSymmetricAboutMeridian on",
+    );
+    assertSource(
+      "src/optics/trace/symmetry.ts",
+      "return mirrorSymmetricAboutMeridian(state) && state.lens.imageSurface?.xSymmetric !== false;",
+      "lvVignettingSetup asks mtfMirrorSymmetric, which hands imageMirrorSymmetricAboutMeridian on",
     );
     // A field: its geometry, its aimed stop lattice (the MTF's, at the authored indices), none of a bounding sphere.
     assertSource(vignetting, "const geometry = computeOffAxisFieldGeometry(state, fieldFraction, fields);", lattices);
@@ -2541,7 +2656,13 @@ test("the vignetting tab still presents the curve the engine answers vignetting.
     ": prepareRayTraceForState(stateWithZ(state, zPos), { ghost: true }).ray(solve.yLaunch, launch.uField);",
     landing,
   );
-  assertSource(height, "return trace.y + trace.u * imagePlaneTransfer;", landing);
+  assertSource(height, "return imageHeightAfterTransfer(state, trace.y, trace.u, imagePlaneTransfer);", landing);
+  assertSource(
+    height,
+    `const shape = state.lens.imageSurface;
+     if (shape === null) return y + u * transfer;`,
+    landing,
+  );
 });
 
 // Stage 6.7, at LV 098c91ef6 (closure fef2e248, with the stage's names): the summary tab's request and readouts and the
@@ -2710,9 +2831,12 @@ test(
       field,
     );
     const imageHeight = "src/optics/field/imageHeight.ts";
+    // Since LV #960 a cylindrical image surface's frame edge stands first; a flat image has none (the exporter refuses
+    // every curved one), so the corner is half the image circle or the format's diagonal, as before.
     assertSource(
       imageHeight,
-      "const maxImageHeight = (state.lens.source?.catalog.imageCircleMm ?? format.diagonalMm) / 2;",
+      `const maxImageHeight =
+         state.lens.imageSurface?.fieldExtentMm ?? (state.lens.source?.catalog.imageCircleMm ?? format.diagonalMm) / 2;`,
       field,
     );
     assertSource(imageHeight, "if (limit?.settled) return { ...geometry, halfFieldDeg: limit.fieldDeg };", field);
@@ -2965,3 +3089,42 @@ test(
     );
   },
 );
+
+// LV #960 (500ef5992), read at 420b47555 (closure c5c5ba6d, 187 files): curved image surfaces. A case has the flat
+// plane z = imageZ only, so exportCase refuses a state whose lens has a curved image surface (curved-image-surface,
+// read through lvImageSurface in src/engines/lv/binding.ts) and every restated line above is the flat image's branch.
+test("a flat image is still a null image surface, which every analysis and the hook leave as it was", { skip }, () => {
+  const refused = "exportCase refuses a state whose lens.imageSurface is not null; null is the flat image";
+  assertSource(
+    "src/optics/types.ts",
+    "Every shape is mirror-symmetric in x and in y. A flat image is `null`, never a shape.",
+    refused,
+  );
+  assertSource(
+    "src/optics/prescription/compileCanonical.ts",
+    "imageSurface: data.imageSurface ? createImageSurfaceShape(data.imageSurface, frameSize(data.imageFormat)) : null,",
+    refused,
+  );
+  assertSource("src/optics/prescription/runtimeView.ts", "imageSurface: lens.imageSurface,", refused);
+  assertSource("src/optics/state/preparedGeometry.ts", "imageSurface: lens.imageSurface,", refused);
+  // The trace's landing on the image: the plane, unless the trace geometry carries a surface.
+  assertSource(
+    "src/optics/trace/pathPlanner.ts",
+    `return geometry.imageSurface === null
+       ? intersectRayPlane({ origin, direction }, geometry.imagePlane)
+       : intersectImageSurface(geometry.imageSurface, geometry.imagePlane, { origin, direction });`,
+    "lv's rays.trace lands every ray on the case's plane (imageProjection.ts), the flat image's landing",
+  );
+  // The hook builds the lens viewed along a section of a cylinder, and leaves every other lens as authored, which the
+  // exporter builds (buildLens of the lens file's default export).
+  assertSource(
+    "src/components/hooks/useLensComputation.ts",
+    "return { L: buildLens(withImageSurfaceSection(system, imageSection)) };",
+    "createLensBuilder in src/engines/lv/lensBuilder.ts builds the authored lens, which the hook builds for a flat image",
+  );
+  assertSource(
+    "src/optics/prescription/imageSurfaceSection.ts",
+    'if (section === "long" || !lens.imageSurface?.cylindrical) return lens;',
+    "createLensBuilder in src/engines/lv/lensBuilder.ts builds the authored lens, which the hook builds for a flat image",
+  );
+});

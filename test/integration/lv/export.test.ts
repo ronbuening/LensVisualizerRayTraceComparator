@@ -19,7 +19,7 @@ import type { RunOptions } from "../../../src/contract/runSpec.ts";
 import { REPO_ROOT } from "../../../src/core/config.ts";
 import { decodeNdArray } from "../../../src/core/numeric/ndarray.ts";
 import { loadSuite } from "../../../src/core/suite.ts";
-import { loadLvBinding, syntheticKind } from "../../../src/engines/lv/binding.ts";
+import { loadLvBinding, lvImageSurface, syntheticKind } from "../../../src/engines/lv/binding.ts";
 import type { LvBinding } from "../../../src/engines/lv/binding.ts";
 import { createLvCaseSource, createLvExporter } from "../../../src/engines/lv/caseSource.ts";
 import { CENSUS_FILES, renderCensusMarkdown } from "../../../src/engines/lv/census.ts";
@@ -171,15 +171,21 @@ test("export --all completes with zero throws, and its counts add up", { skip },
 test(
   "every lens LensVisualizer's own MTF path covers is exported, and no lens is exported without an account",
   { skip },
-  async () => {
+  async (t) => {
     const binding = await loadLvBinding(LV_PATH);
     const exporter = createLvExporter(binding);
     const uncovered: string[] = [];
     const unaccounted: string[] = [];
     const uncoded: string[] = [];
+    // LV #960: a state with a curved image surface, which LensVisualizer's MTF covers on the surface and a case cannot
+    // state, is refused with curved-image-surface, and that code is given to no other state.
+    const curved: string[] = [];
+    const curvedMismatch: string[] = [];
     let exportedCount = 0;
     for (const { key } of (await binding.catalog()).entries) {
       const { runtime, state } = await prepared(binding, key);
+      const surface = lvImageSurface(state);
+      if (surface !== null) curved.push(`${key} (${surface.kind}, R = ${surface.radius} mm)`);
       const radius = binding.api.wideOpenStopAtZoom(0, runtime);
       const support = binding.api.assessMtfSupport(
         ...lvMtfInputs(binding.api, state, gateOptions("reference", radius)),
@@ -198,14 +204,20 @@ test(
         if (!support.available && result.opticalCase.conditions.lines[0].indexSource !== "authored")
           unaccounted.push(key);
       } else {
-        if (support.available) uncovered.push(`${key}: ${result.problems.map((problem) => problem.code).join(", ")}`);
+        const codes = result.problems.map((problem) => problem.code);
+        const refusedCurved = codes.includes("curved-image-surface");
+        if (refusedCurved !== (surface !== null)) curvedMismatch.push(`${key}: ${codes.join(", ")}`);
+        if (support.available && !refusedCurved) uncovered.push(`${key}: ${codes.join(", ")}`);
         for (const problem of result.problems)
           if (!KNOWN_CODES.includes(problem.code)) uncoded.push(`${key}: ${problem.code}`);
       }
+      if (result.ok && surface !== null) curvedMismatch.push(`${key}: exported with a curved image surface`);
     }
     assert.deepEqual(uncovered, [], "LensVisualizer traces these for its MTF, and the exporter has no case for them");
     assert.deepEqual(unaccounted, []);
     assert.deepEqual(uncoded, []);
+    assert.deepEqual(curvedMismatch, []);
+    t.diagnostic(`${binding.fingerprint().commit}: curved image surfaces, refused: ${curved.join("; ") || "none"}`);
     assert.ok(exportedCount > 800);
   },
 );
@@ -225,6 +237,8 @@ test(
         ...lvMtfInputs(binding.api, state, gateOptions("photopic", binding.api.wideOpenStopAtZoom(0, runtime))),
       );
       const result = await exporter.exportLens(key, { lines: { kind: "photopic" } });
+      // A curved image surface (LV #960) is refused whatever the lines: the test above holds it to its code.
+      if (lvImageSurface(state) !== null) continue;
       if (result.ok !== support.available)
         disagree.push(`${key}: exported ${result.ok}, LensVisualizer ${support.reason}`);
       if (result.ok) {

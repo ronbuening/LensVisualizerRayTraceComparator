@@ -10,6 +10,7 @@ import type { OpticalCase } from "../../../src/contract/case.ts";
 import type { RaysTraceSpec } from "../../../src/contract/quantities/raysTrace.ts";
 import type { RunOptions } from "../../../src/contract/runSpec.ts";
 import { decodeNdArray } from "../../../src/core/numeric/ndarray.ts";
+import { lvImageSurface } from "../../../src/engines/lv/binding.ts";
 import type { LvBinding } from "../../../src/engines/lv/binding.ts";
 import { rebuildCase } from "../../../src/engines/lv/caseModel.ts";
 import type { LvCaseModel } from "../../../src/engines/lv/caseModel.ts";
@@ -157,6 +158,7 @@ test("traced as the tabs trace them, the sets give the fake's curve, grid, exit 
         traced.uy,
         model.state.z[last],
         model.state.z[last] + transfer,
+        lvImageSurface(model.state),
       )!;
       assert.deepEqual([point.tracedX, point.tracedY], [image.x, -image.y], `grid ray ${ray - 1}`);
     }
@@ -182,6 +184,7 @@ test("traced as the tabs trace them, the sets give the fake's curve, grid, exit 
         traced.uy,
         model.state.z[last],
         model.state.imgZ,
+        lvImageSurface(model.state),
       )!;
       assert.equal(sample.imageHeightMm, image.y, `field ${at} ${sample.channel}`);
     }

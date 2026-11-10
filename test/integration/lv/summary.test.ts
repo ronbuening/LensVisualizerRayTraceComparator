@@ -26,7 +26,8 @@
 // What R1 does not cover is listed in `NOT_COVERED_BY_R1`; its numbers are written as diagnostics. Then `lv`'s answer
 // is held to the tab asked with a request spelled out a second time. Nothing is written. Measured at LV 607ff23ae
 // (engine closure f016b35b), and again at 6287f4393 (closure fc5ae923, LV #940): the same cases and margins; at
-// 55ddfb1e1, ff57c4469 and 290c6dd85 the same margins on the 123 cases of `MEASURED_CASES`, and at 25f65d4b4 on 124.
+// 55ddfb1e1, ff57c4469 and 290c6dd85 the same margins on the 123 cases of `MEASURED_CASES`, at 25f65d4b4 on 124, and
+// at 420b47555 on 138.
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
@@ -54,16 +55,17 @@ const skip = LV_UNAVAILABLE;
 const SUITES = ["benchmark", "states", "focus-stations"] as const;
 
 /**
- * The engine closure the margins were measured with (LensVisualizer 25f65d4b4; the same margins at 290c6dd85, 0516a7c7,
- * ff57c4469, 0b6c085a, 55ddfb1e1, ff0d938d, 6287f4393, fc5ae923, and 607ff23ae, f016b35b).
+ * The engine closure the margins were measured with (LensVisualizer 420b47555; the same margins at 25f65d4b4, 4669921b,
+ * 290c6dd85, 0516a7c7, ff57c4469, 0b6c085a, 55ddfb1e1, ff0d938d, 6287f4393, fc5ae923, and 607ff23ae, f016b35b).
  */
-const PINNED_CLOSURE = "4669921bae7179c7eddd220fa367e696eae7acec3a5a788d0ca90da632d3eb6b";
+const PINNED_CLOSURE = "c5c5ba6db8a0e4359363747f0f48fe1193468e313b2446a5751909fb558be5b2";
 
 /**
  * The first 16 hex digits of the id of each case the margins were measured on: 123 at 55ddfb1e1 (119 at 607ff23ae and
  * at 6287f4393; the Sigma 35 mm's rims and six lenses' focus stations moved 16 of them, and four stations are new); at
  * ff57c4469 the Thypoch Ksana 21's station moved with its re-solved focus gap (LV #954), the same at 290c6dd85; 124 at
- * 25f65d4b4, whose new Voigtlander Macro APO-Ultron 35 mm f/2 (LV #950) has a certified station.
+ * 25f65d4b4, whose new Voigtlander Macro APO-Ultron 35 mm f/2 (LV #950) has a certified station; 138 at 420b47555,
+ * whose six lens packages (LV #955, #956, #958, #959, #961) add 14 certified stations, every other case the same.
  */
 const MEASURED_CASES: ReadonlySet<string> = new Set([
   "02b1e001699f7823",
@@ -82,8 +84,11 @@ const MEASURED_CASES: ReadonlySet<string> = new Set([
   "199c2510c32fa327",
   "1a34a84b12ddaa76",
   "1a94040d1d518dd6",
+  "1e3c3ef09f59892c",
+  "1e6042680d6d2e5a",
   "1ffeed7214f4c219",
   "20423bc3d2cf0c94",
+  "2115b237f50b5656",
   "22198c5be871fa98",
   "22f573c4dcca9f77",
   "25da8f06a8d3bdf2",
@@ -96,6 +101,7 @@ const MEASURED_CASES: ReadonlySet<string> = new Set([
   "3a6c0b2f69addb62",
   "449063f9188b5228",
   "4556b24f2345c91f",
+  "49c345c2e52f3954",
   "4c007de74973def2",
   "53c5ca7e688cbf9f",
   "568f93341d119dcc",
@@ -109,6 +115,7 @@ const MEASURED_CASES: ReadonlySet<string> = new Set([
   "70d5a589da4a7527",
   "72842c3de154ccbb",
   "75e87a15390874d2",
+  "7654996fb632089d",
   "77240b3249fc2f96",
   "7c3073c4e7dbedf0",
   "7cdedfe0afa1f948",
@@ -118,6 +125,7 @@ const MEASURED_CASES: ReadonlySet<string> = new Set([
   "8270906e01b3faca",
   "827ce23a9b1f784a",
   "83bc7aa668f82b6b",
+  "848e096ac814bc7e",
   "849578276ae0917f",
   "84e21a2ef03892e1",
   "851b25697188fac9",
@@ -127,14 +135,17 @@ const MEASURED_CASES: ReadonlySet<string> = new Set([
   "894debefc6fdb16f",
   "8b15e190d96badcf",
   "8dd3c38f79512c8e",
+  "8ee6b705de575b51",
   "904ae8663e1e2381",
   "9276015f4a09ae0d",
+  "927d7b116e4613a1",
   "93370aead6b9eb8d",
   "9370a35911029626",
   "9876f2f2d40b0326",
   "994c354dbc1f23b3",
   "99b6b35e6ae7faa9",
   "9aee102182725025",
+  "a54061eb49a7332a",
   "a76c758989f346f9",
   "a9fc28dc90bb6ec3",
   "acd45c4d3d13b956",
@@ -157,6 +168,7 @@ const MEASURED_CASES: ReadonlySet<string> = new Set([
   "c7f1b99704f56d90",
   "ca4650a2f1cab812",
   "ccbca3c4799d7e3c",
+  "cd0f69521e93cd74",
   "cd2d5eb4481fbd7b",
   "ce632d6fe72f4ec5",
   "ce80398ec92f8320",
@@ -168,12 +180,14 @@ const MEASURED_CASES: ReadonlySet<string> = new Set([
   "d1fd0633e961ca14",
   "d3c8e53174c6be10",
   "d6dd88710ac133d1",
+  "daf6cfe868bd42ca",
   "db455dd71151e3a2",
   "dc0cc7f4f4644e26",
   "e05ac48d6f62767a",
   "e2778a011e81560e",
   "e29835a068866e0e",
   "e3494e8829f87762",
+  "e37ca0c74deea030",
   "e3849910ab68459a",
   "e3c1b9c0842d88e4",
   "e44ac8f3c84fa88e",
@@ -186,8 +200,10 @@ const MEASURED_CASES: ReadonlySet<string> = new Set([
   "f2ba46d7a8b2499a",
   "f3b6869f0d15a83f",
   "f3fcc3b63cd7c8c3",
+  "f70e7ed164b5b561",
   "f738c7fd1c6b1e01",
   "f8e388d76b003371",
+  "fb063dc8a16a740e",
   "fb6313aafaef4cc6",
   "fc71d244aec38864",
 ]);
@@ -211,7 +227,8 @@ const MARGINS = { focalUnits: 16, pupilUnits: 0, fNumberUnits: 20 } as const;
 export const NOT_COVERED_BY_R1: Readonly<Record<string, string>> = Object.freeze({
   halfFieldDeg:
     "the hook's analysis field geometry (computeAnalysisFieldGeometry): the field whose solved real chief ray lands " +
-    "at the image corner, half the stated image circle or the format's diagonal, within 1e-4 mm; the last field " +
+    "at the image corner, half the stated image circle or the format's diagonal (a cylindrical image surface's " +
+    "frame edge since LV #960, a state the exporter refuses), within 1e-4 mm; the last field " +
     "whose chief ray clears every aperture where one clips it short of the corner; or the projection's authored trace " +
     "field, no larger than the corner's; no engine has the quantity: R9a judges the chief ray at that angle (the " +
     "distortion curve's edge) at every infinity state, and the angle is LensVisualizer's solve",

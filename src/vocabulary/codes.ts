@@ -177,6 +177,10 @@ export const CODES: Readonly<Record<string, CodeText>> = {
     sentence: "The image plane is not centred on the axis.",
     remedy: "",
   },
+  "curved-image-surface": {
+    sentence: "The lens forms its image on a curved surface, where a case has a flat image plane.",
+    remedy: "",
+  },
   "surface-profile-unsupported": {
     sentence: "LensVisualizer gives a surface a profile that its radius and asphere terms do not explain.",
     remedy: "",

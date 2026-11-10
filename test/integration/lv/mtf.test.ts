@@ -79,9 +79,11 @@ const CONFIGURATIONS: readonly { readonly key: string; readonly zoomT: number; r
  * the Sigma 35 mm's case moved with its authored rims (LV #943), and its figures at 70 % with it. At LV ff57c4469
  * (closure 0b6c085a, 184 files: LV #954's focus readout), 290c6dd85 (closure 0516a7c7: LV #949's glass entry) and
  * 25f65d4b4 (closure 4669921b: LV #950's two glass entries) every configuration was measured again and found
+ * unchanged, case and figures. At LV 420b47555 (closure c5c5ba6d, 187 files: LV #960's curved image surfaces, whose
+ * flat branch is every analysis's old line, and six lens packages) every configuration was measured again and found
  * unchanged, case and figures.
  */
-const PINNED_CLOSURE = "4669921bae7179c7eddd220fa367e696eae7acec3a5a788d0ca90da632d3eb6b";
+const PINNED_CLOSURE = "c5c5ba6db8a0e4359363747f0f48fe1193468e313b2446a5751909fb558be5b2";
 
 /**
  * What LensVisualizer's MTF tab presents for each configuration, as `lvrtc mtf` prints it: the case the figures

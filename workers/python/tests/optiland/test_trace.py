@@ -18,6 +18,7 @@ import dataclasses
 import math
 import unittest
 import warnings
+from unittest import mock
 from decimal import Decimal, getcontext
 from typing import Any
 
@@ -61,6 +62,45 @@ getcontext().prec = 60
 SINGLET = read_fixture("valid", "optical-case", "singlet.json")
 WORKED_SPEC = read_fixture("valid", "quantities", "rays.trace.spec", "singlet-axis-and-rim.json")
 WORKED_DATA = read_fixture("valid", "quantities", "rays.trace.data", "singlet-axis-and-rim.json")
+
+# A hemisphere out of glass that reflects a ray 6.7 mm from the axis totally, an asphere 2 mm behind it on a flat
+# base or on a weakly curved one, and a plane: the batch a ray optiland ended spoils (docs/gotchas.md).
+FLAT_BASE = asphere(None, 0.0, (4, 1e-4))
+CURVED_BASE = asphere(1e4, 0.0, (4, 1e-4))
+LIVE: list[Point] = [(3.0, 0.0, -5.0), (0.0, -2.0, -5.0)]
+REFLECTED: Point = (6.7, 0.0, -5.0)
+
+
+def reflecting_lens(shape: dict[str, Any], last_clip: float = 9.9) -> dict[str, Any]:
+    hemisphere = [surface(0.0, PLANE, 9.9), surface(10.0, sphere(-10.0), 9.9)]
+    return make_case([*hemisphere, surface(12.0, shape, 9.9), surface(14.0, PLANE, last_clip)])
+
+
+def one_pass(optic: Any, origins: Any, directions: Any) -> Any:
+    """optiland's own trace of one batch, read once: what the worker answered before the shield."""
+    return trace.settle(optic, trace.record(optic, origins, directions))
+
+
+def ended_from_first_pass(optic: Any, origins: Any, directions: Any, api: Any = None) -> tuple[Any, int]:
+    """A rule the shield does not follow: every ray optiland ended in the first pass answered from it, and the rays
+    it kept traced again without them. A ray that ended only because an ended ray spoiled its batch stays ended."""
+    first = one_pass(optic, origins, directions)
+    ended = first.status != STATUS_OK
+    if ended.all() or not ended.any():
+        return first, 1
+    rest = one_pass(optic, origins[~ended], directions[~ended])
+    merged: dict[str, Any] = {}
+    for field in dataclasses.fields(first):
+        value = getattr(first, field.name)
+        if value is not None:
+            value = value.copy()
+            if field.name in ("hits", "phase_path"):
+                value[:, ~ended] = getattr(rest, field.name)
+            else:
+                value[~ended] = getattr(rest, field.name)
+        merged[field.name] = value
+    return type(first)(**merged), 2
+
 
 # ── Without optiland: the spec ───────────────────────────────────────────────────────────────────────────────────
 
@@ -422,11 +462,14 @@ class TraceTest(TracedRays):
         counts = answer.result["diagnostics"]["counts"]
         self.assertEqual((counts["ok"], counts["blocked"], counts["failed"]), (2, 1, 1))
 
-    def test_an_asphere_whose_base_conic_a_line_misses_is_lost_to_optiland_though_the_line_meets_it(self) -> None:
+    def test_an_asphere_whose_base_conic_a_line_misses_is_met_from_its_vertex_plane(self) -> None:
         # A paraboloid of radius 2, z = r^2 / 4, made shallow by a term of power 2: the surface is z = r^2 / 20.
         # The line z = -0.3 + 0.3 y misses the paraboloid (y^2 / 4 - 0.3 y + 0.3 has no root) and meets the surface
         # at y = 3 - sqrt(3), inside its clear aperture, where the contract passes it. A phone lens has such
         # surfaces (docs/gotchas.md).
+        # Pinned since optiland a9e544a2 (#935): a ray without a seed on the base conic is seeded on the vertex plane
+        # and kept where the iteration converges in front of it. Up to 4e893f53 optiland had no seed, no hit and lost
+        # the ray, which this test pinned as failed at surface 0.
         shape = asphere(2.0, -1.0, (2, 0.05 - 0.25))
         case = make_case([surface(0.0, shape, 2.5), surface(1.0, PLANE, 6.0)], indices=[[1.5, 1.0]])
         origin, d = (0.0, -1.0, -0.6), unit(0.0, 1.0, 0.3)
@@ -434,9 +477,11 @@ class TraceTest(TracedRays):
         self.assertEqual(len(exact.hits), 2, "by the contract the ray passes both surfaces")
         self.assertAlmostEqual(float(exact.hits[0][1]), 3 - math.sqrt(3), delta=1e-9)
         self.assertLess(0.3**2 - 4 * 0.25 * 0.3, 0, "the line misses the base conic")
-        # A second ray, along the axis, is traced: the first is optiland's failure, not the surface's.
-        answer = self.answer(case, [origin, (0.0, 0.0, -0.6)], [d, AXIS])
-        self.assertEqual((answer.status, answer.end), ([STATUS_FAILED, STATUS_OK], [0, -1]))
+        # A second ray, along the axis, has a seed on the base conic; both are the contract's rays to a rounding.
+        origins, directions = [origin, (0.0, 0.0, -0.6)], [d, AXIS]
+        answer = self.answer(case, origins, directions)
+        self.assertEqual((answer.status, answer.end), ([STATUS_OK, STATUS_OK], [-1, -1]))
+        self.assert_is_the_exact_trace(case, answer, origins, directions, 1e-14)
 
     def test_the_clip_radius_is_inclusive_and_so_is_the_radius_of_a_central_obstruction(self) -> None:
         # A plane does not move a ray that is parallel to the axis, so each ray is at its height to the bit. The
@@ -757,6 +802,51 @@ class TraceTest(TracedRays):
         self.assertEqual((reflected.status, lost.status), ([STATUS_BLOCKED], [STATUS_FAILED]))
         self.assertEqual(strayed.status, [STATUS_FAILED])
 
+    def test_a_ray_an_ended_ray_knocked_onto_a_later_rim_is_answered_from_a_clean_pass(self) -> None:
+        # The live ray of the batch above, beside the reflected one, meets the plane at 14 mm 2.376038 mm from the axis
+        # where the contract has it, and 2.376274 mm from it where optiland's one pass leaves it on the base of the
+        # curved asphere; that plane's clip radius lies between. The first pass ends both rays, the live one at the
+        # plane: the least end surface is the reflected ray's, which alone is answered from it, and the live ray is
+        # traced again without it and arrives.
+        case = reflecting_lens(CURVED_BASE, last_clip=2.3761)
+        origins, directions = [LIVE[0], REFLECTED], [AXIS, AXIS]
+        np = optiland_api().np
+        optic = build_case(case).optics[0]
+        first = one_pass(optic, np.array(origins), np.array(directions))
+        self.assertEqual((first.status.tolist(), first.end_surface.tolist()), ([STATUS_BLOCKED] * 2, [3, 1]))
+        answer = self.answer(case, origins, directions)
+        self.assertEqual((answer.status, answer.end), ([STATUS_OK, STATUS_BLOCKED], [-1, 1]))
+        self.assert_is_the_exact_trace(case, answer, origins, directions, 1e-12)
+        # The fault made on purpose: every ended ray answered from the first pass.
+        with mock.patch.object(trace, "trace_batch", ended_from_first_pass):
+            wrong = self.answer(case, origins, directions)
+        self.assertEqual(wrong.status, [STATUS_BLOCKED, STATUS_BLOCKED])
+        with self.assertRaises(AssertionError):
+            self.assert_is_the_exact_trace(case, wrong, origins, directions, 1e-12)
+
+    def test_a_ray_that_comes_to_a_surface_sideways_is_answered_before_the_others_that_end_there(self) -> None:
+        # A ray with a heading of z component 1e-15 in front of the curved asphere misses its base conic; optiland seeds
+        # it 5e14 mm away and raises the tolerance of the surface to 0.9 mm, and ends it there. The other ray, from
+        # above the axis and down toward it, meets the asphere 2.497897 mm from the axis where the contract has it, and
+        # 2.499844 mm from it on the base sphere where the sideways ray leaves it: the clip radius lies between. Both
+        # end at surface 0 in one pass; the sideways ray is answered first, and the other, traced again, arrives.
+        np = optiland_api().np
+        case = make_case([surface(0.0, CURVED_BASE, 2.4983), surface(2.0, PLANE, 9.9)], indices=[[1.5, 1.0]])
+        optic = build_case(case).optics[0]
+        victim, sideways = ((0.0, 5.0, -5.0), unit(0.0, -0.5, 1.0)), ((-20.0, 1.0, -5.0), (1.0, 0.0, 1e-15))
+        origins, directions = np.array([victim[0], sideways[0]]), np.array([victim[1], sideways[1]])
+        first = one_pass(optic, origins, directions)
+        self.assertEqual((first.status.tolist(), first.end_surface.tolist()), ([STATUS_FAILED] * 2, [0, 0]))
+        shielded, passes = trace.trace_batch(optic, origins, directions)
+        self.assertEqual((shielded.status.tolist(), shielded.end_surface.tolist(), passes), ([0, 2], [-1, 0], 2))
+        exact = exact_trace(case, victim[0], victim[1])
+        self.assertEqual(exact.status, STATUS_OK)
+        self.assert_near(tuple(shielded.hits[0, 0].tolist()), exact.hits[0], 1e-12)
+        # The fault made on purpose: the least end surface alone, no ray of it answered first.
+        with mock.patch.object(trace, "end_keys", lambda rows, traced, api=None: 2 * traced.end_surface.astype(int)):
+            plain, passes = trace.trace_batch(optic, origins, directions)
+        self.assertEqual((plain.status.tolist(), passes), ([STATUS_FAILED] * 2, 1))
+
     # ── What a comparison must know of optiland (docs/gotchas.md) ──
 
     def test_beyond_the_equator_of_a_hemisphere_optiland_passes_a_ray_on_the_far_side_of_the_sphere(self) -> None:
@@ -875,32 +965,24 @@ class TraceTest(TracedRays):
         assert sag is not None
         self.assertLess(abs(Decimal(float(alone.hits[0, 0, 2])) - sag), Decimal(2e-12))
 
-    def test_one_ray_without_a_direction_leaves_every_ray_of_its_batch_on_the_base_plane_of_a_flat_asphere(
-        self,
-    ) -> None:
+    def test_one_ray_without_a_direction_leaves_every_ray_of_its_batch_on_the_base_of_an_asphere(self) -> None:
         api = optiland_api()
         np = api.np
         # A hemisphere out of glass, which reflects a ray 6.7 mm from the axis totally (above), and behind it an
         # asphere on a flat base, z = 1e-4 r^4. optiland keeps the point of the reflected ray and has no direction
         # for it. The iteration on the asphere starts at the distance to the base plane, -z / N, and optiland puts
         # 1e-14 where N is no number above that: the ray is 4.6e14 mm away, the batch's tolerance is 8 eps of
-        # that, 0.8 mm, the base plane is within it for every ray, and no ray is brought to the surface.
-        flat = asphere(None, 0.0, (4, 1e-4))
-
-        def lens(shape: dict[str, Any]) -> dict[str, Any]:
-            hemisphere = [surface(0.0, PLANE, 9.9), surface(10.0, sphere(-10.0), 9.9)]
-            return make_case([*hemisphere, surface(12.0, shape, 9.9), surface(14.0, PLANE, 9.9)])
-
-        case = lens(flat)
+        # that, 0.8 mm, the base plane is within it for every ray, and no ray is brought to the surface. This is
+        # optiland's own trace of one batch, one pass (``record``, ``settle``): the worker's answer is shielded from
+        # it (``test_the_shield_answers_every_ray_from_a_batch_without_the_rays_optiland_ended_before_it``).
+        case = reflecting_lens(FLAT_BASE)
         optic = build_case(case).optics[0]
-        live: list[Point] = [(3.0, 0.0, -5.0), (0.0, -2.0, -5.0)]
-        reflected: Point = (6.7, 0.0, -5.0)
         ahead = np.array([AXIS] * 3)
-        alone, _ = trace.trace_rays(optic, np.array(live), ahead[:2])
-        together, _ = trace.trace_rays(optic, np.array([*live, reflected]), ahead)
+        alone = one_pass(optic, np.array(LIVE), ahead[:2])
+        together = one_pass(optic, np.array([*LIVE, REFLECTED]), ahead)
         self.assertEqual(alone.status.tolist() + together.status.tolist(), [0, 0, 0, 0, STATUS_BLOCKED])
         self.assertEqual(int(together.end_surface[2]), 1)
-        for ray, origin in enumerate(live):
+        for ray, origin in enumerate(LIVE):
             exact = exact_trace(case, origin, AXIS)
             self.assertEqual(exact.status, STATUS_OK)
             # Alone the ray is on the surface, where the contract has it: 4.5e-3 mm and 9.8e-4 mm behind the plane.
@@ -910,13 +992,79 @@ class TraceTest(TracedRays):
             # lands somewhere else.
             self.assertEqual(float(together.hits[2, ray, 2]), 12.0)
             self.assertGreater(float(np.abs(together.image_point[ray] - alone.image_point[ray]).max()), 2e-5)
-        # On a curved base, however weakly curved, the same ray does no harm: a conic has no distance for a ray
-        # without a direction, and a distance that is no number raises no tolerance.
-        optic = build_case(lens(asphere(1e4, 0.0, (4, 1e-4)))).optics[0]
-        alone, _ = trace.trace_rays(optic, np.array(live), ahead[:2])
-        together, _ = trace.trace_rays(optic, np.array([*live, reflected]), ahead)
-        self.assertEqual(together.status.tolist(), [0, 0, STATUS_BLOCKED])
-        self.assertEqual(together.hits[:, :2].tobytes(), alone.hits.tobytes())
+        # Since optiland a9e544a2 (#935) a curved base is struck too. A conic has no distance for a ray without a
+        # direction, and up to 4e893f53 that distance, no number, raised no tolerance: the same rays were the bits
+        # they are alone, which this test pinned. Now a ray without a seed on the base conic is seeded on the vertex
+        # plane, at -z / N with 1e-14 for N, so the reflected ray raises the batch's tolerance to some 0.8 mm again,
+        # and every ray of the batch is left where it meets the base sphere, off the asphere by its departure.
+        case = reflecting_lens(CURVED_BASE)
+        optic = build_case(case).optics[0]
+        alone = one_pass(optic, np.array(LIVE), ahead[:2])
+        together = one_pass(optic, np.array([*LIVE, REFLECTED]), ahead)
+        self.assertEqual(alone.status.tolist() + together.status.tolist(), [0, 0, 0, 0, STATUS_BLOCKED])
+        for ray, origin in enumerate(LIVE):
+            exact = exact_trace(case, origin, AXIS)
+            self.assert_near(tuple(alone.hits[2, ray].tolist()), exact.hits[2], 1e-12, ray)
+            x, y, z = (Decimal(float(value)) for value in together.hits[2, ray])
+            height = (x * x + y * y).sqrt()
+            on_base, on_surface = exact_sag(sphere(1e4), height), exact_sag(CURVED_BASE, height)
+            assert on_base is not None and on_surface is not None
+            self.assertLess(abs(z - 12 - on_base), Decimal(1e-12), ray)
+            self.assertGreater(abs(z - 12 - on_surface), Decimal(9e-4), ray)
+            self.assertGreater(float(np.abs(together.image_point[ray] - alone.image_point[ray]).max()), 2e-5)
+
+    # ── The shield (the owner's decision of 2026-11-10) ──
+
+    def test_the_shield_answers_every_ray_from_a_batch_without_the_rays_optiland_ended_before_it(self) -> None:
+        # The batch above, through the engine: optiland's one pass leaves the two live rays on the base of the
+        # asphere, flat or curved; the worker's answer is the contract's ray for each, and the reflected ray keeps the
+        # end and the reason optiland's rows give it.
+        origins, directions = [*LIVE, REFLECTED], [AXIS] * 3
+        for shape in (FLAT_BASE, CURVED_BASE):
+            case = reflecting_lens(shape)
+            answer = self.answer(case, origins, directions)
+            self.assertEqual((answer.status, answer.end), ([STATUS_OK, STATUS_OK, STATUS_BLOCKED], [-1, -1, 1]))
+            self.assert_is_the_exact_trace(case, answer, origins, directions, 1e-12)
+            # The fault made on purpose: without the shield, one pass of the whole batch is the answer, and it is not
+            # the contract's.
+            def unshielded(optic: Any, o: Any, d: Any, api: Any = None) -> tuple[Any, int]:
+                return one_pass(optic, o, d), 1
+
+            with mock.patch.object(trace, "trace_batch", unshielded):
+                wrong = self.answer(case, origins, directions)
+            with self.assertRaises(AssertionError):
+                self.assert_is_the_exact_trace(case, wrong, origins, directions, 1e-12)
+
+    def test_a_batch_in_which_optiland_ends_no_ray_is_one_pass_and_the_same_bits(self) -> None:
+        np = optiland_api().np
+        optic = build_case(reflecting_lens(CURVED_BASE)).optics[0]
+        origins, directions = np.array(LIVE), np.array([AXIS] * 2)
+        shielded, passes = trace.trace_batch(optic, origins, directions)
+        alone = one_pass(optic, origins, directions)
+        self.assertEqual((passes, shielded.status.tolist()), (1, [STATUS_OK, STATUS_OK]))
+        for name in ("status", "end_surface", "hits", "exit_point", "exit_direction", "image_point", "optical_path",
+                     "optical_path_to_image"):
+            self.assertEqual(getattr(shielded, name).tobytes(), getattr(alone, name).tobytes(), name)
+
+    def test_the_shield_takes_a_pass_for_each_end_surface_and_no_more_than_its_limit(self) -> None:
+        np = optiland_api().np
+        # Beside the two live rays and the reflected one (end 1), a ray beyond the rim of the first plane (end 0):
+        # the first pass answers the ray at 0, the second the ray at 1, the third the two that arrive.
+        optic = build_case(reflecting_lens(CURVED_BASE)).optics[0]
+        origins = np.array([(0.0, 9.95, -5.0), *LIVE, REFLECTED])
+        directions = np.array([AXIS] * 4)
+        shielded, passes = trace.trace_batch(optic, origins, directions)
+        self.assertEqual(passes, 3)
+        self.assertEqual(trace.shield_pass_limit(optic), 10, "four surfaces: 2 S + 2")
+        self.assertEqual((shielded.status.tolist(), shielded.end_surface.tolist()), ([1, 0, 0, 1], [0, -1, -1, 1]))
+        # Each ray in its place, the rays that arrived from a batch of their own.
+        alone = one_pass(optic, origins[1:3], directions[1:3])
+        self.assertEqual(shielded.hits[:, 1:3].tobytes(), alone.hits.tobytes())
+        self.assertEqual(shielded.image_point[1:3].tobytes(), alone.image_point.tobytes())
+        # A batch the shield would take more passes for than its limit has no answer.
+        with mock.patch.object(trace, "shield_pass_limit", lambda optic: 2):
+            with self.assertRaises(trace.ShieldPassesExceeded):
+                trace.trace_batch(optic, origins, directions)
 
     def test_behind_a_surface_that_crosses_the_one_before_a_steep_ray_is_met_in_front_of_it_and_stopped(self) -> None:
         api = optiland_api()

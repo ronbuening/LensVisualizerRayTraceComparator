@@ -37,6 +37,8 @@ export interface FakeLensData {
   schema: 2;
   opticalPath?: { mode: "sequential" | "auto"; surfaceOrder: number[]; maxInteractions: number; after?: number[] };
   imageZ?: number;
+  /** A curved image surface, as LV #960 authors one: a radius, and a cylinder's flag. Flat without it. */
+  imageSurface?: { R: number; sd: number; cylindrical?: true };
   zoom?: { stations: unknown[] };
   zoomStopSDs?: number[];
   zoomGaps?: number[];
@@ -197,6 +199,14 @@ export interface FakeStateSurface {
   z: number;
 }
 
+/** The members of LV #960's `ImageSurfaceShape` the fake carries. */
+export interface FakeImageSurfaceShape {
+  readonly kind: "spherical" | "cylindrical";
+  readonly radius: number;
+  readonly cylinderAngle: number | null;
+  readonly semiDiameter: number;
+}
+
 export interface FakeState {
   readonly traceGeometry: { readonly stopSurfaceIndex: number };
   lens: {
@@ -206,6 +216,8 @@ export interface FakeState {
     flags: { isZoom: boolean; isFoldedOptics: boolean };
     projection: { kind: "rectilinear"; config: { kind: string; vectorBeyondDeg?: number } };
     constants: { rayLead?: number };
+    /** LV #960's curved image surface, or null for a flat image: the fake lands no ray on one. */
+    imageSurface: FakeImageSurfaceShape | null;
   };
   focusT: number;
   zoomT: number;

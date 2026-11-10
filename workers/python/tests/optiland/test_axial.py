@@ -19,7 +19,7 @@ from decimal import Decimal
 from typing import Any
 from unittest import mock
 
-from lvrtc_optiland import axial
+from lvrtc_optiland import axial, trace
 from lvrtc_optiland.build import BuildMismatch, optiland_api
 from lvrtc_optiland.engine import OptilandEngine, refusals
 from lvrtc_optiland.first_order import LINEAR_SAG_TERM, QUADRATIC_SAG_TERM
@@ -508,6 +508,38 @@ class RealAxialTest(unittest.TestCase):
         for value, fraction in zip(launch.origins[:, 1], fractions, strict=True):
             self.assertAlmostEqual(float(value), fraction * 4.0, delta=AIMING_TOLERANCE_MM)
         self.assertEqual(axial.trace(made, launch).arrived, (1, 1))
+
+    def test_the_rays_are_traced_through_the_shield_of_rays_trace(self) -> None:
+        # The stop is a plane of radius 9.9 mm in front of glass that ends in a hemisphere of radius 10 mm, and behind it
+        # an asphere on a weakly curved base: the zone at 6.7 mm is totally reflected at the hemisphere, and optiland's
+        # one pass of the two zones leaves the one at 3 mm on the asphere's base (docs/gotchas.md). Through the shield
+        # it leaves the lens where the exact ray from its launch does.
+        lens = [surface(0.0, PLANE, 9.9), surface(10.0, sphere(-10.0), 9.9)]
+        bent = asphere(1e4, 0.0, (4, 1e-4))
+        case = make_case([*lens, surface(12.0, bent, 9.9), surface(14.0, PLANE, 9.9)], stop=0, stop_radius=9.9)
+        held = axial.line_optic(case, 0)
+        launch = axial.launch(held, (3.0 / 9.9, 6.7 / 9.9))
+        self.assertEqual(launch.aimed, (True, True))
+        exact = exact_trace(case, tuple(float(v) for v in launch.origins[0]), (0.0, 0.0, 1.0))
+        self.assertIsNotNone(exact.direction)
+
+        def held_to_exact(traced: axial.Traced) -> None:
+            self.assertEqual(traced.arrived, (1, 0))
+            for axis in range(3):
+                self.assertAlmostEqual(traced.exit_point[axis], float(exact.hits[-1][axis]), delta=1e-12)
+
+        held_to_exact(axial.trace(held, launch))
+        # The fault made on purpose: one pass of the batch, as the worker traced it before the shield.
+        np = optiland_api().np
+
+        def one_pass(optic: Any, origins: Any, directions: Any, api: Any = None, *, row: Any = None) -> Any:
+            rows = trace.record(optic, origins, directions)
+            return trace.settle(optic, rows), 1, np.column_stack((rows.x[row], rows.y[row], rows.z[row]))
+
+        with mock.patch.object(axial, "shielded", one_pass):
+            unshielded = axial.trace(held, launch)
+        with self.assertRaises(AssertionError):
+            held_to_exact(unshielded)
 
     def test_a_launch_from_another_lines_optic_crosses_this_lines_stop_elsewhere_and_is_caught(self) -> None:
         # The stop behind the sphere, of another index at each line: the rays aimed through one line's optic, traced

@@ -5,6 +5,7 @@
 import type { ErrorInfo, UnsupportedItem } from "../../contract/result.ts";
 import type { SpotNativeData, SpotNativeField, SpotNativeSpec } from "../../contract/quantities/spotNative.ts";
 import { decodeNdArray, encodeNdArray, ndRow } from "../../core/numeric/ndarray.ts";
+import { lvImageSurface } from "./binding.ts";
 import type { LvCaseModel } from "./caseModel.ts";
 import { lvSpotRequest, lvSpotSetup } from "./spotSetup.ts";
 import type { LvSpotSetup } from "./spotSetup.ts";
@@ -187,8 +188,12 @@ function comaRings(
  * const launch = prepareAimedPupilLaunch(request, samples, geometry, channel);
  * const tracer = prepareAimedPupilTrace(request.preparedGeometry, launch, channel);
  * const chiefTrace = tracer.skew(launch.chief);
- * const chiefDefocused = skewImagePlaneIntercept(bundle.chiefRay.trace.x, ..., geometry.lastSurfZ, sensorZ);
+ * const chiefDefocused = skewImagePlaneIntercept(
+ *   bundle.chiefRay.trace.x, ..., geometry.lastSurfZ, sensorZ, L.imageSurface);
  * ```
+ *
+ * The image surface is the state's own (`lvImageSurface`): null, the flat plane's straight transfer, on every state the
+ * exporter admits, which refuses a curved one (LV #960).
  *
  * The stop-centre ray is the same whatever samples the launch is asked with (each sample's solve is its own): it is
  * asked with none. A tier-2 test holds it to the tile's own chief ray on the benchmark. Null where LensVisualizer has
@@ -208,7 +213,15 @@ export function lvBokehChiefLanding(
   if (launch === null || launch.chief.status !== "aimed") return null;
   const trace = api.prepareAimedPupilTrace(state, launch).skew(launch.chief);
   if (trace.clipped) return null;
-  return api.skewImagePlaneIntercept(trace.x, trace.y, trace.ux, trace.uy, geometry.lastSurfZ, sensorZ);
+  return api.skewImagePlaneIntercept(
+    trace.x,
+    trace.y,
+    trace.ux,
+    trace.uy,
+    geometry.lastSurfZ,
+    sensorZ,
+    lvImageSurface(state),
+  );
 }
 
 /** How far from the axis a bokeh tile's chief ray lands (`lvBokehChiefLanding`), or null. */

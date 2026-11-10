@@ -207,6 +207,20 @@ class RealSeidelTest(unittest.TestCase):
             original = optic.aberrations.third_order
             optic.aberrations.third_order = lambda: (original()[0] * 2, *original()[1:])
 
+        def summed(optic: Any) -> None:
+            # Both the surfaces' SPHA and the terms they are held to, doubled together: only their sum shows it.
+            terms(optic)
+            native = optic.aberrations.seidels_per_surface
+            optic.aberrations.seidels_per_surface = lambda: native() * api.np.array([[2.0]] + [[1.0]] * 4)
+
+        def per_surface(optic: Any) -> None:
+            native = optic.aberrations.seidels_per_surface
+            optic.aberrations.seidels_per_surface = lambda: native() * (1 + 2**-52)
+
+        def per_surface_shape(optic: Any) -> None:
+            native = optic.aberrations.seidels_per_surface
+            optic.aberrations.seidels_per_surface = lambda: native()[:, :-1]
+
         faults = {
             "aperture type": (aperture_type, "the type of the system aperture"),
             "stop diameter": (stop_value, "the stop diameter"),
@@ -217,7 +231,10 @@ class RealSeidelTest(unittest.TestCase):
             "chief slope": (chief_slope, "the chief ray's slope"),
             "chief height": (chief_height, "the chief ray's height at the stop"),
             "total": (total, "third_order"),
-            "terms": (terms, "the surfaces' SPHA added up"),
+            "terms": (terms, "seidels_per_surface\\(\\)'s SPHA beside third_order\\(\\)'s TSC"),
+            "per surface": (per_surface, "seidels_per_surface\\(\\)'s SPHA beside"),
+            "per-surface shape": (per_surface_shape, "the shape of seidels_per_surface"),
+            "summed": (summed, "the surfaces' SPHA added up"),
         }
         for name, (mistake, said) in faults.items():
             optic = built()

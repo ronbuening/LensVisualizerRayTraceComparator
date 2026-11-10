@@ -530,7 +530,8 @@ by a factor of about 25, and 14 of 50 floors of `lv` against `ref` in R2 and 9 o
 A witness's own error says nothing about whose the excess is. No limit of the policy moved, no gate was loosened,
 and the verdicts of the suites are what they were: the benchmark all `PASS`, the feature suite and the focus
 stations `PASS` with the Hologon's rows and one station `FLOOR`. Also recorded and not implemented: the optiland
-worker does not shield a batch from its ended rays; optiland is reported as it behaves.
+worker does not shield a batch from its ended rays; optiland is reported as it behaves. (Superseded by the owner's
+decision of 2026-11-10: the worker shields a batch of given rays; "optiland a9e544a2 amendment", below.)
 
 ### Baselines as committed, and the contract version
 
@@ -698,3 +699,19 @@ re-keyed (check and engine ids), its reproducers in `--checks`, and the `evidenc
 names a renamed engine recomputed (class and gotcha untouched); `suites/catalog*.json` and `suites/catalog-repro/*`;
 `policy/rungs.v1.json` renamed `policy/checks.json` with a new snapshot; the aliases, the legacy maps and `--rungs`
 removed; a `store prune`, which releases the old `ref` entries.
+
+### optiland a9e544a2 amendment (owner, 2026-11-10)
+
+optiland `a9e544a2` (#935) seeds a ray that misses an asphere's base conic on the vertex plane. A ray optiland ended
+(stopped by an aperture, carried on at an intensity of 0, totally reflected just in front of an asphere) is then put
+1e14 times its z away and raises the batch's tolerance on a curved base too, where before only a flat base was struck:
+every live ray of the batch is left on the base conic. At adoption 45 of 348 `rays.trace` requests of the benchmark's
+Z 50 mm, the features suite's Touit 50 mm and three focus stations failed so, by up to 1.66 mm; `lv` and `ref` agreed
+with the 60-digit trace. The owner decided to shield a batch, replacing the "recorded and not implemented" of Stage 2.5
+above: the worker's `rays.trace`, and its trace of `axial.native`'s aimed rays, answer every ray from a batch that held
+no ray optiland had ended before that ray's own end (the least end surface of a pass answered from it, a ray that came
+to it sideways first, the rest traced again without them, until a pass ends no ray; at most 2 S + 2 passes, more an
+error). A batch in which optiland ends no ray is one pass and the same bits. With the shield all 348 requests are
+within 1.15e-12 mm of `ref`. No gate, band or floor moved; optiland's own analyses (its aimer, MTF, spot and
+wavefront grids) are not shielded, and the upstream report stays the owner's. Evidence: `docs/REFERENCE.md`, "optiland
+a9e544a2 adopted".

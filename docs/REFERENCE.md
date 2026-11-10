@@ -6683,3 +6683,314 @@ policy 24. It ran on the real store, through a private clone of LensVisualizer (
   - The benchmark MTF run at `--jobs 2`: 63 minutes, recomputing `lv`, `replay`, `wave`, optiland and
     `optiland-wave`. Its check, on the warm store: 4 minutes.
   - Each rays suite: at most 10 minutes for its run, compare, check and write.
+
+## LensVisualizer 420b47555 adopted
+
+LensVisualizer main `420b47555` (clean), engine closure `c5c5ba6d`, 187 files: the 184 of `4669921b` (`25f65d4b4`) and
+three new ones, `optics/geometry/imageSurface.ts`, `optics/prescription/imageSurfaceSection.ts` and
+`optics/prescription/validate/imageSurface.ts`. Ten PRs since `25f65d4b4`:
+
+- #960 (`500ef5992`): curved image surfaces. This is the one engine change the comparator reads.
+- #955, #956, #958, #959 and #961: six lenses each. They add the glasses Hoya CF5 and NBFD1, Sumita LASKN3 and Schott
+  N-BK10, and partial dispersions (`PgF`) of catalogue entries that no index reads.
+- #962: lens stories and aperture metadata.
+- #966: doublet badges. Two lenses lose a `cemented` flag; neither is in a committed suite.
+- #967 and #968: the diagram.
+
+No name of the binding was added or lost. `skewImagePlaneIntercept` takes a seventh argument.
+
+### What changed, and what the comparator did
+
+| Change | LensVisualizer | The comparator |
+|---|---|---|
+| #960, the image surface | A lens may state `imageSurface`: a sphere or an asphere (`R`, `asphere`), or a cylinder curved along the long or short side of its frame (`cylindrical`, `curvedAlong`). It is compiled to an `ImageSurfaceShape` (`createImageSurfaceShape`) on `CompiledPrescription.imageSurface`. `null` is a flat image. The prepared state carries it as `state.lens.imageSurface` and in its trace geometry. The vertex is where the flat plane would be. | `curved-image-surface`, a structural export problem (`structuralProblems`, read through `lvImageSurface`). A case states the flat plane `conditions.imageZ` only, so such a state is never exported as flat. A vocabulary entry, a row of `CONTRACT.md`'s table and a gotcha. |
+| #960, the intercept | `skewImagePlaneIntercept(x, y, ux, uy, lastSurfZ, imagePlaneZ, imageSurface)` lands a ray on a curved surface, in image coordinates and with its `z`. Null is the straight transfer of before, without a `z`. | `LvApi` and `lvBokehChiefLanding` (`spot.ts`), and the spot, chief and curvature tests, hand the state's surface. The six-argument calls had crashed `lv`'s `spot.native` and four `test:lv` tests: `undefined` was read as a shape. |
+| #960, every analysis | Each lands on the surface where it is not null. The MTF uses `mtfFlatImagePoint` or `mtfCurvedImagePoint`, cosines along the surface's tangents (`mtfImageAxisCosine`) and a sag-aware nearest image plane. Image heights go through `imageHeightAfterTransfer`, the spherical section through `transverseCoordinateAtPlane(…, imageSurface)` and the chromatic heights through the curved landing. The field curves are measured from the chief ray's landing `z`, Rimmer's cosines in the surface's tangent frame, and the vignetting tab mirrors by `imageMirrorSymmetricAboutMeridian`. A cylinder's frame edge ends the half field (`fieldExtentMm`). | Nine canaries restated with each flat branch, which is the line it replaced, and the dispatch on the surface. A new canary holds a flat image to null and the hook's `withImageSurfaceSection` to the authored lens unless it is a cylinder. |
+| The six packages | 30 lenses with 14 certified focus stations. | `focus-stations` grows from 74 to 88 runs. The census is rewritten. |
+
+### Design choices
+
+1. **A curved image is refused, not approximated.** LensVisualizer measures a curved image's heights along the
+   surface, and on a cylinder along the unrolled film. It takes the MTF's frequencies along the surface's tangents and
+   Rimmer's cosines in its tangent frame. None of that has a place in a case, whose image is a plane. A contract minor
+   that states the surface would need landings on it in `reference-tracer` and optiland, and estimators that measure
+   along it. That is the owner's decision. The refusal is structural, so LensVisualizer's MTF gate is not asked: the
+   gate covers a curved image, adding a limitation.
+2. **One reader of the member.** `lvImageSurface` reads `state.lens.imageSurface`, and gives null where a
+   LensVisualizer before #960 states none. The comparator therefore still runs on an older checkout's extract, and
+   every intercept is handed exactly what LensVisualizer's tabs hand.
+3. **The fake tree mirrors #960 rather than ignoring it.** Its intercept throws for any surface but null, so a call
+   that forgets the argument fails in the hermetic tier, as it fails in LensVisualizer.
+
+### Measured at 420b47555, 2026-11-10
+
+- **Tiers before the adoption.** `npm run test:lv` passed 126 of 139. The 13 failures were:
+  - the 9 canaries above;
+  - the spot (×2), chief and curvature ray tests, on the `cylinderAngle` of an `undefined` image surface.
+
+  `test:optiland`'s R7b runs had `lv` `engine-failure` on the same error.
+- **The MTF tab** (`mtf.test.ts`): the 12 configurations print the same case, spectrum, shift and figures as the
+  pinned ones. Pinned at `c5c5ba6d`.
+- **R4f** (`fidelity.test.ts`): 96 runs. The worst `mtf.maxAbs` is 1.2989609388114332e-14 again, and the 24 opening
+  runs have the same cases and grids. Pinned at `c5c5ba6d`.
+- **The summary tab** (`summary.test.ts`): 138 states, 86 of them finite. The worst margins are 15, 0, 19 and 3 units
+  again; the worst focal-length and image-space f/# margins are the Olympus 7-14 mm's station of zoom 32. Measured on
+  every case: the 124 of `MEASURED_CASES`, and the 14 new focus stations, which join it.
+- **The suites' cases** (each suite expanded through the case source at `420b47555`, against its committed baseline):
+  - benchmark 96, states 128, features 18 and diffractive 9 runs: every name and case as recorded;
+  - folded 16 runs: 15 as recorded. The Maksutov-Cassegrain reference is recorded as refused at ray-set
+    confirmation (`folded-post-path-reflection`), which a suite's expansion does not reach;
+  - focus-stations 88 runs: the 74 of its baseline with the same cases, and 14 new certified stations:
+    - `canon-ef-50mm-f25-compact-macro`;
+    - `canon-ef-s-60mm-f28-macro-usm`;
+    - `canon-rf-85mm-f14-l-vcm`;
+    - `fujifilm-fujinon-xf-150-600mm-f56-8-r-lm-ois-wr` at zoom 0 and zoom 17;
+    - `minolta-af-24mm-f28` and `minolta-af-50mm-f28-macro`;
+    - `pentax-fa-star-300mm-f28-ed-if`;
+    - `sigma-17mm-f4-dg-dn-contemporary`, `sigma-20mm-f14-dg-dn-art`, `sigma-35mm-f2-dg-dn-contemporary` and
+      `sigma-500mm-f4-dg-os-hsm-sports`;
+    - `vivitar-series1-90f25-macro`;
+    - `zeiss-otus-ml-85mm-f14`.
+
+    Until the refresh, `baseline check focus-stations` sees them as NEW.
+- **Every catalog lens at both commits** (exported at both zoom ends on the reference line, the photopic lines and C,
+  d, F, through the comparator of this adoption; `25f65d4b4` as a `git archive` extract, outside both checkouts):
+  - 4,299 exports at `25f65d4b4` (1,433 states × 3), of which 4,029 are exported at both commits.
+  - Four moved, all of one lens: the Canon EF 100-300 mm f/5.6, photopic and C, d, F, at both ends. #956 relabelled
+    an element's glass as Hoya CF5, which the catalogue now has, so its several-line indices are CF5's polynomial.
+    Its reference-line cases did not move. No committed suite has the lens.
+  - No other existing lens's case moved, on any line: the new glass entries (NBFD1, LASKN3, N-BK10) are no token of
+    an existing lens.
+  - 102 new exports, the 33 new lenses' 34 states:
+    - the three curved fixtures, refused `curved-image-surface` on every line;
+    - the Canon FL-F 500 mm, the Schneider 28 mm LS and the Voigtländer Skoparon 35 mm, refused
+      `spectral-data-unavailable` on several lines (LensVisualizer's gate).
+  - Each committed suite expanded at both commits: the same names and cases, the folded Maksutov's included (its
+    baseline records it refused at ray-set confirmation). The 14 new stations are the only change.
+- **The checkout moved during the measurement.** LensVisualizer's checkout went from `420b47555` to `e4c7cf11a` (#973,
+  changelog entries and update archives) while `test:lv` ran.
+  - #973 changes 585 files, none of the 187 of the engine closure (`c5c5ba6d` at both) and none a canary reads, and no
+    lens file.
+  - Every case of every suite is the same at both commits.
+  - The census and the export comparison above are at `e4c7cf11a`. The tiers ran at both commits.
+- **`npm run test:lv`:** 140 of 140, 22 minutes. The MTF tab's pins, R4f's grids and the summary's margins were
+  compared at `c5c5ba6d` and held.
+  - The summary held 138 states (86 finite), with worst margins 15, 0, 19 and 3.
+  - The export sweep refused exactly the three curved fixtures, and gave `curved-image-surface` to no other state.
+- **`npm run check`:** passes, with LensVisualizer and optiland pointing nowhere.
+  - 2,268 hermetic tests and 399 Python tests.
+  - `verify`: 12 baselines, 0 problems.
+- **The 14 new stations on the engines.** A temporary suite of the 13 lenses' `certified-focus` stations: `lv`,
+  `reference-tracer` and optiland, wide open, reference line, design plane. Temporary `LVRTC_RUNS_DIR`, `--jobs 4`;
+  the rays checks were run and compared, then the MTF checks.
+  - Rays checks: 755 pairs PASS, no mask mismatch.
+  - Worst figures among the three pairs:
+
+    | Check | Figure | Worst |
+    |---|---|---|
+    | built-system | sag, scaled | 4.0e-16 |
+    | first-order | first-order value | 4.8e-12 mm |
+    | first-order | pupil position, scaled | 1.4e-12 mm |
+    | ray-trace | hit | 1.34e-12 mm |
+    | ray-trace | direction | 1.8e-14 |
+    | ray-trace | landing | 1.1e-12 mm |
+    | optical-path | path | 3.05e-9 waves (the Sigma 20 mm) |
+    | geometric-mtf | MTF | 1.44e-11 |
+
+  - MTF checks: 438 pairs PASS.
+    - lv-mtf-replay: 28 pairs, `mtf.maxAbs` 1.6e-14, no sampling or field mismatch.
+    - wave-mtf, judged fields: `lv` against `reference-tracer` 3.71e-10 and against optiland 1.17e-10, optiland against
+      `reference-tracer` 3.65e-10, within the 2e-9 that `r6a.test.ts` holds that pair to.
+    - Flagged fields: up to 6.0e-10. The Sigma 17 mm's lattices move by 0.056 on doubling, so its fields are flagged.
+  - The Sigma 20 mm's full field lies beyond LensVisualizer's modeled field. Its 21.65 mm against 20.98 mm is the coded
+    problem `outside-modeled-field` of that field, and fails nothing.
+- **The census** (`reports/census`, at `e4c7cf11a`; closure `c5c5ba6d`, 187 files):
+  - 1,101 lenses (1,068 at `25f65d4b4`), 366 zooms (365) and 1,467 states (1,433).
+  - 1,456 exported. 11 refused: the 8 refused before, for the same reasons, and the three curved fixtures,
+    `curved-image-surface`. None threw.
+  - `aperture.unclipped` 287 (284), `surface.asphere.even` 700 (694), `surface.conic` 325 (321). The limits did not
+    move.
+- **Identities.**
+  - The fingerprint of `lv`, `replay`, `wave` and `flux` (LensVisualizer's closure) moved, `4669921b` to `c5c5ba6d`.
+  - Their adapter revisions moved with `spot.ts`, `exportCase.ts`, `exportProblems.ts`, `binding.ts` and
+    `vignettingFields.ts`, each in all four closures:
+    - `lv` `afad9cb8` to `2a10ac61`;
+    - `replay` `6f0c41d6` to `971fd882`;
+    - `wave` `8a272b3a` to `461b0dae`;
+    - `flux` `6ecb3bb3` to `58918afc`.
+  - `reference-tracer` (`49ce9a07`), `reference-seidel` (`c847050f`) and the TypeScript closure of
+    `otf-of-optiland-wavefront` (`501c2a99`) did not move.
+  - The migration guard now keeps the engine rename's evidence in columns of its own, the revision at the rename and
+    before it, apart from today's pins.
+  - No baseline was written or checked.
+
+## optiland a9e544a2 adopted
+
+optiland main `a9e544a2` (2026-11-08), 117 commits after `4e893f53`. The checkout is clean (the earlier one carried
+local changes to `pyproject.toml` and `uv.lock`): source hash `1d35bfa2`, 611 files. Python 3.14.8, numpy 2.3.5, scipy
+1.16.3, numba 0.65.1, unchanged. The core dependencies are unchanged; only the optional `manufacturing` and `gui`
+extras moved. Most of the commits are the GUI, optimisation, non-sequential tracing, file formats, GRIN media and new
+analyses, none of which the worker calls. The code of `4e893f53` is unchanged in the surface factory, the geometries
+but the asphere's iteration, the conic solver, the physical apertures, the ideal material, `optiland/mtf`,
+`optiland/zernike`, `psf/fft.py`, the field curves, the distortion model, the ray fan, the ray-aiming initialisation and
+`get_working_FNO`. No call the worker makes was deprecated.
+
+### What changed, and what the comparator did
+
+| Change | optiland | The comparator |
+|---|---|---|
+| #935 (`e4a8ac6f`), the asphere's seed | `NewtonRaphsonGeometry._solve_distance_primal` seeds a ray that has no distance to the base conic on the vertex plane, `-z / N` (1e-14 for an `N` not above it), and keeps it where the iteration converges in front of the ray; it stops once only NaN rays are unsettled. | A line that misses the base conic and meets the asphere is now met (the pin `test_an_asphere_whose_base_conic_a_line_misses_is_met_from_its_vertex_plane`, which was "lost"). A ray with a point and no direction is seeded `1e14 z` away and raises the batch's tolerance on a curved base too: the shield below. |
+| #935, the robust aimer | Its four edge probes are solved as one batch; an iterative solve holds a ray whose line search accepted no step. | Nothing: optiland's own analyses, read back as before. |
+| #923, `FNO()` | `abs(f2()) / EPD()`, positive for a negative lens. | `optilandFNumber` (recorded) changes sign where `f2 < 0`; `imageSpaceFNumber` (R12b, `|FNO()|`) is the same bits. A new pin. |
+| #1107, `seidels_per_surface()` | Each surface's `-T 2 n' u'`; `seidels()` is their sum. | R13b reads a surface's sum from it, held to the term of `third_order()` times `2 n' u'` to the bit, with three deliberate faults. The totals move by the new order of summing, a rounding. |
+| #990, the chief-ray wavefront | Paths referred to the sphere by a relative length (unit directions, the common radius taken out first); `WavefrontData.reference_center`. | Nothing: `wavefront.native`'s OPD moves by a rounding (more exact for a distant exit pupil), and with it R5's FFT MTF, R6c and R14b. The centre is not read. |
+| #916, #937, the paraxial aimer | A finite object closer than its virtual entrance pupil is launched toward the lens; vignetting is applied once, in `RayGenerator`. | Nothing: no field of the worker is vignetted, and only `workingFNumberUnaimed` (recorded) is of the paraxial aimer at a finite object. |
+| #436, #1113, the kernel | `Surface._trace_real` hands the step to the medium's `propagation_model.propagate_to_surface`, the indices of a refraction come from `_real_indices`, the paraxial transfer from `paraxial_transfer`; evaluation epochs memoise within one `RealRayTracer` call. | The same arithmetic for a homogeneous medium, the case's only one; `rays.trace` calls `optic.surfaces.trace` and opens no epoch. Docstrings re-read. |
+
+### The shield (the owner's decision of 2026-11-10)
+
+`test:optiland` at `a9e544a2` before any change: 41 of 51 files passed. The optiland pairs failed in `r2`, `r3`,
+`stations`, `r6a`, `r10` and `r11`. The worker's Python tests failed three tests: the identity test (below) and the
+two pins #935 changed.
+
+A scratch run of the failing runs (the Nikkor Z 50 mm f/1.2 and the Zeiss Touit 50 mm on both spectra, and the
+certified stations of the Olympus 17 mm, the Sigma 28 mm and the Tamron 70-180 mm, with ray-trace, wave-mtf,
+spot-rays, field-curve-rays and vignetting-rays on `lv`, `reference-tracer` and `optiland`) has 348 `rays.trace`
+requests. Results:
+
+- **45 requests were off.** optiland's hits were up to 1.66 mm from `reference-tracer`'s, with mask mismatches on the
+  finer and vignetting lattices.
+- **Every pair that failed names optiland.** `lv` against `reference-tracer` passed everywhere.
+- **The cause is the same in all 45.** In each, the batch in front of one curved-base asphere holds rays that have a
+  point and no direction:
+
+  | Run | Asphere (case surface) | Such rays a request | Tolerance, mm |
+  |---|---|---|---|
+  | Z 50 mm f/1.2 | 24 | 10 to 214 | 1.8 to 3.8 |
+  | Touit 50 mm | 5 | 3 to 12 | 0.44 to 0.93 |
+  | Olympus 17 mm, stations 1 and 2 | 20 | 38 to 208 | 0.39 to 0.44 |
+  | Sigma 28 mm, station 1 | 2 | 38 to 164 | 1.8 |
+  | Tamron 70-180 mm, zoom 2 station 1 | 32 | 2 to 16 | 0.49 to 0.57 |
+
+  These are rays `reference-tracer` had already blocked, at case surfaces 18 (Z 50), 0 (Touit), 15 (Olympus), 0 and
+  24 (Sigma) and 16 and 18 (Tamron). optiland carried them on at an intensity of 0, and they were totally reflected at
+  the surface in front of the asphere.
+- **optiland's new seed explains it.** The seed puts each such ray 1e14 times its z away (1.6e15 mm on the Z 50 mm),
+  so the tolerance rises as in the table. The iteration stops at once (0 to 88 steps), and every live ray stays on
+  the base conic.
+- **60 digits agree with `reference-tracer`.** On the worst ray of each request where the 60-digit trace reaches the
+  surface, `reference-tracer` is within 6.0e-14 mm of it and `lv` within 2.9e-13 mm. optiland is 0.08 to 1.66 mm off.
+- **Leaving those rays out of each batch** puts all 45 within 1.14e-12 mm of `reference-tracer`, with no mask
+  mismatch.
+- **Restoring `4e893f53`'s `_solve_distance_primal`** in the process, on `a9e544a2`, puts all 348 within 1.15e-12 mm,
+  with no mask mismatch.
+- **#935's fix met no ray here.** In those requests no ray with a direction was met by the plane seed.
+
+The owner decided to shield a batch (2026-11-10). The rule is `trace.trace_batch` (`trace.shielded`), for
+`rays.trace` and for the trace of `axial.native`'s aimed rays:
+
+1. A batch is traced once.
+2. Where optiland ends no ray, that pass is the answer.
+3. Otherwise the rays that ended at the least end surface of a pass are answered from it. S counts as the end surface
+   of a ray that left the last surface and did not land.
+4. Of the rays ending at that surface, those that came to it sideways are answered first, in a pass of their own
+   (`end_keys`). Sideways means the z component of the heading in front of it is not above 1e-14 in magnitude,
+   optiland's own bound. optiland seeds such a ray 1e14 times its z away when it has no seed on the base conic, so it
+   spoils the very surface it ends at.
+5. The rest are traced again, without the rays answered, in the order given, until a pass ends no ray.
+
+Every ray is answered from a batch that held no ray optiland had ended before that ray's own end. An ended ray keeps
+the end and the reason `settle` reads.
+
+- **Passes.** A pass answers at least one key: two for each surface, one for S. So a batch takes at most 2 S + 2
+  passes (`shield_pass_limit`); more raises `ShieldPassesExceeded`, an error.
+- **Large requests.** Batches above `MAX_BATCH_RAYS` are shielded each on its own, in order.
+- **Unchanged.** The request, the answer's format and the diagnostics' `batches` are unchanged.
+- **Axial read-back.** `axial.native` holds each aimed ray's stop crossing to its point on the pass the ray is answered
+  from.
+- **What the shield does not reach.** A ray optiland keeps alive still raises its batch's tolerance, like the far ray
+  of the gotcha.
+
+On the same 348 requests:
+
+- **No ended ray, same bytes.** The 100 requests in which optiland ends no ray are the bytes of one pass.
+- **The rest agree with `reference-tracer`.** Every hit is within 1.149e-12 mm of `reference-tracer`'s, every end
+  surface is `reference-tracer`'s, and no mask differs.
+- **Passes per request:**
+
+  | Passes | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 |
+  |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+  | Requests | 100 | 37 | 11 | 25 | 22 | 8 | 5 | 21 | 33 | 6 | 8 | 10 | 17 | 17 | 19 | 9 |
+
+- **Cost.** Tracing took 23.7 s against 5.0 s for one pass, 4.7 times as long.
+
+The tests (`test_trace.py`):
+
+- **The contaminated batch, through the engine.** Two live rays and a reflected one, before a flat-base and a
+  curved-base asphere, held to the 60-digit trace within 1e-12 mm. With the shield replaced by one pass they are not
+  (the fault made on purpose).
+- **One pass where nothing ends.** A batch without an ended ray is one pass and the same bits.
+- **The pass count and its limit.** A batch with ends at 0 and 1 takes three passes, the limit is 2 S + 2, and a
+  lower limit raises.
+- **The least-surface rule.** A live ray knocked onto a later rim by a reflected one is answered from a clean pass and
+  arrives. Answering every ended ray from the first pass leaves it blocked: red.
+- **The sideways rule.** A ray at a z component of 1e-15 spoils the curved asphere it ends at, knocking another ray off
+  that surface's rim. It is answered first, and the other arrives. Without that order both end there: red.
+- **Axial.** `test_axial.py` traces two zones of the reflecting lens. The live zone leaves the lens within 1e-12 mm of
+  the exact ray from its launch; with one pass it does not: red.
+- **optiland's own behaviour, still pinned.** `test_one_ray_without_a_direction_leaves_every_ray_of_its_batch_on_the_base_of_an_asphere`
+  holds both bases, on optiland's own single pass.
+
+optiland's own analyses are not shielded: its aimer's trial traces and its MTF, spot, ray fan, field-curve,
+wavefront and working-f-number grids are optiland's batches. The upstream report stays held.
+
+### The stated version
+
+The environment's editable install was made at `4e893f53` and still states `0.6.2.post117+g4e893f53`. The descriptor's
+`version` and `details.distVersion` therefore name the commit of the install, while `details.commit` is `a9e544a2`.
+`test_real.py::test_the_worker_identifies_the_optiland_it_runs` fails until the owner refreshes the install. The
+fingerprint reads the checkout and is right.
+
+### Measured after the changes, 2026-11-10
+
+Each command was run alone, against LensVisualizer `420b47555` and optiland `a9e544a2`.
+
+- **The worker's Python tests on the real optiland:** 402 run, one failure, the identity test above (the stale install).
+  The two pins of #935 are rewritten as history, with the new behaviour pinned. The new tests are the five shield
+  tests of `test_trace.py`, the shield of `test_axial.py`, the f-number pin and the Seidel faults.
+- **The hermetic tier, `npm run test:python`:** passes.
+- **`r2.test.ts`:** 5 of 5 pass.
+  - Benchmark: 216 pairs of each kind PASS, and optiland fails no ray.
+  - optiland against `reference-tracer`, worst hit: 1.16e-12 mm on the benchmark and 1.24e-12 mm on the features
+    suite.
+  - JIT off: the answers are the same bytes.
+- **`r3.test.ts`:** 5 of 5 pass. optiland against `reference-tracer`, worst path: 2.42e-9 waves on the benchmark and
+  3.17e-9 on the features suite.
+- **`stations.test.ts`:** passes.
+  - 247 pairs of each kind PASS.
+  - Worst hit: 2.66e-12 mm. Worst path: 3.48e-9 waves.
+  - optiland fails 14 rays, at the Olympus 17 mm's stations 1 and 2, surface 20 (4 and 10). `lv` and
+    `reference-tracer` each block every one of them at that same surface: `assertR2`'s exception.
+  - optiland's iteration of `4e893f53`, restored, fails the same counts.
+- **`r6a.test.ts`:** passes. 255 pairs PASS. optiland against `reference-tracer` within 1.03e-9, `lv` against optiland
+  within 1.47e-10.
+- **`r8.test.ts`** (`axial.native`, now through the shield): passes.
+- **`r10.test.ts`:** passes.
+- **`r11.test.ts`:** passes. R11a optiland against `reference-tracer`: illumination within 2.5e-14, landing within
+  1.5e-13 mm.
+- **Order of the runs.** `r2`, `r3`, `stations` and `r8` were run after the sideways rule and the axial shield were
+  added. `r6a`, `r10` and `r11` were run before; the 348 requests give the same answers both ways.
+- **The full tier.** The whole `test:optiland` tier with the first shield passed 50 of 51 files, the identity test the
+  one failure.
+
+### Identity
+
+- **The worker's adapter revision** moved, `98f36151` to `59039a7b`, through `trace.py`, `axial.py` and `seidel.py`
+  and the docstrings of `first_order.py`, `summary.py` and `folded.py`.
+- **`otf-of-optiland-wavefront`'s whole revision** moved with it, `9cdfad1a` to `3dc91d1a`; its TypeScript part
+  (`501c2a99`) did not.
+- **optiland's fingerprint** moved with the checkout: commit, source hash and dirty flag.
+- **Every record of `optiland` and `otf-of-optiland-wavefront` is STALE(engine)** until the owner's refresh. No
+  baseline was written or checked.
+- **At that refresh,** the recorded checks of optiland's own analyses (R5, R5g, R6c, R7b to R14b) may move by the
+  changes above. The rays checks' optiland pairs are the shielded answers.

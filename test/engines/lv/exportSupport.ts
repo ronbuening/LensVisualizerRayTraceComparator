@@ -6,6 +6,7 @@ import type {
   LvApertureEvaluation,
   LvAsphere,
   LvFiniteConjugate,
+  LvImageSurfaceShape,
   LvMtfOptions,
   LvMtfResult,
   LvMtfSupport,
@@ -52,6 +53,8 @@ export interface StateSpec {
   readonly folded?: boolean;
   readonly projection?: string;
   readonly runtime?: Partial<LvRuntimeLens>;
+  /** The lens's image surface (LV #960): left out, as a LensVisualizer before #960 leaves it, unless given. */
+  readonly imageSurface?: LvImageSurfaceShape | null;
 }
 
 /** A prepared state as LensVisualizer would hand it out: vertices at the running sum of the gaps. */
@@ -96,6 +99,7 @@ export function stateOf(surfaces: readonly SurfaceSpec[], spec: StateSpec): LvPr
       stop: { surfaceIndex: spec.stopIndex },
       flags: { isFoldedOptics: spec.folded ?? false },
       projection: { kind: spec.projection ?? "rectilinear" },
+      ...(spec.imageSurface === undefined ? {} : { imageSurface: spec.imageSurface }),
     },
     focusT: spec.focusT ?? 0,
     zoomT: spec.zoomT ?? 0,

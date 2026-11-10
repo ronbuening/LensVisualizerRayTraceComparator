@@ -9,6 +9,8 @@
  * - `diffractive-phase-unsupported`: a prepared phase cannot be represented verbatim;
  *   `diffractive-surface` remains a historical census code only;
  * - `tilted-image-plane` / `off-axis-image-plane`: the image plane is not perpendicular to the axis, or not on it;
+ * - `curved-image-surface`: the image is a curved surface (LV #960: a curved sensor, film gate or focal surface), where
+ *   a case's image is the flat plane `conditions.imageZ`;
  * - `surface-profile-unsupported`: LensVisualizer gives a surface a profile that its radius and asphere do not
  *   explain (a tilted plane, or a kind added since);
  * - `asphere-coefficient-unknown`: an asphere has a coefficient that is not `K` or `A<power>`;
@@ -42,6 +44,7 @@ export const EXPORT_PROBLEM_CODES = [
   "diffractive-phase-unsupported",
   "tilted-image-plane",
   "off-axis-image-plane",
+  "curved-image-surface",
   "surface-profile-unsupported",
   "asphere-coefficient-unknown",
   "synthetic-surface-unknown",

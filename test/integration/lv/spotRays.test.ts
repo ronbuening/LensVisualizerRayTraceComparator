@@ -16,7 +16,7 @@ import type { OpticalCase } from "../../../src/contract/case.ts";
 import type { RaysTraceSpec } from "../../../src/contract/quantities/raysTrace.ts";
 import type { RunOptions } from "../../../src/contract/runSpec.ts";
 import { decodeNdArray } from "../../../src/core/numeric/ndarray.ts";
-import { loadLvBinding } from "../../../src/engines/lv/binding.ts";
+import { loadLvBinding, lvImageSurface } from "../../../src/engines/lv/binding.ts";
 import type { LvBinding } from "../../../src/engines/lv/binding.ts";
 import { rebuildCase } from "../../../src/engines/lv/caseModel.ts";
 import type { LvCaseModel } from "../../../src/engines/lv/caseModel.ts";
@@ -64,7 +64,15 @@ function landing(
   const tracer = api.prepareAimedPupilTrace(model.state, clipOf(binding, model));
   const trace = tracer.skew({ origin: vec(f8(set, "origins"), ray), direction: vec(f8(set, "directions"), ray) });
   if (trace.clipped) return null;
-  return api.skewImagePlaneIntercept(trace.x, trace.y, trace.ux, trace.uy, lastSurfZ, planeZ);
+  return api.skewImagePlaneIntercept(
+    trace.x,
+    trace.y,
+    trace.ux,
+    trace.uy,
+    lastSurfZ,
+    planeZ,
+    lvImageSurface(model.state),
+  );
 }
 
 /** The clip radius of the tabs' launch of the case: its stop radius and the aim's tolerance, as LV states it. */
@@ -317,9 +325,18 @@ test(
             trace.uy,
             geometry.lastSurfZ,
             geometry.imagePlaneZ,
+            lvImageSurface(model.state),
           );
           if (onDesign === null) return;
-          const point = api.skewImagePlaneIntercept(trace.x, trace.y, trace.ux, trace.uy, geometry.lastSurfZ, plane);
+          const point = api.skewImagePlaneIntercept(
+            trace.x,
+            trace.y,
+            trace.ux,
+            trace.uy,
+            geometry.lastSurfZ,
+            plane,
+            lvImageSurface(model.state),
+          );
           if (point === null) return;
           expected.push({
             ray,

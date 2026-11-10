@@ -12,20 +12,20 @@ Rewrite it with `node bin/lvrtc.mjs export --all --census reports/census`.
 
 | Input | Value |
 | --- | --- |
-| LensVisualizer commit | `25f65d4b4213a21392cbae92680134906049b2ad` (clean) |
-| Engine closure | `4669921bae7179c7eddd220fa367e696eae7acec3a5a788d0ca90da632d3eb6b` (184 files) |
+| LensVisualizer commit | `e4c7cf11ac873b894a60ef6133ad1a83a0fca728` (clean) |
+| Engine closure | `c5c5ba6db8a0e4359363747f0f48fe1193468e313b2446a5751909fb558be5b2` (187 files) |
 | Contract | 1.0 |
 
 ## Outcome
 
-1068 lenses, 365 of them zooms, in 1433 states; 0 lens files not indexed.
+1101 lenses, 366 of them zooms, in 1467 states; 0 lens files not indexed.
 
 | States | Count | Exported | Not exportable | Threw |
 | --- | --- | --- | --- | --- |
-| Primes | 703 | 695 | 8 | 0 |
-| Zooms, wide end | 365 | 365 | 0 | 0 |
-| Zooms, tele end | 365 | 365 | 0 | 0 |
-| All | 1433 | 1425 | 8 | 0 |
+| Primes | 735 | 724 | 11 | 0 |
+| Zooms, wide end | 366 | 366 | 0 | 0 |
+| Zooms, tele end | 366 | 366 | 0 | 0 |
+| All | 1467 | 1456 | 11 | 0 |
 
 A state that is not exportable has a reason with a code, below. A state whose export threw is a defect of the
 exporter; a healthy census has none.
@@ -37,12 +37,19 @@ applies to one end only.
 
 | Reason | States | Lenses |
 | --- | --- | --- |
+| `curved-image-surface` | 3 | 3 |
 | `folded-auto-path` | 6 | 6 |
 | `mixed-reference` | 1 | 1 |
 | `off-axis-image-plane` | 2 | 2 |
 | `surface-profile-unsupported` | 2 | 2 |
 | `tilted-image-plane` | 2 | 2 |
 | `tilted-surface` | 1 | 1 |
+
+### `curved-image-surface` (3 states, 3 lenses)
+
+- `reference-concentric-mirror-curved-focus`
+- `reference-curved-sensor-achromat`
+- `reference-cylindrical-film-gate`
 
 ### `folded-auto-path` (6 states, 6 lenses)
 
@@ -83,14 +90,14 @@ LensVisualizer data issue: d- and e-referenced glasses lack wavelength data for 
 | Flag | Cases |
 | --- | --- |
 | `aperture.annular` | 7 |
-| `aperture.unclipped` | 284 |
+| `aperture.unclipped` | 287 |
 | `lines.multiple` | 0 |
 | `object.finite` | 0 |
 | `path.folded` | 9 |
-| `surface.asphere.even` | 694 |
+| `surface.asphere.even` | 700 |
 | `surface.asphere.flat-base` | 2 |
 | `surface.asphere.odd` | 87 |
-| `surface.conic` | 321 |
+| `surface.conic` | 325 |
 | `surface.diffractive` | 8 |
 
 ## Provenance notes of the exported cases

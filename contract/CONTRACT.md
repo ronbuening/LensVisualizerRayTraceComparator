@@ -385,6 +385,7 @@ its g and C lines, which its anchored indices are fitted between.
 | `folded-path`, `non-refract-interaction` | has a path that turns at a mirror; a surface that reflects or blocks |
 | `diffractive-surface` | has a surface with a diffractive phase |
 | `tilted-image-plane`, `off-axis-image-plane` | has an image plane that is not perpendicular to the axis, or not on it |
+| `curved-image-surface` | forms its image on a curved surface (LensVisualizer #960: a curved sensor, film gate or focal surface), where a case's image is the flat plane `conditions.imageZ` |
 | `surface-profile-unsupported`, `asphere-coefficient-unknown`, `synthetic-surface-unknown` | has a surface LensVisualizer describes in a way the exporter does not know: a guard against a change in LensVisualizer |
 | `aperture-faster-than-wide-open` | asks for an f-number below the lens's widest |
 | `aperture-beyond-slider-range` | asks for an f-number above the lens's aperture slider maximum |
@@ -1078,7 +1079,7 @@ declares every feature flag and no limit, and offers `system.describe`, `paraxia
 | `entrancePupilZ` | `EPL()`, plus the first vertex | the first surface |
 | `exitPupilZ` | `XPL()`, plus the image plane | the image surface |
 | `entrancePupilSemiDiameter`, `exitPupilSemiDiameter` | half of `EPD()` and of `XPD()`, without the sign | a diameter of optiland is negative where the stop is imaged upside down |
-| `recorded.optilandFNumber` | `FNO()`, which for a stop given by its size is `f2() / EPD()`: the focal length over the diameter of the entrance pupil, whatever the object distance, with the sign of that diameter | |
+| `recorded.optilandFNumber` | `FNO()`, which for a stop given by its size is `abs(f2()) / EPD()` (since optiland `a9e544a2`; `f2() / EPD()` before): the magnitude of the focal length over the diameter of the entrance pupil, whatever the object distance, with the sign of that diameter | |
 | `recorded.magnification`, for a finite object | `magnification()` | |
 
 The vertices and the image plane are read from the optic (`surfaces.positions`). The pupils are images of the stop
@@ -1135,8 +1136,9 @@ where the surface of the case is not, as on the far side of a hemisphere, is a r
 the mask in R2.
 
 **The optical path is optiland's own sum, and one thing is made of it.**
-What optiland's `opd` holds was read in its source (`Surface._trace_real`, `RealRays`, at `4e893f53`) against each
-rule of [`rays.trace`](#raystrace):
+What optiland's `opd` holds was read in its source (`Surface._trace_real`, `RealRays`, at `4e893f53`; at `a9e544a2`
+the same arithmetic runs through its propagation model's `propagate_to_surface`) against each rule of
+[`rays.trace`](#raystrace):
 
 | The contract's path | optiland's `opd` |
 |---|---|
@@ -1234,13 +1236,17 @@ several, whose rays are optiland's and whose sum is the worker's; `method.params
 `maxDelta` and `optilandWarnings`: the counts and the widths are the finer step's, of its first line. `aperture` is
 the FFT's.
 
-**The rays of a request are one batch to optiland**, or several of `maxBatchRays`, and what it answers of a ray
-is not always that ray's alone: the tolerance of its iteration on an asphere is the batch's, raised by the ray
-that is furthest from the surface, a ray that has ended among them. On a curved base that is a matter of
-rounding. On an asphere of a flat base one ray of the batch that was totally reflected further up leaves every
-ray on the base plane, off the surface by its sag, and optiland carries each on from there as a ray that
-arrived: the worker answers it so, and R2 fails the pairs of optiland on that set
-([docs/gotchas.md](../docs/gotchas.md#the-tolerance-of-an-aspheres-iteration-is-that-of-the-batch-it-is-traced-in)).
+**The rays of a request are traced in batches of at most `maxBatchRays`, each shielded from the rays optiland
+ended** (the owner's decision of 2026-11-10). optiland's tolerance on an asphere is its batch's, raised by the ray
+furthest from the surface, a ray that has ended among them: one that was totally reflected just in front of an
+asphere is put 1e14 times its z away, and every ray of the batch is left on the asphere's base (a flat base at
+optiland `4e893f53`; since `a9e544a2` a curved one too). So the worker traces a batch once and, where optiland ends
+no ray, answers that pass; otherwise it answers the rays that ended at the least end surface of a pass from it (a
+ray that came to that surface sideways first, which spoils it) and traces the rest again without them, in order,
+until a pass ends no ray. Every ray is answered from a batch that held no ray optiland had ended before that ray's
+own end, and an ended ray keeps the end and the reason optiland's rows give it; a batch takes at most 2 S + 2
+passes, and more is an error. A ray optiland keeps alive still raises its batch's tolerance, as a ray from far away
+does ([docs/gotchas.md](../docs/gotchas.md#the-tolerance-of-an-aspheres-iteration-is-that-of-the-batch-it-is-traced-in)).
 
 ### `protocol-request` and `protocol-response`
 

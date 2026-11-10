@@ -11,7 +11,7 @@ The contract's value        optiland's
 ``entrancePupilDiameterMm`` the magnitude of ``EPD()``: the system aperture's stop diameter over the height of a
                             paraxial ray of height 1 at the stop (``float_by_stop_size``)
 ``stopDiameterMm``          the system aperture's ``value``, read back as twice ``conditions.stopSemiDiameter``
-``imageSpaceFNumber``       the magnitude of ``FNO()``, which for a stop given by its size is ``f2() / EPD()``
+``imageSpaceFNumber``       the magnitude of ``FNO()``, which for a stop given by its size is ``|f2()| / EPD()``
 ``paraxialWorkingFNumber``  ``1 / (2 n' |u'|)`` of ``marginal_ray()``, its slope after the last surface and the index
                             of the image space: optiland has no accessor of it
 ``workingFNumber``          ``optiland.utils.get_working_FNO`` on the axis, on an optic of its own under the worker's

@@ -148,7 +148,7 @@ export function computeDistortionFieldGrid(request: FakeAnalysisRequest) {
       request.aperture.stopSemiDiameterMm,
     );
     if (trace.clipped) return none;
-    const image = skewImagePlaneIntercept(trace.x, trace.y, trace.ux, trace.uy, lastSurfZ, imagePlaneZ);
+    const image = skewImagePlaneIntercept(trace.x, trace.y, trace.ux, trace.uy, lastSurfZ, imagePlaneZ, state.lens.imageSurface);
     return { ...none, tracedX: image?.x ?? null, tracedY: image ? -image.y : null, usable: image !== null };
   };
   return {
@@ -223,7 +223,7 @@ export function computeLateralColorCurve(request: FakeAnalysisRequest) {
       const own = geometries[index];
       if (own === null || "kind" in own) return { channel, imageHeightMm: null, clipped: true };
       const trace = skewTrace(state, 0 * epsd, own.yChief + 0 * epsd, 0, own.uField, request.aperture.stopSemiDiameterMm, channel);
-      const image = trace.clipped ? null : skewImagePlaneIntercept(trace.x, trace.y, trace.ux, trace.uy, off.lastSurfZ, off.imagePlaneZ);
+      const image = trace.clipped ? null : skewImagePlaneIntercept(trace.x, trace.y, trace.ux, trace.uy, off.lastSurfZ, off.imagePlaneZ, state.lens.imageSurface);
       return { channel, imageHeightMm: image?.y ?? null, clipped: image === null };
     });
     const reference = raw.find((sample) => sample.channel === "G")?.imageHeightMm ?? null;

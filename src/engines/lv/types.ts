@@ -135,6 +135,21 @@ export interface LvPlane {
   readonly normal: LvVec3;
 }
 
+/**
+ * A curved image surface (LV #960, `ImageSurfaceShape` of `src/optics/types.ts`): a curved sensor, film gate or focal
+ * surface whose vertex sits where the flat image plane would. LensVisualizer's analyses land rays on it, measure image
+ * heights along it (on a cylinder, along the unrolled film) and take their cosines in its tangent frame. A case has the
+ * flat plane `conditions.imageZ` only, so the exporter refuses a state with one (`curved-image-surface`) and reads
+ * nothing else of it: only the members its message names are typed here.
+ */
+export interface LvImageSurfaceShape {
+  readonly kind: "spherical" | "aspheric" | "cylindrical";
+  /** Signed vertex radius in mm, as authored. */
+  readonly radius: number;
+  /** A cylinder's angle in radians from the drawn meridian to its curved direction; null when radial. */
+  readonly cylinderAngle: number | null;
+}
+
 /** The member of LV's TraceGeometry that `evaluateAperture` reads. */
 export interface LvTraceGeometry {
   readonly stopSurfaceIndex: number;
@@ -166,6 +181,12 @@ export interface LvPreparedState {
      * `indexAtPreparedSurface`), and how LV resolved the glass (`quality`: "air", "sellmeier", "abbe", ...).
      */
     readonly dispersion?: readonly (LvSurfaceDispersion | undefined)[];
+    /**
+     * The curved image surface at the image plane (LV #960), or null for a flat image, which every catalog lens has at
+     * 420b47555 (three hidden reference fixtures are curved). Absent in a LensVisualizer from before #960, which had
+     * no curved image: read it through `lvImageSurface`, never directly.
+     */
+    readonly imageSurface?: LvImageSurfaceShape | null;
   };
   readonly focusT: number;
   readonly zoomT: number;
@@ -1641,7 +1662,12 @@ export interface LvApi {
   computeComaAnalysis(request: LvAnalysisRequest): LvComaAnalysis;
   /** One tile of LV's bokeh tab: the field traced at the request's focus and intercepted at `sensorZ`. */
   computeBokehFieldFootprint(request: LvAnalysisRequest, fieldFraction: number, sensorZ: number): LvBokehField | null;
-  /** LV's projection of a skew trace from the last vertex plane to an image plane. */
+  /**
+   * LV's projection of a skew trace from the last vertex plane to an image plane, or (LV #960) its landing on the
+   * curved image surface whose vertex is at `imagePlaneZ`, in image coordinates and with the landing's `z`. Every
+   * caller hands the state's own surface (`lvImageSurface`), as LV's tabs do: null is the flat plane's straight
+   * transfer, and an `undefined` is taken for a shape and fails.
+   */
   skewImagePlaneIntercept(
     x: number,
     y: number,
@@ -1649,7 +1675,8 @@ export interface LvApi {
     uy: number,
     lastSurfZ: number,
     imagePlaneZ: number,
-  ): { readonly x: number; readonly y: number } | null;
+    imageSurface: LvImageSurfaceShape | null,
+  ): { readonly x: number; readonly y: number; readonly z?: number } | null;
   /** LV's `COMA_PREVIEW_CIRCULAR_PUPIL_RING_SAMPLES`: the rings of its coma point cloud. */
   readonly comaRingSamples: readonly number[];
   /** LV's `COMA_PREVIEW_FIELD_FRACTIONS`: the fractions of the half field its coma point cloud is drawn at. */

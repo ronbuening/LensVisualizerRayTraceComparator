@@ -11,7 +11,8 @@ estimator (``src/estimators/axialIntercept.ts``), as it does of every engine's r
   aiming, ``set_aiming("robust", max_iter=50, tol=1e-10)``. Its ray generator is asked once, at the line's own
   wavelength and indices, for one ray a signed fraction f of the request, aimed at the point (0, f R) of the stop
   surface, R the case's stop radius (``conditions.stopSemiDiameter``), and those rays are traced through the same
-  optic (``trace.record``, ``trace.settle``, optiland's own tracer as ``rays.trace`` has it). No ray of one line's
+  optic by optiland's own tracer, shielded from the rays optiland ended as ``rays.trace`` is (``trace.shielded``; the
+  owner's decision of 2026-11-10). The aimer's own traces are optiland's and are not shielded. No ray of one line's
   optic is traced at another line: LensVisualizer's sections aim each zone at its point of the real stop, and each
   colour channel at its own indices (LensVisualizer #927, #930). A new optic a line also keeps a number from depending
   on what an aimer solved before: optiland's robust aimer keeps a map of the pupil for each field and wavelength.
@@ -76,7 +77,7 @@ from .mtf import (
     mtf_api,
     verify_field,
 )
-from .trace import STATUS_OK, record, settle
+from .trace import STATUS_OK, shielded
 
 AXIAL_NATIVE = "axial.native"
 
@@ -263,10 +264,11 @@ class Traced:
 def trace(held: LineOptic, launched: Launch, api: OptilandApi | None = None) -> Traced:
     """The aimed rays of a launch traced through the line's own optic by optiland's own tracer, as a line has them.
 
-    One batch, ``trace.record`` then ``trace.settle``, as ``rays.trace`` traces one. Where optiland's own trace of each
-    aimed ray crosses the stop surface (its row of the stop, which goes on behind an aperture that clipped the ray) is
-    held to (0, f R) within the aimer's tolerance, R the case's stop radius: a ``BuildMismatch`` otherwise. A
-    ray that is not aimed is not traced, and did not arrive.
+    One batch, shielded from the rays optiland ended as ``rays.trace`` traces one (``trace.shielded``): each ray is
+    answered from a pass that held no ray optiland had ended before that ray's own end. Where optiland's trace of each
+    aimed ray, in the pass it is answered from, crosses the stop surface (its row of the stop, which goes on behind an
+    aperture that clipped the ray) is held to (0, f R) within the aimer's tolerance, R the case's stop radius: a
+    ``BuildMismatch`` otherwise. A ray that is not aimed is not traced, and did not arrive.
     """
     api = api if api is not None else optiland_api()
     np = api.np
@@ -276,11 +278,12 @@ def trace(held: LineOptic, launched: Launch, api: OptilandApi | None = None) -> 
     point = np.full((count, 3), np.nan, dtype=np.float64)
     direction = np.full((count, 3), np.nan, dtype=np.float64)
     if taken:
-        rows = record(held.optic, launched.origins[taken], launched.directions[taken], api)
         # optiland's row k + 1 is the case's surface k.
-        at_stop = held.stop_index + 1
+        traced, _, at_stop = shielded(
+            held.optic, launched.origins[taken], launched.directions[taken], api, row=held.stop_index + 1
+        )
         for column, ray in enumerate(taken):
-            crossing = (float(rows.x[at_stop][column]), float(rows.y[at_stop][column]))
+            crossing = (float(at_stop[column][0]), float(at_stop[column][1]))
             target = launched.fractions[ray] * held.pupil_radius_mm
             apart = math.hypot(crossing[0], crossing[1] - target)
             if not apart <= AIMING_TOLERANCE_MM:
@@ -289,7 +292,6 @@ def trace(held: LineOptic, launched: Launch, api: OptilandApi | None = None) -> 
                     f"{apart!r} mm from (0, {target!r}) asked (fraction {launched.fractions[ray]!r} of "
                     f"{held.pupil_radius_mm!r} mm), beyond the aimer's tolerance of {AIMING_TOLERANCE_MM!r} mm"
                 )
-        traced = settle(held.optic, rows, api)
         ok = traced.status == STATUS_OK
         arrived[taken] = ok
         point[taken] = np.where(ok[:, None], traced.exit_point, np.nan)

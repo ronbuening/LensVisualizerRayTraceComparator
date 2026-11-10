@@ -10,6 +10,7 @@ import type { OpticalCase } from "../../../src/contract/case.ts";
 import type { RaysTraceSpec } from "../../../src/contract/quantities/raysTrace.ts";
 import type { RunOptions } from "../../../src/contract/runSpec.ts";
 import { decodeNdArray } from "../../../src/core/numeric/ndarray.ts";
+import { lvImageSurface } from "../../../src/engines/lv/binding.ts";
 import type { LvBinding } from "../../../src/engines/lv/binding.ts";
 import { rebuildCase } from "../../../src/engines/lv/caseModel.ts";
 import type { LvCaseModel } from "../../../src/engines/lv/caseModel.ts";
@@ -69,7 +70,15 @@ function landing(
   const x = api.projectCoordinateToZ(point[0], point[2], toward[0], toward[2], z);
   const y = api.projectCoordinateToZ(point[1], point[2], toward[1], toward[2], z);
   const last = state.z[state.z.length - 1];
-  return api.skewImagePlaneIntercept(x, y, toward[0] / toward[2], toward[1] / toward[2], last, planeZ);
+  return api.skewImagePlaneIntercept(
+    x,
+    y,
+    toward[0] / toward[2],
+    toward[1] / toward[2],
+    last,
+    planeZ,
+    lvImageSurface(state),
+  );
 }
 
 function vec(values: Float64Array, ray: number): LvVec3 {
