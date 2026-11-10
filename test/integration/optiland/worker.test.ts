@@ -370,8 +370,8 @@ test(
     for (const rung of answered) assert.equal(manifest.jobs.filter((job) => job.rung === rung).length, 1, rung);
     const traced = manifest.jobs.filter((job) => job.quantity === "rays.trace");
     assert.deepEqual([...new Set(traced.map((job) => job.storeKey))].length, 1);
-    assert.match(out.join(""), /^singlet {2}ray-trace +optiland {7}answered +asked now$/m);
-    assert.match(out.join(""), /^singlet {2}optical-path +optiland {7}answered +from the cache$/m);
+    assert.match(out.join(""), /^singlet {2}ray-trace +optiland +answered +asked now$/m);
+    assert.match(out.join(""), /^singlet {2}optical-path +optiland +answered +from the cache$/m);
     const [engine] = manifest.engines;
     assert.ok(engine.id === "optiland" && engine.status === "available");
     assert.match(engine.adapterRevision ?? "", SHA256);

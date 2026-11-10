@@ -345,7 +345,7 @@ test(
       names.map((run) => {
         const said = [
           `optiland is unsupported (feature ${REFUSED[run].optiland})`,
-          ...(REFUSED[run].ref === null ? [] : [`ref is unsupported (feature ${REFUSED[run].ref})`]),
+          ...(REFUSED[run].ref === null ? [] : [`reference-tracer is unsupported (feature ${REFUSED[run].ref})`]),
         ];
         return [run, "UNSUPPORTED", said.join("; ")];
       }),

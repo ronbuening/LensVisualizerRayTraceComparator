@@ -25,7 +25,7 @@ test(
     const sources = { lv: source };
     const suite = await loadSuite(join(REPO_ROOT, "suites/folded.json"), { rootDir: REPO_ROOT, sources });
     assert.equal(suite.runs.filter((run) => run.opticalCase).length, 9);
-    const watched = watchedRegistry({ lv: fakeEngine(), ref: fakeEngine(), optiland: fakeEngine() });
+    const watched = watchedRegistry({ lv: fakeEngine(), "reference-tracer": fakeEngine(), optiland: fakeEngine() });
     const plan = await planJobs({ suite, sources, registry: watched.registry, runsDir: "unused" });
     assert.equal(plan.runs.filter((run) => run.opticalCase).length, 8);
     for (const run of plan.runs) {

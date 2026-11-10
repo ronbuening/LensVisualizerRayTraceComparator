@@ -262,7 +262,7 @@ test(
     assert.deepEqual([...new Set(pairs.map((pair) => pair.engines))], ["optiland / reference-tracer"]);
     assert.equal(pairs.length, sets);
     // The two engines stopped the same rays, at the same surfaces, for whatever reason each has.
-    assert.deepEqual(counts.optiland, counts.ref);
+    assert.deepEqual(counts.optiland, counts["reference-tracer"]);
 
     // What each system is there for happened, in optiland's answers: rays ended at the surface that reflects and
     // at the obstruction, and rays that landed stepped backwards onto a surface set into the curve before it.
