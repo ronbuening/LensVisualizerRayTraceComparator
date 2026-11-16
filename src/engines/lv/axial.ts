@@ -29,6 +29,7 @@ export type LvAxialAnswerApi = LvAxialApi &
     | "computeLongitudinalChromaticFocus"
     | "chromaticChannelWavelengthsNm"
     | "eLineChannelWavelengthsNm"
+    | "sodiumChannelWavelengthsNm"
     | "lensChromaticReference"
   >;
 
@@ -85,7 +86,7 @@ function refusals(api: LvAxialAnswerApi, model: LvCaseModel, spec: AxialNativeSp
     const channels = lvChannelLines(api, model);
     if (channels === null) {
       const message =
-        "the lens mixes d-line and e-line indices: no channel of LensVisualizer's chromatic tab is of one line";
+        "the lens mixes index references (d, D or e): no channel of LensVisualizer's chromatic tab is of one line";
       refused.push({ code: FEATURE, item: "lines.mixed-reference", message });
     } else if (!spec.lines.some((line) => channelAt(channels, conditions.lines[line]?.wavelengthNm) !== null)) {
       const message = `no line asked is a channel of LensVisualizer's chromatic tab (${Object.values(channels).join(", ")} nm)`;
@@ -252,8 +253,8 @@ function colour(
  *   case's stop radius); since #930 the colour zone is chosen from all four channels. No paraxial focus is presented.
  *
  * Unsupported: a finite object, a folded path, a line the case does not have (`line`), zones other than the section's
- * own, spherical aberration at a line that is not the authored reference line, colour of a lens that mixes d-line and
- * e-line indices or at no line of a channel, and a case off the design plane.
+ * own, spherical aberration at a line that is not the authored reference line, colour of a lens that mixes index
+ * references (d, D or e) or at no line of a channel, and a case off the design plane.
  */
 export function answerLvAxial(api: LvAxialAnswerApi, model: LvCaseModel, spec: AxialNativeSpec): LvAxialAnswer {
   // What the case and the spec decide comes first, before LensVisualizer is asked anything.

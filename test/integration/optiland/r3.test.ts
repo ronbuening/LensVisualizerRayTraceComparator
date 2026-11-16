@@ -412,14 +412,15 @@ test(
   { skip: skipSuites, timeout: 1_800_000 },
   (t) => {
     const { paths, verdicts, sets } = everyRung(t, "benchmark");
-    // 12 configurations, three fields, the reference line and the five photopic ones.
-    assert.equal(sets, 216);
+    // 12 configurations, three fields, the reference line and the nine photopic ones (LV #988; five before f5b456fec).
+    assert.equal(sets, 12 * 3 * (1 + 9));
     // Measured: optiland within 2.7e-9 waves of ref in every path and relative to every chief ray, over 137 596
     // rays, and LensVisualizer within 6.0e-6 waves of both: every pair inside the gate, so the benchmark has no
-    // floor. A pair is counted in both modes: 24 runs on R0 and on R1, 216 ray sets on R2 and on R3, and 72 fields
-    // on R4, five pairs each. On R4 (LensVisualizer 33ebdb30, closure 78215d72) LensVisualizer is within 3.4e-8 of
-    // both, and optiland within 1.2e-11 of ref, against a gate of 1e-7.
-    assert.match(verdicts, /^benchmark: 2760 pairs: 2760 Pass$/);
+    // floor. A pair is counted in both modes: 24 runs on R0 and on R1, 360 ray sets on R2 and on R3, and 72 fields
+    // on R4 (a field is one span of its lines), five pairs each: (24 + 24 + 360 + 360 + 72) x 5. On R4
+    // (LensVisualizer 33ebdb30, closure 78215d72) LensVisualizer is within 3.4e-8 of both, and optiland within 1.2e-11
+    // of ref, against a gate of 1e-7.
+    assert.match(verdicts, /^benchmark: 4200 pairs: 4200 Pass$/);
     // Every chief ray of the benchmark lands, in every engine: the path relative to it is measured in every pair.
     assert.deepEqual(paths.withoutChief, []);
   },
@@ -430,9 +431,11 @@ test(
   { skip: skipSuites, timeout: 1_800_000 },
   (t) => {
     const { paths, verdicts, sets } = everyRung(t, "features");
-    // 16 runs as written, 18 as run: the fixed-iris zoom is run at both ends.
-    assert.equal(sets, 162);
-    assert.match(verdicts, /^features: 2070 pairs: 2070 Pass$/);
+    // 16 runs as written, 18 as run: the fixed-iris zoom is run at both ends. Nine runs on the reference line and nine
+    // on the nine photopic lines, three fields each; with R0, R1 and R4 (54 fields), five pairs each:
+    // (18 + 18 + 270 + 270 + 54) x 5.
+    assert.equal(sets, 9 * 3 * (1 + 9));
+    assert.match(verdicts, /^features: 3150 pairs: 3150 Pass$/);
     // Historical at 33ebdb30: optiland within 3.5e-9 waves of ref; two ray sets of the Hologon, at its full field
     // at 470 nm and 510 nm, are floors of LensVisualizer against ref and optiland (2.07e-5 waves to the image and
     // 2.28e-5 relative to the chief ray, where optiland is 4.2e-10 waves from ref). Version 11 grants no floor.

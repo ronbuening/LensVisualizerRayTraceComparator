@@ -146,9 +146,12 @@ test("the line of each channel is LensVisualizer's reference of the runtime lens
   const api = {
     chromaticChannelWavelengthsNm: { R: 656.2725, G: 587.5618, B: 486.1327, V: 435.8343 },
     eLineChannelWavelengthsNm: { R: 643.8469, G: 546.074, B: 479.9914, V: 435.8343 },
+    sodiumChannelWavelengthsNm: { R: 656.2725, G: 589.2938, B: 486.1327, V: 435.8343 },
+    // LV #965: the reference every element shares, "d" where none is stated, and "d" for a mix.
     lensChromaticReference: (elements: readonly LvElement[]) => {
       asked.push(elements.map((element) => element.id));
-      return elements.length > 0 && elements.every((element) => element.indexReference === "e") ? "e" : "d";
+      const reference = elements[0]?.indexReference ?? "d";
+      return elements.every((element) => (element.indexReference ?? "d") === reference) ? reference : "d";
     },
   } as unknown as Parameters<typeof lvChannelLines>[0];
   const modelWith = (references: (string | undefined)[]) =>
@@ -167,6 +170,10 @@ test("the line of each channel is LensVisualizer's reference of the runtime lens
   assert.equal(lvChannelLines(api, modelWith(["e", "e"])), api.eLineChannelWavelengthsNm);
   assert.equal(lvChannelLines(api, modelWith(["e", undefined])), null);
   assert.equal(lvChannelLines(api, modelWith([undefined, "e"])), null);
+  // LV #965: a lens of sodium D indices has its channels at C, D, F and g; one that mixes D with d has none.
+  assert.equal(lvChannelLines(api, modelWith(["D", "D"])), api.sodiumChannelWavelengthsNm);
+  assert.equal(lvChannelLines(api, modelWith(["D", undefined])), null);
+  assert.equal(lvChannelLines(api, modelWith([undefined, "D"])), null);
 });
 
 test("what the sections do not present is unsupported: other lines, other zones, a finite object", async (t) => {

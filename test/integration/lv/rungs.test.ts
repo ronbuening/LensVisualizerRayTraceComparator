@@ -180,17 +180,18 @@ test(
   (t) => {
     const { manifest, comparisons, verdicts } = cycle(t, "benchmark");
     // 96 runs: 12 configurations in four conditions (wide open and the tab's f/8, at the design plane and at
-    // LensVisualizer's best axial focus), on one line and on five. R0 and R1 once each, and 864 ray sets (three
-    // fields a line), which each engine traces once for R2 and R3 together.
-    assert.equal(manifest.jobs.length, 2 * (96 + 96 + 864 + 864));
+    // LensVisualizer's best axial focus), on one line and on nine (LV #988's photopic lines; five before f5b456fec).
+    // R0 and R1 once each, and 1440 ray sets (three fields a line), which each engine traces once for R2 and R3
+    // together.
+    assert.equal(manifest.jobs.length, 2 * (96 + 96 + 1440 + 1440));
     assert.equal(
       manifest.runs.reduce((sets, run) => sets + (run.raySets?.sets.length ?? 0), 0),
-      864,
+      1440,
     );
     assert.ok(manifest.jobs.every((job) => job.status === "ok"));
 
     // Every gated pair is PASS, and nothing else: no failure, no error, nothing blocked.
-    assert.match(verdicts, /^benchmark: 3840 pairs: 3840 Pass$/);
+    assert.match(verdicts, /^benchmark: 6144 pairs: 6144 Pass$/);
     const { verdicts: counts, floors, rays } = tallyOf(comparisons);
     const [r2, r3] = [worstOf(comparisons, "ray-trace"), worstOf(comparisons, "optical-path")];
     t.diagnostic(
@@ -222,8 +223,8 @@ test(
     assert.deepEqual(counts, {
       "built-system PASS": 96,
       "first-order PASS": 96,
-      "ray-trace PASS": 864,
-      "optical-path PASS": 864,
+      "ray-trace PASS": 1440,
+      "optical-path PASS": 1440,
     });
     assert.equal(floors.size, 0);
     assert.ok(r2["hits.maxDistance"].value < 1e-8, said(r2, R2_METRICS));
@@ -285,7 +286,8 @@ test(
       ["ref-wide", "ref-tele", "photopic-wide", "photopic-tele"].map((rest) => `fixed-iris-zoom-${rest}`),
     );
     assert.ok(manifest.jobs.every((job) => job.status === "ok"));
-    assert.match(verdicts, /^features: 720 pairs: 720 Pass$/);
+    // Nine photopic lines since LV #988 (720 pairs of five before f5b456fec).
+    assert.match(verdicts, /^features: 1152 pairs: 1152 Pass$/);
     const { verdicts: counts, floors, rays } = tallyOf(comparisons);
     const [r2, r3] = [worstOf(comparisons, "ray-trace"), worstOf(comparisons, "optical-path")];
     t.diagnostic(
@@ -310,8 +312,8 @@ test(
     assert.deepEqual(counts, {
       "built-system PASS": 18,
       "first-order PASS": 18,
-      "ray-trace PASS": 162,
-      "optical-path PASS": 162,
+      "ray-trace PASS": 270,
+      "optical-path PASS": 270,
     });
     assert.equal(floors.size, 0);
     // The hits themselves are inside their gate on every lens: it is the landing, behind a steep exit, that at a

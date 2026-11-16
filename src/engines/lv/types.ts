@@ -30,8 +30,8 @@ export interface LvElement {
   /** Beer-Lambert absorption of the glass per mm; above 0 it weights rays and bends none. */
   readonly absorptionCoefficientPerMm?: number;
   /**
-   * The line the element's authored indices are of, `"e"`, or `"d"` where it states none. The comparator reads it
-   * only through LV's own `lensChromaticReference`, as LV's chromatic tab does.
+   * The line the element's authored indices are of, `"e"`, sodium `"D"` (LV #965), or `"d"` where it states none. The
+   * comparator reads it only through LV's own `lensChromaticReference`, as LV's chromatic tab does.
    */
   readonly indexReference?: string;
 }
@@ -990,7 +990,10 @@ export interface LvMtfFieldResult {
 /** LV's MtfFocus: the plane a result is of, with its axial best-focus diagnostic. */
 export interface LvMtfFocus {
   readonly requestedMode: string;
-  /** The plane LV applied to every field: "design" or "best-axial". */
+  /**
+   * The plane LV applied to every field: "design" or "best-axial", or (LV #988) "held", a shift the request states
+   * (`heldFocusShiftMm`), which the comparator never asks.
+   */
   readonly mode: string;
   /** The shift of that plane from the authored image plane, mm, positive away from the lens. */
   readonly appliedShiftMm: number;
@@ -998,8 +1001,9 @@ export interface LvMtfFocus {
 }
 
 /**
- * LV's MtfAxialVignetting: the surface that vignettes the axial marginal ray, the summary's working f-number in its
- * `vignetted` state (`computeWorkingFNumber`), and whether that is before the stop.
+ * LV's MtfAxialVignetting: the surface that vignettes the chart's axial marginal ray, and whether that is before the
+ * stop. Since LV #988 the ray is the MTF's own (`traceWorkingFNumber` of the chart's object at its first line), no
+ * longer the summary's.
  */
 export interface LvMtfAxialVignetting {
   readonly surfaceLabel: string;
@@ -1023,6 +1027,16 @@ export interface LvMtfResult {
   readonly axialVignetting: LvMtfAxialVignetting | null;
 }
 
+/**
+ * What LV's `computeMtfSteps` yields since LV #988: a phase boundary (geometry, focus, aperture, a field's grid and
+ * line), with the result where a step completed one. The request before any field is traced is the first that carries
+ * a result (`lvMtfRequestResult`).
+ */
+export interface LvMtfProgress {
+  readonly phase: { readonly kind: string; readonly [member: string]: unknown };
+  readonly result?: LvMtfResult;
+}
+
 /** What `resolveMtfSpectrum` gives: the spectrum the MTF tab requests, and its note when that is not the preferred. */
 export interface LvMtfSpectrumChoice {
   readonly spectrum: string;
@@ -1034,6 +1048,10 @@ export interface LvMtfPreferences {
   readonly method: string;
   /** The preferred spectrum: a lens without the glass data for it falls back to the reference line. */
   readonly spectrum: string;
+  /** The spectrum of the tab's regular options (LV #988), which stands in for `spectrum` while `advanced` is off. */
+  readonly regularSpectrum: string;
+  /** The wavelength of the spectrum "single" (LV #988), nm; kept when another spectrum is preferred. */
+  readonly wavelengthNm: number;
   readonly focus: string;
   /** The spacing of the fields, in percent of the reference image height. */
   readonly fieldStepPercent: number;
@@ -1041,6 +1059,13 @@ export interface LvMtfPreferences {
   readonly frequencies: readonly number[];
   readonly maxGridSize: number;
   readonly compareF8: boolean;
+  /** The f-number of the comparison overlay (LV #988): 8 wherever the tab's advanced options are off. */
+  readonly comparisonFNumber: number;
+  /** Whether the comparison is refocused on its own or held at the main result's plane (LV #988). */
+  readonly comparisonFocus: string;
+  /** Whether the tab's advanced options are on (LV #988); off, `resolveMtfPreferences` sets them aside. */
+  readonly advanced: boolean;
+  readonly [member: string]: unknown;
 }
 
 /** One wavelength LV traces, with its incident intensity weight. */
@@ -1580,11 +1605,12 @@ export interface LvApi {
   /** LV's product MTF: what its MTF tab draws, for a request with both radii and settings of method, spectrum, focus. */
   computeMtf(request: LvAnalysisRequest, settings: LvMtfRequestOptions): LvMtfResult;
   /**
-   * `computeMtf` step by step. The first result it yields is the request before any field is traced: the field
-   * axis, the focus it applies to every field and each field's target, pending or outside the model. A request its
-   * gate refuses, and one without a field axis, is returned at once and nothing is yielded.
+   * `computeMtf` step by step. Since LV #988 it yields progress (`LvMtfProgress`); the first that carries a result is
+   * the request before any field is traced: the field axis, the focus it applies to every field, the axial readout and
+   * each field's target, pending or outside the model. A request its gate refuses, and one without a field axis, is
+   * returned without a result yielded (`lvMtfRequestResult` reads either).
    */
-  computeMtfSteps(request: LvAnalysisRequest, settings: LvMtfRequestOptions): Generator<LvMtfResult, LvMtfResult>;
+  computeMtfSteps(request: LvAnalysisRequest, settings: LvMtfRequestOptions): Generator<LvMtfProgress, LvMtfResult>;
   /**
    * LV's refinement of one field through a ladder of grid sizes: `evaluate` is asked for the field at a size, each
    * result is held to the one before it, and the best field so far is yielded after every size. A converged size
@@ -1602,13 +1628,26 @@ export interface LvApi {
   ): LvMtfFieldDraft;
   /**
    * Whether a field with this many unresolved samples (unaimed and failed), of this judged share of its flux, may still
-   * be reported; `inBeam`, how many lie beside the transmitted beam, makes the share theirs alone (LV #936).
+   * be reported; `inBeam`, how many lie beside the transmitted beam, makes the share theirs alone (LV #936). The
+   * method (LV #988) words the note: a geometric bound, or none for the diffraction estimate; the share decides alone.
    */
   assessUnresolvedFlux(
     unresolvedRays: number,
     unknownFluxFraction: number,
+    method: string,
     inBeam?: number | null,
   ): { readonly acceptable: boolean; readonly note: string | null };
+  /**
+   * LV's share of a field's beam flux the unresolved samples beside it carry (LV #988): each line's transmitted and
+   * unresolved-in-beam weights times the line's incident weight, summed over the lines.
+   */
+  mtfUnresolvedFluxFraction(
+    lines: readonly {
+      readonly weight: number;
+      readonly transmittedWeight: number;
+      readonly unresolvedInBeamWeight: number;
+    }[],
+  ): number;
   /** A footprint widened on the sides whose guard band carried flux. */
   expandMtfFootprint(footprint: LvMtfFootprint, sides: LvMtfOpenBorders, fraction?: number): LvMtfFootprint;
   /** LV's `MTF_GRID_LADDER`: the grid sizes a field is refined through, coarse to fine. */
@@ -1621,12 +1660,24 @@ export interface LvApi {
   readonly mtfMinRays: number;
   /** LV's `MTF_FIELDS`: the fractions of the reference image height of a request that names none. */
   readonly mtfDefaultFields: readonly number[];
-  /** The spectrum the MTF tab requests for a preferred one: itself, or the reference line where glass data lacks. */
-  resolveMtfSpectrum(state: LvPreparedState, preferred: string): LvMtfSpectrumChoice;
+  /**
+   * The spectrum the MTF tab requests for a preferred one: itself, or the reference line where glass data lacks; the
+   * wavelength is that of the spectrum "single" (LV #988).
+   */
+  resolveMtfSpectrum(state: LvPreparedState, preferred: string, wavelengthNm?: number): LvMtfSpectrumChoice;
   /** LV's `MTF_FREQUENCIES`: the frequencies `computeMtf` reports for a request that names none, as the tab's does. */
   readonly mtfDefaultFrequencies: readonly number[];
   /** LV's `DEFAULT_MTF_PREFERENCES`: the options its MTF tab opens with. */
   readonly mtfDefaultPreferences: LvMtfPreferences;
+  /**
+   * The settings the MTF tab's requests are made with (LV #988): stored preferences with the advanced choices hidden
+   * where the advanced options are off (the spectrum the regular one, the comparison at f/8).
+   */
+  resolveMtfPreferences(preferences: LvMtfPreferences, isZoom?: boolean): LvMtfPreferences;
+  /** LV's `MTF_COMPARISON_F_NUMBERS` (LV #988): the full stops the MTF tab's comparison and aperture sweep offer. */
+  readonly mtfComparisonFullStops: readonly number[];
+  /** LV's `isMtfComparisonFNumber` (LV #988): a finite marked f-number from 1 to 128, a lens's minimum aperture too. */
+  isMtfComparisonFNumber(value: unknown): boolean;
   /** LV's `LINE_NM`. Anchored indices are fitted between its g and C lines. */
   readonly spectralLinesNm: LvLineNm;
   /** LV's `FLAT_R_THRESHOLD`: a surface whose radius is larger in magnitude has no curvature. */
@@ -1699,6 +1750,8 @@ export interface LvApi {
   readonly chromaticChannelWavelengthsNm: Readonly<Record<string, number>>;
   /** LV's `E_LINE_CHANNEL_WAVELENGTH_NM`: the line of each channel of a lens of native e-line indices, nm. */
   readonly eLineChannelWavelengthsNm: Readonly<Record<string, number>>;
+  /** LV's `D_LINE_CHANNEL_WAVELENGTH_NM` (LV #965): C, sodium D, F and g, for a lens of native sodium-D indices, nm. */
+  readonly sodiumChannelWavelengthsNm: Readonly<Record<string, number>>;
   /** What the spherical-aberration section of LV's aberrations tab presents for a request; null when its rays fail. */
   computeSphericalAberration(request: LvAnalysisRequest): LvSphericalAberration | null;
   /** The transverse profile that section plots, at its best focus; empty when its rays fail. */
@@ -1706,8 +1759,9 @@ export interface LvApi {
   /** What the axial-colour section of LV's chromatic tab presents for a request; null when no fraction is usable. */
   computeLongitudinalChromaticFocus(request: LvAnalysisRequest): LvLongitudinalChromaticFocus | null;
   /**
-   * The line LV's chromatic channels of a lens are labelled at: `"e"` only when every element is e-referenced, `"d"`
-   * otherwise. The chromatic tab asks it of the runtime lens's elements (`L.elements`, synthetic rear plates left out).
+   * The line LV's chromatic channels of a lens are labelled at: the reference every element shares, `"d"`, `"D"` (LV
+   * #965) or `"e"`, and `"d"` for a lens that mixes them. The chromatic tab asks it of the runtime lens's elements
+   * (`L.elements`, synthetic rear plates left out).
    */
   lensChromaticReference(elements: readonly LvElement[]): string;
   /** What LV's distortion tab plots as its curve for a request: chief rays solved at even target image heights. */

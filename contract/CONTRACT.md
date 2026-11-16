@@ -371,9 +371,10 @@ a case like any other: every engine is asked about `conditions.imageZ`, and none
 from. The engine `lv` recognises it ([its product MTF](#lensvisualizers-product-mtf)), and the
 [MTF recipe](#the-mtf-recipe) of a run names it.
 
-**Lines and indices** are LensVisualizer's decision, not the exporter's. The reference line is the d line, or the
-e line for a lens whose glasses are all e-referenced, and it is traced with the authored `nd`; several lines, and
-a lens that mixes d- and e-referenced glasses, are traced with indices anchored to the authored one. Which applies,
+**Lines and indices** are LensVisualizer's decision, not the exporter's. The reference line is the d line, the
+e line for a lens whose glasses are all e-referenced, or the sodium D line for one whose glasses are all D-referenced
+(LensVisualizer #965), and it is traced with the authored `nd`; several lines, and a lens that mixes index references,
+are traced with indices anchored to the authored one. Which applies,
 and whether LensVisualizer has the glass data for it, is what `assessMtfSupport` says. An explicit list of
 wavelengths takes the indices of a spectral run, where LensVisualizer has them and every wavelength lies between
 its g and C lines, which its anchored indices are fitted between.
@@ -639,7 +640,7 @@ Where `lv` hands the request to `computeMtf`, `replay-of-lv-mtf` replays the sam
 
 | Step | Is |
 |---|---|
-| the request before a field is traced | LensVisualizer's own: the first step of `computeMtfSteps` states the support record, the frequencies, the field axis, the focus and each field's target, pending or outside the model |
+| the request before a field is traced | LensVisualizer's own: the first step of `computeMtfSteps` that carries a result (since LensVisualizer #988 its steps are progress, and that one comes once the focus is found) states the support record, the frequencies, the field axis, the focus and each field's target, pending or outside the model |
 | the ladder | `MTF_GRID_LADDER` up to the request's `maxGridSize`, restated from `computeMtfSteps` |
 | the image plane | `state.imgZ` plus the focus's applied shift, restated likewise |
 | a field's launch and footprint | LensVisualizer's `prepareMtfFieldLaunch` and `findMtfFieldFootprint`; a field without the one is `chief-ray-failed`, without the other `vignetted` |
@@ -2157,7 +2158,7 @@ manifest records them under `runs[].axialRaySets`, sets and problems as above, e
 A folded case (`folded-path`), a case whose object is not at infinity (`object-not-at-infinity`), a pupil radius not
 above 0 (`no-pupil`), a launch without a stop (`lv-no-launch`) and rays that would not start in front of the first
 surface (`launch-behind-first-surface`) have no axial sets. A zone LensVisualizer aims no ray at is left out of its set
-(`lv-zone-unaimed`), and a lens that mixes d-line and e-line indices has no colour set (`lv-mixed-reference`). Every
+(`lv-zone-unaimed`), and a lens that mixes index references (d, D or e) has no colour set (`lv-mixed-reference`). Every
 restated line has a source canary, and the sets, traced as the sections trace them (`prepareAimedPupilTrace`, the
 authored indices or a channel's), give the sections' intercepts, best focus, RMS, profile, colour zone and channel foci
 to the bit (`test/integration/lv/axialRays.test.ts`, the colour of a run whose lines are the four channels).

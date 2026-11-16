@@ -61,7 +61,7 @@ export const TERMS: readonly TermText[] = [
     term: "reference wavelength",
     replaces: ["reference line"],
     definition:
-      "The wavelength a lens's glasses are specified at: the d line (587.56 nm), or the e line for some lenses.",
+      "The wavelength a lens's glasses are specified at: the d line (587.56 nm), or the e line or the sodium D line for some lenses.",
   },
   {
     term: "photopic",

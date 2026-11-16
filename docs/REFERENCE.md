@@ -4009,7 +4009,7 @@ measure (`no-rays`, `no-flux`, `no-reference`) is unmeasured, not failed.
 
 | Item | When |
 |---|---|
-| `lines.not-authored-reference` | Line 0 is not the authored indices: the tabs trace no chromatic channel. Every photopic run, whose line 0 is 555 nm. |
+| `lines.not-authored-reference` | Line 0 is not the authored indices: the tabs trace no chromatic channel. Every photopic run, whose line 0 is 560 nm (555 nm before LensVisualizer #988). |
 | `focus.off-design` | A coma pattern off the design plane. Every best-focus run. |
 | `pupil.rings` | A bokeh tile of other rings than LensVisualizer's own. |
 | `fields.angles-deg` | Fields as angles. |
@@ -6994,3 +6994,157 @@ Each command was run alone, against LensVisualizer `420b47555` and optiland `a9e
   baseline was written or checked.
 - **At that refresh,** the recorded checks of optiland's own analyses (R5, R5g, R6c, R7b to R14b) may move by the
   changes above. The rays checks' optiland pairs are the shielded answers.
+
+## LensVisualizer f5b456fec adopted
+
+LensVisualizer main `f5b456fec` (#972, clean, a private clone pinned at that commit), engine closure `f0066505`, 193
+files: the 187 of `c5c5ba6d` (`420b47555`, `e4c7cf11a`) and six more:
+
+- `optics/analysis/mtf/mtfConjugateConsistency.ts` and `optics/prescription/sourceMagnification.ts` (#990's audit);
+- `optics/analysis/mtf/mtfIncidentFlux.ts` (a diagnostic of #988, exported, never called by the comparator);
+- `optics/chromatic/glassCatalogEntries/lzos.ts` (#984);
+- `types/sourceProvenanceSchema.ts`;
+- `types/mtf.ts`, now loaded for the wavelength limits of the spectrum "single".
+
+Fifteen PRs since `e4c7cf11a`:
+
+- #988 (`5953e6ed5`): the November MTF audit. The engine change the comparator reads most.
+- #965 (`499565095`): native sodium-D references, and the EBC Fujinon W 24 mm.
+- #990 (`f8481c8ab`): close-focus conjugates certified from patents (about 410 states), and a conjugate audit that
+  reads a conjugate's `sourceMagnification`.
+- #963, #964, #969, #970, #971 and #972: lens packages (38 lenses). #969 and #971 add Hoya, Ohara and CDGM glasses; #984
+  adds LZOS TK14, TK21 and STK3 for the KMZ Zenitars.
+- #976, #977, #978, #981 and #983: folder maps, audit queues, a usage search, catalogue metadata and the relationship
+  map. No engine change.
+
+### What changed, and what the comparator did
+
+| Change | LensVisualizer | The comparator |
+|---|---|---|
+| #988, the steps of an MTF | `computeMtfSteps` is a `Generator<MtfProgress, MtfResult>`: each step is a phase (geometry, focus, aperture, a field's grid and line), and `{ phase: { kind: "aperture" }, result }` is the first to carry the result, once the focus has moved the plane and the axial readout (working f-number, magnification, axial vignetting) is written. A refused request, and one without a field axis, returns without one. | `lvMtfRequestResult` (`tabRequest.ts`) takes the first progress with a result, or the return value. `lvAxialFocus`, the recipe and the replay read the request through it; the type is `LvMtfProgress`. The worker's `stationSteps`, the job builder `mtfJobForRequest` and its job cache are canaried. |
+| #988, the tab's preferences | `resolveMtfPreferences(stored, L.isZoom)`: with Advanced off, the regular spectrum, the default wavelength (546.074 nm), the comparison f/8 and the regular view. `resolveMtfSpectrum` takes the wavelength; a "single" spectrum is requested at it. The comparison is `mtfComparisonFNumbers(fNumber, maxFstop).includes(comparisonFNumber)` and `mtfRequestAtAperture`, refocused by the default `comparisonFocus`. | `resolveMtfPreferences`, `MTF_COMPARISON_F_NUMBERS` and `isMtfComparisonFNumber` are bound; `lvTabRequest` resolves LensVisualizer's defaults and restates the spectrum's spread. `lvTabComparison` reads the resolved `comparisonFNumber` (`lvTabComparisonFNumber`) and offers it where `lvTabComparisonFNumbers`, `mtfComparisonFNumbers` restated, does; with LensVisualizer's defaults that is f/8, the same stop and pupil as before. The fake tree resolves f/11, so the hermetic tests tell the preference from a constant. |
+| #988, the photopic lines | `MTF_PHOTOPIC_LINES` is a nine-point Gauss-Legendre quadrature of V(λ), 470 to 650 nm, 560 nm first (five lines from 555 nm before). | Every photopic case moves with its lines. The comparator follows LensVisualizer's gate; no code of it names the lines. A fourth spectrum, "single", is not asked (`LV_MTF_SPECTRA`). |
+| #988, the unresolved share | `mtfUnresolvedFluxFraction` weights each line's transmitted and unresolved flux by its incident weight; `assessUnresolvedFlux` takes the method third and words its note by it. | Both bound and called by the replay, whose `fieldAtGrid` restates `fluxWeights`. The hermetic test has two lines whose shares differ, so a missing weight turns it red. |
+| #988, the gate | A rejected path names its causes (`pathReasons`); `assessMtfSupport` takes an internal audit's `checks`; the scale check is at the state's zoom position. | The rejection restated; the comparator never hands `checks`. |
+| #988, `waveLatticeOtf` | A triangle mesh in cosine space, a Jacobian of central differences, the other end of a pair at the whole shear from a lit anchor, forward and backward averaged. | No product path. Canaried, and docs/gotchas.md, "LensVisualizer has two wave estimates", rewritten for it. |
+| #965, sodium D | `LINE_NM.D` 589.2938 nm; `D_LINE_CHANNEL_WAVELENGTH_NM` (C, D, F, g); `lensChromaticReference` names the shared reference or "d" for a mix; a D element's catalogue glass is anchored at D, its partial dispersion read in D's coordinate. | `D_LINE_CHANNEL_WAVELENGTH_NM` is bound (`sodiumChannelWavelengthsNm`); `lvChannelLines` returns it for a D lens and null for any mix. One catalog lens, `minor-us1360667-figure-2`, states D indices. |
+| #990, the conjugates | About 410 close-focus states certified from patents; `mtfFiniteConjugate` carries a `sourceMagnification`, which only the audit reads. | `focus-stations` grows from 88 to 518 runs. |
+
+The fake LensVisualizer tree mirrors each name: `resolveMtfPreferences` and the new preferences (its default spectrum
+"single", its regular one photopic, so a hermetic test sees the resolution), `D_LINE_CHANNEL_WAVELENGTH_NM`,
+`mtfUnresolvedFluxFraction`, the progress steps and the new `lensChromaticReference`. No fake file was added.
+
+### Measured at f5b456fec, 2026-11-16
+
+- **Canaries.** 12 of 51 tests failed at first, on 39 lines; all are restated, and the 51 pass.
+- **`npm run test:lv`:** 139 of 140, 25 minutes. The one failure is `diffractive.test.ts`'s comparison of
+  benchmark and features requests with a `git archive HEAD`: the archived comparator reads `computeMtfSteps`'s first
+  step as a result, and crashes on the progress. It passes once this adoption is HEAD. Its claim for this tree is
+  covered by the suite expansions below.
+- **The MTF tab** (`mtf.test.ts`): every case moved with its photopic lines, and every figure with it. Pinned anew at
+  `f0066505`:
+
+  | Configuration | Shift (mm) | Axis, S10 T10 S30 T30 | 70 %, S10 T10 S30 T30 |
+  |---|---|---|---|
+  | Canon EF 135 mm | -0.0269 → -0.0224 | 0.9492 0.9492 0.7546 0.7546 → 0.9582 0.9582 0.7844 0.7844 | 0.9428 0.9430 0.6692 0.7050 → 0.9440 0.9467 0.6637 0.7178 |
+  | Fujinon GF 63 mm | -0.0420 → -0.0439 | 0.9693 0.9693 0.8786 0.8786 → 0.9711 0.9711 0.8897 0.8897 | 0.8312 0.8813 0.5938 0.6326 → 0.8329 0.8830 0.5976 0.6407 |
+  | Sigma 35 mm | -0.0257 → -0.0228 | 0.9564 0.9564 0.7684 0.7684 → 0.9642 0.9642 0.7973 0.7973 | 0.7230 0.8358 0.4802 0.5524 → 0.7326 0.8413 0.4742 0.5638 |
+  | Nikkor Z 50 mm | -0.0507 → -0.0511 | 0.9756 0.9756 0.8540 0.8540 → 0.9781 0.9781 0.8713 0.8713 | 0.8431 0.9277 0.6152 0.6973 → 0.8462 0.9290 0.6211 0.7144 |
+  | Sony FE 20 mm | -0.0394 → -0.0397 | 0.9715 0.9715 0.8630 0.8630 → 0.9719 0.9719 0.8656 0.8656 | 0.7606 0.3210 0.1453 0.0447 → 0.7611 0.3209 0.1428 0.0436 |
+  | Sony FE 400 mm | 0.0512 → 0.0516 | 0.9768 0.9768 0.9209 0.9209 → 0.9772 0.9772 0.9240 0.9240 | 0.9737 0.9669 0.9017 0.8865 → 0.9744 0.9673 0.9072 0.8902 |
+  | Sigma 105 mm | -0.0191 → -0.0192 | 0.9733 0.9733 0.9023 0.9023 → 0.9738 0.9738 0.9061 0.9061 | 0.9545 0.9191 0.7555 0.5763 → 0.9542 0.9198 0.7536 0.5808 |
+  | Z 24-70 mm, 24 mm | -0.0729 → -0.0743 | 0.9663 0.9663 0.8785 0.8785 → 0.9664 0.9664 0.8792 0.8792 | 0.9640 0.9222 0.8718 0.6402 → 0.9648 0.9262 0.8775 0.6649 |
+  | Z 24-70 mm, 70 mm | 0.0153 → 0.0152 | 0.9688 0.9688 0.9024 0.9024 → 0.9688 0.9688 0.9032 0.9032 | 0.8553 0.8808 0.5863 0.6755 → 0.8549 0.8839 0.5873 0.6820 |
+  | Z MC 105 mm | 0.0304 → 0.0308 | 0.9756 0.9756 0.9167 0.9167 → 0.9761 0.9761 0.9199 0.9199 | 0.9721 0.9389 0.8889 0.7269 → 0.9721 0.9406 0.8891 0.7378 |
+  | Z 135 mm Plena | -0.0088 → -0.0097 | 0.9804 0.9804 0.9167 0.9167 → 0.9807 0.9807 0.9185 0.9185 | 0.9657 0.9660 0.8237 0.8605 → 0.9662 0.9669 0.8269 0.8653 |
+  | Sigma 45 mm | -0.0315 → -0.0327 | 0.9376 0.9376 0.7729 0.7729 → 0.9389 0.9389 0.7796 0.7796 | 0.9519 0.9148 0.7649 0.6872 → 0.9530 0.9172 0.7718 0.6984 |
+
+  No axial marginal ray is vignetted, as before, and no configuration is traced off its prepared iris.
+- **R4f** (`fidelity.test.ts`): 96 runs, 480 fields, every pair PASS. The 12 reference-line opening runs have the same
+  cases and grids. The 12 photopic ones have new cases; three grids moved: the Canon EF 135 mm's axis 64 → 32, the
+  Z 50 mm's 75 % field 64 → 128, the Sony FE 400 mm's full field 64 → 128. The worst `mtf.maxAbs` is
+  1.2989609388114332e-14 again, on a reference-line run. Pinned at `f0066505`.
+- **The summary tab** (`summary.test.ts`): 563 states, 511 of them finite. The worst margins are 15, 0, 19 and 3 units
+  again, on the Olympus 7-14 mm's station. `MEASURED_CASES` holds the 138 cases of `c5c5ba6d` and the 425 new focus
+  stations.
+- **Counts that follow the lines.** `test:lv` held counts of five photopic lines; each was measured anew:
+  - benchmark R0 to R3, `lv` against `reference-tracer`: 1,440 ray sets, 6,144 pairs PASS (3,840 before);
+  - features: 270 ray sets, 1,152 pairs PASS (720); the whole suite 8,438 jobs (5,142), 4,338 pairs (2,826);
+  - smoke: 39 ray sets, 1,154 jobs (818), 704 pairs (536);
+  - `test:optiland`'s R2 and R3 on three engines: the benchmark's 12 × 3 × (1 + 9) = 360 ray sets (216), 1,800 R2 pairs
+    (1,080) and 4,200 pairs of R0 to R4 (2,760); the features' 9 × 3 × (1 + 9) = 270 (162), 1,350 (810) and 3,150
+    (2,070); R6a's photopic run 3 × 9 sets a lattice (3 × 5), R11a's 9 fields × 9 lines (9 × 5). Each file passes;
+    `stations.test.ts` fails on the two optiland FAILs below;
+  - the nearly telecentric Viltrox AF 75 mm at the photopic lines: its exit pupil 6.4e-9 mm apart at 615.2 nm,
+    29 m away (3.0e-9 mm at 650 nm before), 2.2e-10 on the scale R1 judges; its radius 2.5e-9 mm apart, 8.6e-11 on
+    that scale. R1 PASS, as before.
+- **The certified focus stations** (`engine.test.ts`): 511 stations, every R0 and R1 pair within its gates. The test now
+  holds a pupil's position and radius as R1 judges them, on the scale of the pupil's distance from the image plane
+  (worst 2.7e-11, the far entrance pupil of the Pentax A 200 mm f/4 macro's close station, 5.8 m away and 1.56e-10 mm
+  apart plainly), and every value that is no pupil's plainly (within 6e-12 mm), each under 1e-10 as before. Until
+  then it held one plain maximum over all of them, which that pupil exceeds.
+- **The census** (`reports/census`, at `f5b456fec`; closure `f0066505`, 193 files):
+  - 1,139 lenses (1,101 at `e4c7cf11a`), 372 zooms (366) and 1,511 states (1,467).
+  - 1,500 exported. 11 refused, the same 11 for the same reasons. None threw.
+  - `aperture.unclipped` 297 (287), `surface.asphere.even` 717 (700), `surface.conic` 330 (325). The limits did not
+    move.
+- **Every catalog lens at both commits** (exported at both zoom ends on the reference line, the photopic lines and C,
+  d, F; `e4c7cf11a` as a `git archive` extract with the committed comparator, `f5b456fec` with this one):
+  - 4,401 exports at `e4c7cf11a` (1,467 states × 3), of which 4,116 are exported at both commits and 285 refused at
+    both, each for the same codes. No export or refusal changed.
+  - Every photopic case moved: 1,330 of 1,330, on 984 lenses (nine lines). No reference-line case and no C, d, F case
+    of an existing lens moved: the new glass entries (Hoya, Ohara, CDGM, LZOS) are no token of an existing lens, and a
+    D element is new with #965.
+  - 132 new exports, the 38 new lenses' 44 states. The Pentax Super-Takumar 300 mm f/4 is refused
+    `spectral-data-unavailable` on several lines (LensVisualizer's gate); every other is exported.
+- **Each committed suite expanded at both commits** (names and cases through the case source):
+  - benchmark 96 runs, states 128 and features 18: the same names; the 48, 64 and 9 photopic runs have new cases, every
+    other run its case of before.
+  - folded 16 and diffractive 9: every name and case as before.
+  - focus-stations 518 runs (88): the 88 the same; 430 new certified stations, of which 425 export and 5 more fisheye
+    stations are refused `finite-conjugate-unavailable`, as the two before. Until the refresh, `baseline check
+    focus-stations` sees the new stations as NEW (the baseline holds 74 runs).
+- **The 425 new stations on the engines.** A temporary suite of each new station's state, `lv`, `reference-tracer` and
+  optiland, wide open, reference line, design plane; every run is the case of its certified station. Temporary
+  `LVRTC_RUNS_DIR`, `--jobs 4`; the rays checks were run and compared (49 s and 18 s), then the MTF checks (4 min 54 s
+  and 2 min).
+  - Rays checks: 13,458 pairs, 13,454 PASS, 4 FAIL. Each FAIL is a pair of optiland's on `ray-trace`'s mask; `lv` and
+    `reference-tracer` agree on every ray of both:
+    - the Fujinon XF 8-16 mm's close station (zoom 0) at its full field, 64.2°: optiland stops 26 rays on surface 2,
+      an asphere with odd terms, and fails 14 more there, where `lv` and `reference-tracer` stop all 40 on surface 3.
+      This is "Another crossing" of docs/gotchas.md, "On an asphere optiland's iteration starts at the base conic, and
+      goes where that leads", which the catalog snapshot lists for the same lens at infinity focus.
+    - the Fujifilm XF 23 mm f/2's close station at 33°: optiland carries 2 rays past surface 7, an asphere with a term
+      of power 3, to surface 8, and fails 20 more on surface 7, where `lv` and `reference-tracer` stop all 22 on surface
+      7: the same entry.
+  - Worst figures of the pairs that pass:
+
+    | Check | Figure | `lv` – `reference-tracer` | `lv` – optiland | optiland – `reference-tracer` |
+    |---|---|---|---|---|
+    | built-system | sag, scaled | | 5.5e-16 (largest) | |
+    | first-order | first-order value | | 2.9e-11 mm (largest) | |
+    | first-order | pupil position, scaled | | 6.0e-11 (largest; the Pentax A 200 mm macro's far pupil) | |
+    | ray-trace | hit | 1.45e-10 mm | 2.0e-11 mm | 3.1e-11 mm |
+    | ray-trace | direction | 5.0e-12 | 6.5e-13 | 9.9e-13 |
+    | optical-path | path to the image | 8.6e-8 waves | 1.5e-7 waves | 2.3e-7 waves |
+    | geometric-mtf | MTF | 4.4e-10 | 1.35e-9 | 1.58e-9 |
+
+    The ray-trace, optical-path and geometric-mtf figures are each the XF 8-16 mm's, at a close station.
+  - MTF checks: 12,970 pairs PASS (both modes).
+    - lv-mtf-replay: 425 pairs, `mtf.maxAbs` 2.3e-14, no sampling or field mismatch.
+    - wave-mtf: 401 fields judged in each pair, 811 flagged. Judged: `lv` against `reference-tracer` 8.5e-10, against
+      optiland 1.10e-9; optiland against `reference-tracer` 1.05e-9, within the 2e-9 that `r6a.test.ts` holds that
+      pair to.
+- **Identities.**
+  - The fingerprint of `lv`, `replay`, `wave` and `flux` (LensVisualizer's closure) moved, `c5c5ba6d` to `f0066505`.
+  - Their adapter revisions moved with `manifest.ts`, `tabRequest.ts`, `focus.ts`, `mtf.ts`, `axialZones.ts`,
+    `axial.ts`, `chief.ts`, `curvature.ts`, `curvatureFields.ts`, `exportAperture.ts` and `exportProblems.ts` (all four
+    closures) and `replay.ts` (the replay's):
+    - `lv` `2a10ac61` to `674d26ff`;
+    - `replay` `971fd882` to `0f8e411d`;
+    - `wave` `461b0dae` to `5541b54d`;
+    - `flux` `58918afc` to `30c7115b`.
+  - `reference-tracer` (`49ce9a07`), `reference-seidel` (`c847050f`) and the TypeScript closure of
+    `otf-of-optiland-wavefront` (`501c2a99`) did not move. The worker's did not either.
+  - No baseline was written or checked. At the owner's refresh, every photopic record is stale by case as well as by
+    engine, and focus-stations gains 425 stations, two of which carry optiland's FAILs above.

@@ -153,6 +153,7 @@ export const LV_IMPORT_MANIFEST = [
         "traceMtfStopBundle",
         "traceMtfLaunchPlaneBundle",
         "shearedOtf",
+        "mtfUnresolvedFluxFraction",
       ),
       { name: "MTF_FREQUENCIES", as: "mtfDefaultFrequencies", kind: "object" },
       { name: "MTF_FIELDS", as: "mtfDefaultFields", kind: "object" },
@@ -173,7 +174,10 @@ export const LV_IMPORT_MANIFEST = [
   },
   {
     module: "src/optics/chromatic/channels.ts",
-    exports: [{ name: "E_LINE_CHANNEL_WAVELENGTH_NM", as: "eLineChannelWavelengthsNm", kind: "object" }],
+    exports: [
+      { name: "E_LINE_CHANNEL_WAVELENGTH_NM", as: "eLineChannelWavelengthsNm", kind: "object" },
+      { name: "D_LINE_CHANNEL_WAVELENGTH_NM", as: "sodiumChannelWavelengthsNm", kind: "object" },
+    ],
   },
   { module: "src/optics/trace/interactions.ts", exports: functions("rearMediumSurfaceIndex") },
   { module: "src/optics/trace/utils.ts", exports: functions("projectCoordinateToZ") },
@@ -228,7 +232,11 @@ export const LV_IMPORT_MANIFEST = [
   },
   {
     module: "src/utils/state/mtfPreferences.ts",
-    exports: [{ name: "DEFAULT_MTF_PREFERENCES", as: "mtfDefaultPreferences", kind: "object" }],
+    exports: [
+      { name: "DEFAULT_MTF_PREFERENCES", as: "mtfDefaultPreferences", kind: "object" },
+      { name: "MTF_COMPARISON_F_NUMBERS", as: "mtfComparisonFullStops", kind: "object" },
+      ...functions("resolveMtfPreferences", "isMtfComparisonFNumber"),
+    ],
   },
 ] as const satisfies readonly LvManifestModule[];
 

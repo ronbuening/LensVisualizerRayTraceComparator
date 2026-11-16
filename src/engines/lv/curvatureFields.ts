@@ -19,6 +19,7 @@ export type LvCurvatureFieldsApi = Pick<
   | "fieldCurvatureCurveFieldFractions"
   | "chromaticChannelWavelengthsNm"
   | "eLineChannelWavelengthsNm"
+  | "sodiumChannelWavelengthsNm"
   | "lensChromaticReference"
 >;
 
@@ -131,14 +132,17 @@ export type LvCurvatureLine =
  * What the sections trace at a line of a case, decided once for the case source's ask and `lv`'s answer: the field
  * curves at a line whose indices are the authored ones (`tracesAuthored`), the chromatic field curves of the channel
  * whose wavelength the line's is (`lvChannelLines`, which LensVisualizer's `lensChromaticReference` decides), and else
- * nothing: a line that is no channel's (`lv-no-channel-at-line`), or any other line of a lens that mixes d-line and
- * e-line indices, whose channels are of no one line (`lv-mixed-reference`). It reads the lens and asks LensVisualizer
- * nothing else.
+ * nothing: a line that is no channel's (`lv-no-channel-at-line`), or any other line of a lens that mixes index
+ * references (d, D or e), whose channels are of no one line (`lv-mixed-reference`). It reads the lens and asks
+ * LensVisualizer nothing else.
  */
 export function lvCurvatureLine(
   api: Pick<
     LvCurvatureFieldsApi,
-    "chromaticChannelWavelengthsNm" | "eLineChannelWavelengthsNm" | "lensChromaticReference"
+    | "chromaticChannelWavelengthsNm"
+    | "eLineChannelWavelengthsNm"
+    | "sodiumChannelWavelengthsNm"
+    | "lensChromaticReference"
   >,
   model: LvCaseModel,
   line: number,
@@ -155,7 +159,10 @@ export function lvCurvatureLine(
 export function lvCurvatureLines(
   api: Pick<
     LvCurvatureFieldsApi,
-    "chromaticChannelWavelengthsNm" | "eLineChannelWavelengthsNm" | "lensChromaticReference"
+    | "chromaticChannelWavelengthsNm"
+    | "eLineChannelWavelengthsNm"
+    | "sodiumChannelWavelengthsNm"
+    | "lensChromaticReference"
   >,
   model: LvCaseModel,
 ): number[] {

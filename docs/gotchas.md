@@ -819,16 +819,23 @@ stays for a future engine with synthetic tests; Phase 5's catalog sweep will tes
     quarter-wave validity and tends to the geometric OTF at low frequency.
   - `waveLatticeOtf` reads the path as the comparator does: launch phase, `opticalPathLengthMm`, and the stretch
     to the foot of the perpendicular from the reference, with the same quarter-wave criterion
-    (`waveLatticePhaseStep`).
-  - Both shear along the lines of the lattice: rows for the cut along x, columns for the one along y, the cosine
-    looked up along that line alone. Off the axis a row is no line of constant cosine. The comparator finds the
-    sheared point in both coordinates.
-  - Both take the square root of the flux for the amplitude, without the area of cosine space a cell covers, and a
-    pair is centred on a cell with both ends interpolated, so the overlap of two cells is a product of two ramps
-    and not the area they share. The comparator's modulus is flux over area, each cell is one end of its pairs,
-    and on an even lattice the overlap is the staircase's exactly.
-  - `shearedOtf` traces half the lattice of a meridional field and mirrors it; `waveLatticeOtf` fills the cosines
-    of dark cells along a line by a straight line. Sums are plain.
+    (`waveLatticePhaseStep`), which since LensVisualizer #988 (`f5b456fec`) also asks for a map of cells to cosines
+    that neither folds nor collapses.
+  - `shearedOtf` shears along the lines of the lattice: rows for the cut along x, columns for the one along y, the
+    cosine looked up along that line alone. Off the axis a row is no line of constant cosine. The comparator finds
+    the sheared point in both coordinates, in its own patch's bilinear map. Since #988 `waveLatticeOtf` finds it in
+    both coordinates too, but in a triangle of the lattice (two a cell), where it reads amplitude and path linearly.
+  - `shearedOtf` takes the square root of the flux for the amplitude, without the area of cosine space a cell
+    covers, and a pair is centred on a cell with both ends interpolated, so the overlap of two cells is a product of
+    two ramps and not the area they share. Since #988 `waveLatticeOtf` divides the amplitude by the square root of a
+    cell's area in cosine space (a Jacobian of central differences of its neighbours' cosines), anchors each pair at
+    a lit cell weighted by that area, finds the other end at the whole shear, and averages the pair taken forward
+    and backward. The comparator's modulus is flux over area, each cell is one end of its pairs, and on an even
+    lattice the overlap is the staircase's exactly.
+  - `shearedOtf` traces half the lattice of a meridional field and mirrors it; `waveLatticeOtf` extends the cosines
+    of dark cells along each line of the lattice by a straight line through its nearest lit cells (they enter its
+    areas and triangles, never a flux or a path), where the comparator reads the cosines of no dark cell that is not
+    beside a lit one. Sums are plain.
 - **Handled.** Nothing is ported. The difference between LensVisualizer's sheared estimate and the comparator's
   estimator on the same rays is rung R6b, recorded and not gated: on one grid the two agree to about 5e-4 on the
   benchmark at f/8, and what the rung shows beyond that is the grid LensVisualizer stops at (below). R6a, the
@@ -2683,8 +2690,8 @@ Measured at LensVisualizer `a94c0ecd7` (the tree of `879c06102`) and optiland `4
 - **Where.** Both tabs call `traceOffAxisBundleFromSamples(..., undefined)`, with no chromatic channel, so a ray
   sees each surface's authored `nd`. The coma tab lands on the image plane of `computeOffAxisFieldGeometry`, which
   is the design plane.
-- **Effect.** A photopic case's line 0 is 555 nm, which is not the tabs' line. A best-focus case's plane is not
-  the coma tab's plane.
+- **Effect.** A photopic case's line 0 is 560 nm (555 nm before LensVisualizer #988), which is not the tabs' line.
+  A best-focus case's plane is not the coma tab's plane.
 - **Handled.** `lv` answers `spot.native` only for a case whose line 0 has the authored indices; otherwise it
   answers `lines.not-authored-reference`. It answers a coma pattern only on the design plane; otherwise it
   answers `focus.off-design`. On the benchmark these are 264 unsupported pairs of R7b and no error. R7a still

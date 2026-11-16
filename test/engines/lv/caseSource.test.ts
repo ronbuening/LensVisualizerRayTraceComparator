@@ -181,14 +181,15 @@ test("every way a lens has no case is a problem of its run, as <code>: <message>
   );
   assert.deepEqual(problemsOf(custom).map(problemCode), ["lv-best-axial-needs-lv-spectrum"]);
   // The two options only a LensVisualizer lens has do give a case where LensVisualizer has an answer: the stop of
-  // the tab's f/8 comparison (the fake singlet is f/2 with an iris of 6.25 mm), and the fake's best axial focus for
-  // that stop, a 128th of it in front of the design plane.
+  // the tab's comparison (the fake singlet is f/2 with an iris of 6.25 mm, and the fake's preferences resolve the
+  // comparison to f/11, where LensVisualizer's resolve it to f/8), and the fake's best axial focus for that stop, a
+  // 128th of it in front of the design plane.
   const tab = caseOf(
     await source.resolve(
       run("acme-singlet-50", { aperture: { kind: "lv-f8-comparison" }, imagePlane: { kind: "lv-best-axial" } }),
     ),
   );
-  const stop = ((6.25 * 2) / 2) * (2 / 8);
+  const stop = ((6.25 * 2) / 2) * (2 / 11);
   assert.equal(tab.conditions.stopSemiDiameter, stop);
   assert.equal(tab.conditions.imageZ, tab.system.designImageZ + -stop / 128);
   // The lens that has no spectral data still has its reference line.

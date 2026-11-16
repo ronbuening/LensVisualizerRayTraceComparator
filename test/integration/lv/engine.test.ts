@@ -479,11 +479,13 @@ test("lv's answers for three benchmark lenses are the numbers measured at LV d36
 
   // At the photopic lines LensVisualizer's own first-order module has nothing to say: the kernel answers each line
   // with its anchored indices, and no stored constant is defined there.
+  // Measured at f5b456fec, on LV #988's nine lines (51.260126330933545 at 555 nm, 51.20538404057052 at 470 nm and
+  // 51.345908811530634 at 650 nm of the five lines before).
   const photopic = await firstOrder("nikkor-z50f12", { lines: { kind: "photopic" } });
-  assert.equal(photopic.efl.length, 5);
-  near(photopic.efl[0], 51.260126330933545, "z50 efl at 555 nm");
-  near(photopic.efl[1], 51.20538404057052, "z50 efl at 470 nm");
-  near(photopic.efl[4], 51.345908811530634, "z50 efl at 650 nm");
+  assert.equal(photopic.efl.length, 9);
+  near(photopic.efl[0], 51.26450199857686, "z50 efl at 560 nm");
+  near(photopic.efl[7], 51.20602578605943, "z50 efl at 472.87 nm");
+  near(photopic.efl[8], 51.34333712165051, "z50 efl at 647.13 nm");
   assert.deepEqual(
     Object.keys(photopic).filter((name) => name.startsWith("lv")),
     [],
@@ -496,7 +498,12 @@ test(
   async (t) => {
     const { binding, lv, ref } = await engines(t);
     const exporter = createLvExporter(binding);
-    const worst = { firstOrder: 0, at: "" };
+    const worst = { firstOrder: 0, at: "", pupilZ: 0, pupilZAt: "", pupilRadius: 0, pupilRadiusAt: "" };
+    const gates = {
+      firstOrder: POLICY.rungs["first-order"].metrics["firstOrder.maxAbs"].tolerance as number,
+      pupilZ: POLICY.rungs["first-order"].metrics["pupilZ.maxScaled"].tolerance as number,
+      pupilRadius: POLICY.rungs["first-order"].metrics["pupilRadius.maxScaled"].tolerance as number,
+    };
     let stations = 0;
     const uncertified: string[] = [];
     for (const { key, at, exported, refused } of await focusStations(binding, exporter)) {
@@ -519,14 +526,18 @@ test(
       for (const count of ["layout", "shape", "aperture", "index"]) assert.equal(echo[`${count}.mismatches`].value, 0);
       assert.ok(echo["sag.maxScaled"].value <= 1e-12, at);
       const first = await compared(lv, ref, exported.opticalCase, PARAXIAL_FIRST_ORDER, at);
-      // Every compared value, the position and the radius of a pupil among them: none of these pupils is far away.
-      const difference = Math.max(
-        first.metrics["firstOrder.maxAbs"].value,
-        first.metrics["pupilZ.maxAbs"].value,
-        first.metrics["pupilRadius.maxAbs"].value,
-      );
-      assert.ok(difference <= 1e-9, `${at}: ${difference} mm`);
-      if (difference > worst.firstOrder) Object.assign(worst, { firstOrder: difference, at });
+      // R1 by its three gates: every value that is no pupil's within a plain 1e-9 mm, and the position and the radius
+      // of a pupil within 1e-9 mm on the scale of the pupil's distance from the image plane. Most of these pupils lie
+      // within a metre of it, where the scale is the plain figure; since LV #990 one does not (the Pentax A 200 mm
+      // f/4 macro's entrance pupil at its close station, 5.8 m away), so each is tallied as R1 judges it.
+      const plain = first.metrics["firstOrder.maxAbs"].value;
+      assert.ok(plain <= gates.firstOrder, `${at}: ${plain} mm`);
+      if (plain > worst.firstOrder) Object.assign(worst, { firstOrder: plain, at });
+      for (const name of ["pupilZ", "pupilRadius"] as const) {
+        const onScale = first.metrics[`${name}.maxScaled`].value;
+        assert.ok(onScale <= gates[name], `${at}: ${name}.maxScaled ${onScale}`);
+        if (onScale > worst[name]) Object.assign(worst, { [name]: onScale, [`${name}At`]: at });
+      }
 
       // Away from infinity focus LensVisualizer's stored constants are those of another state: lv records the
       // magnification of the object and nothing else, and ref records the same magnification from its own kernel.
@@ -537,11 +548,20 @@ test(
       assert.ok(m < 0 && Math.abs(m - n) <= 1e-12 * Math.abs(m), `${at}: ${m} against ${n}`);
       stations++;
     }
-    t.diagnostic(`${stations} certified focus stations: worst R1 difference ${worst.firstOrder} mm (${worst.at})`);
+    t.diagnostic(
+      `${stations} certified focus stations: worst R1 difference of a value that is no pupil's ${worst.firstOrder} ` +
+        `mm (${worst.at}); of a pupil's position on the scale of its distance ${worst.pupilZ} (${worst.pupilZAt}), ` +
+        `of its radius ${worst.pupilRadius} (${worst.pupilRadiusAt})`,
+    );
     if (uncertified.length > 0) t.diagnostic(`documented and not certified, so refused: ${uncertified.join("; ")}`);
-    // At d36f44b3: 19 stations of 12 lenses, from 1:40 to 1:1; the first-order data differ by at most 3.8e-13 mm.
+    // At d36f44b3: 19 stations of 12 lenses, from 1:40 to 1:1; the first-order data differ by at most 3.8e-13 mm. At
+    // f5b456fec (LV #990 certifies close-focus conjugates from patents): 511 stations; every value that is no pupil's
+    // within 6e-12 mm, and a pupil's position within 2.7e-11 on the scale of its distance (the Pentax A 200 mm f/4
+    // macro's close station, whose entrance pupil, 5.8 m from the image plane, is 1.56e-10 mm apart plainly).
     assert.ok(stations >= 10, String(stations));
     assert.ok(worst.firstOrder < 1e-10, `${worst.firstOrder} mm on ${worst.at}`);
+    assert.ok(worst.pupilZ < 1e-10, `${worst.pupilZ} on ${worst.pupilZAt}`);
+    assert.ok(worst.pupilRadius < 1e-10, `${worst.pupilRadius} on ${worst.pupilRadiusAt}`);
   },
 );
 
@@ -740,19 +760,20 @@ test(
     assert.ok(worst.scaled < 1e-14, `${worst.scaled} on ${worst.scaledAt}`);
     assert.ok(worst.abs < 1e-9, `${worst.abs} mm on ${worst.absAt}`);
     // One lens has pupils more than 1e-9 mm apart: the nearly telecentric one, whose exit pupil lies 7.7 m away at
-    // the d line and up to 20 m away at a photopic one. There lv and ref differ by 1.1e-9 mm and 3.0e-9 mm: 2e-13
-    // of the distance, which on the scale of the distance is 2e-10, and passes. Every other pupil is within
-    // 1.9e-11 mm.
+    // the d line and up to 36 m away at a photopic one (LV #988's nine lines; 20 m of the five before f5b456fec).
+    // There lv and ref differ by 1.1e-9 mm and 6.4e-9 mm (at 615.2 nm, 29 m away; 3.0e-9 mm before): 2.2e-13 of the
+    // distance, which on the scale of the distance is 2.2e-10, and passes. Every other pupil is within 1.9e-11 mm.
     const { pupilZ, pupilRadius } = pupils;
     assert.deepEqual([...pupilZ.far.keys()], [NEAR_TELECENTRIC]);
     assert.ok(pupilZ.abs > 1e-9 && pupilZ.abs < 1e-8, `${pupilZ.abs} mm on ${pupilZ.absAt}`);
     assert.ok(pupilZ.scaled < 5e-10, `${pupilZ.scaled} on ${pupilZ.scaledAt}`);
     assert.ok(pupilZ.others < 1e-10, `${pupilZ.others} mm on ${pupilZ.othersAt}`);
-    // The radius of that pupil is as large as it is far, by the same quotient: 6.3 m at 650 nm, where the pupil
-    // lies 14 m from the image plane, and there the two radii differ by 1.35e-9 mm, 2e-13 of themselves. On the
-    // scale of the pupil's distance that is 9.4e-11, and passes, since policy version 4 judges the radius of a
-    // pupil as its position (the plan, "Amendments since approval"). It is the one radius of the catalog more than
-    // 1e-9 mm apart: at 1ed8cc3d every other one is within 4.2e-12 mm. See docs/gotchas.md.
+    // The radius of that pupil is as large as it is far, by the same quotient: 11.5 m at 615.2 nm, where the pupil
+    // lies 29 m from the image plane, and there the two radii differ by 2.5e-9 mm, 2.2e-13 of themselves (6.3 m at
+    // 650 nm and 1.35e-9 mm of the five lines before f5b456fec). On the scale of the pupil's distance that is
+    // 8.6e-11, and passes, since policy version 4 judges the radius of a pupil as its position (the plan,
+    // "Amendments since approval"). It is the one radius of the catalog more than 1e-9 mm apart: at 1ed8cc3d every
+    // other one is within 4.2e-12 mm (4.0e-12 mm at f5b456fec). See docs/gotchas.md.
     assert.deepEqual([...pupilRadius.far.keys()], [NEAR_TELECENTRIC]);
     assert.ok(pupilRadius.abs > 1e-9 && pupilRadius.abs < 1e-8, `${pupilRadius.abs} mm on ${pupilRadius.absAt}`);
     assert.ok(pupilRadius.scaled < 5e-10, `${pupilRadius.scaled} on ${pupilRadius.scaledAt}`);
@@ -821,17 +842,18 @@ test(
       /^pupilZ\.maxScaled 1\.00e-8 exceeds its tolerance 1\.00e-9 at line 0, quantity exitPupilZ$/,
     );
 
-    // At the photopic lines the pupil lies from 1.3 m to 20 m away, on either side, and is placed within the gate
-    // at every one of them: 3.0e-9 mm apart at 650 nm, where the plain gate would fail it.
+    // At the photopic lines the pupil lies from 1.3 m to 36 m away, and is placed within the gate at every one of
+    // them: 6.4e-9 mm apart at 615.2 nm, 29 m away, where the plain gate would fail it (LV #988's nine lines; 20 m
+    // and 3.0e-9 mm at 650 nm of the five before f5b456fec).
     const photopic = await answers(NEAR_TELECENTRIC, { kind: "photopic" });
     const atPhotopic = judged("first-order", photopic.opticalCase, photopic.lvData, photopic.refData);
     const spread = metricsOf(atPhotopic);
-    assert.ok(spread["pupilZ.maxAbs"] > 2e-9 && spread["pupilZ.maxAbs"] < 5e-9, String(spread["pupilZ.maxAbs"]));
+    assert.ok(spread["pupilZ.maxAbs"] > 5e-9 && spread["pupilZ.maxAbs"] < 1e-8, String(spread["pupilZ.maxAbs"]));
     assert.ok(spread["pupilZ.maxScaled"] < 5e-10, String(spread["pupilZ.maxScaled"]));
     const distances = [...f8(photopic.refData.exitPupilZ)].map((z) =>
       Math.abs(z - photopic.opticalCase.conditions.imageZ),
     );
-    assert.ok(Math.min(...distances) > 1000 && Math.max(...distances) > 15_000, String(distances));
+    assert.ok(Math.min(...distances) > 1000 && Math.max(...distances) > 30_000, String(distances));
     t.diagnostic(
       `${NEAR_TELECENTRIC}: exit pupils ${figures["pupilZ.maxAbs"]} mm apart at the reference line and ` +
         `${spread["pupilZ.maxAbs"]} mm at the photopic ones; on the scale of their distance ` +
@@ -840,13 +862,14 @@ test(
         `${figures["pupilRadius.maxScaled"]} and ${spread["pupilRadius.maxScaled"]}; R1 at the photopic lines: ` +
         `${atPhotopic.verdict} ${atPhotopic.reason ?? ""}`,
     );
-    // The radius of that pupil, 6.3 m at 650 nm, of which the two engines hold 1.35e-9 mm apart: 2e-13 of it, and
-    // above a plain 1e-9 mm. Until policy version 4 that failed the photopic case of this one lens. The radius of
-    // a pupil is judged on the scale of the pupil's distance now, as its position is: 9.4e-11 at 14 m. The lens
-    // passes R1 entirely, and the report shows the plain figure beside the one that is judged.
+    // The radius of that pupil, 11.5 m at 615.2 nm, of which the two engines hold 2.5e-9 mm apart: 2.2e-13 of it,
+    // and above a plain 1e-9 mm (6.3 m and 1.35e-9 mm at 650 nm before f5b456fec). Until policy version 4 that
+    // failed the photopic case of this one lens. The radius of a pupil is judged on the scale of the pupil's distance
+    // now, as its position is: 8.6e-11 at 29 m. The lens passes R1 entirely, and the report shows the plain figure
+    // beside the one that is judged.
     assert.deepEqual([atPhotopic.verdict, atPhotopic.reason], ["PASS", undefined]);
     assert.ok(
-      spread["pupilRadius.maxAbs"] > 1e-9 && spread["pupilRadius.maxAbs"] < 2e-9,
+      spread["pupilRadius.maxAbs"] > 2e-9 && spread["pupilRadius.maxAbs"] < 5e-9,
       String(spread["pupilRadius.maxAbs"]),
     );
     assert.ok(spread["pupilRadius.maxScaled"] < 2e-10, String(spread["pupilRadius.maxScaled"]));

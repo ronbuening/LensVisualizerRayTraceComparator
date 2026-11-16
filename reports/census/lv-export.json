@@ -1,46 +1,46 @@
 {
   "byState": {
     "prime": {
-      "exported": 724,
+      "exported": 756,
       "notExportable": 11,
-      "states": 735,
+      "states": 767,
       "threw": 0
     },
     "tele": {
-      "exported": 366,
+      "exported": 372,
       "notExportable": 0,
-      "states": 366,
+      "states": 372,
       "threw": 0
     },
     "wide": {
-      "exported": 366,
+      "exported": 372,
       "notExportable": 0,
-      "states": 366,
+      "states": 372,
       "threw": 0
     }
   },
   "contract": "1.0",
-  "exported": 1456,
+  "exported": 1500,
   "features": {
     "aperture.annular": 7,
-    "aperture.unclipped": 287,
+    "aperture.unclipped": 297,
     "lines.multiple": 0,
     "object.finite": 0,
     "path.folded": 9,
-    "surface.asphere.even": 700,
+    "surface.asphere.even": 717,
     "surface.asphere.flat-base": 2,
     "surface.asphere.odd": 87,
-    "surface.conic": 325,
+    "surface.conic": 330,
     "surface.diffractive": 8
   },
   "kind": "lv-export-census",
   "lensVisualizer": {
-    "commit": "e4c7cf11ac873b894a60ef6133ad1a83a0fca728",
+    "commit": "f5b456fec7b69184844078f6ec6b1ac132f8ec58",
     "dirty": false,
-    "engineClosureHash": "c5c5ba6db8a0e4359363747f0f48fe1193468e313b2446a5751909fb558be5b2",
-    "engineFileCount": 187
+    "engineClosureHash": "f0066505c45b705ef5e22a44ee6303ae9f47de00e295faad6d72b6090cdd4a61",
+    "engineFileCount": 193
   },
-  "lenses": 1101,
+  "lenses": 1139,
   "limits": {
     "asphere.maxPower": {
       "lens": "fujifilm-fujinon-gf-30mm-f35-r-wr",
@@ -137,8 +137,8 @@
     "lines": "reference",
     "zoom": "both-ends"
   },
-  "states": 1467,
+  "states": 1511,
   "threw": [],
   "unindexedFiles": 0,
-  "zooms": 366
+  "zooms": 372
 }

@@ -14,6 +14,8 @@ import {
   lvHookStop,
   lvPupilSeed,
   lvTabComparison,
+  lvTabComparisonFNumber,
+  lvTabComparisonFNumbers,
   lvTabComparisonPupil,
   lvTabFieldFractions,
   lvTabRequest,
@@ -27,12 +29,17 @@ import { modelOf } from "./exportSupport.ts";
 
 const PREFERENCES: LvMtfPreferences = {
   method: "diffraction",
-  spectrum: "photopic",
+  spectrum: "single",
+  regularSpectrum: "photopic",
+  wavelengthNm: 550,
   focus: "best-axial",
   fieldStepPercent: 25,
   frequencies: [20, 40],
   maxGridSize: 64,
   compareF8: false,
+  comparisonFNumber: 11,
+  comparisonFocus: "refocus",
+  advanced: false,
 };
 
 /**
@@ -49,6 +56,8 @@ interface Lens {
   readonly preferences?: Partial<LvMtfPreferences>;
   /** The spectrum the lens has the glass data for, when it is not the preferred one. */
   readonly fallback?: string;
+  /** The comparison f-number the stand-in's preferences resolve to with Advanced off: 8, LensVisualizer's, unless set. */
+  readonly comparison?: number;
 }
 
 /** The calls a stand-in was made with, in order. */
@@ -89,12 +98,28 @@ function standIn(lens: Lens): { api: LvTabApi; runtime: LvRuntimeLens; state: Lv
       const yRatio = given?.yRatio ?? Number.NaN;
       return { epSD: Math.abs(stopSD / yRatio), yRatio, b: 0, epRatio: 1 };
     },
-    resolveMtfSpectrum: (asked, preferred) => {
-      calls.push(["resolveMtfSpectrum", asked, preferred]);
+    resolveMtfSpectrum: (asked, preferred, wavelengthNm) => {
+      calls.push(["resolveMtfSpectrum", asked, preferred, wavelengthNm]);
       return lens.fallback === undefined
         ? { spectrum: preferred, note: null }
         : { spectrum: lens.fallback, note: `no glass data for ${preferred}` };
     },
+    // As LV #988's: with Advanced off the regular spectrum stands in, at a wavelength of the stand-in's own.
+    resolveMtfPreferences: (preferences, isZoom) => {
+      calls.push(["resolveMtfPreferences", preferences, isZoom]);
+      return preferences.advanced
+        ? preferences
+        : {
+            ...preferences,
+            spectrum: preferences.regularSpectrum,
+            wavelengthNm: 600,
+            comparisonFNumber: lens.comparison ?? 8,
+          };
+    },
+    // LensVisualizer's full stops and its test of a marked f-number (LV #988).
+    mtfComparisonFullStops: [1, 1.4, 2, 2.8, 4, 5.6, 8, 11, 16, 22, 32, 45, 64, 90, 128],
+    isMtfComparisonFNumber: (value) =>
+      typeof value === "number" && Number.isFinite(value) && value >= 1 && value <= 128,
     mtfDefaultPreferences: { ...PREFERENCES, ...lens.preferences },
     mtfDefaultFrequencies: [0, 10, 20, 30, 40, 50],
   };
@@ -225,13 +250,36 @@ test("the request follows LensVisualizer's defaults as they are, and its spectru
   assert.deepEqual(request.displayedFrequenciesPerMm, [30]);
   assert.equal(request.spectrumNote, "no glass data for photopic");
 
-  // The spectrum that is resolved is the preferred one of the defaults, whatever it is, for the state of the request.
-  const other = standIn({ wideOpen: 5, fopen: 2, preferences: { spectrum: "cdf" } });
+  // The spectrum that is resolved is the one of the defaults as `resolveMtfPreferences` resolves them (LV #988: the
+  // regular spectrum while the advanced options are off), whatever it is, for the state of the request, with the
+  // resolved wavelength; the defaults are resolved for the lens's zoom.
+  const other = standIn({ wideOpen: 5, fopen: 2, preferences: { regularSpectrum: "cdf" } });
   assert.equal(lvTabRequest(other.api, other.runtime, other.state, "wide-open").options.spectrum, "cdf");
   assert.deepEqual(
     other.calls.filter(([name]) => name === "resolveMtfSpectrum"),
-    [["resolveMtfSpectrum", other.state, "cdf"]],
+    [["resolveMtfSpectrum", other.state, "cdf", 600]],
   );
+  assert.deepEqual(
+    other.calls.filter(([name]) => name === "resolveMtfPreferences"),
+    [["resolveMtfPreferences", other.api.mtfDefaultPreferences, other.runtime.isZoom]],
+  );
+});
+
+test("a single line the tab resolves is requested at the resolved wavelength, as the tab requests it", () => {
+  const preferences = { advanced: true, spectrum: "single", wavelengthNm: 520 };
+  const { api, runtime, state, calls } = standIn({ wideOpen: 5, fopen: 2, preferences });
+  const request = lvTabRequest(api, runtime, state, "wide-open");
+  assert.equal(request.options.spectrum, "single");
+  assert.equal(request.options.wavelengthNm, 520);
+  assert.deepEqual(
+    calls.filter(([name]) => name === "resolveMtfSpectrum"),
+    [["resolveMtfSpectrum", state, "single", 520]],
+  );
+  // A spectrum the lens has no data for falls back, and the request carries no wavelength of its own.
+  const fallback = standIn({ wideOpen: 5, fopen: 2, preferences, fallback: "reference" });
+  const resolved = lvTabRequest(fallback.api, fallback.runtime, fallback.state, "wide-open");
+  assert.equal(resolved.options.spectrum, "reference");
+  assert.equal(Object.hasOwn(resolved.options, "wavelengthNm"), false);
 });
 
 test("the f/8 comparison is the stop rule's f/8 stop and the wide-open pupil scaled by the two stops, as the tab does", () => {
@@ -250,9 +298,47 @@ test("the f/8 comparison is the stop rule's f/8 stop and the wide-open pupil sca
   // The stop is the rule's at 8, asked at the state's zoom position: the slider's own f/8 stop.
   assert.ok(calls.some((call) => call[0] === "stopSemiDiameterForFNumber" && call[1] === 8 && call[2] === 0.5));
   assert.deepEqual(lvTabComparison(api, lvHookAperture(api, runtime, state), runtime, state.zoomT), {
+    fNumber: 8,
     stopSemiDiameterMm: stop,
     unavailable: null,
   });
+});
+
+test("the comparison is of the f-number the preferences resolve to, never of a constant (LV #988)", () => {
+  // Preferences that resolve the comparison to f/11, where LensVisualizer's resolve to f/8: the stop, the pupil, the
+  // f-number and the rule all follow the preference.
+  const { api, runtime, state, calls } = standIn({ wideOpen: 6, fopen: 1.4, yRatio: 0.625, comparison: 11 });
+  calls.length = 0;
+  const comparison = lvTabRequest(api, runtime, state, "f8-comparison");
+  const stop = 19.3 / 11;
+  assert.deepEqual(
+    [comparison.fNumber, comparison.options.stopSemiDiameterMm, comparison.options.pupilSemiDiameterMm],
+    [11, stop, (9.6 * stop) / 6],
+  );
+  assert.ok(calls.some((call) => call[0] === "stopSemiDiameterForFNumber" && call[1] === 11 && call[2] === 0.5));
+  assert.ok(!calls.some((call) => call[0] === "stopSemiDiameterForFNumber" && call[1] === 8));
+  assert.equal(lvTabComparisonFNumber(api, runtime), 11);
+  assert.equal(LV_TAB_COMPARISON_F_NUMBER, 8);
+  // The tab's rule at f/11: a lens that is f/8 wide open is offered it, and one that stops down to f/8 only is not.
+  const slower = standIn({ wideOpen: 5, fopen: 8, maxFstop: 16, comparison: 11 });
+  assert.equal(lvTabRequest(slower.api, slower.runtime, slower.state, "f8-comparison").unavailable, null);
+  const short = standIn({ wideOpen: 5, fopen: 2, maxFstop: 8, comparison: 11 });
+  assert.equal(
+    lvTabRequest(short.api, short.runtime, short.state, "f8-comparison").unavailable,
+    "the lens stops down to f/8 at most, so LensVisualizer's MTF tab has no f/11 to compare it with",
+  );
+});
+
+test("the f-numbers the tab offers a comparison at are LensVisualizer's full stops and a minimum aperture of its own", () => {
+  const { api } = standIn({ wideOpen: 5, fopen: 2 });
+  assert.deepEqual(lvTabComparisonFNumbers(api, 2.8, 16), [4, 5.6, 8, 11, 16]);
+  // A minimum aperture that is no full stop is offered as well; one within the label tolerance of a stop is that stop.
+  assert.deepEqual(lvTabComparisonFNumbers(api, 2.8, 13), [4, 5.6, 8, 11, 13]);
+  assert.deepEqual(lvTabComparisonFNumbers(api, 2.8, 16.04), [4, 5.6, 8, 11, 16]);
+  // Within the tolerance of the slider's own f-number a stop is the chart's, and no f-number at all offers nothing.
+  assert.deepEqual(lvTabComparisonFNumbers(api, 7.96, 11), [11]);
+  assert.deepEqual(lvTabComparisonFNumbers(api, undefined, 22), []);
+  assert.deepEqual(lvTabComparisonFNumbers(api, Number.NaN, 22), []);
 });
 
 test("the stop of the f/8 comparison has the comparison's seed, to the bit, which is not the hook's pupil of it", () => {

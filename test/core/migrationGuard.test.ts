@@ -10,8 +10,11 @@
 // moves today's pins only. The adoption of LensVisualizer 420b47555 (curved image surfaces, LV #960) moved lv,
 // replay-of-lv-mtf, wave-mtf-of-lv-rays and flux-of-lv-rays (spot.ts, exportCase.ts, exportProblems.ts, binding.ts and
 // vignettingFields.ts are in each of their closures); the adoption of optiland a9e544a2 moved the worker's revision,
-// optiland's and the Python half of otf-of-optiland-wavefront's. Pin anew only for a change meant to move a revision,
-// and say so in the commit.
+// optiland's and the Python half of otf-of-optiland-wavefront's; the adoption of LensVisualizer f5b456fec (the MTF
+// audit, LV #988, and sodium-D references, LV #965) moved lv, replay-of-lv-mtf, wave-mtf-of-lv-rays and
+// flux-of-lv-rays again (manifest.ts, tabRequest.ts, focus.ts, mtf.ts, axialZones.ts, axial.ts, chief.ts,
+// curvature.ts, curvatureFields.ts, exportAperture.ts and exportProblems.ts are in all four closures, replay.ts in the
+// replay's). Pin anew only for a change meant to move a revision, and say so in the commit.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { readFileSync, readdirSync } from "node:fs";
@@ -62,7 +65,7 @@ interface Pinned {
 const ADAPTER_REVISIONS: Readonly<Record<string, Pinned>> = {
   lv: {
     module: LV_ENGINE_MODULE,
-    today: "2a10ac61c41e701a8d43812a0a1c63e5b85982043b5c336a88cc51cded2092f2",
+    today: "674d26ffb708596a5462f6199b1cb2c28df679003651e53ebb4bbde0e590be9a",
     atRename: "afad9cb89bd9a25fbfa5ee0ec335b1e315481414b7ba41da2f906c28856010c5",
     beforeRename: "afad9cb89bd9a25fbfa5ee0ec335b1e315481414b7ba41da2f906c28856010c5",
   },
@@ -74,19 +77,19 @@ const ADAPTER_REVISIONS: Readonly<Record<string, Pinned>> = {
   },
   "replay-of-lv-mtf": {
     module: LV_REPLAY_ENGINE_MODULE,
-    today: "971fd882df22c7a0b51b33dbb7c3aeac6e3d5fd3f2347d0ce30ee3b496ca3e9b",
+    today: "0f8e411dfa360a2b0db6a309e23b72c9122dd416d48e2b7c8037a2d8e713674b",
     atRename: "6f0c41d6724506c0039cbda51bb3d3eba51eeb667b0654a5d47246e1ee0349d7",
     beforeRename: "99024448fdb11f7eb293d0e54cf8281dc5272c57c468beeb30d66bb53ecf3409",
   },
   "wave-mtf-of-lv-rays": {
     module: LV_WAVE_ENGINE_MODULE,
-    today: "461b0dae967551fa3a4662c7dae0f1d006f006448e39c5de51abea9857626500",
+    today: "5541b54d966ebed6bf0c0a6b17a2782bf81134a0e7dacdaeb8936b822b91a36b",
     atRename: "8a272b3a3d8efb701c1227738ece2c40e753e5c2efcc7bee68f1f3e14a22d14c",
     beforeRename: "956fcaf5a64e0a0873c6514edd117b9d5002f92623e4f05f6c06faa409926182",
   },
   "flux-of-lv-rays": {
     module: LV_FLUX_ENGINE_MODULE,
-    today: "58918afc710e808c77cdc3a2baffce597f6e7db88371aba65e6656360efdc1d4",
+    today: "30c7115b0041e460fa43bdbcf75bfa0f9f4774e15d14ee79057709695aff88de",
     atRename: "6ecb3bb3f39951e6c1d5ed314ae1bbf84bdc2ba0ce0a986d75caf0e7a378db56",
     beforeRename: "973a417397ef718c252acf3df77fa746782fa17b20b4f22373171e8295ccba58",
   },

@@ -393,12 +393,13 @@ test(
   { skip: skipSuites, timeout: 1_800_000 },
   (t) => {
     const { on, cycle } = threeWays(t, "benchmark");
-    // 12 configurations, three fields, the reference line and the five photopic ones.
+    // 12 configurations, three fields, the reference line and the nine photopic ones (LV #988; five before
+    // f5b456fec): 12 x 3 x (1 + 9) ray sets, five pairs each in the two modes.
     assert.equal(cycle.manifest.runs.length, 24);
-    assert.equal(on.pairs.length / 3, 216);
+    assert.equal(on.pairs.length / 3, 12 * 3 * (1 + 9));
     // Measured: optiland and ref within 1.2e-12 mm in every hit, 2.1e-14 in direction and 8.9e-13 mm in landing,
     // over 137 596 rays; every pair of LensVisualizer inside its gates, so the benchmark has no floor.
-    assert.match(cycle.verdicts, /^benchmark: 1080 pairs: 1080 Pass$/);
+    assert.match(cycle.verdicts, /^benchmark: 1800 pairs: 1800 Pass$/);
   },
 );
 
@@ -407,10 +408,12 @@ test(
   { skip: skipSuites, timeout: 1_800_000 },
   (t) => {
     const { on, cycle } = threeWays(t, "features");
-    // 16 runs as written, 18 as run: the fixed-iris zoom is run at both ends.
+    // 16 runs as written, 18 as run: the fixed-iris zoom is run at both ends. Nine runs on the reference line and nine
+    // on the nine photopic lines (LV #988; five before f5b456fec), three fields each: 9 x 3 x (1 + 9) ray sets, five
+    // pairs each in the two modes.
     assert.equal(cycle.manifest.runs.length, 18);
-    assert.equal(on.pairs.length / 3, 162);
-    assert.match(cycle.verdicts, /^features: 810 pairs: 810 Pass$/);
+    assert.equal(on.pairs.length / 3, 9 * 3 * (1 + 9));
+    assert.match(cycle.verdicts, /^features: 1350 pairs: 1350 Pass$/);
     // At the historical 1e-9 mm tolerance the Hologon had four floors; version 11 grants none.
     assert.ok(on.pairs.every((pair) => pair.verdict === "PASS"));
   },

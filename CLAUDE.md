@@ -551,7 +551,8 @@ Stage 9.8 renamed the opaque engine ids (`LEGACY_ENGINE_IDS`; the vocabulary's `
   An f-number outside the slider (below the widest, above `maxFstop`) is a coded problem
   (`aperture-faster-than-wide-open`, `aperture-beyond-slider-range`), never clamped.
 - **`lv-best-axial` is asked of LensVisualizer, never computed** (`lvBestAxialFocus`, `src/engines/lv/focus.ts`):
-  the first step of `computeMtfSteps` for the stop, the lines and the grid cap of the run. The case is exported at
+  the first progress of `computeMtfSteps` that carries a result (`lvMtfRequestResult`; since LV #988 the steps are
+  progress) for the stop, the lines and the grid cap of the run. The case is exported at
   `state.imgZ` plus that shift and is then a case like any other. The plane is of one stop, one spectrum and one
   cap. `lv` answers `mtf.native` about a case off its design plane only when its own search, asked again for the
   request, gives that plane to the bit; it then asks LV for `best-axial` and states
@@ -561,13 +562,14 @@ Stage 9.8 renamed the opaque engine ids (`LEGACY_ENGINE_IDS`; the vocabulary's `
   engine or a lens; the manifest records it under `runs[].recipe`. A case file states its fields as angles or has
   none (`recipe-needs-field-angles`). It is no contract kind: a request states what it needs of it in its own spec.
 - **`replay` is LensVisualizer's rays and the comparator's sums** (`src/engines/lv/replay.ts`, `replayEngine.ts`).
-  It calls what LV exports (the first step of `computeMtfSteps`, `prepareMtfFieldLaunch`, `findMtfFieldFootprint`,
+  It calls what LV exports (the first result of `computeMtfSteps`, `prepareMtfFieldLaunch`, `findMtfFieldFootprint`,
   `traceMtfStopBundle`, `traceMtfLaunchPlaneBundle`, `expandMtfFootprint`, `refineMtfField`, `emptyMtfField`,
-  `assessUnresolvedFlux`, the constants) and restates only `traceField`'s loop, `fieldAtGrid`'s bookkeeping (since LV
-  #936: the stop lattice of each line kept for the next grid, unaimed and unresolved-in-beam rays, dark lines, the
-  share of the beam's unresolved flux, a refinement past a failed share; since LV #940 a line whose lattice the aim
-  found no ray of ends the field `aim-failed` at once, with LV's message, `aimedNothing` and `aimFailedMessage`) and
-  the ladder, each line with a canary. Never call or port LV's `geometricOtf` or `combineOtfs` there: the sum is `polychromaticOtf`. The sums
+  `mtfUnresolvedFluxFraction` (LV #988), `assessUnresolvedFlux`, the constants) and restates only `traceField`'s
+  loop, `fieldAtGrid`'s bookkeeping (since LV #936: the stop lattice of each line kept for the next grid, unaimed and
+  unresolved-in-beam rays, dark lines, the share of the beam's unresolved flux, each line at its incident weight since
+  LV #988, a refinement past a failed share; since LV #940 a line whose lattice the aim found no ray of ends the
+  field `aim-failed` at once, with LV's message, `aimedNothing` and `aimFailedMessage`) and the ladder, each line
+  with a canary. Never call or port LV's `geometricOtf` or `combineOtfs` there: the sum is `polychromaticOtf`. The sums
   that decide which grids are traced (flux, unresolved share) stay LV's plain ones. Its request is `lvMtfRequest`,
   the one function `lv` builds its own with: never build a second. The stand-in of
   `test/engines/lv/replay.test.ts` holds each line of the bookkeeping to a closed form: removing one must turn a
@@ -699,9 +701,10 @@ Stage 9.8 renamed the opaque engine ids (`LEGACY_ENGINE_IDS`; the vocabulary's `
   Since LV #936 each line of LV's MTF has its own aimed stop lattice, whose stop-centre ray (`lattice.chief`, aimed at
   that line's indices by `mtfAimSpectrum`) is traced unclipped, and every line's reference is line 0's landing
   (`commonReference`, LV `mtf.ts`); optiland-wave states optiland's line-0 chief aimed through the stop centre at
-  555 nm, each engine in its own model of the line's indices. The gaps measured before #936, when LV traced one
-  launch solved at the d line at every line (1.1e-6 to 5.7e-6 mm in the two Stage 4.3 configurations, up to
-  3.0e-4 mm on the R5g benchmark), are history, measured again at the Phase 6 end refresh; the 1e-3 mm limit stays.
+  the photopic line 0 (560 nm since LV #988, 555 nm before), each engine in its own model of the line's indices. The
+  gaps measured before #936, when LV traced one launch solved at the d line at every line (1.1e-6 to 5.7e-6 mm in the
+  two Stage 4.3 configurations, up to 3.0e-4 mm on the R5g benchmark), are history, measured again at the Phase 6 end
+  refresh; the 1e-3 mm limit stays.
   A common reference point does not change the modulus, so the several-line landing only checks that the
   answers are of the same field. Never read `imageHeightMm` of two engines on several lines as the landing of
   one ray. The several-line report names its selected sorting limit through a linted wording template.
@@ -1269,8 +1272,8 @@ Stage 9.8 renamed the opaque engine ids (`LEGACY_ENGINE_IDS`; the vocabulary's `
   change together.
 - **`lv` answers `axial.native` from the sections as they present them** (`src/engines/lv/axial.ts`): spherical
   aberration only at a line of the authored indices; colour at each line whose wavelength is one of its channels'
-  (`lvChannelLines`: C, d, F, g; C', e, F', g when every element is e-referenced; a mixed lens is
-  `lines.mixed-reference`), a line that is none `lv-no-channel-at-line`, with `sampling.indexMaxDelta`, the largest
+  (`lvChannelLines`: C, d, F, g; C', e, F', g when every element is e-referenced; C, D, F, g when every element is
+  of sodium D indices, LV #965; a mixed lens is `lines.mixed-reference`), a line that is none `lv-no-channel-at-line`, with `sampling.indexMaxDelta`, the largest
   difference of the channel's indices from the case's; both on the design plane only (`focus.off-design`). Which
   line a channel is, LV says: `lvChannelLines` asks LV's own `lensChromaticReference` (bound from the chromatic barrel)
   of `model.runtime.elements`, exactly the tab's `lensChromaticReference(L.elements)` (rear plates left out), and of
@@ -2513,3 +2516,76 @@ Stage 9.8 renamed the opaque engine ids (`LEGACY_ENGINE_IDS`; the vocabulary's `
   `9cdfad1a` to `3dc91d1a` (its TypeScript part `501c2a99` did not move). optiland's fingerprint moved with the checkout. Every
   record of `optiland` and `otf-of-optiland-wavefront` is STALE(engine) until the owner's refresh; no baseline was
   written or checked.
+
+## LensVisualizer f5b456fec adopted
+
+- **LV `f5b456fec` adopted** (engine closure `f0066505`, 193 files: the 187 of `c5c5ba6d` and six new,
+  `analysis/mtf/mtfConjugateConsistency.ts`, `analysis/mtf/mtfIncidentFlux.ts`, `chromatic/glassCatalogEntries/lzos.ts`,
+  `prescription/sourceMagnification.ts`, `types/sourceProvenanceSchema.ts` and `types/mtf.ts`, now loaded for its
+  wavelength limits). 15 PRs since `e4c7cf11a`: #988 (`5953e6ed5`, the November MTF audit) and #965 (`499565095`,
+  sodium-D references) are the engine changes the comparator reads; #990 (`f8481c8ab`) certifies close-focus conjugates
+  from patents and adds a conjugate audit (its `sourceMagnification` is read by the audit alone); #963, #964, #969 to
+  #972 add 38 lenses and glass entries (Hoya, Ohara, CDGM; #984 LZOS); #976 to #978, #981 and #983 are tooling and
+  catalogue metadata. The evidence is `docs/REFERENCE.md`, "LensVisualizer f5b456fec adopted".
+- **`computeMtfSteps` yields progress** (LV #988, `{ phase, result? }`): the request before any field is traced is the
+  first progress that carries a result (`yield { phase: { kind: "aperture" }, result }`, once the focus has moved the
+  plane and the axial readout is written), or the value a refused or axis-less request returns without one. Read it
+  through `lvMtfRequestResult` (`tabRequest.ts`; focus, recipe and replay do), never `.next().value`, and never step
+  past it: the yielded result is LV's own object, which later steps fill.
+- **The tab resolves its preferences** (`resolveMtfPreferences`, bound): with the advanced options off (the default)
+  the regular spectrum, the default wavelength, the comparison f/8 and the regular view stand in. `lvTabRequest` asks it
+  with `runtime.isZoom`, and `resolveMtfSpectrum` with the resolved wavelength; a resolved "single" spectrum would be
+  requested at that wavelength (`lvTabSpec`'s profile then says the spectrum is unknown). The comparison is of the
+  resolved `comparisonFNumber` (`lvTabComparisonFNumber`; 8 with LensVisualizer's defaults, 11 with the fake tree's, so
+  a hermetic test tells the preference from a constant), offered where it is one of `mtfComparisonFNumbers(fNumber,
+  maxFstop)` (`lvTabComparisonFNumbers`, restated with LV's bound `MTF_COMPARISON_F_NUMBERS` and
+  `isMtfComparisonFNumber`), at `mtfRequestAtAperture`'s stop and pupil, refocused by the default `comparisonFocus`
+  "refocus"; `heldFocusShiftMm` and the mode "held" are never asked. `LV_TAB_COMPARISON_F_NUMBER` (8) only names the
+  run aperture `lv-f8-comparison` and `lvrtc mtf --aperture f/8`, which select the comparison whatever its f-number.
+- **The photopic spectrum is nine lines** (LV #988, `MTF_PHOTOPIC_LINES`: a nine-point Gauss-Legendre quadrature of
+  V(λ) from 470 to 650 nm, 560 nm first, weights 29.573 to 0.75613): every photopic case moved with its lines (1,330 of
+  1,330 catalog exports; every photopic run of benchmark, states and features), and every photopic record is STALE(case)
+  until the owner's refresh. A photopic run has 9/5 the ray sets, spot, chief and curvature sets of before, and R6c,
+  `wave-mtf-of-lv-rays` and `flux-of-lv-rays` trace 9/5 the lines. LV #988's fourth spectrum, "single" (one line at a
+  wavelength the request states), is not asked: `LV_MTF_SPECTRA` stays reference, cdf, photopic.
+- **The unresolved share counts each line at its incident weight** (`mtfUnresolvedFluxFraction`, bound), and
+  `assessUnresolvedFlux(unresolvedRays, share, method, inBeam)` words its note by the method (a geometric error bound,
+  or none for diffraction); `replay.ts` restates `fieldAtGrid`'s `fluxWeights` and calls both.
+- **Sodium D** (LV #965): `lensChromaticReference` names the reference every element shares, "d" where none is stated
+  or for a mix; a lens of D indices has its channels at C, D (589.2938 nm), F and g (`D_LINE_CHANNEL_WAVELENGTH_NM`,
+  bound as `sodiumChannelWavelengthsNm`), its reference line is the D line (LV's gate says so), and a D element's
+  catalogue glass is anchored at D. `lvChannelLines` returns the D channels for such a lens and null for any mix. One
+  catalog lens (`minor-us1360667-figure-2`) states D indices; no committed suite has it.
+- **The gate names a rejected path's causes** (`pathReasons`, one sentence each; the reason stays "unsupported-path");
+  its third argument, the internal axial-conjugate audit, is never handed by the comparator. `waveLatticeOtf` was
+  rewritten (a triangle mesh in cosine space, a Jacobian, the exact shear from a lit anchor): docs/gotchas.md,
+  "LensVisualizer has two wave estimates", says how it now differs; `shearedOtf`, the product path, did not change.
+- **Measured and pinned anew** at `f0066505`: the MTF tab's 12 answers all moved with the photopic lines (cases and
+  figures re-pinned: shifts by up to 0.0045 mm, figures by up to 0.030); R4f's 12 reference-line opening runs the same
+  cases and grids, the 12 photopic ones new cases with three grids moved, worst again 1.2989609388114332e-14; the
+  summary's margins 15, 0, 19 and 3 on 563 cases (`MEASURED_CASES`: the 138 of `c5c5ba6d` and 425 new focus stations).
+  Count-based `test:lv` and `test:optiland` expectations moved with the nine lines (smoke 1154 jobs, features 8438
+  jobs, benchmark R0–R3 6144 pairs; optiland's R2 and R3 benchmark 12 × 3 × (1 + 9) ray sets). The focus-station test
+  holds a pupil as R1 judges it, on the scale of its distance (the Pentax A 200 mm macro's entrance pupil, 5.8 m away,
+  is 1.56e-10 mm apart plainly and 2.7e-11 on that scale), and every value that is no pupil's within 1e-10 mm, as
+  before. A lens that mixes index references is "mixes index references (d, D or e)" in every refusal. The census
+  rewritten: 1,139 lenses, 372 zooms, 1,511 states, 1,500 exported, the same 11 refused, none thrown.
+- **Every catalog lens at both commits** (both ends, reference, photopic, C, d, F; against an `e4c7cf11a` extract with
+  the committed comparator): no reference-line or C, d, F case of an existing lens moved, every photopic one did, no
+  refusal changed; 38 new lenses, 44 states (the Pentax Super-Takumar 300 mm refused `spectral-data-unavailable` on
+  several lines). Each committed suite expanded at both commits: only photopic cases moved; focus-stations is 518 runs
+  (88 before), 430 new certified stations of which 5 more fisheye stations are refused `finite-conjugate-unavailable`.
+- **The 425 new stations three ways** (`lv`, `reference-tracer`, optiland; R0–R4, then R4, R4f, R6a; temporary runs
+  directory, `--jobs 4`): 13,454 of 13,458 rays pairs PASS and 12,970 MTF pairs PASS. The four FAILs are optiland's on
+  R2's mask at two close stations, `lv` and `reference-tracer` agreeing on every ray: the Fujinon XF 8-16 mm's (26 rays
+  stopped on the odd asphere 2, where the others stop them on 3) and the XF 23 mm f/2's (2 rays carried past the
+  asphere 7): docs/gotchas.md, "On an asphere optiland's iteration starts at the base conic, and goes where that leads".
+  Worst passing figures: R2 hit 1.45e-10 mm (`lv` – `reference-tracer`, the XF 8-16 mm at 64°), R3 2.3e-7 waves, R4
+  1.6e-9, R4f 2.3e-14, R6a judged 1.10e-9 (optiland – `reference-tracer` 1.05e-9). `baseline write focus-stations`
+  refuses a FAIL outside the catalog: how the refresh treats these two stations is the owner's decision.
+- The fingerprint of `lv`, `replay`, `wave` and `flux` moved with LensVisualizer's closure (`c5c5ba6d` to `f0066505`),
+  and their adapter revisions (`lv` `2a10ac61` to `674d26ff`, `replay` `971fd882` to `0f8e411d`, `wave` `461b0dae` to
+  `5541b54d`, `flux` `58918afc` to `30c7115b`); `reference-tracer`'s, `reference-seidel`'s and the TypeScript closure of
+  `otf-of-optiland-wavefront` did not move. No baseline was written or checked. `diffractive.test.ts`'s comparison with
+  a `git archive HEAD` fails until this adoption is committed: the archived comparator reads `computeMtfSteps` as
+  before.

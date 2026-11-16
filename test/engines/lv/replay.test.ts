@@ -5,7 +5,7 @@
 // when a lens says so (a ladder, a test of convergence, a footprint that is widened, plain sums of its own), the
 // replay is held to the fake's own result: the same grids, the same counts, the same status, and the fake's curves
 // to its rounding. The fake's numbers describe no real lens, and none of its constants is LensVisualizer's.
-import { lvMtfInputs } from "../../../src/engines/lv/tabRequest.ts";
+import { lvMtfInputs, lvMtfRequestResult } from "../../../src/engines/lv/tabRequest.ts";
 import assert from "node:assert/strict";
 import { test, type TestContext } from "node:test";
 
@@ -42,6 +42,7 @@ import type {
   LvMtfFootprint,
   LvMtfGridOutcome,
   LvMtfOptions,
+  LvMtfProgress,
   LvMtfPupilRay,
   LvMtfResult,
   LvMtfSupport,
@@ -220,8 +221,11 @@ function standIn(spec: StandIn, traced: unknown[][] = []): LvReplayApi {
         focus: { requestedMode: String(options.focus), mode: "design", appliedShiftMm: 0, bestAxialShiftMm: -0.5 },
         axialVignetting: null,
       };
-      yield result;
-      return result;
+      // LV #988's progress: the phases before the request is known carry no result; the first that does is the one
+      // the replay reads, and the generator is not stepped past it.
+      yield { phase: { kind: "geometry" } };
+      yield { phase: { kind: "aperture" }, result };
+      throw new Error("the replay stepped past the request's first result");
     },
     prepareMtfFieldLaunch: (_state, _options, _support, fieldAngleDeg) => ({
       fieldAngleDeg,
@@ -265,10 +269,23 @@ function standIn(spec: StandIn, traced: unknown[][] = []): LvReplayApi {
       }
     },
     emptyMtfField: pending,
-    assessUnresolvedFlux: (unresolvedRays, unknownFluxFraction, inBeam) =>
+    assessUnresolvedFlux: (unresolvedRays, unknownFluxFraction, method, inBeam) =>
       unknownFluxFraction > (spec.maxUnknownFlux ?? Infinity)
         ? { acceptable: false, note: null }
-        : { acceptable: true, note: unresolvedRays === 0 ? null : `${unresolvedRays} unresolved, ${inBeam} beside` },
+        : {
+            acceptable: true,
+            note: unresolvedRays === 0 ? null : `${unresolvedRays} unresolved, ${inBeam} beside (${method})`,
+          },
+    // LV #988's rule: each line's flux at its incident weight.
+    mtfUnresolvedFluxFraction: (fluxLines) => {
+      let sampled = 0;
+      let unresolved = 0;
+      for (const line of fluxLines) {
+        sampled += line.weight * (line.transmittedWeight + line.unresolvedInBeamWeight);
+        unresolved += line.weight * line.unresolvedInBeamWeight;
+      }
+      return sampled > 0 ? unresolved / sampled : 0;
+    },
     mtfGridLadder: spec.ladder ?? [8, 16, 32, 64],
     mtfDefaultGridCap: 32,
     mtfMaxFootprintExpansions: 2,
@@ -279,8 +296,8 @@ function standIn(spec: StandIn, traced: unknown[][] = []): LvReplayApi {
 const STATE = { imgZ: 100 } as LvPreparedState;
 
 /** Steps that return `result` at once and yield nothing, as LensVisualizer's do for a request it does not trace. */
-function atOnce(result: LvMtfResult): Generator<LvMtfResult, LvMtfResult> {
-  const none: LvMtfResult[] = [];
+function atOnce(result: LvMtfResult): Generator<LvMtfProgress, LvMtfResult> {
+  const none: LvMtfProgress[] = [];
   return (function* () {
     yield* none;
     return result;
@@ -504,9 +521,11 @@ test("a line no ray reaches is dark: every line dark is vignetted, some dark too
 });
 
 test("the unresolved share is of the samples beside the beam, held to LensVisualizer's rule, which refines past a failure", () => {
-  // Line 0: 64 rays of weight 1 land at 8 cells; 2 samples failed and 1 was not aimed, of which 1 lies beside the beam
-  // and stands for 4. Line 1: 64 rays of weight 0.25; 3 unaimed, 2 beside the beam, standing for 1. Beside the beam:
-  // (64 + 4) + (16 + 1) = 85, of which 5 unresolved: 1/17. The weight of the samples away from the beam counts nowhere.
+  // Line 0, of incident weight 1: 64 rays of weight 1 land at 8 cells; 2 samples failed and 1 was not aimed, of which 1
+  // lies beside the beam and stands for 4. Line 1, of incident weight 0.5: 64 rays of weight 0.25; 3 unaimed, 2 beside
+  // the beam, standing for 3. Since LV #988 each line counts at its incident weight: beside the beam
+  // 1 (64 + 4) + 0.5 (16 + 3) = 77.5, of which 1 (4) + 0.5 (3) = 5.5 unresolved, 0.071 (at equal weights 7 / 87,
+  // 0.080). The weight of the samples away from the beam counts nowhere.
   const spec: StandIn = {
     lines: [
       { wavelengthNm: 550, weight: 1 },
@@ -517,25 +536,25 @@ test("the unresolved share is of the samples beside the beam, held to LensVisual
     unresolved: (line) =>
       [
         { failed: 2, unaimed: 1, inBeam: 1, inBeamWeight: 4 },
-        { failed: 0, unaimed: 3, inBeam: 2, inBeamWeight: 1 },
+        { failed: 0, unaimed: 3, inBeam: 2, inBeamWeight: 3 },
       ][line],
     ladder: [8, 16],
   };
   const options = optionsOf({ fieldFractions: [0] });
-  const [kept] = replayLvMtf(standIn({ ...spec, maxUnknownFlux: 0.06 }), STATE, options).fields;
+  const [kept] = replayLvMtf(standIn({ ...spec, maxUnknownFlux: 0.075 }), STATE, options).fields;
   assert.deepEqual(kept.gridSizes, [8, 16]);
   assert.equal(kept.field.status, "converged");
   assert.deepEqual(
     [kept.field.validRays, kept.field.failedRays, kept.field.unaimedRays, kept.field.unresolvedInBeamRays],
     [2 * 16 * 16, 2, 4, 3],
   );
-  // At 16 cells: (256 + 4) + (64 + 1) = 325 beside the beam, 5 unresolved.
-  assert.equal(kept.field.unknownFluxFraction, 5 / 325);
-  // The rule is asked with the failed and unaimed samples, and the ones beside the beam.
-  assert.deepEqual(kept.field.notes, ["6 unresolved, 3 beside"]);
+  // At 16 cells: 1 (256 + 4) + 0.5 (64 + 3) = 293.5 beside the beam, 5.5 unresolved.
+  assert.equal(kept.field.unknownFluxFraction, (1 * 4 + 0.5 * 3) / (1 * (256 + 4) + 0.5 * (64 + 3)));
+  // The rule is asked with the failed and unaimed samples, the request's method and the ones beside the beam.
+  assert.deepEqual(kept.field.notes, ["6 unresolved, 3 beside (geometric)"]);
 
-  // 5 / 85 at 8 cells is above a rule of 0.05: no curve there, and since #936 the ladder goes on to a grid that may
-  // resolve the beam's edge; at 16 cells 5 / 325 passes, and the field has its curve there.
+  // 5.5 / 77.5 at 8 cells is above a rule of 0.05: no curve there, and since #936 the ladder goes on to a grid that may
+  // resolve the beam's edge; at 16 cells 5.5 / 293.5 passes, and the field has its curve there.
   const [refined] = replayLvMtf(standIn({ ...spec, maxUnknownFlux: 0.05 }), STATE, options).fields;
   assert.deepEqual(refined.gridSizes, [8, 16]);
   assert.deepEqual([refined.field.status, refined.field.gridSize], ["unconverged", 16]);
@@ -545,7 +564,7 @@ test("the unresolved share is of the samples beside the beam, held to LensVisual
   assert.deepEqual([refused.field.status, refused.field.reason], ["unavailable", "trace-failed"]);
   assert.equal(
     refused.field.message,
-    "3 pupil samples beside the transmitted beam could not be aimed or traced and carry 1.5% of its flux, too much " +
+    "3 pupil samples beside the transmitted beam could not be aimed or traced and carry 1.9% of its flux, too much " +
       "for an MTF estimate. 3 more touch no transmitted cell.",
   );
   assert.deepEqual(refused.bundles, []);
@@ -657,7 +676,7 @@ test("a request the gate refuses, and one without a field axis, are replayed as 
   const refused: LvReplayApi = {
     ...api,
     computeMtfSteps: (state, options) => {
-      const first = api.computeMtfSteps(state, options).next().value;
+      const first = lvMtfRequestResult(api.computeMtfSteps(state, options));
       const support = { ...first.support, available: false, reason: "unsupported-path", message: "No." };
       return atOnce({ ...first, support, fields: [], geometry: null, focus: null });
     },
@@ -669,7 +688,7 @@ test("a request the gate refuses, and one without a field axis, are replayed as 
   const axisless: LvReplayApi = {
     ...api,
     computeMtfSteps: (state, options) => {
-      const first = api.computeMtfSteps(state, options).next().value;
+      const first = lvMtfRequestResult(api.computeMtfSteps(state, options));
       const fields = first.fields.map((field): LvMtfFieldResult => ({
         ...field,
         status: "unavailable",
@@ -696,12 +715,12 @@ test("the grid cap of the request ends the ladder, and the applied focus shift m
   const shifted: LvReplayApi = {
     ...api,
     computeMtfSteps: function* (state, options) {
-      const first = api.computeMtfSteps(state, options).next().value;
+      const first = lvMtfRequestResult(api.computeMtfSteps(state, options));
       const result = {
         ...first,
         focus: { requestedMode: "best-axial", mode: "best-axial", appliedShiftMm: -0.125, bestAxialShiftMm: -0.125 },
       };
-      yield result;
+      yield { phase: { kind: "aperture" }, result };
       return result;
     },
     traceMtfStopBundle: (...args) => {

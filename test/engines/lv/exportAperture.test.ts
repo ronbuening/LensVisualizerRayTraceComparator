@@ -11,7 +11,7 @@ import {
 import type { LvStopApi } from "../../../src/engines/lv/exportAperture.ts";
 import type { LvRuntimeLens } from "../../../src/engines/lv/types.ts";
 import { profileOf, sag } from "../../../src/engines/ref/surface.ts";
-import { FLAT, lvEvaluateAperture, stateOf } from "./exportSupport.ts";
+import { FLAT, comparisonStandIn, lvEvaluateAperture, stateOf } from "./exportSupport.ts";
 
 const RUNTIME: LvRuntimeLens = {
   source: { key: "synthetic" },
@@ -29,6 +29,7 @@ const RUNTIME: LvRuntimeLens = {
  */
 function ruled(wideOpen: (zoomT: number) => number, fopen: (zoomT: number) => number, k = 24): LvStopApi {
   return {
+    ...comparisonStandIn(),
     wideOpenStopAtZoom: wideOpen,
     stopSemiDiameterForFNumber: (fNumber, zoomT) =>
       fNumber > fopen(zoomT) ? Math.min(wideOpen(zoomT), k / fNumber) : wideOpen(zoomT),

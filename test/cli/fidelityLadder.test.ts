@@ -88,8 +88,9 @@ test("lvrtc run --checks lv-mtf-replay: the replay of a sampled MTF passes, and 
   // The recipe of each run is recorded with it: the plane, the stop, the fields and the frequencies of its request.
   const [first, second] = manifest.runs.map((run) => run.recipe?.recipe);
   assert.deepEqual([first?.source, first?.plane.kind, first?.stopSemiDiameter], ["lv", "design", 6.25]);
-  // The fake singlet is f/2 with an iris of 6.25 mm, and its best focus a 128th of the stop radius in front.
-  const stop = ((6.25 * 2) / 2) * (2 / 8);
+  // The fake singlet is f/2 with an iris of 6.25 mm, and its best focus a 128th of the stop radius in front. The tab's
+  // comparison is of the f-number the fake's preferences resolve to, f/11 (LensVisualizer's resolve to f/8).
+  const stop = ((6.25 * 2) / 2) * (2 / 11);
   assert.deepEqual([second?.plane.kind, second?.stopSemiDiameter, second?.lines.length], ["lv-best-axial", stop, 5]);
   assert.equal(second?.plane.lvBestAxialShiftMm, -stop / 128);
   assert.deepEqual(second?.frequenciesPerMm, [10, 20, 40]);

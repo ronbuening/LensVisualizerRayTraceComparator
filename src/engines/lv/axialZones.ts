@@ -16,6 +16,7 @@ export type LvAxialApi = LvHookApi &
     | "locaMarginalFractions"
     | "lensChromaticReference"
     | "eLineChannelWavelengthsNm"
+    | "sodiumChannelWavelengthsNm"
     | "chromaticChannelWavelengthsNm"
   >;
 
@@ -74,20 +75,30 @@ export function lvAxialZones(api: LvAxialApi): LvAxialZones {
 /**
  * The line each chromatic channel of a lens is traced at, nm, as LensVisualizer's materials resolve it: C, d, F and g
  * for a lens whose elements state d-line indices; C', e, F' and g for a lens whose elements all state e-line indices
- * (`makeSurfaceDispersion` in materialResolver.ts gives a native e-line element those lines on every tier). Which a
- * lens is, LensVisualizer says: its chromatic tab asks `lensChromaticReference(L.elements)` of the runtime lens, whose
- * elements leave the synthetic rear plates out, and the comparator asks the same of the same elements. A lens that
- * mixes the two, whose reference is "d" with an element whose own reference (asked of it alone) is "e", has no one
- * line a channel is of: null.
+ * (`makeSurfaceDispersion` in materialResolver.ts gives a native e-line element those lines on every tier); since LV
+ * #965 C, sodium D, F and g for a lens whose elements all state sodium-D indices. Which a lens is, LensVisualizer
+ * says: its chromatic tab asks `lensChromaticReference(L.elements)` of the runtime lens, whose elements leave the
+ * synthetic rear plates out, and the comparator asks the same of the same elements; since #965 it names the reference
+ * every element shares and "d" for a mix. A lens that mixes references, an element whose own reference (asked of it
+ * alone) is not the lens's, has no one line a channel is of: null.
  */
 export function lvChannelLines(
-  api: Pick<LvApi, "lensChromaticReference" | "eLineChannelWavelengthsNm" | "chromaticChannelWavelengthsNm">,
+  api: Pick<
+    LvApi,
+    | "lensChromaticReference"
+    | "eLineChannelWavelengthsNm"
+    | "sodiumChannelWavelengthsNm"
+    | "chromaticChannelWavelengthsNm"
+  >,
   model: LvCaseModel,
 ): Readonly<Record<string, number>> | null {
   const elements = model.runtime.elements;
-  if (api.lensChromaticReference(elements) === "e") return api.eLineChannelWavelengthsNm;
-  const mixed = elements.some((element) => api.lensChromaticReference([element]) === "e");
-  return mixed ? null : api.chromaticChannelWavelengthsNm;
+  const reference = api.lensChromaticReference(elements);
+  const mixed = elements.some((element) => api.lensChromaticReference([element]) !== reference);
+  if (mixed) return null;
+  if (reference === "e") return api.eLineChannelWavelengthsNm;
+  if (reference === "D") return api.sodiumChannelWavelengthsNm;
+  return api.chromaticChannelWavelengthsNm;
 }
 
 /** The channel traced at a wavelength, or null. */

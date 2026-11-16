@@ -12,20 +12,20 @@ Rewrite it with `node bin/lvrtc.mjs export --all --census reports/census`.
 
 | Input | Value |
 | --- | --- |
-| LensVisualizer commit | `e4c7cf11ac873b894a60ef6133ad1a83a0fca728` (clean) |
-| Engine closure | `c5c5ba6db8a0e4359363747f0f48fe1193468e313b2446a5751909fb558be5b2` (187 files) |
+| LensVisualizer commit | `f5b456fec7b69184844078f6ec6b1ac132f8ec58` (clean) |
+| Engine closure | `f0066505c45b705ef5e22a44ee6303ae9f47de00e295faad6d72b6090cdd4a61` (193 files) |
 | Contract | 1.0 |
 
 ## Outcome
 
-1101 lenses, 366 of them zooms, in 1467 states; 0 lens files not indexed.
+1139 lenses, 372 of them zooms, in 1511 states; 0 lens files not indexed.
 
 | States | Count | Exported | Not exportable | Threw |
 | --- | --- | --- | --- | --- |
-| Primes | 735 | 724 | 11 | 0 |
-| Zooms, wide end | 366 | 366 | 0 | 0 |
-| Zooms, tele end | 366 | 366 | 0 | 0 |
-| All | 1467 | 1456 | 11 | 0 |
+| Primes | 767 | 756 | 11 | 0 |
+| Zooms, wide end | 372 | 372 | 0 | 0 |
+| Zooms, tele end | 372 | 372 | 0 | 0 |
+| All | 1511 | 1500 | 11 | 0 |
 
 A state that is not exportable has a reason with a code, below. A state whose export threw is a defect of the
 exporter; a healthy census has none.
@@ -62,7 +62,7 @@ applies to one end only.
 
 ### `mixed-reference` (1 state, 1 lens)
 
-LensVisualizer data issue: d- and e-referenced glasses lack wavelength data for a common reference line.
+LensVisualizer data issue: glasses of different index references (d, D or e) lack wavelength data for a common reference line.
 
 - `samyang-af-35mm-f2p8-fe`
 
@@ -90,14 +90,14 @@ LensVisualizer data issue: d- and e-referenced glasses lack wavelength data for 
 | Flag | Cases |
 | --- | --- |
 | `aperture.annular` | 7 |
-| `aperture.unclipped` | 287 |
+| `aperture.unclipped` | 297 |
 | `lines.multiple` | 0 |
 | `object.finite` | 0 |
 | `path.folded` | 9 |
-| `surface.asphere.even` | 700 |
+| `surface.asphere.even` | 717 |
 | `surface.asphere.flat-base` | 2 |
 | `surface.asphere.odd` | 87 |
-| `surface.conic` | 325 |
+| `surface.conic` | 330 |
 | `surface.diffractive` | 8 |
 
 ## Provenance notes of the exported cases

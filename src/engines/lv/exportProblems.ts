@@ -65,7 +65,7 @@ export const EXPORT_PROBLEM_CODES = [
  * LensVisualizer's to give. Any reason it adds later is reported the same way.
  *
  * - `finite-conjugate-unavailable`: the focus position is not a station whose object distance LV certifies;
- * - `mixed-reference`: d- and e-referenced glasses without wavelength data for every glass;
+ * - `mixed-reference`: glasses of different index references (d, D or e) without wavelength data for every glass;
  * - `spectral-data-unavailable`: a glass without the dispersion data that several lines need;
  * - `unsupported-path`, `unverified-scale`: LensVisualizer's MTF path does not cover the lens, so it supplies no
  *   per-wavelength indices; the reference line of such a lens is still exported when the contract can express the

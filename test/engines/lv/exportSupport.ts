@@ -1,4 +1,5 @@
 import { lvResolvedMtfOptions } from "../../../src/engines/lv/tabRequest.ts";
+import type { LvComparisonApi } from "../../../src/engines/lv/tabRequest.ts";
 // What the hermetic tests of the case exporter share: prepared states built by hand, and stand-ins for the
 // LensVisualizer functions the exporter calls. Nothing here loads LensVisualizer, and no number describes a real lens.
 import type { ExportCaseInput, LvExportApi } from "../../../src/engines/lv/exportCase.ts";
@@ -8,6 +9,7 @@ import type {
   LvFiniteConjugate,
   LvImageSurfaceShape,
   LvMtfOptions,
+  LvMtfPreferences,
   LvMtfResult,
   LvMtfSupport,
   LvPreparedState,
@@ -248,9 +250,10 @@ export function standInBestShift(stopSemiDiameterMm: number, maxGridSize?: numbe
 }
 
 /**
- * A stand-in for LensVisualizer's `computeMtfSteps`, as far as the exporter reads it: one step, which states the
- * focus of the request (`standInBestShift`, applied when the request asks for "best-axial"), with the support
- * record of `assess`. `asked` takes every request it is given.
+ * A stand-in for LensVisualizer's `computeMtfSteps`, as far as the exporter reads it: a progress without a result,
+ * then the one that carries it (LV #988's shape), which states the focus of the request (`standInBestShift`, applied
+ * when the request asks for "best-axial"), with the support record of `assess`. `asked` takes every request it is
+ * given.
  */
 export function stepsOf(
   assess: LvExportApi["assessMtfSupport"],
@@ -276,8 +279,40 @@ export function stepsOf(
       },
       axialVignetting: null,
     };
-    yield result;
+    yield { phase: { kind: "geometry" } };
+    yield { phase: { kind: "aperture" }, result };
     return result;
+  };
+}
+
+/** Preferences of the stand-ins' own; only what `resolveMtfPreferences` resolves is read. */
+const STAND_IN_PREFERENCES: LvMtfPreferences = {
+  method: "geometric",
+  spectrum: "reference",
+  regularSpectrum: "reference",
+  wavelengthNm: 550,
+  focus: "design",
+  fieldStepPercent: 50,
+  frequencies: [10],
+  maxGridSize: 32,
+  compareF8: false,
+  comparisonFNumber: 4,
+  comparisonFocus: "refocus",
+  advanced: false,
+};
+
+/**
+ * Stand-ins for what the MTF tab's comparison reads (`LvComparisonApi` but the stop rule): preferences that resolve
+ * the comparison to `comparisonFNumber` (8 unless asked: LensVisualizer's default, which a test of another tells
+ * apart), LensVisualizer's full stops, and its test of a marked f-number.
+ */
+export function comparisonStandIn(comparisonFNumber = 8): Omit<LvComparisonApi, "stopSemiDiameterForFNumber"> {
+  return {
+    mtfDefaultPreferences: STAND_IN_PREFERENCES,
+    resolveMtfPreferences: (preferences) => ({ ...preferences, comparisonFNumber }),
+    mtfComparisonFullStops: [1, 1.4, 2, 2.8, 4, 5.6, 8, 11, 16, 22, 32, 45, 64, 90, 128],
+    isMtfComparisonFNumber: (value) =>
+      typeof value === "number" && Number.isFinite(value) && value >= 1 && value <= 128,
   };
 }
 
@@ -315,6 +350,7 @@ export function apiFor(state: LvPreparedState, overrides: Partial<LvExportApi> =
       support.useResolvedReference ? (_surfaceIndex, nd) => resolvedIndex(nd, wavelengthNm) : undefined,
     mtfFiniteObjectPoint: (prepared, conjugate) => [0, 0, prepared.surfaces[0].z - conjugate.objectDistanceMm],
     spectralLinesNm: LINES_NM,
+    ...comparisonStandIn(),
     ...overrides,
   };
 }

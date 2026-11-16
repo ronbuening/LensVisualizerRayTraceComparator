@@ -4,14 +4,15 @@
 // LensVisualizer's own `computeMtf`: if the two agree, the comparator understands LensVisualizer's sampling.
 //
 // What LensVisualizer exports is called, never restated: the request before any field is traced, with the focus
-// and each field's target (`computeMtfSteps`, its first step); a field's launch (`prepareMtfFieldLaunch`); a grid's
-// bundle at a line, with the reference point: on the real stop, aimed and traced (`traceMtfStopBundle`, LV #936,
-// whose aimer blocks a total internal reflection ahead of the stop, retries a seeded cell by the lone solve, and
-// throws a RangeError for a size that is no whole number), and for a field launched from the bounding sphere over a
-// footprint (`findMtfFieldFootprint`, `traceMtfLaunchPlaneBundle`, `expandMtfFootprint`); the walk through the ladder,
-// with the test of convergence and the refinement past a failed grid (`refineMtfField`); the record of a field
-// (`emptyMtfField`) and the rule of unresolved flux (`assessUnresolvedFlux`); and the constants (`MTF_GRID_LADDER`,
-// `MTF_DEFAULT_GRID_CAP`, `MTF_MAX_FOOTPRINT_EXPANSIONS`, `MTF_MIN_RAYS`).
+// and each field's target (`computeMtfSteps`, read by `lvMtfRequestResult`); a field's launch
+// (`prepareMtfFieldLaunch`); a grid's bundle at a line, with the reference point: on the real stop, aimed and traced
+// (`traceMtfStopBundle`, LV #936, whose aimer blocks a total internal reflection ahead of the stop, retries a seeded
+// cell by the lone solve, and throws a RangeError for a size that is no whole number), and for a field launched from
+// the bounding sphere over a footprint (`findMtfFieldFootprint`, `traceMtfLaunchPlaneBundle`, `expandMtfFootprint`);
+// the walk through the ladder, with the test of convergence and the refinement past a failed grid (`refineMtfField`);
+// the record of a field (`emptyMtfField`), the share of the beam's flux the unresolved samples carry
+// (`mtfUnresolvedFluxFraction`, LV #988) and the rule of unresolved flux (`assessUnresolvedFlux`); and the constants
+// (`MTF_GRID_LADDER`, `MTF_DEFAULT_GRID_CAP`, `MTF_MAX_FOOTPRINT_EXPANSIONS`, `MTF_MIN_RAYS`).
 //
 // What LensVisualizer does inline in `computeMtfSteps`, `traceField` and `fieldAtGrid` (src/optics/analysis/mtf/mtf.ts)
 // and exports no function for is restated here, expression by expression and in its order: the ladder of a
@@ -21,7 +22,7 @@
 // canaries hold every restated line to LensVisualizer's text (test/integration/lv/canaries.test.ts). The one thing
 // that is not LensVisualizer's is the transfer function: where LensVisualizer calls its own `geometricOtf` and
 // `combineOtfs`, the replay calls the comparator's `polychromaticOtf`.
-import { lvMtfInputs, lvResolvedMtfOptions } from "./tabRequest.ts";
+import { lvMtfInputs, lvMtfRequestResult, lvResolvedMtfOptions } from "./tabRequest.ts";
 import { polychromaticOtf } from "../../estimators/geometricOtf.ts";
 import type { SpectralSpots } from "../../estimators/geometricOtf.ts";
 import type {
@@ -56,6 +57,7 @@ export type LvReplayApi = Pick<
   | "refineMtfField"
   | "emptyMtfField"
   | "assessUnresolvedFlux"
+  | "mtfUnresolvedFluxFraction"
   | "mtfGridLadder"
   | "mtfDefaultGridCap"
   | "mtfMaxFootprintExpansions"
@@ -180,8 +182,10 @@ function aimFailedMessage(lattice: LvAimedStopLattice, wavelengthNm: number): st
  *   `traceMtfLaunchPlaneBundle` over the footprint, with `MTF_LAUNCH_PLANE_NOTE`. The first line's chief ray, traced
  *   with no aperture checked, is the reference of all of them.
  * - The counts add up over the lines, the unaimed and the unresolved samples beside the beam included. The flux the
- *   beam could carry is the transmitted weight plus the weight of the unresolved samples beside it, which alone are
- *   the unresolved share (`unresolvedInBeamWeight`, the third argument of `assessUnresolvedFlux`).
+ *   beam could carry is, at each line, the transmitted weight plus the weight of the unresolved samples beside it,
+ *   which alone are the unresolved share; since LV #988 each line counts at its incident weight
+ *   (`mtfUnresolvedFluxFraction` of the lines' weights, then `assessUnresolvedFlux` with the request's method, which
+ *   words the note).
  * - A line whose stop lattice the aim found no ray of (no cell aimed, none blocked, some unaimed) ends the field as
  *   "aim-failed", with the aimer's reasons, once that line's counts are added (LV #940). It asks for no finer grid:
  *   a finer lattice is solved as this one was.
@@ -216,8 +220,7 @@ function fieldAtGrid(
   };
   const openBorders = { x: false, y0: false, y1: false };
   const lines: SpectralSpots[] = [];
-  let sampledWeight = 0;
-  let unresolvedWeight = 0;
+  const fluxWeights = [];
   let darkLines = 0;
   for (const [index, line] of support.spectralLines.entries()) {
     let bundle: LvMtfBundle | null;
@@ -255,8 +258,11 @@ function fieldAtGrid(
     if (bundle.lattice && aimedNothing(bundle.lattice))
       return unavailable("aim-failed", aimFailedMessage(bundle.lattice, line.wavelengthNm));
     const transmitted = bundle.rays.reduce((sum, ray) => sum + ray.weight, 0);
-    sampledWeight += transmitted + bundle.unresolvedInBeamWeight;
-    unresolvedWeight += bundle.unresolvedInBeamWeight;
+    fluxWeights.push({
+      weight: line.weight,
+      transmittedWeight: transmitted,
+      unresolvedInBeamWeight: bundle.unresolvedInBeamWeight,
+    });
     if (bundle.rays.length === 0 && bundle.unaimed + bundle.failed === 0) {
       darkLines++;
       continue;
@@ -269,9 +275,14 @@ function fieldAtGrid(
   if (darkLines === support.spectralLines.length)
     return unavailable("vignetted", "No rays reach this image height through the model's clear apertures.", true);
   if (darkLines > 0) return unavailable("empty-pupil", "Too little pupil remains to estimate MTF.", true);
-  field.unknownFluxFraction = sampledWeight > 0 ? unresolvedWeight / sampledWeight : 0;
+  field.unknownFluxFraction = api.mtfUnresolvedFluxFraction(fluxWeights);
   const unresolvedRays = field.failedRays + field.unaimedRays;
-  const unresolved = api.assessUnresolvedFlux(unresolvedRays, field.unknownFluxFraction, field.unresolvedInBeamRays);
+  const unresolved = api.assessUnresolvedFlux(
+    unresolvedRays,
+    field.unknownFluxFraction,
+    options.method,
+    field.unresolvedInBeamRays,
+  );
   if (!unresolved.acceptable) {
     const away = unresolvedRays - field.unresolvedInBeamRays;
     return unavailable(
@@ -386,9 +397,9 @@ function replayField(api: LvReplayApi, context: ReplayContext, target: LvMtfFiel
  * Replays LensVisualizer's MTF sampling for a request, field by field, with the comparator's geometric estimator
  * on the rays of every grid.
  *
- * The request before any field is traced is LensVisualizer's own: the first step of `computeMtfSteps` gives the
- * support record, the frequencies, the field axis, the focus and, for every field, its target and whether it lies
- * outside the model. From there on (`computeMtfSteps` of LensVisualizer, restated):
+ * The request before any field is traced is LensVisualizer's own: `computeMtfSteps` read up to it
+ * (`lvMtfRequestResult`) gives the support record, the frequencies, the field axis, the focus and, for every field,
+ * its target and whether it lies outside the model. From there on (`computeMtfSteps` of LensVisualizer, restated):
  *
  * - the ladder is `MTF_GRID_LADDER` up to the request's `maxGridSize`, or to `MTF_DEFAULT_GRID_CAP` without one;
  * - the image plane is the state's, moved by the focus's applied shift;
@@ -401,13 +412,15 @@ function replayField(api: LvReplayApi, context: ReplayContext, target: LvMtfFiel
  * ("chief-ray-failed", "aim-failed", "vignetted", "empty-pupil", "trace-failed", "outside-modeled-field"), and
  * `REPLAY_ESTIMATOR_REASON` with the estimator's reason where the comparator's estimator has no value.
  *
- * The method of the request is not read: the replay is of the sampling, and its curves are always the geometric
- * estimator's.
+ * The method of the request does not choose the transfer function: the replay is of the sampling, and its curves are
+ * always the geometric estimator's. Since LV #988 the method is handed to `assessUnresolvedFlux`, as `fieldAtGrid`
+ * hands it, where it words the note of a field with unresolved samples (a bound for the geometric method, none for
+ * diffraction); whether a grid is kept is the unresolved share's alone.
  */
 export function replayLvMtf(api: LvReplayApi, state: LvPreparedState, options: LvMtfOptions): LvReplay {
   const [request, settings] = lvMtfInputs(api, state, options);
   options = lvResolvedMtfOptions(request, settings);
-  const first = api.computeMtfSteps(request, settings).next().value;
+  const first = lvMtfRequestResult(api.computeMtfSteps(request, settings));
   const { support, geometry, focus } = first;
   const frequencies = [...first.frequenciesPerMm];
   const cap = (options.maxGridSize as number | undefined) ?? api.mtfDefaultGridCap;

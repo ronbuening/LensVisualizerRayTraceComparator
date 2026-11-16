@@ -3,6 +3,7 @@ import type { SurfaceAperture } from "../../contract/case.ts";
 import type { RunAperture } from "../../contract/runSpec.ts";
 import type { ExportProblem } from "./exportProblems.ts";
 import { lvHookStop, lvTabComparison } from "./tabRequest.ts";
+import type { LvComparisonApi } from "./tabRequest.ts";
 import type { LvApi, LvPreparedState, LvRuntimeLens, LvSurface, LvTraceGeometry } from "./types.ts";
 
 /** The geometry LV clips against, always present after its engine rewrite. */
@@ -12,10 +13,8 @@ export function apertureGeometry(state: LvPreparedState): LvTraceGeometry {
 }
 
 /** The LensVisualizer functions that size the stop. */
-export type LvStopApi = Pick<
-  LvApi,
-  "wideOpenStopAtZoom" | "stopSemiDiameterForFNumber" | "fopenAtZoomClamped" | "fNumberAtStopdown"
->;
+export type LvStopApi = LvComparisonApi &
+  Pick<LvApi, "wideOpenStopAtZoom" | "fopenAtZoomClamped" | "fNumberAtStopdown">;
 
 /** The code of the problem of a run that asks for the tab's f/8 comparison of a lens the tab offers none for. */
 export const F8_COMPARISON_UNAVAILABLE = "f8-comparison-unavailable";
@@ -46,11 +45,11 @@ export function wideOpenStopRadius(api: LvStopApi, runtime: LvRuntimeLens, zoomT
  *   position's wide-open f-number and never more than it above (`stopForFNumber`). The hook's call is restated here,
  *   with a source canary; the rule itself is LensVisualizer's function, which the binding imports. An N below the
  *   widest or above maxFstop is a coded problem: it is outside the slider range.
- * - `lv-f8-comparison`: the stop of the f/8 comparison of LensVisualizer's MTF tab,
- *   `stopSemiDiameterForFNumber(8, zoomT, L)` (`lvTabComparison`, restated with a source canary): since #933 the same
- *   radius, to the bit, as `f-number` 8 (the slider at f/8). A lens the tab offers no comparison for, because it is
- *   not faster than f/7.95 wide open or does not stop down to f/8, is a problem with the tab's own reason
- *   (`F8_COMPARISON_UNAVAILABLE`).
+ * - `lv-f8-comparison`: the stop of the comparison of LensVisualizer's MTF tab, `stopSemiDiameterForFNumber(N, zoomT,
+ *   L)` at the comparison's f-number N, the one LensVisualizer's default preferences resolve to (8; `lvTabComparison`,
+ *   restated with a source canary): since #933 the same radius, to the bit, as `f-number` 8 (the slider at f/8). A
+ *   lens the tab offers no comparison for, because it is not faster than f/7.95 wide open or does not stop down to
+ *   f/8, is a problem with the tab's own reason (`F8_COMPARISON_UNAVAILABLE`).
  * - `stop-radius`: the radius as given.
  */
 export function stopRadius(

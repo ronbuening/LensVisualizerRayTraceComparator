@@ -138,7 +138,8 @@ export const CODES: Readonly<Record<string, CodeText>> = {
     remedy: "",
   },
   "mixed-reference": {
-    sentence: "The lens mixes d-line and e-line glasses without wavelength data for every glass.",
+    sentence:
+      "The lens mixes glasses of different index references (d, D or e) without wavelength data for every glass.",
     remedy: "",
   },
   "spectral-data-unavailable": {

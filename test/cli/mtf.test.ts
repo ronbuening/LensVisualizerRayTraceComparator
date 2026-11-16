@@ -221,13 +221,15 @@ test("--aperture f/8 is the tab's own comparison: another case, another run, the
   const wideOpen = await mtf(["acme-zoom-24-48"], rootDir);
   const comparison = await mtf(["acme-zoom-24-48", "--aperture", "f/8"], rootDir);
   assert.deepEqual([wideOpen.code, comparison.code], [EXIT_OK, EXIT_OK], comparison.err);
-  assert.match(comparison.out, /^profile {5}lv-tab-default: the tab's comparison at f\/8$/m);
-  const [open, stopped] = [recordOf(runsDir, "acme-zoom-24-48"), recordOf(runsDir, "acme-zoom-24-48-f8")];
+  // The option names LensVisualizer's default comparison; the comparison is at the f-number the preferences resolve
+  // to, which for the fake is f/11, and the command says so and names its run by it.
+  assert.match(comparison.out, /^profile {5}lv-tab-default: the tab's comparison at f\/11$/m);
+  const [open, stopped] = [recordOf(runsDir, "acme-zoom-24-48"), recordOf(runsDir, "acme-zoom-24-48-f11")];
   assert.deepEqual(stopped.record.request.spec, open.record.request.spec);
   assert.notEqual(stopped.record.caseId, open.record.caseId);
   const params = (stopped.record.answers[0].result?.data as MtfNativeData).method.params;
-  // The fake zoom is f/4 with an iris of 3 mm at its wide end: the comparison traces 3 x 4 / 8.
-  assert.deepEqual([params.view, params.fNumber, params.stopSemiDiameterMm], ["f8-comparison", 8, 1.5]);
+  // The fake zoom is f/4 with an iris of 3 mm at its wide end: the comparison traces 3 x 4 / 11.
+  assert.deepEqual([params.view, params.fNumber, params.stopSemiDiameterMm], ["f8-comparison", 11, (3 * 4) / 11]);
   // --aperture wide-open is the default: the same lens state and request, and the same text but for the answer now
   // coming from the result cache.
   const named = await mtf(["acme-zoom-24-48", "--aperture", "wide-open"], rootDir);
@@ -238,34 +240,35 @@ test("--aperture f/8 is the tab's own comparison: another case, another run, the
 
 test("a comparison the tab does not offer is said to be none, also where its case is the wide-open one", async (t) => {
   const { rootDir, lv, runsDir } = freshRoot(t);
+  // The fake's preferences resolve the comparison to f/11 (LensVisualizer's to f/8).
   const said = (reason: string) =>
-    `profile     lv-tab-default: the tab's comparison at f/8, which the tab does not offer here: ${reason}`;
+    `profile     lv-tab-default: the tab's comparison at f/11, which the tab does not offer here: ${reason}`;
 
-  // A lens that is f/8 wide open has the stop rule's f/8 stop for its wide-open stop: its comparison is the very case of
-  // the lens wide open, which the engine answers as that. The command does not call it a comparison the tab makes.
-  variantOf(lv, "at-eight", { [ZOOM_FILE]: (text) => text.replace('"fopen": 4,', '"fopen": 8,') });
-  await onTree(rootDir, "at-eight", async () => {
+  // A lens that is f/11 wide open has the stop rule's f/11 stop for its wide-open stop: its comparison is the very case
+  // of the lens wide open, which the engine answers as that. The command does not call it a comparison the tab makes.
+  variantOf(lv, "at-eleven", { [ZOOM_FILE]: (text) => text.replace('"fopen": 4,', '"fopen": 11,') });
+  await onTree(rootDir, "at-eleven", async () => {
     const wideOpen = await mtf(["acme-zoom-24-48"], rootDir);
     const comparison = await mtf(["acme-zoom-24-48", "--aperture", "f/8"], rootDir);
     assert.deepEqual([wideOpen.code, comparison.code], [EXIT_OK, EXIT_OK], comparison.err);
     const reason =
-      "the lens is at f/8 wide open, and LensVisualizer's MTF tab compares with f/8 only a lens that is faster " +
-      "than f/7.95";
+      "the lens is at f/11 wide open, and LensVisualizer's MTF tab compares with f/11 only a lens that is faster " +
+      "than f/10.95";
     assert.equal(comparison.out.split("\n")[1], said(reason));
-    const [open, stopped] = [recordOf(runsDir, "acme-zoom-24-48"), recordOf(runsDir, "acme-zoom-24-48-f8")];
+    const [open, stopped] = [recordOf(runsDir, "acme-zoom-24-48"), recordOf(runsDir, "acme-zoom-24-48-f11")];
     assert.equal(stopped.record.caseId, open.record.caseId);
     assert.match(comparison.out, /^lv {2}answered {2}from the cache$/m);
     const params = (stopped.record.answers[0].result?.data as MtfNativeData).method.params;
-    assert.deepEqual([params.view, params.fNumber], ["wide-open", 8]);
+    assert.deepEqual([params.view, params.fNumber], ["wide-open", 11]);
   });
 
-  // A slower lens has no case of its own for the comparison either since LV #933: the stop rule's f/8 stop is its
-  // wide-open stop. A lens that does not stop down to f/8 has one, and the engine says the same as the command.
+  // A slower lens has no case of its own for the comparison either since LV #933: the stop rule's f/11 stop is its
+  // wide-open stop. A lens that does not stop down to f/11 has one, and the engine says the same as the command.
   variantOf(lv, "short", { [ZOOM_FILE]: (text) => text.replace('"fopen": 4,', '"fopen": 4,\n  "maxFstop": 5.6,') });
   await onTree(rootDir, "short", async () => {
     const comparison = await mtf(["acme-zoom-24-48", "--aperture", "f/8"], rootDir);
     assert.equal(comparison.code, EXIT_OK, comparison.err);
-    const reason = "the lens stops down to f/5.6 at most, so LensVisualizer's MTF tab has no f/8 to compare it with";
+    const reason = "the lens stops down to f/5.6 at most, so LensVisualizer's MTF tab has no f/11 to compare it with";
     assert.equal(comparison.out.split("\n")[1], said(reason));
     assert.ok(comparison.out.includes(`lv  not computed  asked now\n  feature aperture.f8-comparison: ${reason}\n`));
   });

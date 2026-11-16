@@ -659,16 +659,17 @@ test(
       fields: { kind: "image-height-fractions", values: [0.5] },
     });
     assert.deepEqual(problems, []);
+    // LV #988's nine photopic lines (five before f5b456fec).
     assert.deepEqual(
       sets.map((spec) => spec.line),
-      [0, 1, 2, 3, 4],
+      [0, 1, 2, 3, 4, 5, 6, 7, 8],
     );
     // One field, whose stop lattice LensVisualizer aims at each line with that line's anchored indices (LV #936): the
-    // five sets are of five lattices, each held below to LensVisualizer's own bundle of it.
-    assert.equal(new Set(sets.map((spec) => JSON.stringify(spec.origins))).size, 5);
+    // nine sets are of nine lattices, each held below to LensVisualizer's own bundle of it.
+    assert.equal(new Set(sets.map((spec) => JSON.stringify(spec.origins))).size, 9);
     const setup = lvLaunchSetup(binding.api, model);
     assert.ok(!("problem" in setup));
-    assert.equal(setup.support.spectralLines[0].wavelengthNm, 555);
+    assert.equal(setup.support.spectralLines[0].wavelengthNm, 560);
     const landings: number[] = [];
     for (const spec of sets) {
       const result = await lv.run(makeRequest({ caseId: opticalCase.id, quantity: RAYS_TRACE, spec }), opticalCase);
@@ -681,7 +682,7 @@ test(
       landings.push(f8(data.imagePoint)[3 * (spec.groups?.chiefIndex as number) + 1]);
     }
     // Lateral colour: the chief ray lands at another height at every line.
-    assert.equal(new Set(landings).size, 5, JSON.stringify(landings));
+    assert.equal(new Set(landings).size, 9, JSON.stringify(landings));
   },
 );
 
@@ -910,7 +911,7 @@ test(
       const runsDir = join(directory, name);
       const ran = lvrtc(runsDir, "run", suitePath("smoke"), "--engines", "lv", "--checks", "ray-trace");
       assert.equal(ran.code, 0, ran.err);
-      assert.match(ran.out, /^smoke: 27 jobs: 27 answered \(27 asked now\)$/m);
+      assert.match(ran.out, /^smoke: 39 jobs: 39 answered \(39 asked now\)$/m);
       const manifestText = readFileSync(join(runsDir, "smoke", MANIFEST_FILE), "utf8");
       const manifest: RunManifest = JSON.parse(manifestText);
       const entries = manifest.jobs.map((job) =>
@@ -919,10 +920,10 @@ test(
       return { manifestText, manifest, entries };
     });
     const [first, second] = outputs;
-    // 3 fields of a lens on its reference line, 3 fields at each of 5 photopic lines, 3 fields of another lens,
-    // and 3 fields at each end of a zoom.
-    assert.equal(first.manifest.jobs.length, 27);
-    assert.equal(new Set(first.manifest.jobs.map((job) => job.requestId)).size, 27);
+    // 3 fields of a lens on its reference line, 3 fields at each of 9 photopic lines (5 before LV #988), 3 fields of
+    // another lens, and 3 fields at each end of a zoom.
+    assert.equal(first.manifest.jobs.length, 39);
+    assert.equal(new Set(first.manifest.jobs.map((job) => job.requestId)).size, 39);
     assert.equal(first.manifestText, second.manifestText);
     first.entries.forEach((entry, index) => assert.ok(entry.equals(second.entries[index]), `store entry ${index}`));
     // Nothing of this machine is in the manifest, and the rays are in the store, not in the manifest.

@@ -281,8 +281,8 @@ test(
       assert.equal(opticalCase.conditions.stopSemiDiameter, stopTele, key);
       const { sets, problems } = await ask.exporter.raySets(opticalCase, options);
       assert.deepEqual(problems, [], key);
-      // Three fields at five lines.
-      assert.equal(sets.length, 15, key);
+      // Three fields at nine lines (LV #988's photopic lines; five before f5b456fec).
+      assert.equal(sets.length, 27, key);
 
       const verdicts: Record<string, number> = {};
       const worst = { hits: 0, direction: 0, landing: 0, path: 0, rays: 0 };
@@ -328,19 +328,19 @@ test(
     const ran = lvrtc(runsDir, "run", suitePath("features"));
     assert.equal(ran.code, 0, ran.err);
     assert.equal(ran.err, "");
-    // 18 runs on two engines: neither answers the conformance quantity, and every other job is answered. The 162
-    // ray sets are traced once by each engine, for R2, and R3 and R4 find them in the store. R4f is asked of lv and
-    // of the replay of its sampling, one request each for a run. R6a finds the 162 sets in the store and has each
-    // engine trace the same fields on the finer lattice, 162 sets more; R6b is asked of lv and of the wave
-    // estimator on its rays, one request each for a run. R7a has each engine trace the 540 spot sets of the coma and
-    // bokeh tabs, ten a line, R8a the 117 axial sets of the spherical-aberration and axial-colour sections, two a
-    // line and the colour at each of the nine lines that are a chromatic channel's, R9a the 216 chief sets of the
-    // distortion, pupils and lateral-colour tabs, four a line, R10a the 108 curvature sets of the field-curve
-    // sections, two a line, and R11a the 690 beam sets of the vignetting tab, the stop lattice of each of its fields
-    // at every line (LensVisualizer 607ff23ae).
+    // 18 runs on two engines: neither answers the conformance quantity, and every other job is answered. The 270
+    // ray sets (nine photopic lines since LV #988, five before f5b456fec) are traced once by each engine, for R2, and
+    // R3 and R4 find them in the store. R4f is asked of lv and of the replay of its sampling, one request each for a
+    // run. R6a finds the 270 sets in the store and has each engine trace the same fields on the finer lattice, 270
+    // sets more; R6b is asked of lv and of the wave estimator on its rays, one request each for a run. R7a has each
+    // engine trace the 900 spot sets of the coma and bokeh tabs, ten a line, R8a the 189 axial sets of the
+    // spherical-aberration and axial-colour sections, two a line and the colour at each of the nine lines that are a
+    // chromatic channel's, R9a the 360 chief sets of the distortion, pupils and lateral-colour tabs, four a line, R10a
+    // the 180 curvature sets of the field-curve sections, two a line, and R11a the 1150 beam sets of the vignetting
+    // tab, the stop lattice of each of its fields at every line (LensVisualizer f5b456fec).
     assert.match(
       ran.out,
-      /^features: 5142 jobs: 5106 answered, 36 not computed \(4134 asked now, 972 from the result cache, 36 not offered\)$/m,
+      /^features: 8438 jobs: 8402 answered, 36 not computed \(6782 asked now, 1620 from the result cache, 36 not offered\)$/m,
     );
     const manifest: RunManifest = JSON.parse(readFileSync(join(runsDir, "features", MANIFEST_FILE), "utf8"));
     assert.equal(manifest.runs.length, 18);
@@ -351,10 +351,10 @@ test(
     );
     assert.equal(new Set(zoom.map((run) => run.caseId)).size, 4);
     for (const run of manifest.runs) assert.deepEqual(run.problems, [], run.name);
-    // Each end has its own rays: three fields at one line, three at five.
+    // Each end has its own rays: three fields at one line, three at nine (LV #988's photopic lines).
     assert.deepEqual(
       zoom.map((run) => run.raySets?.sets.length),
-      [3, 3, 15, 15],
+      [3, 3, 27, 27],
     );
     const setsAt = (end: string): string[] =>
       zoom.filter((run) => run.name.endsWith(end)).flatMap((run) => run.raySets?.sets ?? []);
@@ -383,12 +383,12 @@ test(
 
     const compared = lvrtc(runsDir, "compare", "features");
     assert.equal(compared.code, 0, compared.out);
-    // R6a adds a pair for each of the 54 fields, R6b one for each run, recorded, R7a one for each of the 540 spot
-    // sets, R8a one for each of the 117 axial sets, R9a one for each of the 72 chief spans (four patterns a run), R10a
-    // one for each of the 108 curvature sets and R11a one for each of the 54 vignetting spans (the beams of a line):
+    // R6a adds a pair for each of the 54 fields, R6b one for each run, recorded, R7a one for each of the 900 spot
+    // sets, R8a one for each of the 189 axial sets, R9a one for each of the 72 chief spans (four patterns a run), R10a
+    // one for each of the 180 curvature sets and R11a one for each of the 90 vignetting spans (the beams of a line):
     // each counted in both modes.
     const summary =
-      /^features: 2826 pairs: \d+ Pass(?:, (\d+) Side by side(?!, worth))?(?:, (\d+) Side by side, worth a look)?, 36 Not computed$/m.exec(
+      /^features: 4338 pairs: \d+ Pass(?:, (\d+) Side by side(?!, worth))?(?:, (\d+) Side by side, worth a look)?, 36 Not computed$/m.exec(
         compared.out,
       );
     assert.ok(

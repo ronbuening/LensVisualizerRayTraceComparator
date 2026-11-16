@@ -245,7 +245,8 @@ test(
         exportedCount++;
         const { lines } = result.opticalCase.conditions;
         const anchored = lines.every((line) => line.indexSource === "anchored");
-        if (lines.length !== 5 || lines[0].wavelengthNm !== 555 || !anchored) wrongLight.push(key);
+        // LV #988's nine photopic lines, 560 nm first (five, 555 nm first, before f5b456fec).
+        if (lines.length !== 9 || lines[0].wavelengthNm !== 560 || !anchored) wrongLight.push(key);
       } else if (!support.available && support.reason !== "unsupported-path") {
         // What is not a matter of the optical path is reported under LensVisualizer's own code.
         const codes = result.problems.map((problem) => problem.code);
@@ -442,21 +443,26 @@ test(
 // ── Lines and indices ────────────────────────────────────────────────────────────────────────────────────────────
 
 test(
-  "a photopic export has LensVisualizer's five lines and weights, and the indices of its resolver",
+  "a photopic export has LensVisualizer's nine lines and weights, and the indices of its resolver",
   { skip },
   async () => {
     const binding = await loadLvBinding(LV_PATH);
     const { runtime, state } = await prepared(binding, "nikkor-z50f12");
     const opticalCase = await exported(binding, "nikkor-z50f12", { lines: { kind: "photopic" } });
-    // LensVisualizer's MTF_PHOTOPIC_LINES at d36f44b3.
+    // LensVisualizer's MTF_PHOTOPIC_LINES at f5b456fec (LV #988: a nine-point Gauss-Legendre quadrature of V(λ) from
+    // 470 to 650 nm, the centre first; five lines, 555 nm first, from d36f44b3 to e4c7cf11a).
     assert.deepEqual(
       opticalCase.conditions.lines.map((line) => [line.wavelengthNm, line.weight, line.indexSource]),
       [
-        [555, 1, "anchored"],
-        [470, 0.091, "anchored"],
-        [510, 0.503, "anchored"],
-        [610, 0.503, "anchored"],
-        [650, 0.107, "anchored"],
+        [560, 29.573, "anchored"],
+        [530.82, 24.475, "anchored"],
+        [589.18, 21.553, "anchored"],
+        [504.8, 9.4728, "anchored"],
+        [615.2, 10.291, "anchored"],
+        [484.76, 2.7286, "anchored"],
+        [635.24, 3.4949, "anchored"],
+        [472.87, 0.75613, "anchored"],
+        [647.13, 0.91347, "anchored"],
       ],
     );
     const support = binding.api.assessMtfSupport(
@@ -464,7 +470,7 @@ test(
     );
     assert.equal(support.available, true);
     const rows = indexRows(opticalCase);
-    assert.equal(rows.length, 5);
+    assert.equal(rows.length, 9);
     opticalCase.conditions.lines.forEach((line, row) => {
       const resolver = binding.api.mtfIndexResolver(state, support, line.wavelengthNm);
       assert.ok(resolver !== undefined);

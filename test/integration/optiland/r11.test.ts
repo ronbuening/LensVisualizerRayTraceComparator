@@ -71,7 +71,8 @@ test(
     // R11a: the tab's beam of each field at each line, traced by the three engines.
     const traced = manifest.jobs.filter((job) => job.rung === "vignetting-rays");
     for (const run of manifest.runs) {
-      const lines = run.name === PHOTOPIC ? 5 : 1;
+      // Nine photopic lines since LV #988 (five before f5b456fec).
+      const lines = run.name === PHOTOPIC ? 9 : 1;
       assert.deepEqual(run.vignettingRaySets?.problems, [], run.name);
       assert.equal(run.vignettingRaySets?.sets.length, lines * FIELDS[run.name], run.name);
     }
@@ -80,7 +81,7 @@ test(
     for (const job of traced) assert.equal(job.status, "ok", `${job.run} ${job.engine} ${job.requestId}`);
     // The pairs are of spans: the beams of a line, one span a line.
     const gated = pairsOf(comparisons, "vignetting-rays", RAYS_TRACE);
-    assert.equal(gated.length, 3 * (1 + 5 + 1 + 1));
+    assert.equal(gated.length, 3 * (1 + 9 + 1 + 1));
     for (const pair of gated) {
       assert.equal(pair.verdict, "PASS", `${pair.run} ${pair.engines}: ${pair.reason ?? ""}`);
       assert.equal(pair.metrics["mask.mismatches"].value, 0, pair.run);

@@ -18,7 +18,7 @@ The words used on screens and in reports, and the older words of this tool that 
 | sorting limit | A limit of a side-by-side check that decides, before any difference is taken, whether two answers are of the same field or system, such as the distance between their chief-ray landings. A field beyond it is set aside and its difference enters no review band; no pair passes or fails by it. |  |
 | lens state | One lens as every engine is handed it: the lens at one zoom, focus and stop, with its wavelengths, field angles and image plane. | `case` |
 | wavelength | One of the wavelengths a lens state is evaluated at, with its weight and the refractive index of every glass at it. | `line` |
-| reference wavelength | The wavelength a lens's glasses are specified at: the d line (587.56 nm), or the e line for some lenses. | `reference line` |
+| reference wavelength | The wavelength a lens's glasses are specified at: the d line (587.56 nm), or the e line or the sodium D line for some lenses. | `reference line` |
 | photopic | A set of several wavelengths weighted by the eye's daylight sensitivity, for white-light figures. |  |
 | engine | A program that answers requests about a lens state: LensVisualizer under review, optiland as an independent external engine, or one of this tool's own. |  |
 | verdict | What a check found of a pair: within or beyond its limit, side by side, not computed or an error. |  |
