@@ -1,10 +1,17 @@
 import {
   KNOWN_FAILURES,
+  KNOWN_FAILURE_SUITES,
   classifyCatalog,
+  knownFailureText,
+  knownFailuresFile,
+  listsKnownFailures,
+  pendingKnownFailures,
   readKnownFailures,
   unclassifiedFailures,
   unusedKnownFailures,
 } from "../../baseline/catalog.ts";
+import { LEGACY_IDS, currentIds } from "../../core/legacyIds.ts";
+import { CONTRACT_VERSION_1_6 } from "../../contract/version.ts";
 import { CATALOG_JSON, CATALOG_MARKDOWN, readCatalogInputs, renderCatalog } from "../../report/catalog.ts";
 import { canonicalJson } from "../../core/numeric/canonicalJson.ts";
 import { readFileSync, readdirSync, realpathSync, statSync } from "node:fs";
@@ -181,6 +188,8 @@ export function createVerifyCommand(inputs: VerifyCommandInputs): CliCommand {
       // The suites that have a rays baseline, and those that have an MTF baseline.
       const suites = new Set<string>();
       const mtfSuites = new Set<string>();
+      // The baselines of each suite that parsed, under the ids of today: a suite's listed failures are held to them.
+      const parsed = new Map<string, Baseline[]>();
       const files = list(join(rootDir, BASELINES_DIRECTORY)).filter((name) => name.endsWith(".json"));
       for (const name of files) {
         const at = `${BASELINES_DIRECTORY}/${name}`;
@@ -199,6 +208,7 @@ export function createVerifyCommand(inputs: VerifyCommandInputs): CliCommand {
         const mtf = marked !== undefined && baseline.suite.name !== stem;
         const suite = mtf ? marked : stem;
         (mtf ? mtfSuites : suites).add(suite);
+        parsed.set(suite, [...(parsed.get(suite) ?? []), currentIds(baseline, LEGACY_IDS)]);
         const [reportMarkdown, reportJson] = mtf
           ? [MTF_REPORT_MARKDOWN, MTF_REPORT_JSON]
           : [BASELINE_REPORT_MARKDOWN, BASELINE_REPORT_JSON];
@@ -237,18 +247,27 @@ export function createVerifyCommand(inputs: VerifyCommandInputs): CliCommand {
               `records it`,
           );
         }
-        if (baseline.suite.name !== "catalog") {
-          // Only the catalog admits a classified FAIL; a FAIL or ERROR in any other baseline is never committed.
+        if (!listsKnownFailures(baseline.suite.name)) {
+          // Only a suite that lists known failures admits a classified FAIL (`KNOWN_FAILURE_SUITES`); a FAIL or ERROR
+          // in any other baseline is never committed.
           for (const line of unclassifiedFailures(baseline)) problems.push(`${at}: ${line}: no baseline records it`);
         } else {
           try {
-            const classified = classifyCatalog(baseline, readKnownFailures(rootDir));
-            if (canonicalJson(classified) !== canonicalJson(baseline) || unclassifiedFailures(classified).length)
-              problems.push(`${at}: unknown or changed catalog failure classification`);
+            // The catalog's list keeps the ids it was written with; another suite's is at the ids of today.
+            const held = baseline.suite.name === "catalog" ? baseline : currentIds(baseline, LEGACY_IDS);
+            const classified = classifyCatalog(held, readKnownFailures(rootDir, baseline.suite.name));
+            if (canonicalJson(classified) !== canonicalJson(held) || unclassifiedFailures(classified).length)
+              problems.push(`${at}: unknown or changed ${baseline.suite.name} failure classification`);
           } catch (error) {
             problems.push(`${at}: ${String(error)}`);
           }
         }
+        // Outside the catalog, minor 6 is stated for a classification alone (`classifyCatalog`), never without one.
+        const classifies = baseline.runs.some((run) =>
+          run.rungs.some((rung) => rung.pairs.some((pair) => pair.failures !== undefined)),
+        );
+        if (baseline.suite.name !== "catalog" && baseline.contract === CONTRACT_VERSION_1_6 && !classifies)
+          problems.push(`${at}: states contract ${CONTRACT_VERSION_1_6} and classifies no failure`);
         const rendered = mtf ? renderMtfBaselineReport(baseline) : renderBaselineReport(baseline);
         const reports = mtf ? mtfBaselineReportFiles(rootDir, suite) : baselineReportFiles(rootDir, suite);
         for (const [file, text, said] of [
@@ -330,6 +349,26 @@ export function createVerifyCommand(inputs: VerifyCommandInputs): CliCommand {
           }
         } catch (error) {
           problems.push(`catalog: ${String(error)}`);
+        }
+      }
+      // The listed failures of a suite other than the catalog (whose list is held with its report above): an entry whose
+      // run a committed baseline of the suite holds must classify a FAIL exactly, as the catalog's do; one whose run no
+      // committed baseline holds is pending, listed ahead of the refresh that writes the run, and is said so.
+      for (const suite of KNOWN_FAILURE_SUITES.filter((name) => name !== "catalog")) {
+        const file = knownFailuresFile(suite);
+        if (readText(join(rootDir, file)) === undefined) continue;
+        try {
+          const committed = parsed.get(suite) ?? [];
+          const { pending, held } = pendingKnownFailures(committed, readKnownFailures(rootDir, suite));
+          const unused = unusedKnownFailures(committed, held);
+          if (unused.length > 0) problems.push(`${file}: no ${suite} baseline classifies ${unused.join("; ")}`);
+          if (pending.length > 0)
+            io.stdout(
+              `${file}: ${VERIFY_OUTPUT_TEXT.pending(pending.length, suite)} ` +
+                `${pending.map(knownFailureText).join("; ")}\n`,
+            );
+        } catch (error) {
+          problems.push(`${file}: ${String(error)}`);
         }
       }
       // Older partial roots need only their per-suite reports. A complete four-suite root, or either statement file,

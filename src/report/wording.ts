@@ -6,6 +6,7 @@ import type { GroupConsensus, NoConsensusReason } from "./consensus.ts";
 import { LEGACY_CHECK_IDS } from "../core/legacyIds.ts";
 import { formatFixed, formatSci, formatSignificant } from "../core/numeric/format.ts";
 import { MATRIX_CHECKS, STATEMENT_CHECKS } from "../vocabulary/checks.ts";
+import { engineName } from "../vocabulary/engines.ts";
 
 /** What a row of an MTF comparison came to. */
 export const MTF_ROW_STATUSES = ["RECORDED", "ATTENTION", "SET ASIDE", "UNSUPPORTED", "ERROR"] as const;
@@ -498,6 +499,8 @@ interface StatementSupportData {
     readonly counterpartLinesNm: readonly number[];
     readonly worstBanded: (SupportFigure & { readonly class: string | null }) | null;
   }[];
+  /** The configurations at which a known failure of one engine is listed, and that engine's id; absent where none. */
+  readonly listedFailureClause?: { readonly configurations: number; readonly engine: string };
 }
 
 const COUNT_WORDS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
@@ -522,6 +525,7 @@ export function statementSupport(statement: StatementSupportData, holds: boolean
   const path = gated(statement.agreementFigures.opticalPath);
   const geometric = gated(statement.agreementFigures.geometricMtf);
   const wave = gated(statement.agreementFigures.waveMtf);
+  const listed = statement.listedFailureClause;
   const fft = statement.counterparts.find((c) => c.rung === "mtf-vs-optiland-fft");
   const wavefront = statement.counterparts.find((c) => c.rung === "mtf-vs-optiland-wavefront");
   if (
@@ -546,6 +550,11 @@ export function statementSupport(statement: StatementSupportData, holds: boolean
     `differs by up to ${supportNumber(fft.worstBanded.value)}, a difference classed as one of ${fft.worstBanded.class}; ` +
     "the comparator's OTF of optiland's own wavefront, per wavelength and photopic, " +
     `differs by up to ${supportNumber(wavefront.worstBanded.value)}. ` +
+    (listed === undefined
+      ? ""
+      : // Owner-signed wording (2026-11-16): printed only where a configuration has a listed failure.
+        `Configurations at which a known failure of one engine is listed (${listed.configurations}, ` +
+        `${engineName(listed.engine)}'s, where LensVisualizer and the reference tracer agree) are not counted. `) +
     "Dispersion, white-light weighting beyond the stated lines, focus choice, stop sizing, states not named and " +
     "the catalog beyond these suites are not covered."
   );

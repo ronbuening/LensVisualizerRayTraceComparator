@@ -257,6 +257,11 @@ export const CODES: Readonly<Record<string, CodeText>> = {
   "engine-defined-under-old-id": {
     sentence: "The configuration defines an engine under an id that has been renamed.",
     remedy: "Rename the engine's entry under engines in lvrtc.config.json or lvrtc.local.json to its new id.",
+  }, // A list of known failures (docs/known-failures.<suite>.json) names a run the suite does not have.
+  "known-failure-of-no-run": {
+    sentence: "A list of known failures names a run that the suite does not have, so that entry can never be met.",
+    remedy:
+      "Correct the entry's run name (a focus station's run is named after LensVisualizer's row, which a lens edit can renumber), or remove the entry.",
   },
 };
 

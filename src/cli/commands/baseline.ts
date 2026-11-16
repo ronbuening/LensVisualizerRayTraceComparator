@@ -1,4 +1,13 @@
-import { catalogFeatures, classifyCatalog, readKnownFailures, unclassifiedFailures } from "../../baseline/catalog.ts";
+import {
+  catalogFeatures,
+  classifyCatalog,
+  knownFailureText,
+  knownFailuresFile,
+  knownFailuresOfNoRun,
+  listsKnownFailures,
+  readKnownFailures,
+  unclassifiedFailures,
+} from "../../baseline/catalog.ts";
 import type { KnownFailure } from "../../baseline/catalog.ts";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
@@ -94,7 +103,8 @@ export function movedText(moved: string): string {
           : LIMIT_KIND_TEXT.attention;
     return MOVED_TEXT.figure(name, was, now, `${called} ${limit}`);
   }
-  if (moved === "new, changed or unclassified catalog FAIL") return MOVED_TEXT.catalogFailure;
+  const unlisted = /^new, changed or unclassified (\S+) FAIL$/.exec(moved);
+  if (unlisted !== null) return MOVED_TEXT.listedFailure(unlisted[1], knownFailuresFile(unlisted[1]));
   return moved;
 }
 
@@ -139,7 +149,7 @@ const HELP = helpText([
     ],
     [
       "write",
-      `For maintainers. Writes the baseline of a run that has been compared: <root>/baselines/<suite>.json, and the report rendered from it, <root>/reports/<suite>/rays.md and rays.json. Nothing is asked of any engine. It is refused for a run with an engine that could not be used, a run that was not started, LensVisualizer changing during the run, and a pair that is "${verdictLabel("FAIL")}" or "${verdictLabel("ERROR")}"; the catalog alone admits a failure listed exactly in docs/known-failures.json, keeping it as a failure with its class.`,
+      `For maintainers. Writes the baseline of a run that has been compared: <root>/baselines/<suite>.json, and the report rendered from it, <root>/reports/<suite>/rays.md and rays.json. Nothing is asked of any engine. It is refused for a run with an engine that could not be used, a run that was not started, LensVisualizer changing during the run, and a pair that is "${verdictLabel("FAIL")}" or "${verdictLabel("ERROR")}"; the catalog and focus-stations alone admit a failure listed exactly in their list of known failures (docs/known-failures.json, docs/known-failures.focus-stations.json), keeping it as a failure with its class.`,
     ],
   ]),
   ...options([
@@ -157,7 +167,7 @@ const HELP = helpText([
     ["--json", "check: print the records as one JSON object in place of the lines"],
   ]),
   ...paragraph(
-    `Exit code: write: 0 when the baseline was written; 1 when a pair is "${verdictLabel("FAIL")}" or "${verdictLabel("ERROR")}"; 2 when the run cannot be a baseline. check: 0 when no record is "${outcomeLabel("DRIFT")}" (DRIFT) and no pair that docs/known-failures.json does not list fails or is an error today, out of date or not; 1 otherwise; 2 when nothing was checked.`,
+    `Exit code: write: 0 when the baseline was written; 1 when a pair is "${verdictLabel("FAIL")}" or "${verdictLabel("ERROR")}"; 2 when the run cannot be a baseline. check: 0 when no record is "${outcomeLabel("DRIFT")}" (DRIFT) and no pair that the suite's list of known failures does not list fails or is an error today, out of date or not; 1 otherwise; 2 when nothing was checked.`,
   ),
 ]);
 
@@ -206,18 +216,37 @@ async function write(
   if (problems.length > 0)
     throw new UsageError(`${directory}: no baseline is written of this run: ${problems.join("; ")}`);
   const raw = catalogFeatures(buildBaseline(manifest, comparisons, policy, mtf ? MTF_BASELINE : {}), directory);
-  const baseline = classifyCatalog(raw, raw.suite.name === "catalog" ? readKnownFailures(rootDir) : []);
+  const baseline = classifyCatalog(raw, readKnownFailures(rootDir, raw.suite.name));
   if (mtf && baseline.runs.every((run) => run.rungs.length === 0)) {
     throw new UsageError(
       `${directory}: no MTF baseline is written of this run: it has none of the MTF checks ${MTF_BASELINE_RUNGS.join(", ")}`,
     );
   }
+  // An entry of the suite's list whose run this rays baseline does not hold can never be met: refused, not left
+  // pending (a run name mistyped, or a station renumbered). The catalog's list is held by verify, as before.
+  if (!mtf && listsKnownFailures(baseline.suite.name) && baseline.suite.name !== "catalog") {
+    const orphans = knownFailuresOfNoRun(
+      readKnownFailures(rootDir, baseline.suite.name),
+      baseline.runs.map((run) => run.name),
+    );
+    if (orphans.length > 0) {
+      for (const entry of orphans)
+        io.stderr(
+          [
+            `lvrtc baseline: known-failure-of-no-run: ${knownFailuresFile(baseline.suite.name)} lists ${knownFailureText(entry)}, a run this baseline does not hold`,
+            ...codeLines("known-failure-of-no-run", 4),
+            "",
+          ].join("\n"),
+        );
+      return EXIT_FAILURE;
+    }
+  }
   const failing = unclassifiedFailures(baseline);
   if (failing.length > 0) {
     for (const line of failing) io.stderr(`lvrtc baseline: ${line}\n`);
     io.stderr(
-      (baseline.suite.name === "catalog"
-        ? `lvrtc baseline: no baseline is written with a "${verdictShort("FAIL")}" that docs/known-failures.json does not list as it is, or any "${verdictShort("ERROR")}": `
+      (listsKnownFailures(baseline.suite.name)
+        ? `lvrtc baseline: no baseline is written with a "${verdictShort("FAIL")}" that ${knownFailuresFile(baseline.suite.name)} does not list as it is, or any "${verdictShort("ERROR")}": `
         : `lvrtc baseline: no baseline is written of a run with a pair that is "${verdictShort("FAIL")}" or "${verdictShort("ERROR")}": `) +
         "a baseline holds what " +
         "the engines agreed on; lvrtc compare names each pair and its reason\n",
@@ -355,7 +384,7 @@ async function check(
     writeFileAtomic(join(directory, COMPARISONS_FILE), comparisonFileText(comparisons));
     const { manifest } = result;
     const built = catalogFeatures(buildBaseline(manifest, comparisons, policy, mtf ? MTF_BASELINE : {}), directory);
-    const known = built.suite.name === "catalog" ? readKnownFailures(rootDir) : [];
+    const known = readKnownFailures(rootDir, built.suite.name);
     const { committed, records } = checkInIdSpace(read.baseline, built, known, policy, maps);
     const changes = summarizeChanges(records);
 
@@ -376,6 +405,16 @@ async function check(
     if (Object.values(manifest.sources ?? {}).some((source) => source.status === SOURCE_CHANGED)) {
       shownErrors.push({ text: "LensVisualizer's files changed while the suite ran: run the check again", code: null });
     }
+    // An entry of the suite's list whose run is in neither the committed baseline nor today's run can never be met.
+    if (built.suite.name !== "catalog")
+      for (const entry of knownFailuresOfNoRun(known, [
+        ...committed.runs.map((run) => run.name),
+        ...manifest.runs.map((run) => run.name),
+      ]))
+        shownErrors.push({
+          text: `${knownFailuresFile(built.suite.name)} lists ${knownFailureText(entry)}, a run in neither the baseline nor today's run`,
+          code: "known-failure-of-no-run",
+        });
     const errors = shownErrors.map((error) => error.text);
     const failingToday = records.some(
       (record) => record.verdict !== undefined && FAILING_VERDICTS.includes(record.verdict),

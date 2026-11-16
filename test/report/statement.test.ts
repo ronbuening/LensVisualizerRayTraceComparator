@@ -26,6 +26,10 @@ test("synthetic statement golden, both files; fixed ordering, no engines or envi
   assert.deepEqual(renderStatement([...inputs].reverse()), rendered);
   assert.deepEqual(wordingProblems(rendered.markdown), []);
   const s = rendered.statement;
+  // No configuration has a listed failure: no list, no clause, and the sentence as the owner signed it in 2026-10.
+  assert.ok(!("listedFailures" in s) && !("listedFailureClause" in s));
+  assert.ok(!s.supportable.includes("known failure"));
+  assert.match(s.supportable, /differs by up to 0\.13\. Dispersion, white-light weighting/);
   assert.equal(s.configurations, 8);
   assert.equal(s.agreementConfigurations, 8);
   assert.equal(s.agreementFigures.population, "agreementStates");
@@ -177,4 +181,122 @@ test("no agreement claim when a gate fails or a whole R6a configuration is unmea
     pairs: r6a.pairs.map((pair) => ({ ...pair, metrics: pair.metrics.map((metric) => ({ ...metric, measured: 0 })) })),
   };
   assert.equal(buildStatement(missing).agreementConfigurations, 7);
+});
+
+/** The owner's clause of 2026-11-16, word for word, at two configurations of optiland's. */
+const OWNER_CLAUSE =
+  "Configurations at which a known failure of one engine is listed (2, optiland's, where LensVisualizer and the " +
+  "reference tracer agree) are not counted.";
+
+/** A listed failure of check ray-trace on the pair `a`–`b` of a run of focus-stations's rays baseline. */
+function listFailure(inputs: Mutable<ReturnType<typeof statementInputs>>, run: number, b: string, a = "lv"): void {
+  const rung = inputs.find((input) => input.file === "focus-stations.json")!.baseline.runs[run].rungs[2];
+  assert.equal(rung.rung, "ray-trace");
+  const failure = {
+    metric: "mask.mismatches",
+    class: "method" as const,
+    gotcha: "docs/gotchas.md#synthetic",
+    reproducer: "node bin/lvrtc.mjs run suites/focus-stations-repro/synthetic.json --checks ray-trace --jobs 4",
+    evidenceHash: "e".repeat(64),
+  };
+  const listed = {
+    a,
+    b,
+    verdict: "FAIL" as const,
+    verdicts: [
+      { verdict: "PASS" as const, count: 1 },
+      { verdict: "FAIL" as const, count: 1 },
+    ],
+    metrics: [{ name: "mask.mismatches", value: 2, tolerance: 0, unit: "rays" }],
+    failures: [failure],
+  };
+  const at = rung.pairs.findIndex((pair) => pair.a === a && pair.b === b);
+  if (at < 0) rung.pairs.push(listed);
+  else rung.pairs[at] = listed;
+}
+
+test("a failure listed exactly keeps the signed sentence, with the owner's clause, over the configurations that pass", () => {
+  const inputs = mutable(statementInputs());
+  for (const run of [0, 1]) {
+    listFailure(inputs, run, "optiland");
+    listFailure(inputs, run, "reference-tracer", "optiland");
+  }
+  const rendered = renderStatement(inputs);
+  const s = rendered.statement;
+  assert.equal(s.configurations, 8);
+  assert.equal(s.agreementConfigurations, 6, "the two configurations with a listed failure are not counted");
+  assert.ok(!s.agreementStates.some((state) => state.suite === "focus-stations"));
+  assert.deepEqual(s.listedFailureClause, { configurations: 2, engine: "optiland" });
+  assert.equal(s.listedFailures?.length, 4);
+  assert.match(s.supportable, /^On 6 configurations across four suites/);
+  assert.ok(s.supportable.includes(`differs by up to 0.13. ${OWNER_CLAUSE} Dispersion, white-light weighting`));
+  assert.ok(rendered.markdown.includes("## Failures, classified"));
+  assert.ok(rendered.markdown.includes("| focus-stations / artificial-line | Ray trace"));
+  assert.deepEqual(wordingProblems(rendered.markdown), []);
+  // The count is of configurations, never of pairs or entries.
+  const one = mutable(statementInputs());
+  listFailure(one, 0, "optiland");
+  listFailure(one, 0, "reference-tracer", "optiland");
+  const single = buildStatement(one);
+  assert.equal(single.agreementConfigurations, 7);
+  assert.ok(single.supportable.includes("is listed (1, optiland's, where LensVisualizer and the reference tracer"));
+  // The clause's words are the owner's (2026-11-16), from the template alone.
+  assert.ok(
+    statementSupport({ ...single, listedFailureClause: { configurations: 2, engine: "optiland" } }, true).includes(
+      OWNER_CLAUSE,
+    ),
+  );
+});
+
+test("no sentence where the listed failures are not of one engine, or LensVisualizer and the reference tracer differ there", () => {
+  const refused = /^The gated records do not support/;
+  // Two engines: optiland's at one configuration, the replay's at another.
+  const two = mutable(statementInputs());
+  listFailure(two, 0, "optiland");
+  const replay = two.find((input) => input.file === "focus-stations.mtf.json")!.baseline.runs[1].rungs[1];
+  assert.equal(replay.rung, "lv-mtf-replay");
+  replay.pairs[0] = {
+    ...replay.pairs[0],
+    verdict: "FAIL",
+    verdicts: [{ verdict: "FAIL", count: 2 }],
+    failures: [
+      {
+        metric: "synthetic.maxAbs",
+        class: "method" as const,
+        gotcha: "docs/gotchas.md#synthetic",
+        reproducer: "synthetic",
+        evidenceHash: "f".repeat(64),
+      },
+    ],
+  };
+  assert.match(buildStatement(two).supportable, refused);
+  assert.ok(!("listedFailureClause" in buildStatement(two)));
+  // A listed failure of LensVisualizer and the reference tracer themselves.
+  const ref = mutable(statementInputs());
+  listFailure(ref, 0, "optiland");
+  listFailure(ref, 0, "reference-tracer");
+  assert.match(buildStatement(ref).supportable, refused);
+  // LensVisualizer and the reference tracer not all Pass at a listed configuration (a gated check left unsupported).
+  const apart = mutable(statementInputs());
+  listFailure(apart, 0, "optiland");
+  const path = apart.find((input) => input.file === "focus-stations.json")!.baseline.runs[0].rungs[3];
+  assert.equal(path.rung, "optical-path");
+  const at = path.pairs.findIndex((pair) => pair.b === "reference-tracer");
+  path.pairs[at] = { ...path.pairs[at], verdict: "UNSUPPORTED", verdicts: [{ verdict: "UNSUPPORTED", count: 2 }] };
+  assert.match(buildStatement(apart).supportable, refused);
+  // An unlisted Fail still refuses it, beside a listed one.
+  const unlisted = mutable(statementInputs());
+  listFailure(unlisted, 0, "optiland");
+  const other = unlisted.find((input) => input.file === "states.json")!.baseline.runs[0].rungs[2];
+  other.pairs[0] = { ...other.pairs[0], verdict: "FAIL", verdicts: [{ verdict: "FAIL", count: 2 }] };
+  assert.match(buildStatement(unlisted).supportable, refused);
+  // Another engine's listed failure: the signed words name optiland, so the sentence is not said.
+  const notOptiland = mutable(statementInputs());
+  listFailure(notOptiland, 0, "wave-mtf-of-lv-rays");
+  assert.match(buildStatement(notOptiland).supportable, refused);
+  assert.ok(!("listedFailureClause" in buildStatement(notOptiland)));
+  // The same listed pairs, every condition met: the sentence with its clause.
+  const held = mutable(statementInputs());
+  listFailure(held, 0, "optiland");
+  assert.match(buildStatement(held).supportable, /is listed \(1, optiland's/);
 });

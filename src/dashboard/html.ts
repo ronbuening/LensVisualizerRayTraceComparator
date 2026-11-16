@@ -1061,8 +1061,9 @@ function pairRow(rung: BaselineRunView["rungs"][number], pair: BaselinePairView)
           `${metricName(each.name)} ${figure(each.value)}${each.unit === "1" ? "" : ` ${escapeHtml(each.unit)}`}${each.tolerance === null ? "" : ` (≤ ${figure(each.tolerance)})`}${each.measured === null ? "" : ` ${fill(L.measured, [figure(each.measured)])}`}${whereText(each.where)}`,
       )
       .join("<br>") || "—",
-    pair.failures.map((failure) => `${metricName(failure.metric)}: ${differenceClass(failure.class)}`).join("<br>") ||
-      "—",
+    pair.failures
+      .map((failure) => `${metricName(failure.metric)}: ${differenceClass(failure.class)} ${code(failure.gotcha)}`)
+      .join("<br>") || "—",
     badge(pair.badge),
   ];
 }

@@ -283,11 +283,16 @@ export interface RunCycleInput {
   readonly runsDir?: string;
   /** Another interpreter for optiland than the configuration's (`watchedInterpreter`). */
   readonly python?: string;
+  /**
+   * `lvrtc compare` may also end with exit code 1 (a pair that fails): for a test that then holds every such pair to
+   * its suite's list of known failures (focus-stations).
+   */
+  readonly compareMayFail?: true;
 }
 
 /**
  * `lvrtc run <suite> --engines <engines> --rungs <rungs>` and `lvrtc compare <name>`, both of which must end with
- * exit code 0, into a temporary runs directory. `root` is a configuration root to run under, with the suite's path
+ * exit code 0 (compare 0 or 1 where `compareMayFail`), into a temporary runs directory. `root` is a configuration root to run under, with the suite's path
  * relative to it; without one the command runs at the root of this repository, as a user runs it.
  */
 export function runAndCompare(t: TestContext, run: RunCycleInput): RunCycle {
@@ -305,7 +310,8 @@ export function runAndCompare(t: TestContext, run: RunCycleInput): RunCycle {
   const runSeconds = (performance.now() - started) / 1000;
   assert.equal(ran.code, 0, ran.out + ran.err);
   const compared = lvrtc(runsDir, cwd, ["compare", run.name, ...rooted], python);
-  assert.equal(compared.code, 0, compared.out + compared.err);
+  if (run.compareMayFail) assert.ok(compared.code === 0 || compared.code === 1, compared.out + compared.err);
+  else assert.equal(compared.code, 0, compared.out + compared.err);
   const manifest: RunManifest = JSON.parse(readFileSync(join(runsDir, run.name, MANIFEST_FILE), "utf8"));
   const comparisons: ComparisonFile = JSON.parse(readFileSync(join(runsDir, run.name, COMPARISONS_FILE), "utf8"));
   const verdicts = compared.out.split("\n").find((line) => line.startsWith(`${run.name}: `)) ?? "";

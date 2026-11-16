@@ -737,6 +737,158 @@ test("catalog CLI refuses unknown FAILs, writes listed FAILs, and checks unchang
   assert.equal(JSON.parse(drift.out).records[0].outcome, "DRIFT");
 });
 
+test("focus-stations: write admits listed FAILs alone, check holds them, verify says pending, used and unused", async (t) => {
+  const root = pairRoot(t);
+  const suite = JSON.parse(readFileSync(join(root, "suites", "pair.json"), "utf8"));
+  writeFileSync(join(root, "suites/focus-stations.json"), JSON.stringify({ ...suite, name: "focus-stations" }));
+  writeConfig(root, { "fake-a": {}, "fake-near": { bias: 1 / 4 } });
+  const list = join(root, "docs/known-failures.focus-stations.json");
+  assert.equal((await lvrtc(root, ["run", "suites/focus-stations.json"])).code, EXIT_OK);
+  assert.equal((await lvrtc(root, ["compare", "focus-stations"])).code, EXIT_FAILURE);
+  // No list (focus-stations then lists none): no baseline with a FAIL, and the refusal names the list.
+  const refused = await lvrtc(root, ["baseline", "write", "focus-stations"]);
+  assert.equal(refused.code, EXIT_FAILURE);
+  assert.match(refused.err, /docs\/known-failures\.focus-stations\.json does not list as it is/);
+  assert.equal(existsSync(join(root, "baselines/focus-stations.json")), false);
+  const { buildBaseline } = await import("../../src/baseline/build.ts");
+  const { readRunManifest } = await import("../../src/core/manifest.ts");
+  const { readComparisonFile } = await import("../../src/compare/comparisonFile.ts");
+  const { failureEvidence } = await import("../../src/baseline/catalog.ts");
+  const directory = join(root, "runs/focus-stations");
+  const raw = buildBaseline(readRunManifest(directory), readComparisonFile(directory), loadPolicy());
+  const known = raw.runs.flatMap((run) =>
+    run.rungs.flatMap((rung) =>
+      rung.pairs.flatMap((pair) =>
+        pair.metrics
+          .filter((m) => m.tolerance !== undefined && (m.value === null || m.value > m.tolerance))
+          .map((m) => ({
+            run: run.name,
+            rung: rung.rung,
+            engines: [pair.a, pair.b],
+            metric: m.name,
+            class: "method",
+            gotcha: "docs/gotchas.md#artificial-example",
+            reproducer:
+              "node bin/lvrtc.mjs run suites/focus-stations-repro/artificial.json --checks pipeline-echo --jobs 1",
+            evidenceHash: failureEvidence(rung.requests, pair),
+          })),
+      ),
+    ),
+  );
+  assert.equal(known.length, 4, "one failing pair a run, two figures beyond their limits");
+  // Listed ahead of the baseline: pending, a note and no problem.
+  mkdirSync(join(root, "docs"));
+  writeFileSync(list, JSON.stringify(known));
+  const ahead = await lvrtc(root, ["verify"]);
+  assert.equal(ahead.code, EXIT_OK, ahead.err + ahead.out);
+  assert.match(
+    ahead.out,
+    /^docs\/known-failures\.focus-stations\.json: 4 listed failures are pending, their runs in no committed focus-stations baseline yet: singlet pipeline-echo fake-a fake-near /m,
+  );
+  // Only one listed: the other FAIL is refused; both listed: written, a FAIL kept with its class, contract minor 6.
+  writeFileSync(list, JSON.stringify(known.slice(0, 1)));
+  assert.equal((await lvrtc(root, ["baseline", "write", "focus-stations"])).code, EXIT_FAILURE);
+  // An entry whose run the baseline would not hold (a run name mistyped) could never be met: refused, coded.
+  writeFileSync(list, JSON.stringify([...known, { ...known[0], run: "singlett" }]));
+  const typo = await lvrtc(root, ["baseline", "write", "focus-stations"]);
+  assert.equal(typo.code, EXIT_FAILURE, typo.err + typo.out);
+  assert.match(
+    typo.err,
+    /^lvrtc baseline: known-failure-of-no-run: docs\/known-failures\.focus-stations\.json lists singlett pipeline-echo fake-a fake-near values\.maxAbs, a run this baseline does not hold$/m,
+  );
+  assert.equal(existsSync(join(root, "baselines/focus-stations.json")), false);
+  writeFileSync(list, JSON.stringify(known));
+  const wrote = await lvrtc(root, ["baseline", "write", "focus-stations"]);
+  assert.equal(wrote.code, EXIT_OK, wrote.err + wrote.out);
+  const baseline = JSON.parse(readFileSync(join(root, "baselines/focus-stations.json"), "utf8")) as Baseline;
+  assert.equal(baseline.contract, "1.6");
+  assert.deepEqual(
+    baseline.runs.flatMap((run) =>
+      run.rungs.flatMap((rung) => rung.pairs.map((p) => [p.verdict, p.failures?.[0].class])),
+    ),
+    [
+      ["FAIL", "method"],
+      ["FAIL", "method"],
+    ],
+  );
+  const report = readFileSync(join(root, "reports/focus-stations/rays.md"), "utf8");
+  assert.match(report, /^## Failures, classified$/m);
+  assert.match(report, /docs\/gotchas\.md#artificial-example/);
+  // Check: unchanged listed FAILs are OK and the check passes; the comparison still fails.
+  const checked = await lvrtc(root, ["baseline", "check", "focus-stations", "--json"]);
+  assert.equal(checked.code, EXIT_OK, checked.err + checked.out);
+  assert.deepEqual(
+    JSON.parse(checked.out).records.map((r: { outcome: string; verdict: string }) => [r.outcome, r.verdict]),
+    [
+      ["OK", "FAIL"],
+      ["OK", "FAIL"],
+    ],
+  );
+  assert.equal((await lvrtc(root, ["compare", "focus-stations"])).code, EXIT_FAILURE);
+  // A station renumbered since the list was written: its run is in neither the baseline nor today's run.
+  writeFileSync(list, JSON.stringify([...known, { ...known[0], run: "singlet-zoom0-focus7" }]));
+  const renumbered = await lvrtc(root, ["baseline", "check", "focus-stations", "--json"]);
+  assert.equal(renumbered.code, EXIT_FAILURE, renumbered.err + renumbered.out);
+  const said = JSON.parse(renumbered.out);
+  assert.equal(said.failed, true);
+  assert.deepEqual(said.errors, [
+    "docs/known-failures.focus-stations.json lists singlet-zoom0-focus7 pipeline-echo fake-a fake-near values.maxAbs, a run in neither the baseline nor today's run",
+  ]);
+  const shown = await lvrtc(root, ["baseline", "check", "focus-stations"]);
+  assert.match(shown.err + shown.out, /A list of known failures names a run that the suite does not have/);
+  writeFileSync(list, JSON.stringify(known));
+  // Verify: used, so neither pending nor a problem.
+  const used = await lvrtc(root, ["verify"]);
+  assert.equal(used.code, EXIT_OK, used.err + used.out);
+  assert.doesNotMatch(used.out, /pending/);
+  // An entry whose run the baseline holds that classifies nothing is unused; a station not run yet stays pending.
+  const unused = { ...known[0], evidenceHash: "f".repeat(64) };
+  const later = { ...known[0], run: "a-station-not-run-yet" };
+  writeFileSync(list, JSON.stringify([unused, ...known.slice(1), later]));
+  const stale = await lvrtc(root, ["verify"]);
+  assert.equal(stale.code, EXIT_FAILURE, stale.err + stale.out);
+  assert.match(
+    stale.out + stale.err,
+    /docs\/known-failures\.focus-stations\.json: no focus-stations baseline classifies/,
+  );
+  assert.match(
+    stale.out,
+    /1 listed failure is pending, its run in no committed focus-stations baseline yet: a-station-not-run-yet/,
+  );
+  // A class changed in the list: the committed classification is no longer the list's.
+  writeFileSync(list, JSON.stringify(known.map((k, i) => (i === 0 ? { ...k, class: "numerical" } : k))));
+  const changed = await lvrtc(root, ["verify"]);
+  assert.equal(changed.code, EXIT_FAILURE, changed.err + changed.out);
+  assert.match(changed.out + changed.err, /unknown or changed focus-stations failure classification/);
+  // An unlisted FAIL today drifts.
+  writeFileSync(list, "[]");
+  const drift = await lvrtc(root, ["baseline", "check", "focus-stations", "--json"]);
+  assert.equal(drift.code, EXIT_FAILURE, drift.err + drift.out);
+  assert.equal(JSON.parse(drift.out).records[0].outcome, "DRIFT");
+});
+
+test("verify: a baseline other than the catalog's that states contract 1.6 classifies a failure", async (t) => {
+  const root = pairRoot(t);
+  const suite = JSON.parse(readFileSync(join(root, "suites", "pair.json"), "utf8"));
+  writeFileSync(join(root, "suites/focus-stations.json"), JSON.stringify({ ...suite, name: "focus-stations" }));
+  for (const args of [
+    ["run", "suites/focus-stations.json"],
+    ["compare", "focus-stations"],
+    ["baseline", "write", "focus-stations"],
+    ["verify"],
+  ]) {
+    const ended = await lvrtc(root, args);
+    assert.equal(ended.code, EXIT_OK, `${args.join(" ")}: ${ended.err}${ended.out}`);
+  }
+  const file = join(root, "baselines/focus-stations.json");
+  const baseline = JSON.parse(readFileSync(file, "utf8")) as Baseline;
+  assert.equal(baseline.contract, CONTRACT_VERSION, "no classification, no minor 6");
+  writeFileSync(file, baselineText({ ...baseline, contract: "1.6" }));
+  const stated = await lvrtc(root, ["verify"]);
+  assert.equal(stated.code, EXIT_FAILURE, stated.err + stated.out);
+  assert.match(stated.err, /baselines\/focus-stations\.json: states contract 1\.6 and classifies no failure/);
+});
+
 test("a catalog refresh: written at the policy at hand, frozen, then verified under a later policy; check works", async (t) => {
   const rootDir = pairRoot(t, "catalog-root");
   const snapshots = join(tempDir(t), "snapshots");

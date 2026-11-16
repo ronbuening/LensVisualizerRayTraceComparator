@@ -18,6 +18,8 @@ import type { MtfComparisonRow } from "./mtfComparison.ts";
 import { SORTING_LIMITS, checkTitle, classLabel, rowStatusLabel, verdictShort } from "../vocabulary/index.ts";
 import { checkName, placeText, unitName } from "./names.ts";
 import {
+  CATALOG_LABELS,
+  CATALOG_TEXT,
   NOT_COVERED,
   STATEMENT_LABELS,
   STATEMENT_TEXT,
@@ -190,6 +192,42 @@ function counterpart(
   };
 }
 
+/** A pair a list of known failures lists, as its baseline classifies it (`classifyCatalog`). */
+const listedPair = (pair: BaselineRung["pairs"][number]): boolean =>
+  pair.verdict === "FAIL" && (pair.failures?.length ?? 0) > 0;
+
+/**
+ * The clause of the supportable sentence on configurations with a listed failure (the owner's words of 2026-11-16),
+ * or why it cannot be said: the listed pairs must name one engine, other than LensVisualizer and the reference tracer,
+ * in every pair, and that engine must be optiland, whose name the signed words carry, and the LensVisualizer–reference-tracer pairs of those configurations on the statement's gated checks
+ * must all pass, that of check ray-trace among them. Null where no configuration has a listed failure.
+ */
+function listedFailureClause(
+  records: readonly RecordRung[],
+  listed: readonly { readonly suite: string; readonly run: string; readonly a: string; readonly b: string }[],
+): { readonly configurations: number; readonly engine: string } | "unsayable" | null {
+  if (listed.length === 0) return null;
+  const configurations = [...new Set(listed.map(({ suite, run }) => `${suite}\0${run}`))];
+  const common = [listed[0].a, listed[0].b].filter(
+    (engine) =>
+      engine !== "lv" && engine !== "reference-tracer" && listed.every(({ a, b }) => a === engine || b === engine),
+  );
+  // The owner signed the clause's words naming optiland (2026-11-16): of any other engine it is not said.
+  if (common.length !== 1 || common[0] !== "optiland") return "unsayable";
+  const agree = configurations.every((key) => {
+    const own = records.filter(
+      ({ suite, run, rung }) => `${suite}\0${run.name}` === key && STATEMENT_RUNGS[rung.rung].mode === "gated",
+    );
+    const pairs = own.flatMap(({ rung }) =>
+      rung.pairs
+        .filter((pair) => [pair.a, pair.b].sort().join() === "lv,reference-tracer")
+        .map((pair) => ({ rung, pair })),
+    );
+    return pairs.some(({ rung }) => rung.rung === "ray-trace") && pairs.every(({ pair }) => pair.verdict === "PASS");
+  });
+  return agree ? { configurations: configurations.length, engine: common[0] } : "unsayable";
+}
+
 /** Reduces sources in fixed order, deduplicating R4 in rays/MTF by suite and run, with MTF's measured counts. */
 export function buildStatement(inputs: readonly StatementInput[], maps: LegacyMaps = LEGACY_IDS) {
   if (
@@ -323,12 +361,34 @@ export function buildStatement(inputs: readonly StatementInput[], maps: LegacyMa
     counterpart(records, "mtf-vs-optiland-wavefront", "otf-of-optiland-wavefront"),
   ];
   const wavelengthsNm = sortedNumbers(counterparts.flatMap((c) => c.linesNm));
+  // The failures a list of known failures lists, on the statement's gated checks: their configurations are not
+  // counted by the supportable sentence, which says so (`listedFailureClause`), and are listed with their classes.
+  const listedFailures = records.flatMap(({ suite, run, rung }) =>
+    STATEMENT_RUNGS[rung.rung].mode !== "gated"
+      ? []
+      : rung.pairs.filter(listedPair).flatMap((pair) =>
+          (pair.failures ?? []).map((failure) => ({
+            suite,
+            run: run.name,
+            rung: rung.rung,
+            a: pair.a,
+            b: pair.b,
+            metric: failure.metric,
+            class: failure.class,
+            gotcha: failure.gotcha,
+            reproducer: failure.reproducer,
+          })),
+        ),
+  );
+  const listedRuns = new Set(listedFailures.map(({ suite, run }) => `${suite}\0${run}`));
+  const clause = listedFailureClause(records, listedFailures);
   const required = ["ray-trace", "optical-path", "geometric-mtf", "wave-mtf"];
   const eligible = suites.flatMap((suite) =>
     suite.states
       .filter(
         (state) =>
           state.caseId !== null &&
+          !listedRuns.has(`${suite.suite}\0${state.run}`) &&
           required.every((id) =>
             records.some(
               (r) =>
@@ -372,9 +432,17 @@ export function buildStatement(inputs: readonly StatementInput[], maps: LegacyMa
     geometricMtf: agreementFigure("geometric-mtf"),
     waveMtf: agreementFigure("wave-mtf"),
   };
-  const gateHolds = rungs
-    .filter((r) => r.mode === "gated")
-    .every((r) => r.verdicts.every((v) => v.verdict === "PASS" || v.verdict === "UNSUPPORTED"));
+  // The gates hold where every pair of a gated check passed (or was not computed), but for a pair that fails exactly as
+  // a list of known failures lists it, whose clause must then be sayable (the owner's decision of 2026-11-16).
+  const gateHolds =
+    clause !== "unsayable" &&
+    records
+      .filter(({ rung }) => STATEMENT_RUNGS[rung.rung].mode === "gated")
+      .every(({ rung }) =>
+        rung.pairs.every(
+          (pair) => listedPair(pair) || pair.verdicts.every((v) => v.verdict === "PASS" || v.verdict === "UNSUPPORTED"),
+        ),
+      );
   const statement = {
     kind: "validation-statement",
     sources: files.map(({ file, baseline }) => ({
@@ -398,6 +466,11 @@ export function buildStatement(inputs: readonly StatementInput[], maps: LegacyMa
       ? STATEMENT_Z50_ATTRIBUTION
       : null,
     notCovered: NOT_COVERED,
+    // Only where there are any, so that a statement without them keeps its bytes.
+    ...(listedFailures.length === 0 ? {} : { listedFailures }),
+    ...(clause === null || clause === "unsayable"
+      ? {}
+      : { listedFailureClause: { configurations: clause.configurations, engine: clause.engine } }),
   };
   return { ...statement, supportable: statementSupport(statement, gateHolds) };
 }
@@ -537,6 +610,28 @@ export function renderStatement(inputs: readonly StatementInput[], maps: LegacyM
         ]),
       );
     lines.push("");
+  }
+  if (statement.listedFailures !== undefined) {
+    lines.push(
+      `## ${CATALOG_LABELS.failures}`,
+      "",
+      CATALOG_TEXT.failures,
+      "",
+      `| ${CATALOG_LABELS.failureColumns.join(" | ")} |`,
+      "|---|---|---|---|---|---|---|",
+      ...statement.listedFailures.map((f) =>
+        row([
+          `${f.suite} / ${f.run}`,
+          checkName(f.rung),
+          `${f.a} / ${f.b}`,
+          f.metric,
+          `${classLabel(f.class)} (\`${f.class}\`)`,
+          f.gotcha,
+          f.reproducer,
+        ]),
+      ),
+      "",
+    );
   }
   lines.push(
     `## ${L.notCovered}`,

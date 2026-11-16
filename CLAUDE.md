@@ -50,6 +50,7 @@ node bin/lvrtc.mjs run suites/states.json --checks geometric-mtf,lv-mtf-replay,w
 node bin/lvrtc.mjs run suites/catalog.json --checks built-system,first-order,ray-trace,optical-path,geometric-mtf --jobs 4   # OWNER ONLY: every catalog state (1,341); MTF with --checks geometric-mtf,lv-mtf-replay,wave-mtf; recipe in docs/REFERENCE.md, Stage 5.3 (old ids there)
 node bin/lvrtc.mjs report catalog --catalog    # reports/catalog.{md,json} from the two catalog baselines alone
 node bin/catalog-case.mjs <run> suites/catalog-repro/<run>.json   # a one-run reproducer of one catalog state (suite catalog-repro)
+node bin/catalog-case.mjs --suite focus-stations <run> suites/focus-stations-repro/<run>.json   # the same of a focus station (suite focus-stations-repro)
 node bin/catalog-attribution.mjs <temporary LVRTC_RUNS_DIR>       # after a reproducer: 60-digit LV/reference-tracer check, native optiland rows
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,reference-tracer --checks built-system,first-order   # real lenses on the built-in engines
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,reference-tracer --checks built-system,first-order,ray-trace,optical-path,geometric-mtf   # with LV's own launch rays traced, and the geometric MTF of them
@@ -725,6 +726,17 @@ Stage 9.8 renamed the opaque engine ids (`LEGACY_ENGINE_IDS`; the vocabulary's `
   time. Its hermetic synthetic goldens are written only by `node test/report/writeGolden.ts`. The owner signed
   off the supportable sentence word for word (2026-10-23): change its words only with the owner. The plan records
   the amended unnamed-state/catalog exclusion. Every committed `reports/**/*.md` passes `wordingProblems`.
+  **The owner signed off one clause word for word (2026-11-16)**, placed before "Dispersion, white-light
+  weighting…" and printed only where a configuration of the statement's gated checks has a listed failure
+  (`listedFailureClause`): "Configurations at which a known failure of one engine is listed (2, optiland's, where
+  LensVisualizer and the reference tracer agree) are not counted." The count is of configurations; the engine must
+  be optiland, whose name the signed words carry (another engine's listed failure refuses the sentence). An exactly
+  listed FAIL no longer blocks the sentence (an unlisted FAIL or ERROR does);
+  its configurations leave the count and the quoted figures, and the statement lists the failures (`listedFailures`,
+  "Failures, classified"). The clause, and so the sentence, cannot be said where the listed pairs name more than one
+  engine besides LensVisualizer and the reference tracer, or where a LensVisualizer–reference-tracer pair of those
+  configurations on a gated check is not Pass (or has no ray-trace pair): the statement refuses as before. Without
+  a listed failure the statement is byte for byte as before (`test/report/statement.test.ts` holds all three).
 - **MTF baselines are files of their own** (`baselines/<suite>.mtf.json`, `reports/<suite>/mtf.{md,json}`;
   `--mtf` on `baseline write` and `check`; `verify` holds both kinds). `buildBaseline` with `MTF_BASELINE`: the
   rungs r4, r4f, r5, r5g, r6a, r6b of the run, each metric with `measured`, a rung's `steps`, `bands` and, for r5
@@ -946,7 +958,9 @@ Stage 9.8 renamed the opaque engine ids (`LEGACY_ENGINE_IDS`; the vocabulary's `
   run (name and case hash), rung and pair of engines, the verdict, metrics, counts, policy, fingerprints and
   adapter revisions; no ray arrays, no prescriptions. `reports/<suite>/rays.{md,json}` are rendered from the
   baseline alone. `lvrtc baseline write <suite>` writes both from a compared run and refuses a run with a FAIL or
-  ERROR pair (the catalog alone admits a FAIL listed exactly in `docs/known-failures.json`). Source refusals are recorded as coded run problems with no ERROR pair.
+  ERROR pair (the catalog and focus-stations alone admit a FAIL listed exactly in their lists of known failures,
+  `docs/known-failures.json` and `docs/known-failures.focus-stations.json`). Source refusals are recorded as coded run
+  problems with no ERROR pair.
   `lvrtc baseline check <suite>` needs the engines: per record OK, STALE(case|engine|policy) with
   REFRESHABLE or DRIFT, NEW or GONE; it exits 1 only on DRIFT, FAIL or ERROR. `lvrtc verify` is hermetic and the
   last step of `npm run check`: schema, invariants, policy hash, and reports byte for byte; it cannot see STALE.
@@ -1112,7 +1126,8 @@ Stage 9.8 renamed the opaque engine ids (`LEGACY_ENGINE_IDS`; the vocabulary's `
   then ordinary zoom ends; wide open, reference line, design plane, lv/ref/optiland, gated R0–R4/R4f/R6a only.
   Source refusals remain coded runs. At clean LV `879c06102` this expands 1,341 states. Never run a full sweep
   as an implementer; the bounded sample is at most 25 lenses, using temporary storage and at most four jobs.
-- Catalog-only baseline annotations state contract **1.6**: `runs[].features`, `censusReasons` and pair `failures`.
+- Catalog-only baseline annotations state contract **1.6**: `runs[].features`, `censusReasons` and pair `failures`
+  (since 2026-11-16 `failures` also of focus-stations, below).
   The baseline writer copies flags from validated cases, and codes from source/field/recipe problems. No engine
   wire document or global `CONTRACT_VERSION` changes. All other suite baseline formats/FAIL refusals stay as before.
 - `docs/known-failures.json` admits exact catalog FAIL evidence only. Each exceeding metric needs run/rung/ordered
@@ -1122,8 +1137,35 @@ Stage 9.8 renamed the opaque engine ids (`LEGACY_ENGINE_IDS`; the vocabulary's `
   is DRIFT. ERROR is never admitted; comparison always fails on FAIL. Empty after the zero-FAIL sample; the subsequent owner rays sweep has 83 FAIL rows on 12 lenses, attributed
   as method with 24 exact three-request aggregate entries and one-run reproducers. See docs/REFERENCE.md's Stage 5.3
   attribution table and docs/catalog-attribution.json.
-  `lvrtc verify` reports a FAIL or ERROR in any baseline other than the catalog's, and a list entry that no
-  classification of the catalog baselines uses (`unusedKnownFailures`): remove an entry once its FAIL is gone.
+  `lvrtc verify` reports a FAIL or ERROR in any baseline other than the catalog's and focus-stations' (each held to
+  its list), and a list entry that no classification of the catalog baselines uses (`unusedKnownFailures`): remove
+  an entry once its FAIL is gone.
+- **focus-stations lists known failures too** (owner decision 2026-11-16; `KNOWN_FAILURE_SUITES` in
+  `src/baseline/catalog.ts`, `FAILURE_LIST_SUITES` in `src/contract/baseline.ts`): `docs/known-failures.focus-stations.json`,
+  the catalog's schema at today's ids, read by `readKnownFailures(root, suite)` (no file: none listed); the catalog's
+  list and its raw-id paths are unchanged, byte for byte. `baseline write`, `check`, `verify`, `verify:real`, the
+  reports, the statement and the dashboard treat an exactly listed focus-stations FAIL as the catalog's (its class and
+  gotcha shown; contract 1.6 only where a pair is classified). Unlike the catalog's, an entry whose run no committed
+  focus-stations baseline holds is **pending** (`pendingKnownFailures`: a note of `verify`, no problem); once a
+  baseline holds the run, the entry must classify a FAIL exactly or it is unused (a problem). An entry that can never
+  be met is refused (code `known-failure-of-no-run`, `knownFailuresOfNoRun`): `baseline write` (rays) of a baseline
+  that holds no run of it, `baseline check` of a run in neither the committed baseline nor today's run (an error of
+  the check). `baseline check` calls a listed FAIL of a run the baseline lacks NEW (an unlisted one DRIFT, as the
+  catalog's). Outside the catalog contract 1.6 is stated only with a classification (`verify` reports one without),
+  and `lvrtc statement` holds the classifications to the list before writing, as `verify` does. **`lvrtc compare
+  focus-stations` exits 1 by design** while a listed FAIL stands (comparison always fails on FAIL, as for `lvrtc run`
+  on diffractive and folded): a refresh script uses `baseline check focus-stations && baseline write focus-stations`,
+  which exit 0 on exactly listed FAILs, and must not stop at `compare`. Reproducers:
+  `node bin/catalog-case.mjs --suite focus-stations <run> suites/focus-stations-repro/<run>.json` (suite
+  `focus-stations-repro`; never `focus-stations`). Listed: the `-zoom0-focus1` stations of the Fujinon XF 8-16 mm
+  and XF 23 mm f/2, `ray-trace` `mask.mismatches` of `lv`–optiland and optiland–`reference-tracer`, class method
+  ("Another crossing" of the gotcha on optiland's asphere iteration), pending until the owner's refresh writes them.
+  `test/integration/optiland/stations.test.ts` accepts exactly these (classified as `baseline write` would) and fails
+  on any other. On the two requests of the listed FAILs alone (`listedRequests`, keyed by check, run and request) the
+  pairs of optiland and the reference tracer are held to the gates, not the exact tracers' bounds (the batch keeps
+  optiland's far crossings), and optiland's failed rays may be blocked by the others on the next surface; every other
+  request keeps the bounds. The stations without rays are pinned: only the Pentax A 200 mm macro's second station at
+  `f5b456fec` (`chief-ray-failed` at every field). Evidence: docs/REFERENCE.md, "Known failures of focus-stations".
 - `node bin/catalog-case.mjs <expanded-name> suites/catalog-repro/<name>.json` makes an ordinary one-run suite
   from the source expansion, without prescriptions. Its suite is named `catalog-repro`, so a reproduction never
   replaces `runs/catalog`; never name a reproducer suite `catalog`.
@@ -2581,8 +2623,8 @@ Stage 9.8 renamed the opaque engine ids (`LEGACY_ENGINE_IDS`; the vocabulary's `
   stopped on the odd asphere 2, where the others stop them on 3) and the XF 23 mm f/2's (2 rays carried past the
   asphere 7): docs/gotchas.md, "On an asphere optiland's iteration starts at the base conic, and goes where that leads".
   Worst passing figures: R2 hit 1.45e-10 mm (`lv` – `reference-tracer`, the XF 8-16 mm at 64°), R3 2.3e-7 waves, R4
-  1.6e-9, R4f 2.3e-14, R6a judged 1.10e-9 (optiland – `reference-tracer` 1.05e-9). `baseline write focus-stations`
-  refuses a FAIL outside the catalog: how the refresh treats these two stations is the owner's decision.
+  1.6e-9, R4f 2.3e-14, R6a judged 1.10e-9 (optiland – `reference-tracer` 1.05e-9). The owner decided (2026-11-16)
+  to list the four as known failures of focus-stations (above, Stage 5.3).
 - The fingerprint of `lv`, `replay`, `wave` and `flux` moved with LensVisualizer's closure (`c5c5ba6d` to `f0066505`),
   and their adapter revisions (`lv` `2a10ac61` to `674d26ff`, `replay` `971fd882` to `0f8e411d`, `wave` `461b0dae` to
   `5541b54d`, `flux` `58918afc` to `30c7115b`); `reference-tracer`'s, `reference-seidel`'s and the TypeScript closure of

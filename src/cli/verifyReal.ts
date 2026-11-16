@@ -8,6 +8,7 @@ import { availableParallelism } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { KNOWN_FAILURES, knownFailuresFile, listsKnownFailures } from "../baseline/catalog.ts";
 import { baselineFile, mtfBaselineFile } from "../baseline/files.ts";
 import { REPO_ROOT } from "../core/config.ts";
 import { defaultMemoryBudgetGiB, jobEstimateGiB } from "../core/memoryBudget.ts";
@@ -95,7 +96,7 @@ export function verifyRealHelpBody(): string[] {
       ],
     ]),
     ...paragraph(
-      `Exit code: 0 when every result of every suite is ${CLEAN_LABELS.join(", ")}, with no failure that docs/known-failures.json does not list and no engine that could not be used (a side-by-side figure that moved is reported and fails nothing); 1 otherwise, or when a check was interrupted (the checks after it are not run); 2 when nothing was checked: a command line, suite or baseline that is not there, or a machine that is not ready.`,
+      `Exit code: 0 when every result of every suite is ${CLEAN_LABELS.join(", ")}, with no failure that its suite's list of known failures (docs/known-failures.json for the catalog, docs/known-failures.focus-stations.json for focus-stations) does not list and no engine that could not be used (a side-by-side figure that moved is reported and fails nothing); 1 otherwise, or when a check was interrupted (the checks after it are not run); 2 when nothing was checked: a command line, suite or baseline that is not there, or a machine that is not ready.`,
     ),
   ];
 }
@@ -365,7 +366,7 @@ export interface CheckOutcome {
   readonly records: number;
   readonly counts: Readonly<Record<string, number>> | null;
   readonly stale: Readonly<Record<string, number>> | null;
-  /** Pairs that are FAIL today and are listed in docs/known-failures.json: admitted, as the check admits them. */
+  /** Pairs that are FAIL today and are listed in their suite's list of known failures: admitted, as the check admits them. */
   readonly listedFails: number;
   /** Why the check is not clean; empty when it is. */
   readonly problems: readonly string[];
@@ -397,6 +398,11 @@ function checkJson(stdout: string): CheckJson | null {
   }
 }
 
+/** The list of known failures a suite's failures are read against: its own, or the catalog's, which lists none of it. */
+function listOf(suite: string): string {
+  return listsKnownFailures(suite) ? knownFailuresFile(suite) : KNOWN_FAILURES;
+}
+
 /**
  * The rule of a clean check: `baseline check` exited 0, said it did not fail, and every record is OK, REFRESHABLE
  * or MOVED. A DRIFT, an unlisted FAIL or ERROR, an engine that could not be used, a NEW or a GONE record (the suite
@@ -424,7 +430,8 @@ export function judgeCheck(step: CheckStep, ended: LvrtcEnded): CheckOutcome {
   const t = CHECK_LV_OUTPUT_TEXT;
   const records = (n: number): string => `${n} ${n === 1 ? t.record : t.records}`;
   if (count("DRIFT") > 0) problems.push(`${records(count("DRIFT"))} ${t.drift}`);
-  if (failing > 0) problems.push(`${failing} ${failing === 1 ? t.failingOne : t.failing}`);
+  const list = listOf(step.suite);
+  if (failing > 0) problems.push(`${failing} ${failing === 1 ? t.failingOne(list) : t.failing(list)}`);
   if (count("NEW") > 0) problems.push(`${count("NEW")} ${t.newProblem}`);
   if (count("GONE") > 0) problems.push(`${count("GONE")} ${t.goneProblem}`);
   const unclean = said.records.filter((record) => !CLEAN_OUTCOMES.includes(record.outcome)).length;
@@ -459,7 +466,7 @@ function jobsText(jobs: number): string {
 
 /**
  * The line of one set of committed results in the summary: what it came to, how many results came out as each
- * outcome (by label, those above zero), what made them out of date, the failures docs/known-failures.json lists, its
+ * outcome (by label, those above zero), what made them out of date, the failures its suite's list of known failures lists, its
  * jobs and how long it took; then, on a line of their own, why it is not clean and what is noted.
  */
 export function summaryLine(outcome: CheckOutcome, seconds: number | null): string {
@@ -480,7 +487,7 @@ export function summaryLine(outcome: CheckOutcome, seconds: number | null): stri
       );
     }
   }
-  if (outcome.listedFails > 0) parts.push(`${outcome.listedFails} ${t.listedFails}`);
+  if (outcome.listedFails > 0) parts.push(`${outcome.listedFails} ${t.listedFails(listOf(step.suite))}`);
   parts.push(jobsText(step.jobs));
   if (seconds !== null) parts.push(`${seconds.toFixed(0)} s`);
   const said = [...outcome.problems, ...outcome.notes];

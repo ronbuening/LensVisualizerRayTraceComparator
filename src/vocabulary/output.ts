@@ -151,6 +151,10 @@ export const VERIFY_OUTPUT_TEXT = {
     "No engine was run: whether a lens state or an engine has changed since the results were written (out of date) is what lvrtc baseline check finds, not this command.",
   snapshotHeld: "it is held to the limits file it was written with, not to the one at hand",
   snapshotNotRewritten: "and is not written anew with it",
+  /** Listed failures of a suite whose runs no committed baseline holds yet: neither used nor unused until it does. */
+  pending: (count: number, suite: string): string =>
+    `${count} listed ${count === 1 ? "failure is" : "failures are"} pending, ${count === 1 ? "its run" : "their runs"} ` +
+    `in no committed ${suite} baseline yet:`,
 } as const;
 
 /** What `lvrtc check-lv` (and `npm run verify:real`) prints. */
@@ -178,15 +182,19 @@ export const CHECK_LV_OUTPUT_TEXT = {
   record: "record",
   outOfDate: "out of date",
   changedIn: "changed in",
-  listedFails:
-    "pairs fail as docs/known-failures.json lists them (failures of the dated catalog snapshot, each explained there)",
+  /** Failures of a suite whose list of known failures (`file`) lists them as they are. */
+  listedFails: (file: string): string =>
+    file === "docs/known-failures.json"
+      ? "pairs fail as docs/known-failures.json lists them (failures of the dated catalog snapshot, each explained there)"
+      : `pairs fail as ${file} lists them (each explained there)`,
   cleanAll: "every result of",
   cleanMeans: "is unchanged, out of date but still within its limits, or a side-by-side figure that moved",
   notClean: "not clean",
   remaining: "the remaining sets were not checked",
   drift: "changed beyond limits",
-  failing: "pairs fail or end in an error today and are not listed in docs/known-failures.json",
-  failingOne: "pair fails or ends in an error today and is not listed in docs/known-failures.json",
+  /** Failures and errors that the suite's list of known failures (`file`) does not list. */
+  failing: (file: string): string => `pairs fail or end in an error today and are not listed in ${file}`,
+  failingOne: (file: string): string => `pair fails or ends in an error today and is not listed in ${file}`,
   newProblem: "new: the suite is not the one the committed results are of",
   goneProblem: "no longer run: the suite is not the one the committed results are of",
   otherProblem: "neither unchanged, out of date but within limits, nor a side-by-side figure that moved",
@@ -347,7 +355,9 @@ export const MOVED_TEXT = {
   verdicts: (was: string, now: string): string => `verdicts were ${was} — now ${now}`,
   figure: (name: string, was: string, now: string, limit: string): string =>
     `${name} was ${was} — now ${now} (${limit})`,
-  catalogFailure: "a catalog Fail that docs/known-failures.json does not list as it is (new, changed or unclassified)",
+  /** A Fail of a suite that lists known failures, which its list (`file`) does not list as it is. */
+  listedFailure: (suite: string, file: string): string =>
+    `a ${suite} Fail that ${file} does not list as it is (new, changed or unclassified)`,
   /** Between two things that moved in one record. */
   separator: " | ",
 } as const;

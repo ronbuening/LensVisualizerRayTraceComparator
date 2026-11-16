@@ -17,7 +17,7 @@ import { sha256Hex } from "../core/numeric/hash.ts";
 import { COUNT_UNITS } from "../report/floor.ts";
 import { escapeCell } from "../report/markdown.ts";
 import { checkName, figureName, placeText, quantityName, unitName } from "../report/names.ts";
-import { HOW_TO_READ_TEXT, REPORT_TEXT } from "../report/wording.ts";
+import { CATALOG_LABELS, CATALOG_TEXT, HOW_TO_READ_TEXT, REPORT_TEXT } from "../report/wording.ts";
 import {
   ENGINE_DETAIL_TEXT,
   FIELD_ANGLE_QUANTITIES,
@@ -30,6 +30,7 @@ import {
   SUPPORT_STATUS_TEXT,
   VERDICT_TEXT,
   checkOf,
+  classLabel,
   engineName,
   engineOf,
   runNameParts,
@@ -117,6 +118,22 @@ export interface ReportRung {
   readonly rows: readonly ReportRow[];
 }
 
+/**
+ * One classified failing figure of a pair that fails as a list of known failures lists it, in a baseline other than
+ * the catalog's (whose failures the catalog statistics list): where it is, its class, the entry of docs/gotchas.md
+ * that explains it and the command that reproduces it in one run.
+ */
+export interface ReportFailure {
+  readonly run: string;
+  readonly rung: string;
+  readonly a: string;
+  readonly b: string;
+  readonly metric: string;
+  readonly class: string;
+  readonly gotcha: string;
+  readonly reproducer: string;
+}
+
 /** The report of one baseline. */
 export interface BaselineReport {
   readonly contract: string;
@@ -128,6 +145,8 @@ export interface BaselineReport {
   readonly engines: readonly BaselineEngine[];
   readonly runs: readonly Pick<Baseline["runs"][number], "name" | "caseId" | "problems">[];
   readonly rungs: readonly ReportRung[];
+  /** The listed failures of a suite other than the catalog, where it has any (`ReportFailure`). */
+  readonly failures?: readonly ReportFailure[];
 }
 
 function counted(verdicts: readonly Verdict[]): BaselineVerdictCount[] {
@@ -270,6 +289,27 @@ export function buildBaselineReport(baseline: Baseline, source: Baseline = basel
     };
   });
 
+  // The catalog's failures are listed by the catalog statistics (reports/catalog.md), whose snapshot's reports keep
+  // their bytes; another suite's are listed here.
+  const failures: ReportFailure[] =
+    baseline.suite.name === "catalog"
+      ? []
+      : baseline.runs.flatMap((run) =>
+          run.rungs.flatMap((rung) =>
+            rung.pairs.flatMap((pair) =>
+              (pair.failures ?? []).map((failure) => ({
+                run: run.name,
+                rung: rung.rung,
+                a: pair.a,
+                b: pair.b,
+                metric: failure.metric,
+                class: failure.class,
+                gotcha: failure.gotcha,
+                reproducer: failure.reproducer,
+              })),
+            ),
+          ),
+        );
   return {
     contract: CONTRACT_VERSION,
     kind: "baseline-report",
@@ -279,6 +319,7 @@ export function buildBaselineReport(baseline: Baseline, source: Baseline = basel
     engines: baseline.engines,
     runs: baseline.runs.map(({ name, caseId, problems }) => ({ name, caseId, ...(problems ? { problems } : {}) })),
     rungs,
+    ...(failures.length === 0 ? {} : { failures }),
   };
 }
 
@@ -427,6 +468,18 @@ function howToReadLines(report: BaselineReport, layout: BaselineReportLayout): s
   if (layout.measured === true) lines.push("", t.measured);
   const rays = report.rungs.some((rung) => rung.rows.some((row) => row.rays !== undefined));
   if (rays) lines.push("", RAY_OUTCOME_TEXT);
+  // The classes of the listed failures, as the catalog statistics give them.
+  if (report.failures !== undefined) {
+    lines.push(
+      "",
+      CATALOG_LABELS.failuresIntro,
+      "",
+      ...table(
+        CATALOG_LABELS.classColumns,
+        [...new Set(report.failures.map((f) => f.class))].sort().map((kind) => [classLabel(kind), `\`${kind}\``]),
+      ),
+    );
+  }
   // The places the report names, each once, with the quantity whose field it is.
   const places = [
     ...report.rungs.flatMap((rung) =>
@@ -578,6 +631,27 @@ export function renderBaselineMarkdown(report: BaselineReport, layout: BaselineR
       ),
     ),
     "",
+    ...(report.failures === undefined
+      ? []
+      : [
+          `## ${CATALOG_LABELS.failures}`,
+          "",
+          CATALOG_TEXT.failures,
+          "",
+          ...table(
+            CATALOG_LABELS.failureColumns,
+            report.failures.map((f) => [
+              f.run,
+              checkName(f.rung),
+              `${f.a} / ${f.b}`,
+              f.metric,
+              `${classLabel(f.class)} (\`${f.class}\`)`,
+              f.gotcha,
+              f.reproducer,
+            ]),
+          ),
+          "",
+        ]),
     `## ${r.support}`,
     "",
     ...r.supportIntro,

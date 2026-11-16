@@ -7148,3 +7148,97 @@ The fake LensVisualizer tree mirrors each name: `resolveMtfPreferences` and the 
     `otf-of-optiland-wavefront` (`501c2a99`) did not move. The worker's did not either.
   - No baseline was written or checked. At the owner's refresh, every photopic record is stale by case as well as by
     engine, and focus-stations gains 425 stations, two of which carry optiland's FAILs above.
+
+## Known failures of focus-stations (owner decision 2026-11-16)
+
+The owner decided to list the four optiland FAILs that the new close stations of LensVisualizer `f5b456fec` carry
+(above) as known failures of focus-stations, extending the catalog's mechanism to a second suite, and to let the
+validation statement say so in one clause he signed off word for word.
+
+- **The list.** `docs/known-failures.focus-stations.json`, the schema of `docs/known-failures.json` (which stays the
+  catalog's, byte for byte, with its old ids) at today's check and engine ids. `KNOWN_FAILURE_SUITES` (catalog,
+  focus-stations) in `src/baseline/catalog.ts` and `FAILURE_LIST_SUITES` in `src/contract/baseline.ts` name the
+  suites that may list; `knownFailuresFile(suite)` names a suite's file and `readKnownFailures(root, suite)` reads it
+  (for a suite other than the catalog, no file is no entry; the catalog's file is required as before).
+- **The entries.** Each is a pair of optiland's on `ray-trace`, metric `mask.mismatches`, class method, gotcha
+  [On an asphere optiland's iteration starts at the base conic, and goes where that leads](gotchas.md#on-an-asphere-optilands-iteration-starts-at-the-base-conic-and-goes-where-that-leads)
+  ("Another crossing"; the entry now names both stations), three requests a pair:
+
+  | Run | Pair | Mask mismatches | Evidence hash |
+  |---|---|---:|---|
+  | `certified-fujifilm-fujinon-xf-8-16mm-f28-r-lm-wr-zoom0-focus1` | `lv` – optiland | 26 | `b938e96d47d2a986ac17b7b479753c1df0e8ed8616852a8424ccb0dcd5e75453` |
+  | `certified-fujifilm-fujinon-xf-8-16mm-f28-r-lm-wr-zoom0-focus1` | optiland – `reference-tracer` | 26 | `a2e9355b14748ce32bf19fefe6e00f206e371f261f52a1b23930a42a228820b5` |
+  | `certified-fujifilm-xf-23mm-f2-r-wr-zoom0-focus1` | `lv` – optiland | 2 | `f1f8d09be75ca72fe0009d3d9b352d6c73463e48f792246bfd2e51246b298507` |
+  | `certified-fujifilm-xf-23mm-f2-r-wr-zoom0-focus1` | optiland – `reference-tracer` | 2 | `862becfd4934f13e22528efe19f8499ffbe26ce498eafcb0ce53eacb22845099` |
+
+  Each hash is `failureEvidence(requests, pair)` of the pair's aggregate record, measured on the evidence run of the
+  425 new stations and again on each entry's reproducer at the committed code (LensVisualizer `f5b456fec`, optiland
+  `a9e544a2`): the same four hashes.
+- **Reproducers.** `node bin/catalog-case.mjs --suite focus-stations <run> suites/focus-stations-repro/<run>.json`
+  writes a one-run suite named `focus-stations-repro` (`reproducerSuiteName`; never `focus-stations`, whose run
+  directory `baseline write` records) from the case source's expansion, without a prescription; the entry's command
+  runs it with `--checks ray-trace --jobs 4`. Each of the two, run into a temporary `LVRTC_RUNS_DIR` and compared,
+  gives its station's three requests and two FAILs with the hashes above (`lv` – `reference-tracer` PASS).
+- **Write, check, verify.** `baseline write focus-stations` classifies the run with the list (`classifyCatalog`) and
+  admits a FAIL only where every failing figure has its entry with that pair's evidence; it then states contract 1.6,
+  and only then (the annotation minor 6 added). An unlisted FAIL or any ERROR is refused, the refusal naming the list.
+  `baseline check` holds an unchanged listed FAIL OK (or REFRESHABLE) and a changed, unlisted or reclassified one
+  DRIFT (`new, changed or unclassified focus-stations FAIL`), as the catalog's; unlike the catalog's, a listed FAIL of
+  a run the baseline does not hold yet is NEW, an unlisted one DRIFT. `verify` holds each committed focus-stations
+  baseline's classifications to the list and, for the list, splits its entries by whether a committed focus-stations
+  baseline holds their run (`pendingKnownFailures`): an entry of a held run must classify a FAIL exactly, or it is
+  unused, a problem; an entry of a run no committed baseline holds is **pending**, a note and no problem. Today the
+  four are pending: the committed baseline holds 74 runs, and the stations are among the 444 runs the owner's refresh
+  adds as NEW (14 from LensVisualizer `420b47555`, 430 from `f5b456fec`).
+  An entry that can never be met is refused with the code `known-failure-of-no-run` (`knownFailuresOfNoRun`): by
+  `baseline write focus-stations` where the rays baseline it writes holds no run of the entry (a run name mistyped),
+  and by `baseline check` where the run is in neither the committed baseline nor today's run (a station
+  LensVisualizer renumbered), as an error of the check. Outside the catalog contract 1.6 is stated only where a pair
+  is classified: `verify` reports a baseline that states it without one.
+- **Comparing and refreshing.** `lvrtc compare focus-stations` exits 1 by design while a listed FAIL stands, as every
+  comparison with a FAIL does (and as `lvrtc run` does on diffractive and folded for their source refusals). The
+  refresh runs `lvrtc baseline check focus-stations && lvrtc baseline write focus-stations` (each with `--mtf` after),
+  which exit 0 on exactly listed FAILs; a refresh script must not stop at `compare`.
+  `verify:real` names each suite's own list in its lines and counts a listed FAIL clean, as the catalog's.
+- **Reports and dashboard.** A baseline's report other than the catalog's (whose report is its own) has a section
+  "Failures, classified" after the summary, with each failing figure's run, check, engines, class (its label and the
+  stored value), gotcha and reproducer, and the classes in "How to read this", only where the baseline holds one; every other report keeps its
+  bytes. The dashboard shows, for any baseline, each classified figure with its class and its gotcha.
+- **The statement.** A FAIL listed exactly no longer blocks the supportable sentence; an unlisted FAIL or ERROR still
+  does. The configurations with a listed failure leave the count and the quoted figures (as every configuration
+  whose pairs do not all pass does), the statement lists the failures (`listedFailures`, "Failures, classified"), and
+  the sentence gains the clause the owner signed off on 2026-11-16, before "Dispersion, white-light weighting…":
+  "Configurations at which a known failure of one engine is listed (2, optiland's, where LensVisualizer and the
+  reference tracer agree) are not counted." The count is the baselines' (`listedFailureClause`). The clause cannot be
+  said, and the statement refuses the sentence as before, where the listed pairs name more than one engine besides
+  LensVisualizer and the reference tracer, where that engine is not optiland (the signed words name it), or where a
+  LensVisualizer–reference-tracer pair of those configurations on a gated check is not Pass. `lvrtc statement` holds
+  each baseline's classifications to its suite's list before writing (`statementClassificationProblems`), as `verify`
+  does. Without a listed failure
+  nothing is added: the committed `reports/validation-statement.*` and the synthetic goldens are byte for byte as
+  before.
+- **Tests.** `test/baseline/listedFailures.test.ts` (classification, contract minor, check outcomes, pending and
+  unused, the committed list and its reproducers), the focus-stations round trip of `test/cli/baseline.test.ts`
+  (write refused then admitted, check, verify pending, used, unused and changed),
+  `test/report/statement.test.ts` (the clause in the owner's words, its count, and each refusal),
+  `test/dashboard/listedFailures.test.ts`; `test/integration/optiland/stations.test.ts` runs focus-stations three
+  ways and accepts exactly the listed failures (a classification as `baseline write` makes it, every entry met,
+  nothing else failing).
+- **Measured** (LensVisualizer `f5b456fec`, optiland `a9e544a2`; `stations.test.ts`, serial, 4 min 25 s): 511
+  stations of 319 lenses with a case, 1,459 ray sets; 14,590 pairs (pairwise and against the reference engine),
+  14,584 PASS and 6 FAIL, the four listed pairs (the two of optiland and `reference-tracer` counted in both modes),
+  each met exactly. On R2 1,295,597 rays are ok in all three engines; optiland fails 74 rays, each blocked by `lv` and
+  `reference-tracer`: at the XF 8-16 mm's station 14 of them on surface 2, which both block on surface 3 (the listed
+  difference of where rays end), the rest where both block them. The XF 8-16 mm's listed request keeps the 26 rays
+  optiland iterated beyond the rim in its batch, which raises the batch's tolerance (the tolerance of a batch,
+  docs/gotchas.md): optiland – `reference-tracer` there are hits 3.96e-10 mm and paths 2.37e-7 waves apart, within
+  the gates (1e-8 mm, R3 PASS) but beyond the exact tracers' bounds the test holds every other pair to (1e-10 mm,
+  1e-7 waves); the test holds the pairs of optiland and the reference tracer on those two requests alone to the gates
+  and says their figures, and there lets the others block optiland's failed rays on the next surface; every other
+  request of the two runs keeps the bounds. The XF 23 mm's are 1.4e-12 mm and 2.1e-9 waves. Every other figure is within the bounds as before (worst `lv` –
+  `reference-tracer` hit 1.45e-10 mm, path 8.6e-8 waves).
+- **A station without rays.** `certified-pentax-a-200mm-f4-macro-ed-zoom0-focus2`, new at `f5b456fec`, exports a case
+  but has no ray set: LensVisualizer finds no chief ray that reaches the image plane at any of its three fields
+  (`chief-ray-failed`, coded, failing nothing). The test, which held every station to have rays, now admits a station
+  whose every field is such a coded problem (`chief-ray-failed`, `vignetted`, `outside-modeled-field`), and pins the
+  stations without rays to exactly this one.

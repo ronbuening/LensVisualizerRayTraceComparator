@@ -279,6 +279,7 @@ The suites committed under suites/.
 | `smoke` | Two simple primes and a simple zoom: a quick first run of LensVisualizer and the reference tracer. |
 | `catalog` | Every lens of LensVisualizer's catalog, wide open, at both zoom ends: the maintainer's full sweep. Its baselines are a dated snapshot. |
 | `catalog-repro` | The files under suites/catalog-repro: each a one-run suite that repeats one catalog lens state a known failure was found on. |
+| `focus-stations-repro` | The files under suites/focus-stations-repro: each a one-run suite that repeats one focus station a known failure was found on. |
 
 ## Verdicts
 

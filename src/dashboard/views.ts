@@ -1009,8 +1009,11 @@ export interface BaselinePairView {
   /** How many requests came to each verdict, as the baseline counts them. */
   readonly verdicts: readonly { readonly verdict: Verdict; readonly requests: Figure }[];
   readonly metrics: readonly BaselineMetricView[];
-  /** A catalog FAIL's classifications: the metric and its class. */
-  readonly failures: readonly { readonly metric: string; readonly class: string }[];
+  /**
+   * The classifications of a FAIL that its suite's list of known failures lists (the catalog's, focus-stations'): the
+   * metric, its class and the entry of docs/gotchas.md that explains it.
+   */
+  readonly failures: readonly { readonly metric: string; readonly class: string; readonly gotcha: string }[];
   readonly stale: readonly StaleReason[];
   readonly notKnown: readonly StaleReason[];
   readonly badge: string;
@@ -1275,7 +1278,11 @@ export function buildBaselineRunView(
               where,
             };
           }),
-          failures: (pair.failures ?? []).map((failure) => ({ metric: failure.metric, class: failure.class })),
+          failures: (pair.failures ?? []).map((failure) => ({
+            metric: failure.metric,
+            class: failure.class,
+            gotcha: failure.gotcha,
+          })),
           ...recordStaleness(baseline, run, pair.a, pair.b, basis),
         };
       }),

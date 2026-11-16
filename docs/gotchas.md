@@ -1933,6 +1933,14 @@ medium's `propagation_model` with the same arithmetic; nothing the worker calls 
   **For the owner.** As for LensVisualizer's crossing loss, the class names the origin, not an acceptable answer:
   a ray carried on from an iterate 0.4 to 8 mm off optiland's own surface, with `converged=false`, is optiland's
   behaviour to report upstream if the owner chooses; nothing is filed.
+  **Two focus stations, listed (LV `f5b456fec`, optiland `a9e544a2`, the batch shielded).** The close stations
+  `certified-fujifilm-fujinon-xf-8-16mm-f28-r-lm-wr-zoom0-focus1` (full field, 64.2°: optiland stops 26 rays on surface
+  2, an odd asphere, and fails 14 more there, where `lv` and `reference-tracer` stop all 40 on surface 3) and
+  `certified-fujifilm-xf-23mm-f2-r-wr-zoom0-focus1` (33°: optiland carries 2 rays past surface 7, an asphere with a
+  term of power 3, and fails 20 more there, where both stop all 22 on 7) fail R2's mask in optiland's two pairs, `lv`
+  and `reference-tracer` agreeing on every ray. Another crossing, as at the XF 8-16 mm's wide end above; the owner
+  listed the four pairs in `docs/known-failures.focus-stations.json` (2026-11-16), each with its reproducer under
+  `suites/focus-stations-repro`.
 - **Class.** method.
 
 ### On an asphere optiland is as exact as a plain sum of its terms

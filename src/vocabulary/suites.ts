@@ -53,6 +53,11 @@ export const SUITES: readonly SuiteText[] = [
     description:
       "The files under suites/catalog-repro: each a one-run suite that repeats one catalog lens state a known failure was found on.",
   },
+  {
+    name: "focus-stations-repro",
+    description:
+      "The files under suites/focus-stations-repro: each a one-run suite that repeats one focus station a known failure was found on.",
+  },
 ];
 
 /** The line of a suite, or undefined. */
