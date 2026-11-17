@@ -36,11 +36,11 @@ which engines it is asked of and its limits.
 - **Python `>=3.10` as `python3`**, for the demonstration engines and the worker kit's own tests. Checking
   LensVisualizer does not need it; optiland brings an interpreter of its own.
 - **A LensVisualizer checkout**, cloned with git:
-  `git clone https://github.com/ronbuening/LensVisualizer.git`, then `git checkout 25f65d4b4` in it for the commit
+  `git clone https://github.com/ronbuening/LensVisualizer.git`, then `git checkout f5b456fec` in it for the commit
   the committed results were taken at. lvrtc reads it and never writes to it. It needs no `npm install`: lvrtc
   loads only LensVisualizer's optics and lens files, which import no package.
   <!-- Checked by walking the imports of every LensVisualizer module the binding loads, in a git archive of
-  25f65d4b4 outside both checkouts: 184 files, no bare package import, and none in any lens file. -->
+  f5b456fec outside both checkouts: 193 files, no bare package import, and none in any lens file. -->
 - **An optiland checkout with its own virtual environment**, made with Python 3.11 or later. lvrtc runs
   optiland with that interpreter and never installs anything into it:
 
@@ -50,7 +50,7 @@ which engines it is asked of and its limits.
   ```bash
   git clone https://github.com/optiland/optiland.git
   cd optiland
-  git checkout 4e893f53
+  git checkout a9e544a2
   python3.11 -m venv .venv          # or any later python3.x
   .venv/bin/python -m pip install -e .
   ```
@@ -58,7 +58,7 @@ which engines it is asked of and its limits.
   The install must be of the checkout itself (`-e .`): lvrtc names optiland's version by the commit of its
   checkout and a hash of its sources.
 
-**The committed results were taken at LensVisualizer `25f65d4b4` and optiland `4e893f53`.** On other commits, or
+**The committed results were taken at LensVisualizer `f5b456fec` and optiland `a9e544a2`.** On other commits, or
 with other versions of Python, numpy, scipy or numba under optiland, every result is first marked *out of date*
 (its lens data or engine code changed); checking again then says of each whether it is *still within its limits*
 or *changed beyond its limits*. A LensVisualizer commit that changes a lens marks that lens's results out of date
@@ -178,12 +178,6 @@ its reproducer commands, and older run directories. lvrtc still reads an old id 
 command. `lvrtc glossary <old id>` says what an old check or engine id is now, and `lvrtc checks <old id>` shows
 that check in full. `lvrtc checks` lists every check with its old id beside it, and
 [docs/GLOSSARY.md](docs/GLOSSARY.md) every engine with its own.
-
-Until the maintainer writes the committed results again at the new ids, `lvrtc check-lv` says of each suite that
-"the suite file is not the one the committed results name", and its records come out "Out of date, still within
-limits": out of date because the limits file and the code of the renamed engines changed with the ids. That is
-expected, and the check is still clean: the figures were computed again and stayed within their limits. A record
-"Changed beyond limits" is not explained by the rename.
 
 ## Troubleshooting
 

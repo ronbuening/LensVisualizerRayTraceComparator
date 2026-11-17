@@ -14,7 +14,7 @@ import type { RunSpec, Suite } from "../../src/contract/runSpec.ts";
 import { formatIssues, validateKind } from "../../src/contract/schemas.ts";
 import { CONTRACT_VERSION, CONTRACT_VERSION_1_3 } from "../../src/contract/version.ts";
 import { REPO_ROOT } from "../../src/core/config.ts";
-import { LEGACY_ENGINE_IDS, legacyEngineId } from "../../src/core/legacyIds.ts";
+import { LEGACY_ENGINE_IDS } from "../../src/core/legacyIds.ts";
 import { hashCanonical } from "../../src/core/numeric/hash.ts";
 import { loadSuite } from "../../src/core/suite.ts";
 import { BUILTIN_ENGINES } from "../../src/engines/builtin.ts";
@@ -146,13 +146,9 @@ test("the benchmark suite is the 12 configurations in four conditions, each on t
   // its hash, which baselines/benchmark.json names, is that of the file as written, and the baseline's runs are
   // these runs by name.
   const baseline = JSON.parse(readFileSync(join(REPO_ROOT, "baselines", "benchmark.json"), "utf8"));
-  // Until the maintainer's refresh the baseline is of the file as it was written before the engine rename (Stage
-  // 9.8), which is this file with the engines under their old ids, and nothing else.
-  const before = (baseline.engines as { id: string }[]).some((engine) => Object.hasOwn(LEGACY_ENGINE_IDS, engine.id));
-  const asHashed = before
-    ? runs.map((run) => ({ ...run, engines: run.engines?.map((id) => legacyEngineId(id)) }))
-    : runs;
-  assert.equal(hashCanonical({ name: "benchmark", runs: asHashed }), baseline.suite.hash);
+  // The maintainer's refresh (Stage 9.9) wrote it of the file as it is, its engines under today's ids.
+  assert.ok((baseline.engines as { id: string }[]).every((engine) => !Object.hasOwn(LEGACY_ENGINE_IDS, engine.id)));
+  assert.equal(hashCanonical({ name: "benchmark", runs }), baseline.suite.hash);
   assert.deepEqual(
     baseline.runs.map((run: { name: string }) => run.name),
     runs.map((run) => run.name),

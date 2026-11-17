@@ -9,8 +9,6 @@ import { policyProblems } from "../contract/policy.ts";
 import type { Policy } from "../contract/policy.ts";
 import { formatIssues, validateKind } from "../contract/schemas.ts";
 import { isCompatibleContract } from "../contract/version.ts";
-import { matchesBeforeRename } from "./policyTransition.ts";
-import type { TransitionMaps } from "./policyTransition.ts";
 import type { RungDefinition } from "../core/rungs.ts";
 import type { ComparatorLookup } from "./comparator.ts";
 
@@ -88,18 +86,12 @@ export function policyRegistryProblems(
   return problems;
 }
 
-/**
- * Baselines must state the policy version and content hash at hand. The one exception is the transition of the
- * check rename until the maintainer's refresh (`matchesBeforeRename`, `src/compare/policyTransition.ts`): a baseline
- * of version 24 is held to the policy at hand of version 25 under the ids it was written with.
- */
+/** Baselines must state the policy version and content hash at hand. */
 export function baselinePolicyMatches(
   stated: { readonly hash: string; readonly version: number },
   policy: Policy,
-  maps?: TransitionMaps,
 ): boolean {
-  if (stated.version === policy.version && stated.hash === hashCanonical(policy)) return true;
-  return matchesBeforeRename(stated, policy, maps);
+  return stated.version === policy.version && stated.hash === hashCanonical(policy);
 }
 
 /**

@@ -49,8 +49,7 @@ for (const [suite, records] of [
       assert.deepEqual(said.errors, []);
       assert.equal(said.records.length - said.counts.NEW, records);
       t.diagnostic(`${suite}: ${JSON.stringify(said.counts)}; stale ${JSON.stringify(said.stale)}`);
-      // Until the maintainer's refresh of the check rename every record is out of date by its limits file alone (v24
-      // against v25, the same limits): a record otherwise current then holds as REFRESHABLE.
+      // A record out of date by its limits file alone holds as REFRESHABLE; one otherwise current is OK.
       const current = said.records.filter(
         (record) => record.stale.every((reason) => reason === "policy") && record.outcome !== "NEW",
       );

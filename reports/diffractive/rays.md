@@ -13,12 +13,12 @@ engines are still those of the baseline. How to read this, near the end, says wh
 | Input | Value |
 |---|---|
 | Suite | diffractive |
-| Limits file | v24 |
+| Limits file | v25 |
 
 | Engine | Name | Version | What the engine states of itself |
 |---|---|---|---|
-| lv | LensVisualizer | 1 | clean checkout, 184 engine files |
-| optiland | optiland | 0.6.2.post117+g4e893f53 | backend numpy, checkout with uncommitted changes, JIT compilation on, Numba 0.65.1, NumPy 2.3.5, precision float64, Python 3.14.8, SciPy 1.16.3, 534 source files |
+| lv | LensVisualizer | 1 | clean checkout, 193 engine files |
+| optiland | optiland | 0.6.2.post234+ga9e544a2 | backend numpy, clean checkout, JIT compilation on, Numba 0.65.1, NumPy 2.3.5, precision float64, Python 3.14.8, SciPy 1.16.3, 611 source files |
 | reference-tracer | Reference tracer | 1 | 13 source files |
 
 ## Runs with a problem
@@ -510,16 +510,16 @@ contract version is that of the file format the baseline is written in.
 
 | Identifier | Value |
 |---|---|
-| Suite file | 9641803ac2132a78445530b795f878211e8b446ed4c8d4257f163c9c884d4ce2 |
-| Baseline file | c55b9b55b26882f89e87fc398cf3ccf4fe6d39dcc85e5ae43684ec54e1538ec3 |
-| Limits file | be3e032669e5859702174ce5c6ea63cd00f44850c893b09e005c0d8a407c4889 |
+| Suite file | 11c1257d7fb17669d98cf9abd0c830d93272845ba1eb920586b2e58540ad17b7 |
+| Baseline file | 2de1ad19e5f969c2462ea4d4734d4e1fb1801e5903e8f57fe2e46ac7584d708e |
+| Limits file | 3e6d9a8477bb56df20f310e2184e19169b30a07dc7b373508b746d8211f476ad |
 | Contract version of the baseline file | 1.0 |
 
 | Engine | Engine code | This tool's code behind it | Commit and sources |
 |---|---|---|---|
-| lv | 4669921bae7179c7eddd220fa367e696eae7acec3a5a788d0ca90da632d3eb6b | afad9cb89bd9a25fbfa5ee0ec335b1e315481414b7ba41da2f906c28856010c5 | commit 25f65d4b4213a21392cbae92680134906049b2ad |
-| optiland | bcfbf3916c1103b3b3b49a93117d3346a0bd6921ec35f01feb99bc1a2a6e39eb | 98f36151b0cdd2d3d3f82013841899de85309b22012967de64bbba662217fbcb | commit 4e893f53aee1312f2d091680b93dd2279711e197, distribution version 0.6.2.post117+g4e893f53, source hash 279af5c55d8ebe1610686b9dad3e6eeb22b1822037d59a0e5f148c2fb8937f38 |
-| reference-tracer | b7d0684b593261d14a1dfebb903774775bbe481a07ae2955689644dc0ffd919e | 2225e342b4fd8539480e933e59a3ca95a8ae2beeb24f45972b55fd4e4a59d357 | — |
+| lv | f0066505c45b705ef5e22a44ee6303ae9f47de00e295faad6d72b6090cdd4a61 | 674d26ffb708596a5462f6199b1cb2c28df679003651e53ebb4bbde0e590be9a | commit f5b456fec7b69184844078f6ec6b1ac132f8ec58 |
+| optiland | 2ca0f73256d5e0ead64aa3695522bef399721276bf11d612db34b7bf19c5ee39 | 59039a7b219f2882f1e4cabf8f43bc07a9fdf66ecb95d26f4076feca4406d853 | commit a9e544a2e058f1c1b64606e9ce90e6dc103efee1, distribution version 0.6.2.post234+ga9e544a2, source hash 1d35bfa2f7a6addd60f2c1057cd17e65a710a6a7d4e3a277e8675647d0262131 |
+| reference-tracer | 1285061cefc83b4538eba70d6a45fc6f0186be2b876f122a3721e150c5a34ed3 | 49ce9a07661a4cb64d5850ff62a4c3ac138b08fee37d05c86596498dcd7db117 | — |
 
 | Run | Lens state |
 |---|---|

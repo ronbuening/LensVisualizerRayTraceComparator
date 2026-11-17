@@ -245,15 +245,13 @@ test(
     const read = parseBaseline(readFileSync(COMMITTED_BASELINE, "utf8"));
     assert.ok("baseline" in read, JSON.stringify(read));
     const fresh = buildBaseline(manifest, comparisons, POLICY);
-    // The committed baseline may name its checks by the ids of before the rename: held as the command holds it.
+    // Held as the command holds it (`checkInIdSpace`), whatever ids the baseline was written with.
     const records = checkInIdSpace(read.baseline, fresh, [], POLICY).records.filter(
       (record) => record.a === "lv" && record.b === "reference-tracer" && record.outcome !== "GONE",
     );
     assert.equal(records.length, 4 * 96);
-    // Until the maintainer's refresh of the renames every record is out of date by its limits file (v24 against v25,
-    // the same limits) and by the reference tracer's code (its id constant moved its adapter revision, nothing it
-    // computes): a record otherwise current then holds as REFRESHABLE. A record out of date by engine is held only
-    // where lv is the baseline's own, so that the reference tracer is the engine that moved.
+    // A record out of date by its limits file, or by the reference tracer's code where lv is the baseline's own (so
+    // that the reference tracer is the engine that moved), holds as REFRESHABLE; one otherwise current is OK.
     const lvOf = (engines: readonly { id: string; fingerprint: string; adapterRevision?: string }[]) =>
       engines.find((engine) => engine.id === "lv");
     const [lvBefore, lvNow] = [lvOf(read.baseline.engines), lvOf(fresh.engines)];

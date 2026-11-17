@@ -320,35 +320,36 @@ test("a baseline committed before a rename is read under the new ids, every list
   assert.equal(before.runs[0].rungs[0].pairs[1].b, "ref");
 });
 
-test("every committed baseline names checks by the old ids, and is read under today's with the real maps", () => {
+test("the catalog snapshot names checks and engines by the old ids; every other committed baseline by today's", () => {
   const today = new Set(RUNGS.map((rung) => rung.id));
-  for (const file of ["benchmark.json", "benchmark.mtf.json", "catalog.json"]) {
-    const read = parseBaseline(readFileSync(join(ROOT, "baselines", file), "utf8"));
-    assert.ok("baseline" in read, file);
-    const checks = read.baseline.runs.flatMap((run) => run.rungs.map((rung) => rung.rung));
-    // Written before the rename (until the maintainer's refresh): every check by its old id.
-    assert.ok(checks.length > 0 && checks.every((id) => Object.hasOwn(LEGACY_CHECK_IDS, id)), file);
-    const read2 = currentIds(read.baseline);
-    assert.ok(
-      read2.runs.every((run) => run.rungs.every((rung) => today.has(rung.rung))),
-      `${file}: every check is one of today's`,
-    );
-    // Written before the engine rename: the renamed engines by their old ids, read under today's, in the writer's
-    // order.
-    const engines = read.baseline.engines.map((engine) => engine.id);
-    assert.ok(
-      engines.some((id) => Object.hasOwn(LEGACY_ENGINE_IDS, id)),
-      file,
-    );
-    const engines2 = read2.engines.map((engine) => engine.id);
-    assert.ok(
-      engines2.every((id) => !Object.hasOwn(LEGACY_ENGINE_IDS, id)),
-      `${file}: every engine is one of today's`,
-    );
-    assert.deepEqual(engines2, [...engines2].sort(), file);
-    assert.deepEqual(engines2, engines.map((id) => currentEngineId(id)).sort(), file);
-    // And back again is the baseline as written.
-    assert.deepEqual(snapshotIds(read2), read.baseline, file);
+  // The catalog snapshot, written before the renames (until the end-of-project refresh): every check by its old id,
+  // the renamed engines by theirs, read under today's with the real maps, and back again as written.
+  const catalog = parseBaseline(readFileSync(join(ROOT, "baselines", "catalog.json"), "utf8"));
+  assert.ok("baseline" in catalog);
+  const checks = catalog.baseline.runs.flatMap((run) => run.rungs.map((rung) => rung.rung));
+  assert.ok(checks.length > 0 && checks.every((id) => Object.hasOwn(LEGACY_CHECK_IDS, id)));
+  const read = currentIds(catalog.baseline);
+  assert.ok(
+    read.runs.every((run) => run.rungs.every((rung) => today.has(rung.rung))),
+    "every check is one of today's",
+  );
+  const engines = catalog.baseline.engines.map((engine) => engine.id);
+  assert.ok(engines.some((id) => Object.hasOwn(LEGACY_ENGINE_IDS, id)));
+  const engines2 = read.engines.map((engine) => engine.id);
+  assert.ok(
+    engines2.every((id) => !Object.hasOwn(LEGACY_ENGINE_IDS, id)),
+    "every engine is one of today's",
+  );
+  assert.deepEqual(engines2, [...engines2].sort());
+  assert.deepEqual(engines2, engines.map((id) => currentEngineId(id)).sort());
+  assert.deepEqual(snapshotIds(read), catalog.baseline);
+  // The maintainer's refresh (Stage 9.9) wrote the benchmark's baselines at today's ids: read under them, the same.
+  for (const file of ["benchmark.json", "benchmark.mtf.json"]) {
+    const committed = parseBaseline(readFileSync(join(ROOT, "baselines", file), "utf8"));
+    assert.ok("baseline" in committed, file);
+    assert.equal(currentIds(committed.baseline), committed.baseline, file);
+    const ids = committed.baseline.runs.flatMap((run) => run.rungs.map((rung) => rung.rung));
+    assert.ok(ids.length > 0 && ids.every((id) => today.has(id)), file);
   }
 });
 
@@ -693,57 +694,34 @@ test("with the real maps a listed FAIL of a pair with the reference tracer stays
   assert.equal(records.length, 3);
 });
 
-test("a committed baseline read against today's renamed engines is out of date by engine code, never NEW or GONE", async () => {
-  const { adapterRevision } = await import("../../src/engines/adapterRevision.ts");
-  const { sha256Hex, hashCanonical } = await import("../../src/core/numeric/hash.ts");
+test("a baseline written under the old ids, read against today's run, is out of date by engine code, never NEW or GONE", () => {
   const policy = loadPolicy();
-  // The adapter revision of each renamed engine today: its id constant moved, so its revision did.
-  const modules: Readonly<Record<string, string>> = {
-    "reference-tracer": "engines/ref/engine.ts",
-    "reference-seidel": "engines/refSeidel/engine.ts",
-    "replay-of-lv-mtf": "engines/lv/replayEngine.ts",
-    "wave-mtf-of-lv-rays": "engines/lv/waveEngine.ts",
-    "flux-of-lv-rays": "engines/lv/fluxEngine.ts",
-  };
+  const renamed = new Set(Object.values(LEGACY_ENGINE_IDS));
   for (const file of ["benchmark.json", "benchmark.mtf.json"]) {
     const read = parseBaseline(readFileSync(join(ROOT, "baselines", file), "utf8"));
     assert.ok("baseline" in read, file);
-    const committed = read.baseline;
-    const at = currentIds(committed);
-    const optiland = at.engines.find((engine) => engine.id === "optiland");
-    const revisionOf = (id: string, was: string | undefined): string | undefined =>
-      Object.hasOwn(modules, id)
-        ? adapterRevision(modules[id]).revision
-        : id === "otf-of-optiland-wavefront"
-          ? sha256Hex(
-              `${optiland?.adapterRevision}\n${adapterRevision("engines/optiland/wavefrontEngine.ts").revision}`,
-            )
-          : was;
-    // Today's run gives the same results under the new ids, by today's engines, judged by the limits file at hand.
-    const today = {
-      ...at,
-      policy: { version: policy.version, hash: hashCanonical(policy) },
-      engines: at.engines.map((engine) => ({
-        ...engine,
-        adapterRevision: revisionOf(engine.id, engine.adapterRevision),
-      })),
-    };
-    const renamed = new Set(Object.values(LEGACY_ENGINE_IDS));
-    const moved = today.engines.filter((engine, place) => engine.adapterRevision !== at.engines[place].adapterRevision);
-    assert.deepEqual(
-      moved.map((engine) => engine.id),
-      at.engines.map((engine) => engine.id).filter((id) => renamed.has(id)),
-      `${file}: exactly the renamed engines have moved`,
+    // Today's run is the committed baseline; the same results written before the renames are under the old ids, by
+    // engines whose adapter revisions are other (each renamed engine's id constant is in its revision).
+    const today = read.baseline;
+    const before = snapshotIds({
+      ...today,
+      engines: today.engines.map((engine) =>
+        renamed.has(engine.id) ? { ...engine, adapterRevision: "0".repeat(64) } : engine,
+      ),
+    });
+    assert.ok(
+      before.engines.some((engine) => Object.hasOwn(LEGACY_ENGINE_IDS, engine.id)),
+      file,
     );
-    const { records } = checkInIdSpace(committed, today, [], policy);
+    const { records } = checkInIdSpace(before, today, [], policy);
     assert.ok(records.length > 0, file);
     let byEngine = 0;
     for (const record of records) {
-      const stale = renamed.has(record.a) || renamed.has(record.b) ? ["engine", "policy"] : ["policy"];
-      if (stale.length === 2) byEngine += 1;
+      const stale = renamed.has(record.a) || renamed.has(record.b) ? ["engine"] : [];
+      if (stale.length > 0) byEngine += 1;
       assert.deepEqual(
         [record.stale, record.outcome],
-        [stale, "REFRESHABLE"],
+        [stale, stale.length > 0 ? "REFRESHABLE" : "OK"],
         `${file} ${record.run} ${record.rung} ${record.a} ${record.b}`,
       );
     }

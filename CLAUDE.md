@@ -127,11 +127,10 @@ Stage 9.8 renamed the opaque engine ids (`LEGACY_ENGINE_IDS`; the vocabulary's `
 - **The rules below keep the historical ids** (R0 to R14b, `r2`, `selftest`; `ref`, `ref-seidel`, `replay`, `wave`,
   `flux`, `optiland-wave`) as names of the same checks and engines; code, suites, the limits file
   (`policy/rungs.v1.json`, version 25, keyed by the new check ids; it names no engine) and new run directories use
-  the new ones. Stored files written before a rename keep the ids they were written with: the committed baselines
-  name the old engine ids until the maintainer's refresh (Stage 9.9), and are read through `currentIds`, so a renamed
-  engine's record is STALE(engine) REFRESHABLE (its adapter revision moved), never GONE or NEW
-  (`test/core/legacyIds.test.ts` holds it on the committed benchmark baselines). The suite files changed with the
-  engine rename, so `baseline check` notes the suite file changed until that refresh.
+  the new ones. Stored files written before a rename keep the ids they were written with, and a baseline is read
+  through `currentIds`, so a renamed engine's record is STALE(engine) REFRESHABLE (its adapter revision moved), never
+  GONE or NEW (`test/core/legacyIds.test.ts` holds it on the committed benchmark baselines mapped back to the old
+  ids). The maintainer's refresh (Stage 9.9, below) wrote every baseline but the catalog's at today's ids.
 - **Files written before the rename keep their ids**: the catalog snapshot (`baselines/catalog*.json`,
   `policy/snapshots/rungs.v15.json`, `reports/catalog*`), `docs/known-failures.json` and its `--rungs` reproducers,
   `suites/catalog.json`, `suites/catalog-repro/*` (`bin/catalog-case.mjs` writes new reproducers with today's
@@ -167,14 +166,10 @@ Stage 9.8 renamed the opaque engine ids (`LEGACY_ENGINE_IDS`; the vocabulary's `
   pair names a renamed engine** (12 of the 24 entries name `ref`) at that refresh. Until then `baseline check
   catalog` reads today's run back to `ref` (`snapshotIds`) before classifying, so a listed FAIL of a pair with the
   reference tracer stays OK (held with the real maps in `test/core/legacyIds.test.ts`).
-- **The limits-file transition** (`src/compare/policyTransition.ts`: `POLICY_V24_HASH`, `policyBeforeRename`,
-  `matchesBeforeRename`): `baselinePolicyMatches` in `policyFile.ts` calls it, so `policyFile.ts` imports
-  `policyTransition.ts`, which imports `legacyIds.ts`; neither file is in an engine closure, and `policyFile.ts` itself
-  never names the legacy maps (the catalog's gates there read raw ids). Until the maintainer's refresh of Stage 9.9, a
-  baseline stating v24 and that hash is accepted by `verify` exactly when the v25 file at hand names no check by an
-  old id and, its keys mapped back by the inverse map and its version set to 24, hashes to it; `baseline check`
-  reports such records STALE(policy) and REFRESHABLE. The transition's tests are in `test/compare/policyFile.test.ts`.
-  Remove the module and those tests after that refresh.
+- **The limits-file transition is gone** (`src/compare/policyTransition.ts`, removed with its tests after the Stage
+  9.9 refresh): `verify` again holds every baseline but the catalog's to the exact version and hash of the limits file
+  at hand (`baselinePolicyMatches`). `policyFile.ts` never names the legacy maps (the catalog's gates there read raw
+  ids).
 
 ## Rules
 
@@ -1159,7 +1154,7 @@ Stage 9.8 renamed the opaque engine ids (`LEGACY_ENGINE_IDS`; the vocabulary's `
   `node bin/catalog-case.mjs --suite focus-stations <run> suites/focus-stations-repro/<run>.json` (suite
   `focus-stations-repro`; never `focus-stations`). Listed: the `-zoom0-focus1` stations of the Fujinon XF 8-16 mm
   and XF 23 mm f/2, `ray-trace` `mask.mismatches` of `lv`–optiland and optiland–`reference-tracer`, class method
-  ("Another crossing" of the gotcha on optiland's asphere iteration), pending until the owner's refresh writes them.
+  ("Another crossing" of the gotcha on optiland's asphere iteration), written by the Stage 9.9 refresh.
   `test/integration/optiland/stations.test.ts` accepts exactly these (classified as `baseline write` would) and fails
   on any other. On the two requests of the listed FAILs alone (`listedRequests`, keyed by check, run and request) the
   pairs of optiland and the reference tracer are held to the gates, not the exact tracers' bounds (the batch keeps
@@ -2525,8 +2520,8 @@ Stage 9.8 renamed the opaque engine ids (`LEGACY_ENGINE_IDS`; the vocabulary's `
   `vignettingFields.ts` (`lv` `afad9cb8` to `2a10ac61`, `replay` `6f0c41d6` to `971fd882`, `wave` `8a272b3a` to
   `461b0dae`, `flux` `6ecb3bb3` to `58918afc`); `reference-tracer`'s, `reference-seidel`'s and the TypeScript closure of
   `otf-of-optiland-wavefront` did not move. `test/core/migrationGuard.test.ts` holds today's revisions apart from the
-  rename's evidence (above, "Legacy ids"). No baseline was written or checked: every record of the four is
-  STALE(engine) until the owner's refresh.
+  rename's evidence (above, "Legacy ids"). No baseline was written or checked at the adoption: every record of the four
+  was STALE(engine) until the Stage 9.9 refresh (below).
 
 ## optiland a9e544a2 adopted
 
@@ -2556,8 +2551,8 @@ Stage 9.8 renamed the opaque engine ids (`LEGACY_ENGINE_IDS`; the vocabulary's `
 - The worker's adapter revision moved (`trace.py`, `axial.py`, `seidel.py`, docstrings of `first_order.py`,
   `summary.py`, `folded.py`): `98f36151` to `59039a7b`, and with it `otf-of-optiland-wavefront`'s whole revision,
   `9cdfad1a` to `3dc91d1a` (its TypeScript part `501c2a99` did not move). optiland's fingerprint moved with the checkout. Every
-  record of `optiland` and `otf-of-optiland-wavefront` is STALE(engine) until the owner's refresh; no baseline was
-  written or checked.
+  record of `optiland` and `otf-of-optiland-wavefront` was STALE(engine) until the Stage 9.9 refresh (below); no
+  baseline was written or checked at the adoption.
 
 ## LensVisualizer f5b456fec adopted
 
@@ -2584,12 +2579,12 @@ Stage 9.8 renamed the opaque engine ids (`LEGACY_ENGINE_IDS`; the vocabulary's `
   `isMtfComparisonFNumber`), at `mtfRequestAtAperture`'s stop and pupil, refocused by the default `comparisonFocus`
   "refocus"; `heldFocusShiftMm` and the mode "held" are never asked. `LV_TAB_COMPARISON_F_NUMBER` (8) only names the
   run aperture `lv-f8-comparison` and `lvrtc mtf --aperture f/8`, which select the comparison whatever its f-number.
-- **The photopic spectrum is nine lines** (LV #988, `MTF_PHOTOPIC_LINES`: a nine-point Gauss-Legendre quadrature of
-  V(λ) from 470 to 650 nm, 560 nm first, weights 29.573 to 0.75613): every photopic case moved with its lines (1,330 of
-  1,330 catalog exports; every photopic run of benchmark, states and features), and every photopic record is STALE(case)
-  until the owner's refresh. A photopic run has 9/5 the ray sets, spot, chief and curvature sets of before, and R6c,
-  `wave-mtf-of-lv-rays` and `flux-of-lv-rays` trace 9/5 the lines. LV #988's fourth spectrum, "single" (one line at a
-  wavelength the request states), is not asked: `LV_MTF_SPECTRA` stays reference, cdf, photopic.
+- **The photopic spectrum is nine lines** (LV #988, `MTF_PHOTOPIC_LINES`: a nine-point Gauss-Legendre quadrature of V(λ)
+  from 470 to 650 nm, 560 nm first, weights 29.573 to 0.75613): every photopic case moved with its lines (1,330 of 1,330
+  catalog exports; every photopic run of benchmark, states and features), and every photopic record was STALE(case)
+  until the Stage 9.9 refresh (below). A photopic run has 9/5 the ray sets, spot, chief and curvature sets of before,
+  and R6c, `wave-mtf-of-lv-rays` and `flux-of-lv-rays` trace 9/5 the lines. LV #988's fourth spectrum, "single" (one
+  line at a wavelength the request states), is not asked: `LV_MTF_SPECTRA` stays reference, cdf, photopic.
 - **The unresolved share counts each line at its incident weight** (`mtfUnresolvedFluxFraction`, bound), and
   `assessUnresolvedFlux(unresolvedRays, share, method, inBeam)` words its note by the method (a geometric error bound,
   or none for diffraction); `replay.ts` restates `fieldAtGrid`'s `fluxWeights` and calls both.
@@ -2631,3 +2626,29 @@ Stage 9.8 renamed the opaque engine ids (`LEGACY_ENGINE_IDS`; the vocabulary's `
   `otf-of-optiland-wavefront` did not move. No baseline was written or checked. `diffractive.test.ts`'s comparison with
   a `git archive HEAD` fails until this adoption is committed: the archived comparator reads `computeMtfSteps` as
   before.
+
+## The Stage 9.9 refresh
+
+- **Done, 2026-11-16**, at LensVisualizer `f5b456fec` (closure `f0066505`, through a pinned clone), optiland
+  `a9e544a2` (the editable install refreshed: it states `0.6.2.post234+ga9e544a2`), limits file v25, on the real store,
+  by the plan's Stage 9.9 recipe: all ten baselines other than the catalog's at today's check and engine ids, then
+  `statement`, `matrix` and `verify` (12 baselines, 0 problems). No gate, band or floor moved; no `--replace`. Then the
+  limits-file transition was removed (above, "Identifiers"), and README's pinned commits moved to these.
+- Every record was stale by limits file and by engine (`lv`, `replay-of-lv-mtf`, `wave-mtf-of-lv-rays`,
+  `flux-of-lv-rays`, `optiland`, `otf-of-optiland-wavefront` from the adoptions and the rename; `reference-tracer` and
+  `reference-seidel` from the rename), every photopic run also by case (nine lines: 48 of benchmark's 96 runs, 9 of
+  features' 18, 64 of states' 128); no other case moved. focus-stations is 518 runs (511 exported): 444 NEW (the 14
+  stations of 420b47555 and the 430 of f5b456fec), none GONE; its four listed FAILs (two Fujinon stations, `ray-trace`
+  `mask.mismatches` of optiland's pairs) are written and classified, no longer pending. No unlisted FAIL, no ERROR.
+- **The benchmark's MTF baseline was written over three DRIFT records, by the owner's decision (2026-11-16)**:
+  `wave-mtf` of `canon-ef-135-f2l-usm-best-photopic`, all three pairs, Pass before and after. Under the nine photopic
+  lines two of its three fields settle (phase step 0.244 waves, doubling 0.0011 and 0.0032; before, every field was
+  set aside at 0.414 and 0.0114), so `waveMtf.maxAbs` went from not measured to 1.8e-12 to 5.3e-12 (gate 2e-8); its
+  edge field is still set aside. Seven MOVED records, which fail nothing: four side-by-side figures of the same run,
+  measured for the same reason; the Plena photopic `lv`–`otf-of-optiland-wavefront` pair now ATTENTION; one field of
+  the Z 24-70 mm tele best-focus photopic `geometric-mtf-vs-optiland` ATTENTION in two pairs.
+- The statement counts 508 configurations (276 before): 753 export, and the sentence counts those where `lv` passes
+  against both optiland and the reference tracer with a measured figure on all four of its checks, less the two of
+  the listed failures, whose clause it now prints. focus-stations gives 277 of its 511 (46 of 72 before); the rest
+  have no judged wave-MTF field. The benchmark covers ten wavelengths.
+- `store prune` is the owner's, and only after the refresh commit is committed.

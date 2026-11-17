@@ -6990,8 +6990,8 @@ Each command was run alone, against LensVisualizer `420b47555` and optiland `a9e
 - **`otf-of-optiland-wavefront`'s whole revision** moved with it, `9cdfad1a` to `3dc91d1a`; its TypeScript part
   (`501c2a99`) did not.
 - **optiland's fingerprint** moved with the checkout: commit, source hash and dirty flag.
-- **Every record of `optiland` and `otf-of-optiland-wavefront` is STALE(engine)** until the owner's refresh. No
-  baseline was written or checked.
+- **Every record of `optiland` and `otf-of-optiland-wavefront` was STALE(engine)** until the owner's refresh ("The
+  Stage 9.9 refresh", below). No baseline was written or checked at the adoption.
 - **At that refresh,** the recorded checks of optiland's own analyses (R5, R5g, R6c, R7b to R14b) may move by the
   changes above. The rays checks' optiland pairs are the shielded answers.
 
@@ -7242,3 +7242,59 @@ validation statement say so in one clause he signed off word for word.
   (`chief-ray-failed`, coded, failing nothing). The test, which held every station to have rays, now admits a station
   whose every field is such a coded problem (`chief-ray-failed`, `vignetted`, `outside-modeled-field`), and pins the
   stations without rays to exactly this one.
+
+## The Stage 9.9 refresh
+
+**Done, 2026-11-16**, by the owner, at LensVisualizer `f5b456fec` (engine closure `f0066505`, 193 files, through a
+pinned clone), optiland `a9e544a2` (the editable install refreshed first: it states `0.6.2.post234+ga9e544a2`), limits
+file v25, on the real store. The recipe is the plan's (Stage 9.9): each of the ten baselines other than the catalog's
+checked and written straight after its own check, the benchmark's MTF at `--jobs 2`, then `statement`, `matrix` and
+`verify` (12 baselines, 0 problems). No gate, band or floor moved; no `--replace`. The limits-file transition
+(`src/compare/policyTransition.ts`) was then removed: `verify` again holds every baseline but the catalog's to the
+exact version and hash of the limits file at hand.
+
+What made every record stale:
+- **Limits file**: v24 to v25, the same limits under the new check ids.
+- **Engines**: `lv`, `replay-of-lv-mtf`, `wave-mtf-of-lv-rays` and `flux-of-lv-rays` (LensVisualizer `25f65d4b4` to
+  `f5b456fec`, and the rename), `optiland` and `otf-of-optiland-wavefront` (optiland `4e893f53` to `a9e544a2`, the
+  shield), `reference-tracer` and `reference-seidel` (the rename alone).
+- **Cases**: every photopic run, by LensVisualizer's nine photopic lines (48 of the benchmark's 96 runs, 9 of
+  features' 18, 64 of states' 128). No other case of an existing run moved.
+
+| Baseline | Runs | New runs | Verdicts written |
+|---|---:|---:|---|
+| benchmark (rays) | 96 | 0 | 32,976 Pass |
+| benchmark (MTF) | 96 | 0 | 1,824 Pass; 1,478 Side by side; 106 worth a look; 240 Not computed |
+| features (rays) | 18 | 0 | 6,183 Pass |
+| features (MTF) | 18 | 0 | 342 Pass |
+| states (rays) | 128 | 0 | 43,968 Pass |
+| states (MTF) | 128 | 0 | 2,432 Pass |
+| focus-stations (rays) | 518 | 444 | 16,193 Pass; 4 Fail, listed |
+| focus-stations (MTF) | 518 | 444 | 9,265 Pass |
+| diffractive (rays) | 9 | 0 | 584 Pass; 16 Not computed |
+| folded (rays) | 16 | 0 | 97 Pass; 47 Not computed |
+
+focus-stations' new runs are the 14 certified stations of `420b47555` and the 430 of `f5b456fec`; 511 of its 518
+runs export (seven fisheye stations are `finite-conjugate-unavailable`), and one, the Pentax A 200 mm macro's second
+station, has no ray set. Its four FAILs are the listed known failures ("Known failures of focus-stations", above),
+classified in the baseline and no longer pending. No unlisted FAIL and no ERROR anywhere.
+
+**The benchmark's MTF check stopped on three DRIFT records, and the owner had the baseline written over them**
+(2026-11-16). All three are `wave-mtf` of `canon-ef-135-f2l-usm-best-photopic` (`lv`–optiland, `lv`–
+`reference-tracer`, optiland–`reference-tracer`), Pass before and after. In the committed baseline every field of
+that run was set aside, its lattice unsettled (phase step 0.414 waves against the quarter wave, a move of 0.0114 on
+doubling against 0.01), so `waveMtf.maxAbs` was not measured. Under the nine photopic lines the axis and middle fields
+settle (phase step 0.244 waves; moves 0.0011 and 0.0032) and are judged, at 1.8e-12 to 5.3e-12 against the gate of
+2e-8; the edge field (9.17°) is still set aside. A figure that goes from not measured to measured is DRIFT by the
+check's rule, which is why the check stopped. Seven MOVED records failed nothing: four side-by-side figures of the same
+run, measured for the same reason; the Plena photopic pair of `lv` and `otf-of-optiland-wavefront`, now worth a look;
+one field of the Z 24-70 mm's tele best-focus photopic `geometric-mtf-vs-optiland`, worth a look in two pairs. The
+check of the other nine baselines found no DRIFT.
+
+**The validation statement** counts 508 configurations (276 before). 753 configurations export; the supportable
+sentence counts those where `lv` passes against both optiland and the reference tracer, with a measured figure, on
+`ray-trace`, `optical-path`, `geometric-mtf` and `wave-mtf`, less the two configurations of the listed failures, which
+its owner-signed clause now names. focus-stations gives 277 of its 511 (46 of 72 before); the others have no judged
+`wave-mtf` field. The benchmark covers ten wavelengths (the reference line and the nine photopic lines). Its figures: worst landing
+3.2e-11 mm, optical path 9.3e-9 waves, geometric MTF 3.5e-10, wave MTF 1.1e-9; LensVisualizer's diffraction MTF beside
+the OTF of optiland's wavefront differs by up to 0.0078 (0.0074 before).

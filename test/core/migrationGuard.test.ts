@@ -54,7 +54,7 @@ interface Pinned {
   readonly today: string;
   /** The revision the engine rename of Stage 9.8 left (`f394268`). */
   readonly atRename: string;
-  /** The revision before the rename: the one the committed baselines record until the maintainer's refresh. */
+  /** The revision before the rename: the one the committed baselines recorded until the maintainer's refresh. */
   readonly beforeRename: string;
 }
 
