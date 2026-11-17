@@ -81,6 +81,7 @@ export function assessMtfSupport(request: FakeAnalysisRequest, settings: Omit<Fa
 export function resolveMtfSpectrum(
   state: FakeState,
   preferred: FakeMtfOptions["spectrum"],
+  _wavelengthNm?: number,
 ): { spectrum: FakeMtfOptions["spectrum"]; note: string | null } {
   const hasData = !state.lens.runtime.source.noDispersionData;
   if (preferred === "reference" || hasData) return { spectrum: preferred, note: null };

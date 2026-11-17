@@ -19,19 +19,19 @@ export const POLICY: Policy = {
   kind: "policy",
   version: 3,
   rungs: {
-    r5: {
+    "mtf-vs-optiland-fft": {
       quantity: "mtf.native",
       mode: "independent-method",
       class: "recorded",
       metrics: { "spot.rms": { unit: "mm" }, "mtf.maxAbs": { attention: 0.005, unit: "1" } },
     },
-    r1: {
+    "first-order": {
       quantity: "paraxial.first-order",
       mode: "direct",
       class: "gated",
       metrics: { "firstOrder.maxAbs": { tolerance: 1e-9, unit: "mm" } },
     },
-    r2: {
+    "ray-trace": {
       quantity: "rays.trace",
       mode: "identical-rays",
       class: "gated",
@@ -41,7 +41,11 @@ export const POLICY: Policy = {
 };
 
 function job(run: string, rung: string, requestId: string, engine: string, more: Record<string, unknown> = {}) {
-  const quantities: Record<string, string> = { r1: "paraxial.first-order", r2: "rays.trace", r5: "mtf.native" };
+  const quantities: Record<string, string> = {
+    "first-order": "paraxial.first-order",
+    "ray-trace": "rays.trace",
+    "mtf-vs-optiland-fft": "mtf.native",
+  };
   const quantity = quantities[rung] ?? "system.describe";
   return {
     run,
@@ -75,11 +79,15 @@ export const MANIFEST: RunManifest = {
     },
   ],
   jobs: [
-    job("tele", "r5", FIRST, "lv"),
-    job("tele", "r5", FIRST, "optiland"),
-    job("tele", "r5", FIRST, "zemax", { status: "error", storeKey: null, error: { code: "spawn-failed" } }),
-    job("tele", "r5", SECOND, "lv"),
-    job("tele", "r5", SECOND, "optiland", {
+    job("tele", "mtf-vs-optiland-fft", FIRST, "lv"),
+    job("tele", "mtf-vs-optiland-fft", FIRST, "optiland"),
+    job("tele", "mtf-vs-optiland-fft", FIRST, "zemax", {
+      status: "error",
+      storeKey: null,
+      error: { code: "spawn-failed" },
+    }),
+    job("tele", "mtf-vs-optiland-fft", SECOND, "lv"),
+    job("tele", "mtf-vs-optiland-fft", SECOND, "optiland", {
       status: "unsupported",
       storeKey: null,
       unsupported: [
@@ -87,10 +95,10 @@ export const MANIFEST: RunManifest = {
         { code: "option", item: "a|b" },
       ],
     }),
-    job("tele", "r0", FIRST, "lv"),
-    job("tele", "r0", FIRST, "optiland", { status: "pending", storeKey: null }),
-    job("tele", "r1", SECOND, "lv"),
-    job("tele", "r1", SECOND, "optiland"),
+    job("tele", "built-system", FIRST, "lv"),
+    job("tele", "built-system", FIRST, "optiland", { status: "pending", storeKey: null }),
+    job("tele", "first-order", SECOND, "lv"),
+    job("tele", "first-order", SECOND, "optiland"),
   ],
 };
 
@@ -133,7 +141,7 @@ export const COMPARISONS: ComparisonFile = {
   comparisons: [
     {
       ...SET,
-      rung: "r5",
+      rung: "mtf-vs-optiland-fft",
       quantity: "mtf.native",
       requestId: FIRST,
       participants: PARTICIPANTS,
@@ -143,7 +151,7 @@ export const COMPARISONS: ComparisonFile = {
     },
     {
       ...SET,
-      rung: "r5",
+      rung: "mtf-vs-optiland-fft",
       quantity: "mtf.native",
       requestId: FIRST,
       participants: PARTICIPANTS,
@@ -152,7 +160,7 @@ export const COMPARISONS: ComparisonFile = {
     },
     {
       ...SET,
-      rung: "r5",
+      rung: "mtf-vs-optiland-fft",
       quantity: "mtf.native",
       requestId: SECOND,
       participants: PARTICIPANTS.slice(0, 2).map((participant, index) =>
@@ -172,7 +180,7 @@ export const COMPARISONS: ComparisonFile = {
     },
     {
       ...SET,
-      rung: "r0",
+      rung: "built-system",
       quantity: "system.describe",
       requestId: FIRST,
       participants: [{ engine: "lv", fingerprint: "f".repeat(64), status: "ok" }],
@@ -182,7 +190,7 @@ export const COMPARISONS: ComparisonFile = {
     },
     {
       ...SET,
-      rung: "r1",
+      rung: "first-order",
       quantity: "paraxial.first-order",
       requestId: SECOND,
       participants: [
@@ -198,7 +206,7 @@ export const COMPARISONS: ComparisonFile = {
           metrics: [],
           class: "gated",
           verdict: "BLOCKED",
-          reason: "not judged: rung r0 failed for lv and optiland on this case",
+          reason: "not judged: rung built-system failed for lv and optiland on this case",
         },
       ],
     },

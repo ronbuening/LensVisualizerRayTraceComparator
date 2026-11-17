@@ -44,7 +44,7 @@ export function f8(wire: RaysTraceData[keyof RaysTraceData]): number[] {
 /** How the rays of each engine ended, over every ray set of a rung of traced rays. */
 export function rayCounts(
   comparisons: ComparisonFile,
-  rung: "r2" | "r3" = "r2",
+  rung: "ray-trace" | "optical-path" = "ray-trace",
 ): Record<string, { ok: number; blocked: number; failed: number }> {
   const counts: Record<string, { ok: number; blocked: number; failed: number }> = {};
   for (const set of comparisons.comparisons) {
@@ -64,40 +64,76 @@ export interface R2Summary {
   readonly pairs: readonly RungPair[];
   readonly verdicts: Readonly<Record<string, number>>;
   readonly counts: ReturnType<typeof rayCounts>;
+  /** The requests whose R2 pair fails as `listed` lists it (`listedRequestKey`): none without `listed`. */
+  readonly listedRequests: ReadonlySet<string>;
+}
+
+/** A request of a check of a run, as `assertR2` and `assertR3` key the requests of a listed FAIL. */
+export function listedRequestKey(rung: string, run: string, requestId: string): string {
+  return `${rung} ${run} ${requestId}`;
 }
 
 /**
  * Holds every pair of a compared run to rung R2: PASS under the policy without floors;
  * not one ray that one engine stopped and the other passed; and no failed ray of LV or ref. An optiland failure
  * on an asphere is allowed only where both other engines block that same ray at that same surface, named below.
- * A pair of
+ * `listed` names the pairs (`<run> <a> / <b>`) a list of known failures lists, which the caller holds to it: a FAIL
+ * of such a pair is admitted, and on the request it fails on alone (`listedRequests`) an optiland failure may end one
+ * surface before the others block it, and the pair of optiland and the reference engine is held to the gates. A pair of
  * optiland and the reference engine is held to the independent precision bounds above. Says, for
  * each two engines, the largest of each figure and where it is.
  */
-export function assertR2(t: TestContext, label: string, cycle: RunCycle): R2Summary {
+export function assertR2(
+  t: TestContext,
+  label: string,
+  cycle: RunCycle,
+  listed: ReadonlySet<string> = new Set(),
+): R2Summary {
   const { comparisons } = cycle;
-  const pairs = pairsOf(comparisons, "r2", RAYS_TRACE);
+  const pairs = pairsOf(comparisons, "ray-trace", RAYS_TRACE);
   assert.ok(pairs.length > 0);
   const verdicts: Record<string, number> = {};
   for (const pair of pairs) {
     const reason = pair.reason ?? "";
     const said = `${label}, ${pair.run}, ${pair.engines}: ${pair.verdict} ${reason}`;
     verdicts[`${pair.engines} ${pair.verdict}`] = (verdicts[`${pair.engines} ${pair.verdict}`] ?? 0) + 1;
-    assert.equal(pair.verdict, "PASS", said);
-    assert.equal(pair.metrics["mask.mismatches"]?.value, 0, said);
-    if (pair.engines === "optiland / ref") {
-      // The exact tracers retain their independent precision bounds.
+    // A FAIL of a pair a list of known failures lists is held to that list by the caller, as `baseline write` holds
+    // it (`classifyCatalog`): every figure beyond its gate is listed, with the pair's evidence.
+    const known = pair.verdict === "FAIL" && listed.has(`${pair.run} ${pair.engines}`);
+    if (!known) {
       assert.equal(pair.verdict, "PASS", said);
-      for (const name of GEOMETRY) {
-        const value = pair.metrics[name]?.value;
-        assert.ok(value !== null && value !== undefined && value <= AGREEMENT[name], `${said} ${name} ${value}`);
-      }
+      assert.equal(pair.metrics["mask.mismatches"]?.value, 0, said);
+    }
+  }
+  // The requests a listed FAIL is of. Their batches keep the rays optiland iterated to another crossing, which raise
+  // the batch's tolerance (docs/gotchas.md, the tolerance of a batch): there optiland and the reference engine are
+  // held to the policy's gates, and every other request of the run to the exact tracers' bounds.
+  const listedRequests = new Set(
+    pairs
+      .filter((pair) => pair.verdict === "FAIL" && listed.has(`${pair.run} ${pair.engines}`))
+      .map((pair) => listedRequestKey("ray-trace", pair.run, pair.requestId)),
+  );
+  for (const pair of pairs.filter((each) => each.engines === "optiland / reference-tracer")) {
+    const said = `${label}, ${pair.run}, ${pair.engines}: ${pair.verdict} ${pair.reason ?? ""}`;
+    if (listedRequests.has(listedRequestKey("ray-trace", pair.run, pair.requestId))) {
+      t.diagnostic(`${said}: listed; ${GEOMETRY.map((name) => `${name} ${pair.metrics[name]?.value}`).join("; ")}`);
+      continue;
+    }
+    // The exact tracers retain their independent precision bounds.
+    assert.equal(pair.verdict, "PASS", said);
+    for (const name of GEOMETRY) {
+      const value = pair.metrics[name]?.value;
+      assert.ok(value !== null && value !== undefined && value <= AGREEMENT[name], `${said} ${name} ${value}`);
     }
   }
   const counts = rayCounts(comparisons);
   for (const [engine, of] of Object.entries(counts)) {
     if (engine === "optiland" && of.failed > 0) {
-      assert.equal(assertBlockedFailures(t, label, cycle), of.failed, `${label}: unaccounted optiland failures`);
+      assert.equal(
+        assertBlockedFailures(t, label, cycle, listedRequests),
+        of.failed,
+        `${label}: unaccounted optiland failures`,
+      );
     } else {
       assert.equal(of.failed, 0, `${label}: ${engine} could not trace ${of.failed} rays`);
     }
@@ -114,12 +150,21 @@ export function assertR2(t: TestContext, label: string, cycle: RunCycle): R2Summ
     });
     t.diagnostic(`${label}, R2, ${engines}, ${of.length} pairs, ${compared} rays ok in both: ${figures.join("; ")}`);
   }
-  return { pairs, verdicts, counts };
+  return { pairs, verdicts, counts, listedRequests };
 }
 
-/** Check each failed ray against stored answers, never aggregate counts or the pair's surviving-ray mask alone. */
-function assertBlockedFailures(t: TestContext, label: string, cycle: RunCycle): number {
-  const jobs = cycle.manifest.jobs.filter((job) => job.rung === "r2");
+/**
+ * Check each failed ray against stored answers, never aggregate counts or the pair's surviving-ray mask alone. On a
+ * request of `listedRequests` (a listed FAIL of optiland's) both other engines must still block the ray, at its
+ * surface or at the next one, as the gotcha records (the XF 8-16 mm's close station: optiland on 2, the others on 3).
+ */
+function assertBlockedFailures(
+  t: TestContext,
+  label: string,
+  cycle: RunCycle,
+  listedRequests: ReadonlySet<string> = new Set(),
+): number {
+  const jobs = cycle.manifest.jobs.filter((job) => job.rung === "ray-trace");
   const answer = (run: string, requestId: string, engine: string): RaysTraceData => {
     const job = jobs.find((job) => job.run === run && job.requestId === requestId && job.engine === engine);
     assert.ok(
@@ -137,7 +182,7 @@ function assertBlockedFailures(t: TestContext, label: string, cycle: RunCycle): 
     const failed = f8(data.status).flatMap((status, ray) => (status === RAY_STATUS.failed ? [ray] : []));
     if (failed.length === 0) continue;
     const end = f8(data.endSurface);
-    const others = ["lv", "ref"].map((engine) => {
+    const others = ["lv", "reference-tracer"].map((engine) => {
       const data = answer(job.run, job.requestId, engine);
       return { engine, status: f8(data.status), end: f8(data.endSurface) };
     });
@@ -147,11 +192,16 @@ function assertBlockedFailures(t: TestContext, label: string, cycle: RunCycle): 
       const surface = end[ray];
       const said = `${label}, ${job.run}, request ${job.requestId}, ray ${ray}, surface ${surface}`;
       assert.equal(opticalCase.system.surfaces[surface]?.shape.kind, "asphere", `${said}: not an asphere`);
+      const listedRequest = listedRequests.has(listedRequestKey("ray-trace", job.run, job.requestId));
       for (const other of others) {
         assert.equal(other.status[ray], RAY_STATUS.blocked, `${said}: ${other.engine} did not block it`);
-        assert.equal(other.end[ray], surface, `${said}: ${other.engine} ended at another surface`);
+        const ends = listedRequest ? [surface, surface + 1] : [surface];
+        assert.ok(ends.includes(other.end[ray]), `${said}: ${other.engine} ended at ${other.end[ray]}`);
       }
-      t.diagnostic(`${said}: optiland failed; lv and ref both blocked it here (docs/gotchas.md, asphere iteration)`);
+      const where = others.every((other) => other.end[ray] === surface) ? "here" : `at ${others[0].end[ray]} (listed)`;
+      t.diagnostic(
+        `${said}: optiland failed; lv and ref both blocked it ${where} (docs/gotchas.md, asphere iteration)`,
+      );
       allowed++;
     }
   }
@@ -176,12 +226,19 @@ const NO_CHIEF = /opd\.maxAbs was not measured: (the set has no chief ray|the ch
  * The path to the last surface and the path to the image plane are measured in every pair; the path relative to
  * the chief ray's is measured wherever the set has a chief ray that every engine landed, and where it is not, the
  * pair says why and is judged on the other two. A pair of optiland and the reference engine is held to more: the
- * independent bound of 1e-7 waves in every figure it has.
+ * independent bound of 1e-7 waves in every figure it has, but on a request of `listedRequests` (`listedRequestKey`
+ * of check ray-trace: one whose R2 pair of optiland's fails as a list of known failures lists it), whose batch keeps the rays optiland
+ * iterated to another crossing: there it must PASS the policy's gates, and its figures are said.
  *
  * Says, for each two engines, the largest of each figure and where it is: the run, the line, the field, the ray.
  */
-export function assertR3(t: TestContext, label: string, comparisons: ComparisonFile): R3Summary {
-  const pairs = pairsOf(comparisons, "r3", RAYS_TRACE);
+export function assertR3(
+  t: TestContext,
+  label: string,
+  comparisons: ComparisonFile,
+  listedRequests: ReadonlySet<string> = new Set(),
+): R3Summary {
+  const pairs = pairsOf(comparisons, "optical-path", RAYS_TRACE);
   assert.ok(pairs.length > 0);
   const verdicts: Record<string, number> = {};
   const withoutChief = new Set<string>();
@@ -197,9 +254,15 @@ export function assertR3(t: TestContext, label: string, comparisons: ComparisonF
       withoutChief.add(`${pair.run} ${pair.requestId}`);
     }
     for (const name of measured) assert.ok(pair.metrics[name].value !== null, `${said}: ${name} is not finite`);
-    if (pair.engines === "optiland / ref") {
+    if (pair.engines === "optiland / reference-tracer") {
       // The paths of two engines that share no code retain their absolute 1e-7-wave bound.
       assert.equal(pair.verdict, "PASS", said);
+      if (listedRequests.has(listedRequestKey("ray-trace", pair.run, pair.requestId))) {
+        t.diagnostic(
+          `${said}: of a listed request; ${measured.map((n) => `${n} ${pair.metrics[n].value}`).join("; ")}`,
+        );
+        continue;
+      }
       for (const name of measured) {
         const value = pair.metrics[name].value;
         assert.ok(value !== null && value <= AGREEMENT[name], `${said} ${name} ${value}`);
@@ -391,7 +454,10 @@ export function figuresOf(pairs: readonly RungPair[]): Map<string, RungPair> {
 }
 
 /** The stored answer of each ray set that optiland gave on a rung of traced rays in a run, by request id. */
-export function optilandAnswers(cycle: RunCycle, rung: "r2" | "r3" = "r2"): Map<string, RaysTraceData> {
+export function optilandAnswers(
+  cycle: RunCycle,
+  rung: "ray-trace" | "optical-path" = "ray-trace",
+): Map<string, RaysTraceData> {
   const answers = new Map<string, RaysTraceData>();
   for (const job of cycle.manifest.jobs) {
     if (job.engine !== "optiland" || job.rung !== rung || job.storeKey === null) continue;

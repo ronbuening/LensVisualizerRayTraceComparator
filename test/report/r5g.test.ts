@@ -35,36 +35,42 @@ import { GEOMETRIC_SPEC, R5G_FIXTURE_RUNG, R5G_GOLDEN, R5G_POLICY, geometricStan
 import { goldenFile } from "./support.ts";
 
 test("r5g has the comparator of r5, made for it, the bands of r5 in the policy, and a follow-up of its own", () => {
-  assert.deepEqual([mtfGeometricComparator.quantity, mtfGeometricComparator.rung], ["mtf.native", "r5g"]);
-  assert.equal(COMPARATORS.get("mtf.native", "r5g"), mtfGeometricComparator);
+  assert.deepEqual(
+    [mtfGeometricComparator.quantity, mtfGeometricComparator.rung],
+    ["mtf.native", "geometric-mtf-vs-optiland"],
+  );
+  assert.equal(COMPARATORS.get("mtf.native", "geometric-mtf-vs-optiland"), mtfGeometricComparator);
   assert.equal(mtfGeometricComparator.compare, mtfNativeComparator.compare);
   assert.deepEqual(mtfGeometricComparator.metrics, mtfNativeComparator.metrics);
   const policy = loadPolicy();
   // The bands of r5; the limit on the chief rays' landing is the rung's own, a micrometre (the plan's Amendments).
-  const [r5, r5g]: RungPolicy[] = [policy.rungs.r5, policy.rungs.r5g];
+  const [r5, r5g]: RungPolicy[] = [policy.rungs["mtf-vs-optiland-fft"], policy.rungs["geometric-mtf-vs-optiland"]];
   assert.deepEqual(
     [r5g.metrics["mtfOnAxis.maxAbs"].attention, r5g.metrics["mtfOffAxis.maxAbs"].attention],
     [0.005, 0.01],
   );
   assert.deepEqual(r5g, { ...r5, metrics: { ...r5.metrics, "chiefLanding.maxAbs": { attention: 1e-3, unit: "mm" } } });
-  assert.deepEqual([policy.rungs.r5g.mode, policy.rungs.r5g.class], ["independent-method", "recorded"]);
+  assert.deepEqual(
+    [policy.rungs["geometric-mtf-vs-optiland"].mode, policy.rungs["geometric-mtf-vs-optiland"].class],
+    ["independent-method", "recorded"],
+  );
   assert.deepEqual(
     followUpsOf(policy).map(({ rung, engine, step, options }) => [rung, engine, step, options]),
     [
-      ["r5", "optiland", "fft512", { fftRays: 512 }],
-      ["r5g", "optiland", R5G_FOLLOW_UP_STEP, R5G_FOLLOW_UP_OPTIONS],
+      ["mtf-vs-optiland-fft", "optiland", "fft512", { fftRays: 512 }],
+      ["geometric-mtf-vs-optiland", "optiland", R5G_FOLLOW_UP_STEP, R5G_FOLLOW_UP_OPTIONS],
     ],
   );
   assert.deepEqual([R5G_FOLLOW_UP_STEP, R5G_FOLLOW_UP_OPTIONS], ["geo512", { geometricRays: 512 }]);
   assert.deepEqual(
     followUpsOf(R5G_POLICY).map((followUp) => followUp.rung),
-    ["r5g"],
+    ["geometric-mtf-vs-optiland"],
   );
 });
 
 test("r5g asks one request a field for the geometric MTF, at the fields and frequencies of r5, and hands optiland each angle", () => {
   assert.deepEqual([r5gRung.quantity, r5gRung.needsRecipe, r5gRung.onlyWhereNamed], ["mtf.native", true, true]);
-  assert.deepEqual(r5gRung.engines, ["lv", "optiland", "replay"]);
+  assert.deepEqual(r5gRung.engines, ["lv", "optiland", "replay-of-lv-mtf"]);
   assert.equal(r5gRung.engines, R5G_ENGINES);
   // Synthetic: five fields with angles that are no multiple of each other, so that their order shows, and thirteen
   // frequencies, which are thinned to eleven as for r5.
@@ -137,7 +143,7 @@ test("a rung is asked for the options of each of its requests, and an engine is 
     registry: watched.registry,
     runsDir: tempDir(t),
     rungDefinitions: [rung],
-    rungs: ["r5g"],
+    rungs: ["geometric-mtf-vs-optiland"],
   });
   assert.deepEqual(
     watched.requests.map((request, index) => [watched.ran[index], request.engineOptions]),
@@ -146,8 +152,8 @@ test("a rung is asked for the options of each of its requests, and an engine is 
       ["lv", undefined],
       ["optiland", { frequencies: 4 }],
       ["optiland", { frequencies: 2 }],
-      ["replay", undefined],
-      ["replay", undefined],
+      ["replay-of-lv-mtf", undefined],
+      ["replay-of-lv-mtf", undefined],
     ],
   );
 });
@@ -183,14 +189,14 @@ test("optiland is asked again once, with geometricRays 512, for the run of one l
     [
       "edge lv ok",
       "edge optiland ok",
-      "edge replay ok",
+      "edge replay-of-lv-mtf ok",
       "beyond lv ok",
       "beyond optiland ok",
-      "beyond replay ok",
+      "beyond replay-of-lv-mtf ok",
       "beyond optiland +geo512 ok",
       "polychromatic lv ok",
       "polychromatic optiland ok",
-      "polychromatic replay ok",
+      "polychromatic replay-of-lv-mtf ok",
     ],
   );
   const asked = watched.requests.filter((_request, index) => watched.ran[index] === "optiland");
@@ -204,11 +210,11 @@ test("optiland is asked again once, with geometricRays 512, for the run of one l
     .filter((set) => set.mode === "pairwise")
     .map((set) => `${set.run}: ${set.pairs.map((pair) => `${pair.a}-${pair.b} ${pair.verdict}`).join(", ")}`);
   assert.deepEqual(verdicts, [
-    "edge: lv-optiland RECORDED, lv-replay RECORDED, optiland-replay RECORDED",
-    "beyond: lv-optiland ATTENTION, lv-replay RECORDED, optiland-replay ATTENTION",
-    "polychromatic: lv-optiland ATTENTION, lv-replay RECORDED, optiland-replay ATTENTION",
+    "edge: lv-optiland RECORDED, lv-replay-of-lv-mtf RECORDED, optiland-replay-of-lv-mtf RECORDED",
+    "beyond: lv-optiland ATTENTION, lv-replay-of-lv-mtf RECORDED, optiland-replay-of-lv-mtf ATTENTION",
+    "polychromatic: lv-optiland ATTENTION, lv-replay-of-lv-mtf RECORDED, optiland-replay-of-lv-mtf ATTENTION",
   ]);
-  assert.ok(comparisons.comparisons.every((set) => set.rung === "r5g"));
+  assert.ok(comparisons.comparisons.every((set) => set.rung === "geometric-mtf-vs-optiland"));
   const beyond = comparisons.comparisons.find((set) => set.run === "beyond" && set.mode === "pairwise");
   const pair = beyond?.pairs.find(({ a, b }) => a === "lv" && b === "optiland");
   const value = (name: string) => pair?.metrics.find((metric) => metric.name === name)?.value;
@@ -238,7 +244,7 @@ test("the table of r5g is of the geometric MTF: bands at their edges, a field of
   assert.deepEqual(edge.mtf.columns, [
     { engine: "lv", step: null, judged: true },
     { engine: "optiland", step: null, judged: true },
-    { engine: "replay", step: null, judged: false },
+    { engine: "replay-of-lv-mtf", step: null, judged: false },
   ]);
   assert.deepEqual(edge.mtf.bands, {
     onAxis: ON_AXIS_BAND,
@@ -285,7 +291,7 @@ test("the table of r5g is of the geometric MTF: bands at their edges, a field of
   // One unit in the last place beyond the band is ATTENTION, of optiland's last step.
   assert.deepEqual(
     beyond.mtf.columns.map((column) => `${column.engine} ${column.step} ${column.judged}`),
-    ["lv null true", "optiland null false", "optiland geo512 true", "replay null false"],
+    ["lv null true", "optiland null false", "optiland geo512 true", "replay-of-lv-mtf null false"],
   );
   const marked = beyond.row(0, "sagittal", 50);
   assert.deepEqual(
@@ -314,7 +320,7 @@ test("the table of r5g is of the geometric MTF: bands at their edges, a field of
   assert.deepEqual([summed.difference, summed.status], [-2 * OFF_AXIS_BAND, "ATTENTION"]);
   assert.deepEqual(
     polychromatic.mtf.columns.map((column) => `${column.engine} ${column.step}`),
-    ["lv null", "optiland null", "replay null"],
+    ["lv null", "optiland null", "replay-of-lv-mtf null"],
   );
 });
 
@@ -335,35 +341,39 @@ test("the report of the stand-ins is its golden file, says whose rays and whose 
   assert.equal(count(MTF_COMPARISON_INTROS.geometric.join("\n")), 3);
   assert.equal(count(MTF_COMPARISON_INTROS.diffraction.join("\n")), 0);
   assert.equal(count(GEOMETRIC_SAMPLING.join("\n")), 3);
-  // Only the run of several lines says that the sum is the worker's.
+  // Only the run of several wavelengths says that the sum is this tool's.
   assert.equal(count(GEOMETRIC_SEVERAL_LINES.join("\n")), 1);
   assert.ok(report.markdown.indexOf(GEOMETRIC_SEVERAL_LINES[0]) > report.markdown.indexOf("### polychromatic"));
   // A geometric MTF has no rim rays, and the table no column of them.
   assert.doesNotMatch(report.markdown, /Rim rays/);
   assert.match(
     report.markdown,
-    /^\| Field \| Angle \[deg\] \| lv \| optiland \| optiland geo512 \| replay \| lv: across \| lv: last change \| optiland geo512: across \| optiland geo512: last change \| Chief rays apart \[mm\] \| Class \| Reason \|$/m,
+    /^\| Field \| Angle \[deg\] \| lv \| optiland \| optiland geo512 \| replay-of-lv-mtf \| lv: across \| lv: last change \| optiland geo512: across \| optiland geo512: last change \| Chief rays apart \[mm\] \| Class \| Reason \|$/m,
   );
   assert.match(
     report.markdown,
-    /^\| 0 \| 0\.000 \| ok \| ok \| ok \| ok \| 64 \| 1\.95e-3 \| 512 \| 4\.88e-4 \| 0 \| method \|/m,
+    /^\| 0 \| 0\.000 \| ok \| ok \| ok \| ok \| 64 \| 1\.95e-3 \| 512 \| 4\.88e-4 \| 0 \| the methods differ \|/m,
   );
   assert.match(
     report.markdown,
-    /^\| 0 \| sagittal \| 50 \| 0\.5000 \| 0\.4961 \| 0\.4961 \| 0\.5000 \| 3\.91e-3 \| ATTENTION \| method \|$/m,
+    /^\| 0 \| sagittal \| 50 \| 0\.5000 \| 0\.4961 \| 0\.4961 \| 0\.5000 \| 3\.91e-3 \| Side by side, worth a look \| the methods differ \|$/m,
   );
   for (const sentence of NOT_COVERED) assert.ok(report.markdown.includes(`- ${sentence}\n`), sentence);
-  assert.ok(NOT_COVERED.some((sentence) => /Rung R5g is recorded and never gated/.test(sentence)));
+  assert.ok(
+    NOT_COVERED.some((sentence) =>
+      /Check geometric-mtf-vs-optiland sets the two side by side and holds them to no limit/.test(sentence),
+    ),
+  );
 });
 
 test("the lint takes a sentence about R5g as one of a recorded row", () => {
   for (const claim of [
     "R5g passes for every lens of the benchmark.",
-    "| nikkor-z50f12-ref | r5g | lv | optiland | PASS |",
+    "| nikkor-z50f12-ref | geometric-mtf-vs-optiland | lv | optiland | PASS |",
     "The geometric MTF of optiland agrees with LensVisualizer's.",
     "optiland's geometric MTF confirms the MTF of LensVisualizer.",
   ]) {
     assert.notDeepEqual(wordingProblems(claim), [], claim);
   }
-  assert.deepEqual(wordingProblems("| edge | r5g | ok | ok | ok |"), []);
+  assert.deepEqual(wordingProblems("| edge | geometric-mtf-vs-optiland | ok | ok | ok |"), []);
 });

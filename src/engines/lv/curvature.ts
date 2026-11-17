@@ -29,7 +29,13 @@ import type { LvApi, LvFieldCurvatureField, LvFieldCurvatureResult } from "./typ
 /** The LensVisualizer exports a field curve is answered with. */
 export type LvCurvatureAnswerApi = LvChiefSetupApi &
   LvCurvatureFieldsApi &
-  Pick<LvAxialAnswerApi, "chromaticChannelWavelengthsNm" | "eLineChannelWavelengthsNm" | "lensChromaticReference"> &
+  Pick<
+    LvAxialAnswerApi,
+    | "chromaticChannelWavelengthsNm"
+    | "eLineChannelWavelengthsNm"
+    | "sodiumChannelWavelengthsNm"
+    | "lensChromaticReference"
+  > &
   Pick<LvApi, "computeFieldCurvatureBundle">;
 
 /** What the engine makes of a `curvature.native` spec. */
@@ -76,8 +82,8 @@ function refusals(api: LvCurvatureAnswerApi, model: LvCaseModel, spec: Curvature
     const mixed = traced.some((made) => made.kind === "none" && made.reason === "lv-mixed-reference");
     const channels = lvChannelLines(api, model);
     const message = mixed
-      ? "the lens mixes d-line and e-line indices, so no channel of LensVisualizer's chromatic field curves is of " +
-        "one line, and no line asked is its authored reference line"
+      ? "the lens mixes index references (d, D or e), so no channel of LensVisualizer's chromatic field curves is " +
+        "of one line, and no line asked is its authored reference line"
       : "no line asked is LensVisualizer's authored reference line or a channel of its chromatic field curves " +
         `(${Object.values(channels ?? {}).join(", ")} nm)`;
     refused.push({ code: FEATURE, item: mixed ? "lines.mixed-reference" : "lines.not-traced", message });

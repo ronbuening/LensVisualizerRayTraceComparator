@@ -129,12 +129,12 @@ test("every run meets every engine: one job per request, in suite order and then
   });
 
   assert.deepEqual(rows(result), [
-    "singlet selftest fake-a ok computed",
-    "singlet selftest fake-b ok computed",
-    "singlet selftest fake-none unsupported negotiated",
-    "double-gauss selftest fake-a ok computed",
-    "double-gauss selftest fake-b ok computed",
-    "double-gauss selftest fake-none unsupported negotiated",
+    "singlet pipeline-echo fake-a ok computed",
+    "singlet pipeline-echo fake-b ok computed",
+    "singlet pipeline-echo fake-none unsupported negotiated",
+    "double-gauss pipeline-echo fake-a ok computed",
+    "double-gauss pipeline-echo fake-b ok computed",
+    "double-gauss pipeline-echo fake-none unsupported negotiated",
   ]);
   assert.deepEqual(seen, result.outcomes, "onJob is told of each job, in order");
   assert.deepEqual(result.warnings, []);
@@ -146,7 +146,7 @@ test("every run meets every engine: one job per request, in suite order and then
   assert.deepEqual(result.manifest.jobs[0], {
     run: "singlet",
     caseId: SINGLET.id,
-    rung: "selftest",
+    rung: "pipeline-echo",
     quantity: SELFTEST_ECHO,
     requestId: singletRequest.id,
     engine: "fake-a",
@@ -156,7 +156,7 @@ test("every run meets every engine: one job per request, in suite order and then
   assert.deepEqual(result.manifest.jobs[5], {
     run: "double-gauss",
     caseId: DOUBLE_GAUSS.id,
-    rung: "selftest",
+    rung: "pipeline-echo",
     quantity: SELFTEST_ECHO,
     requestId: gaussRequest.id,
     engine: "fake-none",
@@ -318,14 +318,14 @@ test("rungs run in ladder order, then engines, then the rung's requests in the o
   assert.deepEqual(
     both.manifest.jobs.map((job) => `${job.run} ${job.rung} ${job.engine}`),
     [
-      "singlet selftest fake-a",
-      "singlet selftest fake-b",
+      "singlet pipeline-echo fake-a",
+      "singlet pipeline-echo fake-b",
       "singlet twice fake-a",
       "singlet twice fake-a",
       "singlet twice fake-b",
       "singlet twice fake-b",
-      "double-gauss selftest fake-a",
-      "double-gauss selftest fake-b",
+      "double-gauss pipeline-echo fake-a",
+      "double-gauss pipeline-echo fake-b",
       "double-gauss twice fake-a",
       "double-gauss twice fake-a",
       "double-gauss twice fake-b",
@@ -340,9 +340,9 @@ test("rungs run in ladder order, then engines, then the rung's requests in the o
   assert.equal(new Set(both.manifest.jobs.map((job) => job.storeKey)).size, 12);
 
   // The rungs asked for replace each run's own, and the order they are named in changes nothing.
-  const suite = pairSuite({ rungs: ["selftest"] });
+  const suite = pairSuite({ rungs: ["pipeline-echo"] });
   const own = await runSuite({ suite, registry: registry().registry, runsDir: tempDir(t), rungDefinitions });
-  assert.deepEqual([...new Set(own.manifest.jobs.map((job) => job.rung))], ["selftest"]);
+  assert.deepEqual([...new Set(own.manifest.jobs.map((job) => job.rung))], ["pipeline-echo"]);
   const asked = await runSuite({
     suite,
     registry: registry().registry,
@@ -356,7 +356,7 @@ test("rungs run in ladder order, then engines, then the rung's requests in the o
     registry: registry().registry,
     runsDir: tempDir(t),
     rungDefinitions,
-    rungs: ["twice", "selftest"],
+    rungs: ["twice", "pipeline-echo"],
   });
   assert.deepEqual(reversed.manifest.jobs, both.manifest.jobs);
 });
@@ -368,7 +368,7 @@ test("two runs of one case share their answers: the second finds what the first 
   ]);
   const engines = watchedRegistry({ "fake-a": fakeEngine() });
   const result = await runSuite({ suite, registry: engines.registry, runsDir: tempDir(t) });
-  assert.deepEqual(rows(result), ["first selftest fake-a ok computed", "second selftest fake-a ok cached"]);
+  assert.deepEqual(rows(result), ["first pipeline-echo fake-a ok computed", "second pipeline-echo fake-a ok cached"]);
   assert.equal(result.manifest.jobs[0].storeKey, result.manifest.jobs[1].storeKey);
   assert.deepEqual(engines.ran, ["fake-a"]);
 });
@@ -377,14 +377,20 @@ test("two runs of one case share their answers: the second finds what the first 
 
 test("an unknown rung or engine is a usage error, and nothing is created, run or written", async (t) => {
   const refusals: [input: Partial<RunSuiteInput>, message: string][] = [
-    [{ rungs: ["R0"] }, 'unknown rung "R0": the rungs are selftest'],
-    [{ rungs: [] }, "no rung was named: the rungs are selftest"],
-    [{ suite: pairSuite({ rungs: ["selftest", "R1"] }) }, 'run singlet: unknown rung "R1": the rungs are selftest'],
+    [{ rungs: ["R0"] }, 'unknown rung "R0": the rungs are pipeline-echo'],
+    [{ rungs: [] }, "no rung was named: the rungs are pipeline-echo"],
+    [
+      { suite: pairSuite({ rungs: ["pipeline-echo", "R1"] }) },
+      'run singlet: unknown rung "R1": the rungs are pipeline-echo',
+    ],
     [
       { engines: ["fake-a", "optiland"] },
       'unknown engine "optiland": the configuration defines fake-a, fake-b, fake-none',
     ],
-    [{ engines: ["ref", "lv"] }, 'unknown engines "ref", "lv": the configuration defines fake-a, fake-b, fake-none'],
+    [
+      { engines: ["reference-tracer", "lv"] },
+      'unknown engines "reference-tracer", "lv": the configuration defines fake-a, fake-b, fake-none',
+    ],
     [{ engines: [] }, "no engine was named: the configuration defines fake-a, fake-b, fake-none"],
     [
       { suite: pairSuite({ engines: ["fake-b", "constructor"] }) },
@@ -410,7 +416,7 @@ test("what a run asks for is checked even when the run cannot start", async (t) 
     { name: "bad", opticalCase: null, problems: ["no case"], rungs: ["R9"] },
   ]);
   const said = await refused(runSuite({ suite, registry: threeFakes().registry, runsDir: tempDir(t) }));
-  assert.equal(said, 'run bad: unknown rung "R9": the rungs are selftest');
+  assert.equal(said, 'run bad: unknown rung "R9": the rungs are pipeline-echo');
 });
 
 test("without any engine there is nothing to run: a usage error", async (t) => {
@@ -428,8 +434,8 @@ test("an engine whose descriptor says it cannot answer is not asked, and nothing
   const engines = watchedRegistry({ "fake-none": fakeEngine({ offersQuantities: false }) });
   const result = await runSuite({ suite: pairSuite(), registry: engines.registry, runsDir });
   assert.deepEqual(rows(result), [
-    "singlet selftest fake-none unsupported negotiated",
-    "double-gauss selftest fake-none unsupported negotiated",
+    "singlet pipeline-echo fake-none unsupported negotiated",
+    "double-gauss pipeline-echo fake-none unsupported negotiated",
   ]);
   assert.deepEqual(engines.ran, [], "the engine was described, and never run");
   assert.deepEqual(engines.created, ["fake-none"]);
@@ -466,9 +472,9 @@ test("negotiation is per case: an engine is asked about the cases it can take, a
   const result = await runSuite({ suite, registry: engines.registry, runsDir });
 
   assert.deepEqual(rows(result), [
-    "singlet selftest small ok computed",
-    "double-gauss selftest small unsupported negotiated",
-    "all-features selftest small unsupported negotiated",
+    "singlet pipeline-echo small ok computed",
+    "double-gauss pipeline-echo small unsupported negotiated",
+    "all-features pipeline-echo small unsupported negotiated",
   ]);
   assert.deepEqual(engines.ran, ["small"]);
   assert.deepEqual(result.manifest.jobs[1].unsupported, [{ code: "feature", item: "surfaces.count" }]);
@@ -502,8 +508,8 @@ test("an engine that implements another version of a quantity's definition is no
   const result = await runSuite({ suite, registry: engines.registry, runsDir });
 
   assert.deepEqual(rows(result), [
-    "singlet selftest current ok computed",
-    "singlet selftest other unsupported negotiated",
+    "singlet pipeline-echo current ok computed",
+    "singlet pipeline-echo other unsupported negotiated",
   ]);
   assert.deepEqual(engines.ran, ["current"], "the engine of another version was not asked");
   assert.deepEqual(result.manifest.jobs[1].unsupported, [{ code: "quantity", item: SELFTEST_ECHO }]);
@@ -522,8 +528,8 @@ test("an engine that answers unsupported when asked is an answer, and is stored"
   const first = engines();
   const result = await runSuite({ suite: pairSuite(), registry: first.registry, runsDir });
   assert.deepEqual(rows(result), [
-    "singlet selftest picky unsupported computed",
-    "double-gauss selftest picky unsupported computed",
+    "singlet pipeline-echo picky unsupported computed",
+    "double-gauss pipeline-echo picky unsupported computed",
   ]);
   assert.deepEqual(result.manifest.jobs[0].unsupported, [{ code: "option", item: "rays" }]);
   assert.equal(result.outcomes[0].detail, "the ray count is fixed");
@@ -532,8 +538,8 @@ test("an engine that answers unsupported when asked is an answer, and is stored"
   const second = engines();
   const again = await runSuite({ suite: pairSuite(), registry: second.registry, runsDir });
   assert.deepEqual(rows(again), [
-    "singlet selftest picky unsupported cached",
-    "double-gauss selftest picky unsupported cached",
+    "singlet pipeline-echo picky unsupported cached",
+    "double-gauss pipeline-echo picky unsupported cached",
   ]);
   assert.deepEqual(second.ran, []);
   assert.deepEqual(again.manifest, result.manifest);
@@ -553,12 +559,12 @@ test("an engine that cannot be built ends its jobs as errors with the code, and 
   const result = await runSuite({ suite: pairSuite(), registry: engines.registry, runsDir });
 
   assert.deepEqual(rows(result), [
-    "singlet selftest broken error unavailable",
-    "singlet selftest fake-a ok computed",
-    "singlet selftest fake-z ok computed",
-    "double-gauss selftest broken error unavailable",
-    "double-gauss selftest fake-a ok computed",
-    "double-gauss selftest fake-z ok computed",
+    "singlet pipeline-echo broken error unavailable",
+    "singlet pipeline-echo fake-a ok computed",
+    "singlet pipeline-echo fake-z ok computed",
+    "double-gauss pipeline-echo broken error unavailable",
+    "double-gauss pipeline-echo fake-a ok computed",
+    "double-gauss pipeline-echo fake-z ok computed",
   ]);
   const [job] = result.manifest.jobs;
   assert.deepEqual(job.error, { code: "load-failed" });
@@ -579,10 +585,10 @@ test("an engine that is not the one configured is unavailable too, and is still 
   const watched = watchedRegistry({ imposter: fakeEngine({ id: "someone-else" }), "fake-a": fakeEngine() });
   const result = await runSuite({ suite: pairSuite(), registry: watched.registry, runsDir: tempDir(t) });
   assert.deepEqual(rows(result), [
-    "singlet selftest fake-a ok computed",
-    "singlet selftest imposter error unavailable",
-    "double-gauss selftest fake-a ok computed",
-    "double-gauss selftest imposter error unavailable",
+    "singlet pipeline-echo fake-a ok computed",
+    "singlet pipeline-echo imposter error unavailable",
+    "double-gauss pipeline-echo fake-a ok computed",
+    "double-gauss pipeline-echo imposter error unavailable",
   ]);
   assert.deepEqual(result.manifest.jobs[1].error, { code: "id-mismatch" });
   assert.deepEqual(result.manifest.engines[1], { id: "imposter", status: "unavailable", code: "id-mismatch" });
@@ -601,9 +607,9 @@ test("an engine that fails a request is an error job with its code, never stored
   const first = engines();
   const result = await runSuite({ suite: pairSuite(), registry: first.registry, runsDir });
   assert.deepEqual(rows(result).slice(0, 3), [
-    "singlet selftest fake-a ok computed",
-    "singlet selftest refuses error computed",
-    "singlet selftest throws error computed",
+    "singlet pipeline-echo fake-a ok computed",
+    "singlet pipeline-echo refuses error computed",
+    "singlet pipeline-echo throws error computed",
   ]);
   assert.deepEqual(result.manifest.jobs[1].error, { code: "protocol-error" });
   assert.deepEqual(result.manifest.jobs[2].error, { code: "transport-error" });
@@ -635,9 +641,9 @@ test("an ok result whose data is not the quantity's becomes an error, invalid-da
 
   assert.equal(INVALID_DATA, "invalid-data");
   assert.deepEqual(rows(result), [
-    "singlet selftest bad-bytes error computed",
-    "singlet selftest bad-shape error computed",
-    "singlet selftest fake-a ok computed",
+    "singlet pipeline-echo bad-bytes error computed",
+    "singlet pipeline-echo bad-shape error computed",
+    "singlet pipeline-echo fake-a ok computed",
   ]);
   for (const job of result.manifest.jobs.slice(0, 2)) {
     assert.deepEqual(job.error, { code: "invalid-data" });
@@ -659,8 +665,8 @@ test("a pending job is recorded as pending and is not stored", async (t) => {
   const engines = watchedRegistry({ bench: answeringEngine(() => ({ status: "pending" })) });
   const result = await runSuite({ suite: pairSuite(), registry: engines.registry, runsDir });
   assert.deepEqual(rows(result), [
-    "singlet selftest bench pending computed",
-    "double-gauss selftest bench pending computed",
+    "singlet pipeline-echo bench pending computed",
+    "double-gauss pipeline-echo bench pending computed",
   ]);
   assert.deepEqual(result.manifest.jobs[0].storeKey, null);
   assert.deepEqual(storeFiles(runsDir), []);
@@ -765,12 +771,12 @@ test("a second run computes nothing: every answer is in the store, and the manif
   const cached = await runSuite({ suite: pairSuite(), registry: second.registry, runsDir });
   assert.deepEqual(second.ran, [], "no engine was asked anything");
   assert.deepEqual(rows(cached), [
-    "singlet selftest fake-a ok cached",
-    "singlet selftest fake-b ok cached",
-    "singlet selftest fake-none unsupported negotiated",
-    "double-gauss selftest fake-a ok cached",
-    "double-gauss selftest fake-b ok cached",
-    "double-gauss selftest fake-none unsupported negotiated",
+    "singlet pipeline-echo fake-a ok cached",
+    "singlet pipeline-echo fake-b ok cached",
+    "singlet pipeline-echo fake-none unsupported negotiated",
+    "double-gauss pipeline-echo fake-a ok cached",
+    "double-gauss pipeline-echo fake-b ok cached",
+    "double-gauss pipeline-echo fake-none unsupported negotiated",
   ]);
   assert.equal(manifestBytes(runsDir, "pair"), before);
   assert.deepEqual(cached.manifest, computed.manifest);
@@ -993,7 +999,7 @@ test("options named for an engine id that every object inherits a member for are
   const suite = suiteOf("inherited", [{ name: "singlet", opticalCase: SINGLET, sampling: { engines: {} } }]);
   const engines = watchedRegistry({ constructor: fakeEngine() });
   const result = await runSuite({ suite, registry: engines.registry, runsDir: tempDir(t) });
-  assert.deepEqual(rows(result), ["singlet selftest constructor ok computed"]);
+  assert.deepEqual(rows(result), ["singlet pipeline-echo constructor ok computed"]);
   assert.equal(engines.requests[0].engineOptions, undefined);
 });
 
@@ -1007,7 +1013,7 @@ test("a run without a case is recorded with its problems and has no jobs; the ot
     { name: "singlet", opticalCase: SINGLET },
   ]);
   const result = await runSuite({ suite, registry: threeFakes().registry, runsDir, engines: ["fake-a"] });
-  assert.deepEqual(rows(result), ["singlet selftest fake-a ok computed"]);
+  assert.deepEqual(rows(result), ["singlet pipeline-echo fake-a ok computed"]);
   assert.deepEqual(result.manifest.runs, [
     { name: "lv", caseId: null, problems: [problem] },
     { name: "singlet", caseId: SINGLET.id, problems: [] },
@@ -1063,7 +1069,10 @@ test("suites share the store and keep their own directories", async (t) => {
     { name: "gauss", opticalCase: DOUBLE_GAUSS },
   ]);
   const result = await runSuite({ suite: other, registry: second.registry, runsDir });
-  assert.deepEqual(rows(result), ["the-same-lens selftest fake-a ok cached", "gauss selftest fake-a ok computed"]);
+  assert.deepEqual(rows(result), [
+    "the-same-lens pipeline-echo fake-a ok cached",
+    "gauss pipeline-echo fake-a ok computed",
+  ]);
   assert.deepEqual(readdirSync(runsDir).sort(), ["another", "one", STORE_DIRECTORY]);
 });
 
@@ -1148,12 +1157,12 @@ test("the fixture suite runs on the fixture root's engines, built by the real re
   // the latter, and fake-human answers by file exchange (test/exchange/collect.test.ts).
   const result = await runSuite({ suite, registry, runsDir, engines: ["fake-a", "fake-b", "fake-none"] });
   assert.deepEqual(rows(result), [
-    "singlet selftest fake-a ok computed",
-    "singlet selftest fake-b ok computed",
-    "singlet selftest fake-none unsupported negotiated",
-    "double-gauss selftest fake-a ok computed",
-    "double-gauss selftest fake-b ok computed",
-    "double-gauss selftest fake-none unsupported negotiated",
+    "singlet pipeline-echo fake-a ok computed",
+    "singlet pipeline-echo fake-b ok computed",
+    "singlet pipeline-echo fake-none unsupported negotiated",
+    "double-gauss pipeline-echo fake-a ok computed",
+    "double-gauss pipeline-echo fake-b ok computed",
+    "double-gauss pipeline-echo fake-none unsupported negotiated",
   ]);
   // The in-memory suite of these tests differs from the file only in its name and lens paths: the jobs are equal.
   const inMemory = await runSuite({ suite: pairSuite(), registry: threeFakes().registry, runsDir: tempDir(t) });

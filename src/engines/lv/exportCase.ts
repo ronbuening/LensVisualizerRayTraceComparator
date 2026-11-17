@@ -11,7 +11,7 @@ import type { OpticalCase, OpticalCaseDraft, SurfaceIR } from "../../contract/ca
 import type { LvProvenance } from "../../contract/provenance.ts";
 import type { RunImagePlane, RunOptions, RunSampling } from "../../contract/runSpec.ts";
 import { encodeNdArray } from "../../core/numeric/ndarray.ts";
-import { syntheticKind } from "./binding.ts";
+import { lvImageSurface, syntheticKind } from "./binding.ts";
 import { stopRadius, surfaceAperture, wideOpenStopRadius } from "./exportAperture.ts";
 import type { LvStopApi } from "./exportAperture.ts";
 import { exportLight } from "./exportLines.ts";
@@ -77,6 +77,7 @@ const STRUCTURAL: ReadonlySet<string> = new Set([
   "diffractive-phase-unsupported",
   "tilted-image-plane",
   "off-axis-image-plane",
+  "curved-image-surface",
   "synthetic-surface-unknown",
   "surface-profile-unsupported",
   "asphere-coefficient-unknown",
@@ -114,6 +115,15 @@ function structuralProblems(state: LvPreparedState): ExportProblem[] {
   }
   if (state.imagePlane.point[0] !== 0 || state.imagePlane.point[1] !== 0) {
     problems.push({ code: "off-axis-image-plane", message: "the image plane is not centred on the optical axis" });
+  }
+  // LV #960: LensVisualizer lands every analysis on a curved image surface and measures image heights along it; a
+  // case has the flat plane z = imageZ only, so the state is refused, never exported as flat.
+  const imageSurface = lvImageSurface(state);
+  if (imageSurface !== null) {
+    const message =
+      `the image surface is ${imageSurface.kind} (R = ${imageSurface.radius} mm), where a case's image is the flat ` +
+      "plane z = imageZ";
+    problems.push({ code: "curved-image-surface", message });
   }
   const otherSynthetic = state.surfaces.filter((surface) => ![null, "rearPlate"].includes(syntheticKind(surface)));
   if (otherSynthetic.length > 0) {
@@ -171,10 +181,10 @@ function notesOf(state: LvPreparedState, runtime: LvRuntimeLens): string[] {
  *   the notes "bulk-absorption" and "projection:<kind>" for what changes no surface.
  *
  * A lens that cannot be exported as asked is a result with every problem found, each with a code: what the contract
- * cannot express (`structuralProblems`, a surface's shape), what LV does not supply (`exportLight`), an f-number
- * faster than wide open, the f/8 comparison of the MTF tab for a lens the tab offers none for, and the image plane
- * "lv-best-axial" where LV's focus search has no answer: for lines that are none of its spectra, or a state its
- * MTF does not cover.
+ * cannot express (`structuralProblems`, among them a curved image surface, LV #960; a surface's shape), what LV does
+ * not supply (`exportLight`), an f-number faster than wide open, the f/8 comparison of the MTF tab for a lens the tab
+ * offers none for, and the image plane "lv-best-axial" where LV's focus search has no answer: for lines that are none
+ * of its spectra, or a state its MTF does not cover.
  *
  * Throws, naming the lens, for what would be a defect of the exporter or a change in LV that it does not yet read
  * correctly: a draft that is not a valid case, LV's wide-open stop radius differing from the prepared stop

@@ -1,8 +1,8 @@
 // The MTF recipe of a case that came from a LensVisualizer lens (`src/core/mtfRecipe.ts`): the plane, the fields
 // and the frequencies as LensVisualizer itself resolves them for the stop radius and the lines of the case. Every
-// number is asked of LensVisualizer: the first step of its own `computeMtfSteps` states the field axis, the angle
-// of each fraction of the reference image height and its best axial focus, before any field is traced.
-import { lvMtfInputs } from "./tabRequest.ts";
+// number is asked of LensVisualizer: its own `computeMtfSteps`, before any field is traced (`lvMtfRequestResult`),
+// states the field axis, the angle of each fraction of the reference image height and its best axial focus.
+import { lvMtfInputs, lvMtfRequestResult } from "./tabRequest.ts";
 import type { RunOptions } from "../../contract/runSpec.ts";
 import { recipeFrequencies, recipeOfCase, recipeProblem } from "../../core/mtfRecipe.ts";
 import type { MtfRecipe, MtfRecipeField, MtfRecipeResolution } from "../../core/mtfRecipe.ts";
@@ -39,7 +39,8 @@ function fieldOf(field: LvMtfFieldResult): MtfRecipeField {
  *
  * LensVisualizer is asked once: `computeMtfSteps` with the comparator's general request for the stop radius of the
  * case (`lvGeneralMtfOptions`), on the spectrum the lines of the case are (`lvSpectrumOf`), with the focus
- * "best-axial", the fractions of the run and its grid cap. Its first step gives:
+ * "best-axial", the fractions of the run and its grid cap. The request before any field is traced
+ * (`lvMtfRequestResult`) gives:
  *
  * - **the fields**: for each fraction of the run (LensVisualizer's own `MTF_FIELDS` for a run that states none),
  *   the image height it is to land at and the chief-ray angle LensVisualizer solves for it. A fraction beyond the
@@ -88,8 +89,8 @@ export function lvMtfRecipe(
   const fractions = [...(run.fields?.values ?? api.mtfDefaultFields)];
   const frequenciesPerMm = recipeFrequencies(run, api.mtfDefaultFrequencies);
   const lvGridCap = run.sampling?.lvGridCap;
-  const first = api
-    .computeMtfSteps(
+  const first = lvMtfRequestResult(
+    api.computeMtfSteps(
       ...lvMtfInputs(api, state, {
         ...general,
         spectrum,
@@ -98,8 +99,8 @@ export function lvMtfRecipe(
         frequenciesPerMm,
         ...(lvGridCap === undefined ? {} : { maxGridSize: lvGridCap }),
       }),
-    )
-    .next().value;
+    ),
+  );
   if (!first.support.available) {
     const reason = first.support.reason ?? "mtf-unavailable";
     return none(reason, `LensVisualizer's MTF refuses the request of this run: ${first.support.message}`);

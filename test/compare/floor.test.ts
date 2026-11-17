@@ -18,8 +18,9 @@ import type { RaysTraceData } from "../../src/contract/quantities/raysTrace.ts";
 import { validateKind } from "../../src/contract/schemas.ts";
 import { BASE, LENS, SPEC, STOP_CLIP, WAVE_MM, changed, hitAt, hitRadius, stopAt, tracer } from "./raysSupport.ts";
 import { POLICY_LADDER } from "../contract/corpus.ts";
+import { atCurrentIds } from "../core/support.ts";
 
-const POLICY: Policy = structuredClone(POLICY_LADDER);
+const POLICY: Policy = atCurrentIds(POLICY_LADDER);
 const CONTEXT = { spec: SPEC, opticalCase: LENS };
 
 /** A trace whose hit of ray 2 on surface 1 lies `mm` from the base's, along z: one engine's own rounding. */
@@ -40,7 +41,11 @@ function longerBy(waves: number): RaysTraceData {
   return changed(BASE, (arrays) => void (arrays.opticalPathToImage[1] += waves * WAVE_MM[0]));
 }
 
-function groupOf(rung: "r2" | "r3", participants: readonly ParticipantResult[], policy?: RungPolicy): ComparisonGroup {
+function groupOf(
+  rung: "ray-trace" | "optical-path",
+  participants: readonly ParticipantResult[],
+  policy?: RungPolicy,
+): ComparisonGroup {
   return {
     suite: "floor",
     run: "one",
@@ -64,22 +69,25 @@ function pairsOf(group: ComparisonGroup): Record<string, PairComparison> {
 }
 
 test("the synthetic policy gives lv a floor against ref, in the two rungs of traced rays, with limits around each gate", () => {
-  for (const rung of ["r2", "r3"] as const)
+  for (const rung of ["ray-trace", "optical-path"] as const)
     assert.deepEqual(POLICY.rungs[rung].floor, { engine: "lv", arbiter: "ref" });
-  assert.deepEqual(POLICY.rungs.r2.metrics["hits.maxDistance"].floor, { limit: 1e-7, agreement: 1e-10 });
-  assert.deepEqual(POLICY.rungs.r3.metrics["opticalPathToImage.maxAbs"].floor, { limit: 2e-4, agreement: 1e-7 });
+  assert.deepEqual(POLICY.rungs["ray-trace"].metrics["hits.maxDistance"].floor, { limit: 1e-7, agreement: 1e-10 });
+  assert.deepEqual(POLICY.rungs["optical-path"].metrics["opticalPathToImage.maxAbs"].floor, {
+    limit: 2e-4,
+    agreement: 1e-7,
+  });
   // The exit direction: ten times its gate of 1e-9, where every other engine is within 1e-12 of ref.
-  assert.deepEqual(POLICY.rungs.r2.metrics["direction.maxAbs"], {
+  assert.deepEqual(POLICY.rungs["ray-trace"].metrics["direction.maxAbs"], {
     tolerance: 1e-9,
     unit: "1",
     floor: { limit: 1e-8, agreement: 1e-12 },
   });
   // Which rays got through has no floor: a count is right or it is not.
-  assert.equal(POLICY.rungs.r2.metrics["mask.mismatches"].floor, undefined);
+  assert.equal(POLICY.rungs["ray-trace"].metrics["mask.mismatches"].floor, undefined);
 });
 
 test("lv against ref, a hit 3e-8 mm off: above the gate, within the floor's limit, and so FLOOR", () => {
-  const pairs = pairsOf(groupOf("r2", [tracer("lv", offBy(3e-8)), tracer("ref", BASE)]));
+  const pairs = pairsOf(groupOf("ray-trace", [tracer("lv", offBy(3e-8)), tracer("ref", BASE)]));
   const pair = pairs["lv ref"];
   assert.equal(pair.verdict, "FLOOR");
   assert.equal(pair.class, "gated");
@@ -95,7 +103,7 @@ test("lv against ref, a hit 3e-8 mm off: above the gate, within the floor's limi
   // The same in the other mode, and with the reference named either way: a pair is judged alike everywhere.
   for (const reference of ["lv", "ref"]) {
     const set = compareGroup(
-      groupOf("r2", [tracer("ref", BASE), tracer("lv", offBy(3e-8))]),
+      groupOf("ray-trace", [tracer("ref", BASE), tracer("lv", offBy(3e-8))]),
       "reference-vs-each",
       reference,
     );
@@ -104,12 +112,12 @@ test("lv against ref, a hit 3e-8 mm off: above the gate, within the floor's limi
 });
 
 test("condition 1: without a metric above its gate there is nothing to attribute: PASS, not FLOOR", () => {
-  const pairs = pairsOf(groupOf("r2", [tracer("lv", offBy(9e-9)), tracer("ref", BASE)]));
+  const pairs = pairsOf(groupOf("ray-trace", [tracer("lv", offBy(9e-9)), tracer("ref", BASE)]));
   assert.deepEqual([pairs["lv ref"].verdict, pairs["lv ref"].reason], ["PASS", undefined]);
 });
 
 test("condition 2: lv more than the floor's limit from ref is no floor: FAIL, with the figure that is too large", () => {
-  const pairs = pairsOf(groupOf("r2", [tracer("lv", offBy(1.5e-7)), tracer("ref", BASE)]));
+  const pairs = pairsOf(groupOf("ray-trace", [tracer("lv", offBy(1.5e-7)), tracer("ref", BASE)]));
   assert.equal(pairs["lv ref"].verdict, "FAIL");
   assert.equal(
     pairs["lv ref"].reason,
@@ -119,15 +127,15 @@ test("condition 2: lv more than the floor's limit from ref is no floor: FAIL, wi
   // The limit is inclusive, as every limit of a policy is. On the stop's plane, at z = 7, an offset of 2^-24 mm is
   // the difference to the last bit.
   const policy: RungPolicy = {
-    ...POLICY.rungs.r2,
+    ...POLICY.rungs["ray-trace"],
     metrics: {
-      ...POLICY.rungs.r2.metrics,
+      ...POLICY.rungs["ray-trace"].metrics,
       "hits.maxDistance": { tolerance: 1e-8, unit: "mm", floor: { limit: 2 ** -24, agreement: 1e-10 } },
     },
   };
   const verdictAt = (mm: number): string => {
     const lv = changed(BASE, (arrays) => void (arrays.hits[hitAt(arrays, 2, 2) + 2] += mm));
-    return pairsOf(groupOf("r2", [tracer("lv", lv), tracer("ref", BASE)], policy))["lv ref"].verdict;
+    return pairsOf(groupOf("ray-trace", [tracer("lv", lv), tracer("ref", BASE)], policy))["lv ref"].verdict;
   };
   assert.equal(verdictAt(2 ** -24), "FLOOR");
   assert.equal(verdictAt(2 ** -24 + 2 ** -50), "FAIL");
@@ -136,7 +144,9 @@ test("condition 2: lv more than the floor's limit from ref is no floor: FAIL, wi
 test("three engines: lv is FLOOR against ref and against the engine that agrees with ref, which itself passes", () => {
   // The third engine is ref to within 5e-11 mm: its own rounding, far inside the 1e-10 mm of agreement.
   const other = offBy(5e-11);
-  const pairs = pairsOf(groupOf("r2", [tracer("lv", offBy(3e-8)), tracer("optiland", other), tracer("ref", BASE)]));
+  const pairs = pairsOf(
+    groupOf("ray-trace", [tracer("lv", offBy(3e-8)), tracer("optiland", other), tracer("ref", BASE)]),
+  );
   assert.equal(pairs["optiland ref"].verdict, "PASS");
   assert.equal(pairs["lv ref"].verdict, "FLOOR");
   assert.equal(pairs["lv optiland"].verdict, "FLOOR");
@@ -160,7 +170,9 @@ test("a witness that does not corroborate withholds nothing: still FLOOR, and th
   // The third engine is 3e-10 mm from ref: inside the gate, so it passes against ref, and outside the agreement.
   // It is a hundred times nearer to ref than to lv: whose rounding the excess is stays plain.
   const other = offBy(3e-10);
-  const pairs = pairsOf(groupOf("r2", [tracer("lv", offBy(3e-8)), tracer("optiland", other), tracer("ref", BASE)]));
+  const pairs = pairsOf(
+    groupOf("ray-trace", [tracer("lv", offBy(3e-8)), tracer("optiland", other), tracer("ref", BASE)]),
+  );
   assert.equal(pairs["optiland ref"].verdict, "PASS");
   for (const name of ["lv ref", "lv optiland"]) {
     assert.equal(pairs[name].verdict, "FLOOR", name);
@@ -172,7 +184,7 @@ test("a witness that does not corroborate withholds nothing: still FLOOR, and th
   // A witness that is off the arbiter by more than the gate fails against the arbiter by itself; the floor of lv
   // is still lv's, as long as that witness is not nearer to lv.
   const far = pairsOf(
-    groupOf("r2", [tracer("lv", offBy(3e-8)), tracer("optiland", offBy(-5e-8)), tracer("ref", BASE)]),
+    groupOf("ray-trace", [tracer("lv", offBy(3e-8)), tracer("optiland", offBy(-5e-8)), tracer("ref", BASE)]),
   );
   assert.equal(far["optiland ref"].verdict, "FAIL");
   assert.equal(far["lv ref"].verdict, "FLOOR");
@@ -192,7 +204,7 @@ test("condition 4: in the pair of lv with a witness that is as far from ref as l
   // are the same double): the witness is nearer to ref than to lv, so it does not side with lv, and of the pair of
   // the two nobody can say whose the excess is.
   const pairs = pairsOf(
-    groupOf("r2", [tracer("lv", offBy(2 ** -25)), tracer("optiland", offBy(-(2 ** -25))), tracer("ref", BASE)]),
+    groupOf("ray-trace", [tracer("lv", offBy(2 ** -25)), tracer("optiland", offBy(-(2 ** -25))), tracer("ref", BASE)]),
   );
   assert.equal(pairs["lv ref"].verdict, "FLOOR");
   assert.equal(pairs["lv optiland"].verdict, "FAIL");
@@ -203,7 +215,7 @@ test("condition 3: a witness that sides with lv against ref makes the arbiter su
   // lv is 1.2e-8 mm from ref and the third engine 9e-9 mm, the same way: it passes against ref, and is three
   // times nearer to lv than to ref. Two engines of different code that agree against the arbiter are no floor.
   const pairs = pairsOf(
-    groupOf("r2", [tracer("lv", offBy(1.2e-8)), tracer("optiland", offBy(9e-9)), tracer("ref", BASE)]),
+    groupOf("ray-trace", [tracer("lv", offBy(1.2e-8)), tracer("optiland", offBy(9e-9)), tracer("ref", BASE)]),
   );
   assert.equal(pairs["optiland ref"].verdict, "PASS");
   assert.equal(pairs["lv optiland"].verdict, "PASS");
@@ -214,7 +226,7 @@ test("condition 3: a witness that sides with lv against ref makes the arbiter su
   );
   // Exactly between the two it sides with neither: the comparison is strict.
   const between = pairsOf(
-    groupOf("r2", [tracer("lv", offBy(2 ** -25)), tracer("optiland", offBy(2 ** -26)), tracer("ref", BASE)]),
+    groupOf("ray-trace", [tracer("lv", offBy(2 ** -25)), tracer("optiland", offBy(2 ** -26)), tracer("ref", BASE)]),
   );
   assert.equal(between["lv ref"].verdict, "FLOOR");
   assert.match(
@@ -223,7 +235,7 @@ test("condition 3: a witness that sides with lv against ref makes the arbiter su
   );
   // A witness that sides with lv fails both pairs of lv that are above a gate.
   const both = pairsOf(
-    groupOf("r2", [tracer("lv", offBy(6e-8)), tracer("optiland", offBy(4.5e-8)), tracer("ref", BASE)]),
+    groupOf("ray-trace", [tracer("lv", offBy(6e-8)), tracer("optiland", offBy(4.5e-8)), tracer("ref", BASE)]),
   );
   for (const name of ["lv ref", "lv optiland"]) {
     assert.equal(both[name].verdict, "FAIL", name);
@@ -242,13 +254,15 @@ test("an engine that did not answer is no witness", () => {
     status: "unsupported",
     detail: "quantity rays.trace",
   };
-  const withAbsent = pairsOf(groupOf("r2", [tracer("lv", offBy(3e-8)), absent, tracer("ref", BASE)]));
+  const withAbsent = pairsOf(groupOf("ray-trace", [tracer("lv", offBy(3e-8)), absent, tracer("ref", BASE)]));
   assert.equal(withAbsent["lv ref"].verdict, "FLOOR");
   assert.equal(withAbsent["lv optiland"].verdict, "UNSUPPORTED");
 });
 
 test("only a pair of lv can be a floor: two other engines that far apart FAIL, whatever lv does", () => {
-  const pairs = pairsOf(groupOf("r2", [tracer("lv", BASE), tracer("optiland", offBy(3e-8)), tracer("ref", BASE)]));
+  const pairs = pairsOf(
+    groupOf("ray-trace", [tracer("lv", BASE), tracer("optiland", offBy(3e-8)), tracer("ref", BASE)]),
+  );
   assert.equal(pairs["optiland ref"].verdict, "FAIL");
   assert.equal(
     pairs["optiland ref"].reason,
@@ -267,7 +281,7 @@ test("a metric without a floor never is one: a mask mismatch, or a number that i
   // The hit is within the floor, and a ray is clipped by one engine well inside the stop.
   const masked = changed(offBy(3e-8), (arrays) => stopAt(arrays, 3, 2));
   const withRadius = changed(BASE, (arrays) => hitRadius(arrays, 2, 3, STOP_CLIP - 0.5));
-  const mask = pairsOf(groupOf("r2", [tracer("lv", masked), tracer("ref", withRadius)]))["lv ref"];
+  const mask = pairsOf(groupOf("ray-trace", [tracer("lv", masked), tracer("ref", withRadius)]))["lv ref"];
   assert.equal(mask.verdict, "FAIL");
   assert.match(
     mask.reason ?? "",
@@ -275,10 +289,10 @@ test("a metric without a floor never is one: a mask mismatch, or a number that i
   );
   // In the rim band the same ray is no mismatch, and the pair is the floor it otherwise is.
   const atRim = changed(BASE, (arrays) => hitRadius(arrays, 2, 3, STOP_CLIP - 1e-9));
-  assert.equal(pairsOf(groupOf("r2", [tracer("lv", masked), tracer("ref", atRim)]))["lv ref"].verdict, "FLOOR");
+  assert.equal(pairsOf(groupOf("ray-trace", [tracer("lv", masked), tracer("ref", atRim)]))["lv ref"].verdict, "FLOOR");
   // Nor does the direction's floor reach the mask: a direction within its floor, and the same ray clipped.
   const turnedAndMasked = changed(turnedBy(5e-9), (arrays) => stopAt(arrays, 3, 2));
-  const both = pairsOf(groupOf("r2", [tracer("lv", turnedAndMasked), tracer("ref", withRadius)]))["lv ref"];
+  const both = pairsOf(groupOf("ray-trace", [tracer("lv", turnedAndMasked), tracer("ref", withRadius)]))["lv ref"];
   assert.equal(both.verdict, "FAIL");
   assert.match(
     both.reason ?? "",
@@ -286,7 +300,7 @@ test("a metric without a floor never is one: a mask mismatch, or a number that i
   );
 
   const broken = changed(BASE, (arrays) => void (arrays.hits[hitAt(arrays, 1, 2)] = NaN));
-  const nan = pairsOf(groupOf("r2", [tracer("lv", broken), tracer("ref", BASE)]))["lv ref"];
+  const nan = pairsOf(groupOf("ray-trace", [tracer("lv", broken), tracer("ref", BASE)]))["lv ref"];
   assert.equal(nan.verdict, "FAIL");
   assert.match(
     nan.reason ?? "",
@@ -294,7 +308,7 @@ test("a metric without a floor never is one: a mask mismatch, or a number that i
   );
   // A direction that is no number is no floor either.
   const lost = changed(BASE, (arrays) => void (arrays.exitDirection[3 * 2] = NaN));
-  const none = pairsOf(groupOf("r2", [tracer("lv", lost), tracer("ref", BASE)]))["lv ref"];
+  const none = pairsOf(groupOf("ray-trace", [tracer("lv", lost), tracer("ref", BASE)]))["lv ref"];
   assert.equal(none.verdict, "FAIL");
   assert.match(
     none.reason ?? "",
@@ -303,7 +317,7 @@ test("a metric without a floor never is one: a mask mismatch, or a number that i
 });
 
 test("the exit direction, lv against ref: 5e-9 is above the gate and within the floor's limit, and so FLOOR", () => {
-  const pairs = pairsOf(groupOf("r2", [tracer("lv", turnedBy(5e-9)), tracer("ref", BASE)]));
+  const pairs = pairsOf(groupOf("ray-trace", [tracer("lv", turnedBy(5e-9)), tracer("ref", BASE)]));
   const pair = pairs["lv ref"];
   assert.equal(pair.verdict, "FLOOR");
   // Nothing else is off: the positions of the same rays are the base's, and the reason states each figure.
@@ -314,19 +328,21 @@ test("the exit direction, lv against ref: 5e-9 is above the gate and within the 
       "lv against ref landing.maxDistance 0 within 1.00e-7",
   );
   // Within the gate there is nothing to attribute: PASS, not FLOOR.
-  const within = pairsOf(groupOf("r2", [tracer("lv", turnedBy(9e-10)), tracer("ref", BASE)]))["lv ref"];
+  const within = pairsOf(groupOf("ray-trace", [tracer("lv", turnedBy(9e-10)), tracer("ref", BASE)]))["lv ref"];
   assert.deepEqual([within.verdict, within.reason], ["PASS", undefined]);
   // The same in the other mode, with the reference named either way.
   for (const reference of ["lv", "ref"]) {
     const set = compareGroup(
-      groupOf("r2", [tracer("ref", BASE), tracer("lv", turnedBy(5e-9))]),
+      groupOf("ray-trace", [tracer("ref", BASE), tracer("lv", turnedBy(5e-9))]),
       "reference-vs-each",
       reference,
     );
     assert.deepEqual([set.pairs[0].verdict, set.pairs[0].reason], ["FLOOR", pair.reason], reference);
   }
   // Only lv has the floor: another engine as far from ref fails, and lv's pair with it is no floor of lv.
-  const others = pairsOf(groupOf("r2", [tracer("lv", BASE), tracer("optiland", turnedBy(5e-9)), tracer("ref", BASE)]));
+  const others = pairsOf(
+    groupOf("ray-trace", [tracer("lv", BASE), tracer("optiland", turnedBy(5e-9)), tracer("ref", BASE)]),
+  );
   assert.equal(others["optiland ref"].verdict, "FAIL");
   assert.equal(
     others["optiland ref"].reason,
@@ -337,7 +353,7 @@ test("the exit direction, lv against ref: 5e-9 is above the gate and within the 
 });
 
 test("the exit direction, condition 3: lv beyond ten times the gate is no floor, and the limit is inclusive", () => {
-  const pair = pairsOf(groupOf("r2", [tracer("lv", turnedBy(2e-8)), tracer("ref", BASE)]))["lv ref"];
+  const pair = pairsOf(groupOf("ray-trace", [tracer("lv", turnedBy(2e-8)), tracer("ref", BASE)]))["lv ref"];
   assert.equal(pair.verdict, "FAIL");
   assert.equal(
     pair.reason,
@@ -346,15 +362,15 @@ test("the exit direction, condition 3: lv beyond ten times the gate is no floor,
   );
   // The policy's own limit, from both sides.
   const verdictOf = (by: number): string =>
-    pairsOf(groupOf("r2", [tracer("lv", turnedBy(by)), tracer("ref", BASE)]))["lv ref"].verdict;
+    pairsOf(groupOf("ray-trace", [tracer("lv", turnedBy(by)), tracer("ref", BASE)]))["lv ref"].verdict;
   assert.deepEqual([9.9e-9, 1.01e-8].map(verdictOf), ["FLOOR", "FAIL"]);
 
   // To the last bit: ray 0 starts on the meridional plane, so the x component of its direction is 0 in the base,
   // and a component of 2^-27 is that far from it exactly.
   const policy: RungPolicy = {
-    ...POLICY.rungs.r2,
+    ...POLICY.rungs["ray-trace"],
     metrics: {
-      ...POLICY.rungs.r2.metrics,
+      ...POLICY.rungs["ray-trace"].metrics,
       "direction.maxAbs": { tolerance: 1e-9, unit: "1", floor: { limit: 2 ** -27, agreement: 1e-12 } },
     },
   };
@@ -363,7 +379,7 @@ test("the exit direction, condition 3: lv beyond ten times the gate is no floor,
       assert.equal(arrays.exitDirection[0], 0);
       arrays.exitDirection[0] = component;
     });
-    return pairsOf(groupOf("r2", [tracer("lv", lv), tracer("ref", BASE)], policy))["lv ref"].verdict;
+    return pairsOf(groupOf("ray-trace", [tracer("lv", lv), tracer("ref", BASE)], policy))["lv ref"].verdict;
   };
   assert.equal(verdictAt(2 ** -27), "FLOOR");
   assert.equal(verdictAt(2 ** -27 * (1 + 2 ** -52)), "FAIL");
@@ -372,7 +388,7 @@ test("the exit direction, condition 3: lv beyond ten times the gate is no floor,
 test("the exit direction: a third engine corroborates ref within 1e-12 in direction, and is named beyond it", () => {
   // The third engine's direction is 5e-13 from ref's: its own rounding, and a witness that ref is right.
   const near = pairsOf(
-    groupOf("r2", [tracer("lv", turnedBy(5e-9)), tracer("optiland", turnedBy(5e-13)), tracer("ref", BASE)]),
+    groupOf("ray-trace", [tracer("lv", turnedBy(5e-9)), tracer("optiland", turnedBy(5e-13)), tracer("ref", BASE)]),
   );
   assert.equal(near["optiland ref"].verdict, "PASS");
   assert.equal(near["lv ref"].verdict, "FLOOR");
@@ -390,7 +406,7 @@ test("the exit direction: a third engine corroborates ref within 1e-12 in direct
   // 2e-12 from ref is far inside the gate, so that engine passes against ref, and outside the agreement: it does
   // not corroborate, and is named with its distance.
   const apart = pairsOf(
-    groupOf("r2", [tracer("lv", turnedBy(5e-9)), tracer("optiland", turnedBy(2e-12)), tracer("ref", BASE)]),
+    groupOf("ray-trace", [tracer("lv", turnedBy(5e-9)), tracer("optiland", turnedBy(2e-12)), tracer("ref", BASE)]),
   );
   assert.equal(apart["optiland ref"].verdict, "PASS");
   for (const name of ["lv ref", "lv optiland"]) {
@@ -402,7 +418,7 @@ test("the exit direction: a third engine corroborates ref within 1e-12 in direct
   }
   // The witness is looked at in every metric that has floor limits, whichever of them lv exceeds.
   const hit = pairsOf(
-    groupOf("r2", [tracer("lv", offBy(3e-8)), tracer("optiland", turnedBy(2e-12)), tracer("ref", BASE)]),
+    groupOf("ray-trace", [tracer("lv", offBy(3e-8)), tracer("optiland", turnedBy(2e-12)), tracer("ref", BASE)]),
   );
   assert.equal(hit["lv ref"].verdict, "FLOOR");
   assert.match(
@@ -411,7 +427,7 @@ test("the exit direction: a third engine corroborates ref within 1e-12 in direct
   );
   // A witness whose direction is nearer to lv's than to ref's makes the arbiter suspect.
   const sided = pairsOf(
-    groupOf("r2", [tracer("lv", turnedBy(5e-9)), tracer("optiland", turnedBy(4e-9)), tracer("ref", BASE)]),
+    groupOf("ray-trace", [tracer("lv", turnedBy(5e-9)), tracer("optiland", turnedBy(4e-9)), tracer("ref", BASE)]),
   );
   assert.equal(sided["lv ref"].verdict, "FAIL");
   assert.match(
@@ -422,7 +438,7 @@ test("the exit direction: a third engine corroborates ref within 1e-12 in direct
 
 test("a direction and a position above their gates together: FLOOR when both are within their limits, FAIL when either is not", () => {
   const verdictOf = (hitMm: number, direction: number) =>
-    pairsOf(groupOf("r2", [tracer("lv", turnedBy(direction, offBy(hitMm))), tracer("ref", BASE)]))["lv ref"];
+    pairsOf(groupOf("ray-trace", [tracer("lv", turnedBy(direction, offBy(hitMm))), tracer("ref", BASE)]))["lv ref"];
 
   // Both above their gates, both within their limits: one floor, and the reason names both excesses.
   const both = verdictOf(3e-8, 5e-9);
@@ -457,23 +473,23 @@ test("a direction and a position above their gates together: FLOOR when both are
 
 test("without the arbiter there is nothing to hold lv to: a pair above its gate FAILs and says so", () => {
   const missing: ParticipantResult = { engine: "ref", fingerprint: null, status: "error", detail: "engine-failure" };
-  const pairs = pairsOf(groupOf("r2", [tracer("lv", offBy(3e-8)), tracer("optiland", BASE), missing]));
+  const pairs = pairsOf(groupOf("ray-trace", [tracer("lv", offBy(3e-8)), tracer("optiland", BASE), missing]));
   assert.equal(pairs["lv optiland"].verdict, "FAIL");
   assert.match(pairs["lv optiland"].reason ?? "", /; not a floor of lv: the arbiter ref has no answer$/);
   assert.equal(pairs["lv ref"].verdict, "ERROR");
   // Nor without ref in the comparison at all.
-  const two = pairsOf(groupOf("r2", [tracer("lv", offBy(3e-8)), tracer("optiland", BASE)]));
+  const two = pairsOf(groupOf("ray-trace", [tracer("lv", offBy(3e-8)), tracer("optiland", BASE)]));
   assert.match(two["lv optiland"].reason ?? "", /the arbiter ref has no answer$/);
 });
 
 test("rung r3: a path 5e-5 waves off is a floor, 3e-4 is beyond it, and a witness corroborates within 1e-7", () => {
-  const floor = pairsOf(groupOf("r3", [tracer("lv", longerBy(5e-5)), tracer("ref", BASE)]))["lv ref"];
+  const floor = pairsOf(groupOf("optical-path", [tracer("lv", longerBy(5e-5)), tracer("ref", BASE)]))["lv ref"];
   assert.equal(floor.verdict, "FLOOR");
   assert.match(
     floor.reason ?? "",
     /^opd\.maxAbs 5\.00e-5 exceeds its tolerance 2\.00e-5 at .*; opticalPathToImage\.maxAbs 5\.00e-5 exceeds its tolerance 2\.00e-5 at .*; floor of lv: lv against ref opd\.maxAbs 5\.00e-5 within 2\.00e-4, lv against ref opticalPath\.maxAbs 0 within 2\.00e-4, lv against ref opticalPathToImage\.maxAbs 5\.00e-5 within 2\.00e-4$/,
   );
-  const beyond = pairsOf(groupOf("r3", [tracer("lv", longerBy(3e-4)), tracer("ref", BASE)]))["lv ref"];
+  const beyond = pairsOf(groupOf("optical-path", [tracer("lv", longerBy(3e-4)), tracer("ref", BASE)]))["lv ref"];
   assert.equal(beyond.verdict, "FAIL");
   assert.match(
     beyond.reason ?? "",
@@ -491,7 +507,7 @@ test("rung r3: a path 5e-5 waves off is a floor, 3e-4 is beyond it, and a witnes
     ],
   ] as const) {
     const pairs = pairsOf(
-      groupOf("r3", [tracer("lv", longerBy(5e-5)), tracer("optiland", longerBy(waves)), tracer("ref", BASE)]),
+      groupOf("optical-path", [tracer("lv", longerBy(5e-5)), tracer("optiland", longerBy(waves)), tracer("ref", BASE)]),
     );
     assert.equal(pairs["lv ref"].verdict, verdict, String(waves));
     assert.match(pairs["lv ref"].reason ?? "", said);
@@ -503,7 +519,7 @@ test("rung r3: a path 5e-5 waves off is a floor, 3e-4 is beyond it, and a witnes
   // A metric that was not measured is no part of the rule: without a chief ray the two raw paths decide.
   const { chiefIndex: _chief, ...groups } = SPEC.groups ?? {};
   const group = {
-    ...groupOf("r3", [tracer("lv", longerBy(5e-5)), tracer("ref", BASE)]),
+    ...groupOf("optical-path", [tracer("lv", longerBy(5e-5)), tracer("ref", BASE)]),
     context: { opticalCase: LENS, spec: { ...SPEC, groups } },
   };
   const unreferenced = pairsOf(group)["lv ref"];
@@ -515,12 +531,12 @@ test("rung r3: a path 5e-5 waves off is a floor, 3e-4 is beyond it, and a witnes
 });
 
 test("a rung without a floor, and a verdict that is no FAIL, come back as they are", () => {
-  const { floor: _floor, ...plain } = POLICY.rungs.r2;
+  const { floor: _floor, ...plain } = POLICY.rungs["ray-trace"];
   const metrics = Object.fromEntries(
     Object.entries(plain.metrics).map(([name, { floor: _limits, ...metric }]) => [name, metric]),
   );
   const unfloored: RungPolicy = { ...plain, metrics };
-  const pairs = pairsOf(groupOf("r2", [tracer("lv", offBy(3e-8)), tracer("ref", BASE)], unfloored));
+  const pairs = pairsOf(groupOf("ray-trace", [tracer("lv", offBy(3e-8)), tracer("ref", BASE)], unfloored));
   assert.equal(pairs["lv ref"].verdict, "FAIL");
   assert.equal(
     pairs["lv ref"].reason,
@@ -530,8 +546,8 @@ test("a rung without a floor, and a verdict that is no FAIL, come back as they a
   // attributeFloor is given a pair and returns it, the same object, unless it is a FAIL it makes a FLOOR of.
   const inputs = {
     participants: [tracer("lv", offBy(3e-8)), tracer("ref", BASE)],
-    policy: POLICY.rungs.r2,
-    comparator: COMPARATORS.get("rays.trace", "r2"),
+    policy: POLICY.rungs["ray-trace"],
+    comparator: COMPARATORS.get("rays.trace", "ray-trace"),
     context: CONTEXT,
   };
   const failed = comparePair(

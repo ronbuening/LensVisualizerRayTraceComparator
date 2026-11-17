@@ -44,7 +44,7 @@ test("the hand-built report is its golden file, and renderReport gives the model
 
 test("the Markdown has LF line endings, one newline at the end, and its sections in order", () => {
   assert.ok(!MARKDOWN.includes("\r"));
-  assert.ok(MARKDOWN.endsWith("verdict in both.\n") && !MARKDOWN.endsWith("\n\n"));
+  assert.ok(MARKDOWN.endsWith("|\n") && !MARKDOWN.endsWith("\n\n"));
   assert.deepEqual(
     MARKDOWN.split("\n").filter((line) => /^#{1,3} /.test(line)),
     [
@@ -58,12 +58,12 @@ test("the Markdown has LF line endings, one newline at the end, and its sections
       "### tele",
       "## Not covered",
       "## How to read this",
+      "## Identifiers",
     ],
   );
-  assert.match(
-    MARKDOWN,
-    /^Only FAIL and ERROR fail a comparison\. FLOOR is a pass that is counted apart from PASS\. /m,
-  );
+  assert.match(MARKDOWN, /^Only Fail \(`FAIL`\) and Error \(`ERROR`\) fail a comparison\.$/m);
+  // The limits file of the hand-built report grants no floor, so a floor is not named.
+  assert.doesNotMatch(MARKDOWN, /FLOOR|floor/);
 });
 
 test("every table row has as many cells as its header, whatever text its cells hold", () => {
@@ -80,24 +80,46 @@ test("every table row has as many cells as its header, whatever text its cells h
     }
     assert.equal(cells, width, line);
   });
-  assert.equal(tables, 11);
+  assert.equal(tables, 15);
 });
 
 test("text from the manifest and the comparisons is escaped where it enters a table", () => {
-  assert.deepEqual(rowsStarting(MARKDOWN, "lv")[0], ["lv", "available", "0.9 \\| dev", "f".repeat(64)]);
-  assert.deepEqual(rowsStarting(MARKDOWN, "optiland")[0], ["optiland", "available", "0.5.9", "operator<br>build"]);
-  assert.deepEqual(rowsStarting(MARKDOWN, "zemax")[0], ["zemax", "unavailable: spawn-failed", "—", "—"]);
+  assert.deepEqual(rowsStarting(MARKDOWN, "lv")[0], ["lv", "available", "0.9 \\| dev"]);
+  assert.deepEqual(rowsStarting(MARKDOWN, "optiland")[0], ["optiland", "available", "0.5.9"]);
+  assert.deepEqual(rowsStarting(MARKDOWN, "zemax")[0], ["zemax", "unavailable: spawn-failed", "—"]);
   assert.deepEqual(rowsStarting(MARKDOWN, "wide"), [
-    ["wide", "—", "not started: lens fixture a\\|b.json: it cannot be read (ENOENT); second<br>problem"],
+    ["wide", "not started: lens fixture a\\|b.json: it cannot be read (ENOENT); second<br>problem"],
+    ["wide", "—"],
   ]);
+  // The engines' code and the runs' lens states are under Identifiers, the last section, escaped as well.
+  const identifiers = MARKDOWN.slice(MARKDOWN.indexOf("\n## Identifiers\n"));
+  assert.deepEqual(rowsStarting(identifiers, "lv"), [["lv", "f".repeat(64)]]);
+  assert.deepEqual(rowsStarting(identifiers, "optiland"), [["optiland", "operator<br>build"]]);
+  assert.deepEqual(rowsStarting(identifiers, "zemax"), [["zemax", "—"]]);
+  // Each section's request is named there by its run and check.
+  assert.deepEqual(
+    rowsStarting(identifiers, "tele").slice(1),
+    MODEL.sections.map((section) => [
+      section.run,
+      section.request === null ? section.rung : `${section.rung}, ${section.request}`,
+      section.requestId,
+    ]),
+  );
+  // The section lines name no request: its id is in the table above alone (the hand-built ids repeat).
+  assert.doesNotMatch(MARKDOWN, /^Quantity .*Request `/m);
   assert.match(MARKDOWN, /\| unsupported: feature surface\.asphere\.odd, option a\\\|b \|/);
 });
 
 test("the inputs name the suite, the contract version and the policy version", () => {
   assert.deepEqual(rowsStarting(MARKDOWN, "Suite"), [["Suite", "hand-built"]]);
-  assert.deepEqual(rowsStarting(MARKDOWN, "Suite hash"), [["Suite hash", "5".repeat(64)]]);
   assert.deepEqual(rowsStarting(MARKDOWN, "Contract version"), [["Contract version", "1.0"]]);
-  assert.deepEqual(rowsStarting(MARKDOWN, "Policy"), [["Policy", "rungs v3"]]);
+  // The hashes of the suite file and of the limits file are under Identifiers, at the end.
+  assert.deepEqual(rowsStarting(MARKDOWN, "Suite file"), [["Suite file", "5".repeat(64)]]);
+  assert.deepEqual(rowsStarting(MARKDOWN, "Limits file"), [
+    ["Limits file", "v3"],
+    ["Limits file", COMPARISONS.policy],
+  ]);
+  assert.ok(MARKDOWN.indexOf("| Suite file |") > MARKDOWN.indexOf("\n## Identifiers\n"));
   assert.deepEqual(MODEL.policy, { version: 3, hash: COMPARISONS.policy });
 });
 
@@ -114,22 +136,34 @@ test("the summary counts the pairs of each mode by verdict, and says how many fa
   ]);
   // A blocked pair is counted, and is not one of the failures: the rung that blocks it is.
   assert.equal(MODEL.failing, 3);
-  assert.match(MARKDOWN, /^3 of 7 pairs are FAIL or ERROR\.$/m);
-  assert.deepEqual(rowsStarting(MARKDOWN, "ATTENTION")[0], ["ATTENTION", "1", "1"]);
-  assert.deepEqual(rowsStarting(MARKDOWN, "BLOCKED")[0], ["BLOCKED", "1", "0"]);
-  assert.deepEqual(rowsStarting(MARKDOWN, "ERROR")[0], ["ERROR", "1", "2"]);
+  assert.match(MARKDOWN, /^3 of 7 pairs are Fail or Error\.$/m);
+  // The summary names each verdict by its label and each mode by the words the commands use.
+  assert.match(MARKDOWN, /^\| Verdict \| against the reference \| every pair \|$/m);
+  assert.deepEqual(rowsStarting(MARKDOWN, "Side by side, worth a look")[0], ["Side by side, worth a look", "1", "1"]);
+  assert.deepEqual(rowsStarting(MARKDOWN, "Not judged (an earlier check failed)")[0], [
+    "Not judged (an earlier check failed)",
+    "1",
+    "0",
+  ]);
+  assert.deepEqual(rowsStarting(MARKDOWN, "Error")[0], ["Error", "1", "2"]);
 
   const clean: ComparisonFile = { ...COMPARISONS, comparisons: COMPARISONS.comparisons.slice(2, 3) };
   const markdown = renderMarkdown(buildReport(MANIFEST, clean, POLICY));
-  assert.match(markdown, /^No pair is FAIL or ERROR, of 1 compared\.$/m);
+  assert.match(markdown, /^No pair is Fail or Error, of 1 compared\.$/m);
 });
 
 test("the support matrix has a row per request and a cell per engine, from the manifest alone", () => {
-  assert.deepEqual(rowsStarting(MARKDOWN, "tele").slice(1), [
-    ["tele", "r5, request 1 of 2", "ok", "ok", "error: spawn-failed"],
-    ["tele", "r5, request 2 of 2", "ok", "unsupported: feature surface.asphere.odd, option a\\|b", "—"],
-    ["tele", "r0", "ok", "pending", "—"],
-    ["tele", "r1", "ok", "ok", "—"],
+  assert.deepEqual(rowsStarting(MARKDOWN, "tele").slice(1, 5), [
+    ["tele", "mtf-vs-optiland-fft, request 1 of 2", "ok", "ok", "error: spawn-failed"],
+    [
+      "tele",
+      "mtf-vs-optiland-fft, request 2 of 2",
+      "ok",
+      "unsupported: feature surface.asphere.odd, option a\\|b",
+      "—",
+    ],
+    ["tele", "built-system", "ok", "pending", "—"],
+    ["tele", "first-order", "ok", "ok", "—"],
   ]);
   const nothingCompared = buildReport(MANIFEST, { ...COMPARISONS, comparisons: [] }, POLICY);
   assert.deepEqual(nothingCompared.support, MODEL.support);
@@ -150,21 +184,21 @@ test("a section has the policy's metrics by name, then any other, each with its 
   );
   assert.deepEqual([first.request, second.request, third.request], ["request 1 of 2", "request 2 of 2", null]);
   assert.deepEqual([first.mode, first.class], ["independent-method", "recorded"]);
-  // A rung the policy has no entry for is shown without limits, and says so.
+  // A check the limits file has no entry for is shown without limits, and says so.
   assert.deepEqual([third.mode, third.class, third.columns], [null, null, []]);
-  assert.match(MARKDOWN, /^Quantity `system\.describe`, the policy has no entry for this rung\. /m);
+  assert.match(MARKDOWN, /^Quantity `system\.describe`: the limits file has no entry for this check\.$/m);
   assert.match(MARKDOWN, /^Reference vs each, against `lv`:\n\nNo other engine was compared\.$/m);
 });
 
 test("a gated metric shows its tolerance with its unit", () => {
   const gated: ComparisonFile = {
     ...COMPARISONS,
-    comparisons: [{ ...COMPARISONS.comparisons[2], rung: "r2", quantity: "rays.trace" }],
+    comparisons: [{ ...COMPARISONS.comparisons[2], rung: "ray-trace", quantity: "rays.trace" }],
   };
   const model = buildReport(MANIFEST, gated, POLICY);
   assert.deepEqual(model.sections[0].columns, [{ name: "hits.max", unit: "mm", limit: 0, limitKind: "tolerance" }]);
-  const policy = { ...POLICY, rungs: { r2: POLICY.rungs.r2 } };
-  const set = { ...COMPARISONS.comparisons[0], rung: "r2", quantity: "rays.trace" };
+  const policy = { ...POLICY, rungs: { "ray-trace": POLICY.rungs["ray-trace"] } };
+  const set = { ...COMPARISONS.comparisons[0], rung: "ray-trace", quantity: "rays.trace" };
   const markdown = renderMarkdown(buildReport(MANIFEST, { ...COMPARISONS, comparisons: [set] }, policy));
   assert.match(
     markdown,
@@ -198,11 +232,15 @@ test("a figure that is shown and not judged stands beside the judged figure of t
   const pair = { a: "lv", b: "optiland", metrics, class: "gated", verdict: "PASS" } as const;
   const sets = [0, 1].map((index) => ({
     ...COMPARISONS.comparisons[index],
-    rung: "r1",
+    rung: "first-order",
     quantity: "paraxial.first-order",
     pairs: [pair],
   }));
-  const model = buildReport(MANIFEST, { ...COMPARISONS, comparisons: sets }, { ...POLICY, rungs: { r1 } });
+  const model = buildReport(
+    MANIFEST,
+    { ...COMPARISONS, comparisons: sets },
+    { ...POLICY, rungs: { "first-order": r1 } },
+  );
   const markdown = renderMarkdown(model);
 
   // The metrics the policy names, by name, each followed by the figure of the same subject that is only shown.
@@ -216,7 +254,7 @@ test("a figure that is shown and not judged stands beside the judged figure of t
   ]);
   assert.match(
     markdown,
-    /^\| Engine \| firstOrder\.maxAbs \(≤ 1\.00e-9 mm\) \| pupilRadius\.maxScaled \(≤ 1\.00e-9 mm\) \| pupilRadius\.maxAbs \[mm\] \| pupilZ\.maxScaled \(≤ 1\.00e-9 mm\) \| pupilZ\.maxAbs \[mm\] \| lines\.compared \[lines\] \| Verdict \| Note \|$/m,
+    /^\| Engine \| firstOrder\.maxAbs \(≤ 1\.00e-9 mm\) \| pupilRadius\.maxScaled \(≤ 1\.00e-9 mm\) \| pupilRadius\.maxAbs \[mm\] \| pupilZ\.maxScaled \(≤ 1\.00e-9 mm\) \| pupilZ\.maxAbs \[mm\] \| lines\.compared \[wavelengths\] \| Verdict \| Note \|$/m,
   );
   // The plain figures are above 1e-9 mm in a pair that passes: they are shown beside what is judged, with where.
   // (A row of each engine is in the table of engines, then in the consensus's: the gated rung has three engines.)
@@ -253,8 +291,8 @@ test("a figure that is shown and not judged stands beside the judged figure of t
     { name: "mask.failed", value: 0, unit: "rays" },
     { name: "mask.mismatches", value: 0, unit: "rays" },
   ];
-  const set = { ...sets[0], rung: "r2", quantity: "rays.trace", pairs: [{ ...pair, metrics: counts }] };
-  const rays = buildReport(MANIFEST, { ...COMPARISONS, comparisons: [set] }, { ...POLICY, rungs: { r2 } });
+  const set = { ...sets[0], rung: "ray-trace", quantity: "rays.trace", pairs: [{ ...pair, metrics: counts }] };
+  const rays = buildReport(MANIFEST, { ...COMPARISONS, comparisons: [set] }, { ...POLICY, rungs: { "ray-trace": r2 } });
   assert.deepEqual(
     rays.sections[0].columns.map((column) => column.name),
     ["hits.maxDistance", "mask.mismatches", "mask.rimBand", "mask.failed", "rays.compared"],
@@ -285,11 +323,11 @@ test("a floor is a verdict of its own: counted apart from PASS, no failure, with
   const pair = { a: "lv", b: "optiland", metrics, class: "gated", verdict: "FLOOR", reason } as const;
   const sets = [0, 1].map((index) => ({
     ...COMPARISONS.comparisons[index],
-    rung: "r2",
+    rung: "ray-trace",
     quantity: "rays.trace",
     pairs: [pair],
   }));
-  const model = buildReport(MANIFEST, { ...COMPARISONS, comparisons: sets }, { ...POLICY, rungs: { r2 } });
+  const model = buildReport(MANIFEST, { ...COMPARISONS, comparisons: sets }, { ...POLICY, rungs: { "ray-trace": r2 } });
   const markdown = renderMarkdown(model);
 
   // The floor limit is in the heading of each metric that has one, after its tolerance; a metric of the policy
@@ -324,13 +362,17 @@ test("a floor is a verdict of its own: counted apart from PASS, no failure, with
     ],
   );
   assert.equal(model.failing, 0);
-  assert.match(markdown, /^No pair is FAIL or ERROR, of 2 compared\.$/m);
-  assert.deepEqual(rowsStarting(markdown, "PASS")[0], ["PASS", "0", "0"]);
-  assert.deepEqual(rowsStarting(markdown, "FLOOR")[0], ["FLOOR", "1", "1"]);
-  assert.match(
-    markdown,
-    /^\| FLOOR \| A gated rung: a judged metric is above its tolerance by the known numerical floor /m,
-  );
+  assert.match(markdown, /^No pair is Fail or Error, of 2 compared\.$/m);
+  assert.deepEqual(rowsStarting(markdown, "Pass: within limit")[0], ["Pass: within limit", "0", "0"]);
+  assert.deepEqual(rowsStarting(markdown, "Within a known numerical floor")[0], [
+    "Within a known numerical floor",
+    "1",
+    "1",
+  ]);
+  // The limits file grants a floor, so the legend names it, and how its limit is shown.
+  assert.match(markdown, /^\| Within a known numerical floor \| `FLOOR` \| A check held to a limit: a judged figure /m);
+  assert.match(markdown, /^Within a known numerical floor \(`FLOOR`\) is a pass that is counted apart from Pass/m);
+  assert.match(markdown, /`floor ≤` how far the engine with a floor may be from the arbiter/);
   // The pairwise matrix names the metric furthest past its tolerance.
   assert.deepEqual(rowsStarting(markdown, "lv")[2], [
     "lv",
@@ -341,7 +383,8 @@ test("a floor is a verdict of its own: counted apart from PASS, no failure, with
 });
 
 test("an engine of the comparator's own is listed with its adapter revision; a report without one has no column", () => {
-  assert.deepEqual(rowsStarting(MARKDOWN, "Engine")[0], ["Engine", "Status", "Version", "Fingerprint"]);
+  assert.deepEqual(rowsStarting(MARKDOWN, "Engine")[0], ["Engine", "Status", "Version"]);
+  assert.ok(rowsStarting(MARKDOWN, "Engine").some((row) => row.join() === "Engine,Engine code"));
   assert.ok(MODEL.engines.every((engine) => !Object.hasOwn(engine, "adapterRevision")));
   const [lv, ...others] = MANIFEST.engines;
   const adapted = { ...MANIFEST, engines: [{ ...lv, adapterRevision: "a".repeat(64) }, ...others] };
@@ -354,24 +397,27 @@ test("an engine of the comparator's own is listed with its adapter revision; a r
     adapterRevision: "a".repeat(64),
   });
   const markdown = renderMarkdown(model);
-  assert.deepEqual(rowsStarting(markdown, "Engine")[0], [
-    "Engine",
-    "Status",
-    "Version",
-    "Fingerprint",
-    "Adapter revision",
-  ]);
-  assert.deepEqual(rowsStarting(markdown, "lv")[0], ["lv", "available", "0.9 \\| dev", "f".repeat(64), "a".repeat(64)]);
+  // The column is under Identifiers, beside the engine's code; the inputs keep status and version alone.
+  assert.deepEqual(rowsStarting(markdown, "Engine")[0], ["Engine", "Status", "Version"]);
+  const identifiers = markdown.slice(markdown.indexOf("\n## Identifiers\n"));
+  assert.deepEqual(rowsStarting(identifiers, "Engine")[0], ["Engine", "Engine code", "This tool's code behind it"]);
+  assert.deepEqual(rowsStarting(identifiers, "lv")[0], ["lv", "f".repeat(64), "a".repeat(64)]);
   // An engine without one, and one that could not be used, have nothing to state there.
-  assert.deepEqual(rowsStarting(markdown, "optiland")[0].at(-1), "—");
-  assert.deepEqual(rowsStarting(markdown, "zemax")[0], ["zemax", "unavailable: spawn-failed", "—", "—", "—"]);
+  assert.deepEqual(rowsStarting(identifiers, "optiland")[0].at(-1), "—");
+  assert.deepEqual(rowsStarting(identifiers, "zemax")[0], ["zemax", "—", "—"]);
 });
 
 test("a column shows the limit its rung is judged by: the band of a recorded rung, the tolerance of a gated one", () => {
   const limits = { tolerance: 1e-9, attention: 0.005, unit: "1" };
   const columnsOf = (rungClass: "gated" | "recorded"): unknown => {
-    const r5 = { ...POLICY.rungs.r5, mode: "direct" as const, class: rungClass, metrics: { "mtf.maxAbs": limits } };
-    return buildReport(MANIFEST, COMPARISONS, { ...POLICY, rungs: { r5 } }).sections[0].columns[0];
+    const r5 = {
+      ...POLICY.rungs["mtf-vs-optiland-fft"],
+      mode: "direct" as const,
+      class: rungClass,
+      metrics: { "mtf.maxAbs": limits },
+    };
+    return buildReport(MANIFEST, COMPARISONS, { ...POLICY, rungs: { "mtf-vs-optiland-fft": r5 } }).sections[0]
+      .columns[0];
   };
   assert.deepEqual(columnsOf("recorded"), { name: "mtf.maxAbs", unit: "1", limit: 0.005, limitKind: "attention" });
   assert.deepEqual(columnsOf("gated"), { name: "mtf.maxAbs", unit: "1", limit: 1e-9, limitKind: "tolerance" });
@@ -405,7 +451,7 @@ test("a whole number is written in full, so a count and a limit of 0 read as wha
   const counting = { quantity: "system.describe", mode: "direct", class: "gated" } as const;
   const policy = {
     ...POLICY,
-    rungs: { r0: { ...counting, metrics: { "shape.mismatches": { tolerance: 0, unit: "elements" } } } },
+    rungs: { "built-system": { ...counting, metrics: { "shape.mismatches": { tolerance: 0, unit: "elements" } } } },
   };
   const metrics: ComparisonMetric[] = [
     { name: "shape.mismatches", value: 12, unit: "elements", where: { field: "curvature", surface: 4 } },
@@ -413,7 +459,7 @@ test("a whole number is written in full, so a count and a limit of 0 read as wha
   ];
   const reason = "shape.mismatches 12 exceeds its tolerance 0 at field curvature, surface 4";
   const pair = { a: "lv", b: "optiland", metrics, class: "gated", verdict: "FAIL", reason } as const;
-  const set = { ...COMPARISONS.comparisons[0], rung: "r0", quantity: "system.describe", pairs: [pair] };
+  const set = { ...COMPARISONS.comparisons[0], rung: "built-system", quantity: "system.describe", pairs: [pair] };
   const markdown = renderMarkdown(buildReport(MANIFEST, { ...COMPARISONS, comparisons: [set] }, policy));
   assert.match(
     markdown,
@@ -430,7 +476,7 @@ test("a whole number is written in full, so a count and a limit of 0 read as wha
 
 test("a blocked pair is a row with its reason, and no metric", () => {
   const section = MODEL.sections[3];
-  assert.deepEqual([section.rung, section.mode, section.class], ["r1", "direct", "gated"]);
+  assert.deepEqual([section.rung, section.mode, section.class], ["first-order", "direct", "gated"]);
   assert.deepEqual(section.referenceVsEach, {
     reference: "lv",
     rows: [
@@ -438,17 +484,17 @@ test("a blocked pair is a row with its reason, and no metric", () => {
         engine: "optiland",
         metrics: [null],
         verdict: "BLOCKED",
-        reason: "not judged: rung r0 failed for lv and optiland on this case",
+        reason: "not judged: rung built-system failed for lv and optiland on this case",
       },
     ],
   });
-  assert.deepEqual(rowsStarting(MARKDOWN, "optiland").at(-1), [
+  assert.deepEqual(rowsStarting(MARKDOWN.slice(0, MARKDOWN.indexOf("\n## Identifiers\n")), "optiland").at(-1), [
     "optiland",
     "—",
     "BLOCKED",
-    "not judged: rung r0 failed for lv and optiland on this case",
+    "not judged: rung built-system failed for lv and optiland on this case",
   ]);
-  assert.match(MARKDOWN, /^\| BLOCKED \| Both engines answered and the pair is not judged: /m);
+  assert.match(MARKDOWN, /^\| Not judged \(an earlier check failed\) \| `BLOCKED` \| The pair is not judged/m);
 });
 
 test("recorded values are listed side by side: a row per element, a column per engine, nothing judged", () => {
@@ -504,8 +550,8 @@ test("the worst metric is the one furthest past its limit, in units of the limit
     const policy = {
       ...POLICY,
       rungs: {
-        r5: {
-          ...POLICY.rungs.r5,
+        "mtf-vs-optiland-fft": {
+          ...POLICY.rungs["mtf-vs-optiland-fft"],
           metrics: {
             a: { attention: 10, unit: "1" },
             b: { attention: 0.1, unit: "1" },

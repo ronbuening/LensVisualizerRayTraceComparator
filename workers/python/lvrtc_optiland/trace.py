@@ -28,19 +28,40 @@ the contract asks beside that is decided here, from what optiland returned (``se
   not met with it; a ray whose exit point lies up to ``IMAGE_PLANE_TOLERANCE_MM`` behind the image plane lands
   where it left; one that cannot reach the plane is blocked with S as its end surface.
 
-The rays of a request are one batch for optiland, or several of ``MAX_BATCH_RAYS`` for a request that large.
-optiland's tolerance on an asphere is the batch's, raised to the rounding of the longest step any ray of it takes
-to the surface, a ray that has ended among them. On a curved base that is a rounding; on a flat base a ray that
-has a point and no direction, one that was totally reflected further up, is 1e14 times its z from the base plane,
-and every ray of its batch is left on that plane and answered so (docs/gotchas.md).
+The rays of a request are one batch for optiland, or several of ``MAX_BATCH_RAYS`` for a request that large, in the
+order given. optiland's tolerance on an asphere is the batch's, raised to the rounding of the longest step any ray
+of it takes to the surface, a ray that has ended among them: a ray with a point and no direction, one that was
+totally reflected at the surface before, is put 1e14 times its z from the vertex plane, and every ray of its batch
+is left on the base of the asphere (on a flat base since 4e893f53 at least; on a curved base since optiland
+a9e544a2, whose #935 seeds a ray that misses the base conic on the vertex plane; docs/gotchas.md).
+
+**So a batch is shielded from the rays optiland ended** (the owner's decision of 2026-11-10; ``trace_batch``). A
+batch is traced as it is, once; when optiland ends no ray of it, that is the answer, bit for bit. Otherwise the rays
+that ended at the first surface any ray ended at (the least end surface, S for a ray that left the last surface and
+did not land) are answered from that pass, which held no ray that had ended before that surface, and the rest are
+traced again, as a batch of their own in the order given, without them; and so on until a pass ends no ray, whose
+rays are answered from it. So every ray, the ones optiland keeps and the ones it ends, is answered from a trace of
+a batch that held no ray optiland had ended before that ray's own end, and an ended ray keeps the end surface and
+the reason ``settle`` reads from the pass it is answered from. One ray spoils the surface it ends at: one that comes
+to it sideways (the z component of its heading not above ``SIDEWAYS_HEADING`` in magnitude, optiland's own bound),
+which optiland seeds 1e14 times its z away where it has no seed on an asphere's base conic. Of the rays that end at
+the least surface, such rays are answered first, in a pass of their own (``end_keys``), and the others traced again
+without them. A pass answers at least one key, two a surface and one for S, so a batch takes at most 2 S + 2 passes
+where no pass ends a ray at a key below that of the pass before it, as it cannot but for a rounding of a tolerance; a
+batch that would take more is an error (``ShieldPassesExceeded``), never an answer. What the shield does not reach:
+a ray optiland keeps alive raises the tolerance of its batch as before, the far ray of docs/gotchas.md among them.
+optiland's own analyses (its aimer's traces, its MTF, spot and wavefront grids) trace their own batches, which are
+optiland's and are not shielded; ``axial.native`` traces the rays optiland's aimer launched through the shield.
 
 **The optical path** is optiland's own (``path_lengths``), and what its ``opd`` holds was read in its source, at
-optiland 4e893f53, rule by rule against the contract's (contract/CONTRACT.md, ``rays.trace``):
+optiland 4e893f53 and again at a9e544a2, rule by rule against the contract's (contract/CONTRACT.md, ``rays.trace``):
 
 - *Where it starts.* ``RealRays.__init__`` sets ``opd`` to 0 and ``ObjectSurface._trace_real`` does nothing: the
   path is 0 at the ray's own origin, wherever the object surface stands. ``record`` holds the first row to it.
-- *What a stretch adds.* ``Surface._trace_real`` adds ``t * material_pre.n(w)`` on the way to each surface, the
-  image surface included (``ImageSurface`` has no kernel of its own for real rays), and nothing else does: a
+- *What a stretch adds.* ``Surface._trace_real`` adds ``t * material_pre.n(w)`` on the way to each surface (since
+  a9e544a2 through the medium's ``propagation_model.propagate_to_surface``, which for the homogeneous medium of
+  every case adds the same), the image surface included (``ImageSurface`` has no kernel of its own for real rays),
+  and nothing else does: a
   refraction adds no path, and the model that would (a phase profile, a thin lens) is none ``verify_optic`` lets
   through. ``t`` is the step of the surface's intersection along the ray, with its sign: a step backwards is
   subtracted, as the contract counts it.
@@ -502,7 +523,8 @@ def settle(optic: Any, rows: Rows, api: OptilandApi | None = None) -> Traced:
        point optiland has;
     3. a ray without a point there is blocked when the surface is a conic that its line provably misses
        (``_misses_conic``), and failed otherwise: on an asphere optiland's iteration starts from the base conic
-       and has no point when the line misses that, whether or not it meets the asphere;
+       (since a9e544a2 from the vertex plane where the line misses that) and has no point where it does not
+       settle in front of the ray, whether or not the line meets the asphere;
     4. a ray with a point that does not lie on the surface (``_off_surface``, ``ON_SURFACE_TOLERANCE_MM``) is
        failed: optiland stopped it, or lost its direction, at a point that is not where it met the surface;
     5. a ray on the surface with an intensity of 0 is blocked: an aperture stopped it;
@@ -611,14 +633,117 @@ def settle(optic: Any, rows: Rows, api: OptilandApi | None = None) -> Traced:
     )
 
 
+class ShieldPassesExceeded(RuntimeError):
+    """A batch the shield did not settle within its bound of passes (``shield_pass_limit``): no answer is made."""
+
+
+SIDEWAYS_HEADING = 1e-14
+"""optiland's own bound on a heading (``NewtonRaphsonGeometry._solve_distance_primal``, a9e544a2): a ray that has no
+seed on an asphere's base conic and whose direction's z component is not above it in magnitude is seeded on the vertex
+plane 1e14 times its z away, which raises the tolerance of every ray of the batch at that surface. Such a ray spoils
+the very surface it ends at, so it is answered before the other rays that end there (``end_keys``)."""
+
+
+def shield_pass_limit(optic: Any) -> int:
+    """The most passes ``trace_batch`` takes for a batch through ``optic``: 2 S + 2 for S surfaces of the case.
+
+    A pass answers the rays of the least key it has (``end_keys``): two a surface of the S surfaces, the rays that came
+    to it sideways and the others, one for S itself, a ray that left the last surface and did not land; and the last
+    pass the rays that arrived: 2 S + 2 passes where no pass ends a ray at a key below that of the pass before it.
+    """
+    surfaces = int(optic.surfaces.num_surfaces) - 2
+    return 2 * surfaces + 2
+
+
+def end_keys(rows: Rows, traced: Traced, api: OptilandApi | None = None) -> Any:
+    """The order in which the ended rays of a pass are answered: twice the end surface, less one for a ray whose
+    heading in front of that surface is sideways (``SIDEWAYS_HEADING``), which spoils that surface for the others.
+
+    int64 ``[n]``; a ray that arrived has no key that is read. A ray that ended at S, behind the last surface, is
+    landed on a plane, where no tolerance is raised: never sideways here.
+    """
+    api = api if api is not None else optiland_api()
+    np = api.np
+    surfaces = int(rows.x.shape[0]) - 2
+    end = traced.end_surface.astype(np.int64)
+    keys = 2 * end
+    inside = np.flatnonzero((traced.status != STATUS_OK) & (end >= 0) & (end < surfaces))
+    # Row m of what optiland recorded holds the direction in front of the case's surface m (row 0 the launch).
+    heading = rows.N[end[inside], inside]
+    keys[inside[np.abs(heading) <= SIDEWAYS_HEADING]] -= 1
+    return keys
+
+
+def trace_batch(optic: Any, origins: Any, directions: Any, api: OptilandApi | None = None) -> tuple[Traced, int]:
+    """One batch of rays traced and shielded from the rays optiland ended, and how many passes it took.
+
+    The batch is traced once (``record``) and read once (``settle``). Where no ray ended, that is the answer, the
+    very arrays. Otherwise the ended rays of the least key of the pass (``end_keys``: the least end surface, the rays
+    that came to it sideways first) are answered from it, and the others are traced again, without them and in the
+    order given, until a pass ends no ray: each ray's answer is that of the pass it was answered in, in its place in
+    the batch. More passes than ``shield_pass_limit`` raise ``ShieldPassesExceeded``.
+    """
+    traced, passes, _ = shielded(optic, origins, directions, api)
+    return traced, passes
+
+
+def shielded(
+    optic: Any, origins: Any, directions: Any, api: OptilandApi | None = None, *, row: int | None = None
+) -> tuple[Traced, int, Any]:
+    """``trace_batch``, and where ``row`` is given, each ray's point there as optiland recorded it in the pass the ray
+    is answered from: float64 ``[n, 3]``, the row whatever became of the ray (optiland traces it on); else None."""
+    api = api if api is not None else optiland_api()
+    np = api.np
+    rows = record(optic, origins, directions, api)
+    first = settle(optic, rows, api)
+
+    def points(recorded: Rows) -> Any:
+        return None if row is None else np.column_stack((recorded.x[row], recorded.y[row], recorded.z[row]))
+
+    if not np.any(first.status != STATUS_OK):
+        return first, 1, points(rows)
+    limit = shield_pass_limit(optic)
+    answer = {name: None if getattr(first, name) is None else np.array(getattr(first, name)) for name in _TRACED}
+    kept = points(rows)
+    remaining = np.arange(int(origins.shape[0]))
+    traced, passes = first, 1
+    while True:
+        ended = traced.status != STATUS_OK
+        if np.any(ended):
+            keys = end_keys(rows, traced, api)
+            answered = ended & (keys == int(np.min(keys[ended])))
+        else:
+            answered = np.ones(remaining.shape[0], dtype=bool)
+        for name in _TRACED:
+            if answer[name] is None:
+                continue
+            if _RAY_AXIS.get(name, 0) == 1:
+                answer[name][:, remaining[answered]] = getattr(traced, name)[:, answered]
+            else:
+                answer[name][remaining[answered]] = getattr(traced, name)[answered]
+        if kept is not None:
+            kept[remaining[answered]] = points(rows)[answered]
+        remaining = remaining[~answered]
+        if remaining.shape[0] == 0:
+            return Traced(**answer), passes, kept
+        if passes == limit:
+            raise ShieldPassesExceeded(
+                f"{remaining.shape[0]} rays were not settled in {limit} passes, the most a batch of this optic takes"
+            )
+        rows = record(optic, origins[remaining], directions[remaining], api)
+        traced = settle(optic, rows, api)
+        passes += 1
+
+
 def trace_rays(
     optic: Any, origins: Any, directions: Any, api: OptilandApi | None = None, *, max_batch: int = MAX_BATCH_RAYS
 ) -> tuple[Traced, int]:
     """The trace of given rays through a built optic, and how many batches optiland traced for it.
 
     ``origins`` and ``directions`` are float64 arrays of shape (n, 3), in the contract's frame. The rays are handed
-    to optiland in the order given, ``max_batch`` at a time, each batch traced once (``record``) and read once
-    (``settle``); the answer has the rays in the order given.
+    to optiland in the order given, ``max_batch`` at a time, each batch traced and shielded from the rays optiland
+    ended (``trace_batch``); the answer has the rays in the order given. The count is of those batches, not of the
+    passes the shield took.
     """
     api = api if api is not None else optiland_api()
     np = api.np
@@ -626,7 +751,7 @@ def trace_rays(
     parts = []
     for start in range(0, count, max_batch):
         batch = slice(start, start + max_batch)
-        parts.append(settle(optic, record(optic, origins[batch], directions[batch], api), api))
+        parts.append(trace_batch(optic, origins[batch], directions[batch], api)[0])
     if len(parts) == 1:
         return parts[0], 1
     joined = (

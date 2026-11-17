@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" class="lvc" width="640" height="498" viewBox="0 0 640 498" role="img">
-<title>stand-in-tabs, lens, r10b: Tangential focus shift (mm) against Field angle (degrees)</title>
-<desc>Each recorded comparison of this card in this condition: each value both answers recorded, set on shared axes, and below it the first engine&#39;s value minus the second&#39;s. A difference is drawn only for a field or line the comparison sorts as of two methods (repeated by the comparator&#39;s own functions from the values it recorded); one it sets aside is named with its class and reason. The shaded band is the attention band the policy at hand gives the value&#39;s metric, and a chart says where it gives none. 0: set aside as data (indices-differ), so no difference is drawn. 10: set aside as data (indices-differ), so no difference is drawn. 20: set aside as unsupported (no-curve), so no difference is drawn.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" class="lvc" width="640" height="516" viewBox="0 0 640 516" role="img">
+<title>stand-in-tabs, lens, field-curve-vs-optiland: Tangential focus shift (mm) against Field angle (degrees)</title>
+<desc>Each side-by-side comparison of this card in this condition: each value both answers recorded, set on shared axes, and below it the first engine&#39;s value minus the second&#39;s. A difference is drawn only for a field or wavelength the comparison sorts as of two methods (repeated by this tool&#39;s own functions from the values it recorded); one it sets aside is named with its class and reason. The shaded band is the review band the limits file at hand gives the value&#39;s figure, and a chart says where it gives none. 0: set aside (the inputs differ: indices-differ), so no difference is drawn. 10: set aside (the inputs differ: indices-differ), so no difference is drawn. 20: set aside (not computed by one engine: an engine has no curve of the field), so no difference is drawn.</desc>
 <style>.lvc{font:11px system-ui,-apple-system,'Segoe UI',sans-serif}
 .lvc .bg{fill:#fcfcfb}
 .lvc text{fill:#1c1c21}
@@ -104,8 +104,8 @@
 .lvc .v-BLOCKED{fill:#3d3d46}
 .lvc text.t-BLOCKED{fill:#e4e4ea}
 }</style>
-<rect class="bg" x="0" y="0" width="640" height="498"/>
-<text x="12" y="20" class="head">stand-in-tabs, lens, r10b: Tangential focus shift (mm) against Field angle (degrees)</text>
+<rect class="bg" x="0" y="0" width="640" height="516"/>
+<text x="12" y="20" class="head">stand-in-tabs, lens, field-curve-vs-optiland: Tangential focus shift (mm) against Field angle (degrees)</text>
 <line class="grid" x1="76" y1="236" x2="624" y2="236"/>
 <text x="70" y="240" class="muted" text-anchor="end">0</text>
 <line class="grid" x1="76" y1="186" x2="624" y2="186"/>
@@ -153,20 +153,20 @@
 <line class="axis" x1="76" y1="280" x2="76" y2="390"/>
 <text x="14" y="335" text-anchor="middle" transform="rotate(-90 14 335)">Difference</text>
 <text x="350" y="424" text-anchor="middle">Field angle (degrees)</text>
-<rect class="band" x="76" y="307.5" width="548" height="55"><title>attention ±1.00e-5: policy/compare-policy.json /rungs/r10b/metrics/tangentialShift.maxAbs/attention</title></rect>
+<rect class="band" x="76" y="307.5" width="548" height="55"><title>review band ±1.00e-5: policy/compare-policy.json /rungs/field-curve-vs-optiland/metrics/tangentialShift.maxAbs/attention</title></rect>
 <line class="zeroline" x1="76" y1="335" x2="624" y2="335"/>
 <polyline class="line s0" points="76,236 350,138.34 624,40.69"/>
-<circle class="dot s0" cx="76" cy="236" r="4"><title>lv, 587.5618 nm at 0 (r10b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/fieldAngleDeg/0): 0 (r10b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/tangentialShiftMm/0)</title></circle>
-<circle class="dot s0" cx="350" cy="138.34" r="4"><title>lv, 587.5618 nm at 10 (r10b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/fieldAngleDeg/1): 1.95e-2 (r10b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/tangentialShiftMm/1)</title></circle>
-<circle class="dot s0" cx="624" cy="40.69" r="4"><title>lv, 587.5618 nm at 20 (r10b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/fieldAngleDeg/2): 3.91e-2 (r10b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/tangentialShiftMm/2)</title></circle>
+<circle class="dot s0" cx="76" cy="236" r="4"><title>LensVisualizer, 587.5618 nm at 0 (r10b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/fieldAngleDeg/0): 0 (r10b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/tangentialShiftMm/0)</title></circle>
+<circle class="dot s0" cx="350" cy="138.34" r="4"><title>LensVisualizer, 587.5618 nm at 10 (r10b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/fieldAngleDeg/1): 1.95e-2 (r10b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/tangentialShiftMm/1)</title></circle>
+<circle class="dot s0" cx="624" cy="40.69" r="4"><title>LensVisualizer, 587.5618 nm at 20 (r10b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/fieldAngleDeg/2): 3.91e-2 (r10b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/tangentialShiftMm/2)</title></circle>
 <polyline class="line s1 dash" points="76,236 350,138.34 624,40.69"/>
 <rect class="dot s1" x="72" y="232" width="8" height="8"><title>optiland, 587.5618 nm at 0 (r10b-stand-ins/comparisons.json /comparisons/0/participants/1/recorded/fieldAngleDeg/0): 0 (r10b-stand-ins/comparisons.json /comparisons/0/participants/1/recorded/tangentialShiftMm/0)</title></rect>
 <rect class="dot s1" x="346" y="134.34" width="8" height="8"><title>optiland, 587.5618 nm at 10 (r10b-stand-ins/comparisons.json /comparisons/0/participants/1/recorded/fieldAngleDeg/1): 1.95e-2 (r10b-stand-ins/comparisons.json /comparisons/0/participants/1/recorded/tangentialShiftMm/1)</title></rect>
 <rect class="dot s1" x="620" y="36.69" width="8" height="8"><title>optiland, 587.5618 nm at 20 (r10b-stand-ins/comparisons.json /comparisons/0/participants/1/recorded/fieldAngleDeg/2): 3.91e-2 (r10b-stand-ins/comparisons.json /comparisons/0/participants/1/recorded/tangentialShiftMm/2)</title></rect>
 <polyline class="line s2" points="76,236 350,138.34 624,40.69"/>
-<polygon class="dot s2" points="76,231 81,240 71,240"><title>lv, 537.5618 nm at 0 (r10b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/fieldAngleDeg/3): 0 (r10b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/tangentialShiftMm/3)</title></polygon>
-<polygon class="dot s2" points="350,133.34 355,142.34 345,142.34"><title>lv, 537.5618 nm at 10 (r10b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/fieldAngleDeg/4): 1.95e-2 (r10b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/tangentialShiftMm/4)</title></polygon>
-<polygon class="dot s2" points="624,35.69 629,44.69 619,44.69"><title>lv, 537.5618 nm at 20 (r10b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/fieldAngleDeg/5): 3.91e-2 (r10b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/tangentialShiftMm/5)</title></polygon>
+<polygon class="dot s2" points="76,231 81,240 71,240"><title>LensVisualizer, 537.5618 nm at 0 (r10b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/fieldAngleDeg/3): 0 (r10b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/tangentialShiftMm/3)</title></polygon>
+<polygon class="dot s2" points="350,133.34 355,142.34 345,142.34"><title>LensVisualizer, 537.5618 nm at 10 (r10b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/fieldAngleDeg/4): 1.95e-2 (r10b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/tangentialShiftMm/4)</title></polygon>
+<polygon class="dot s2" points="624,35.69 629,44.69 619,44.69"><title>LensVisualizer, 537.5618 nm at 20 (r10b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/fieldAngleDeg/5): 3.91e-2 (r10b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/tangentialShiftMm/5)</title></polygon>
 <polyline class="line s3 dash" points="76,236 350,138.34"/>
 <polygon class="dot s3" points="76,231 81,236 76,241 71,236"><title>optiland, 537.5618 nm at 0 (r10b-stand-ins/comparisons.json /comparisons/0/participants/1/recorded/fieldAngleDeg/3): 0 (r10b-stand-ins/comparisons.json /comparisons/0/participants/1/recorded/tangentialShiftMm/3)</title></polygon>
 <polygon class="dot s3" points="350,133.34 355,138.34 350,143.34 345,138.34"><title>optiland, 537.5618 nm at 10 (r10b-stand-ins/comparisons.json /comparisons/0/participants/1/recorded/fieldAngleDeg/4): 1.95e-2 (r10b-stand-ins/comparisons.json /comparisons/0/participants/1/recorded/tangentialShiftMm/4)</title></polygon>
@@ -174,11 +174,11 @@
 <polygon class="dot s4" points="76,340 81,331 71,331"><title>at 0 (r10b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/fieldAngleDeg/0): 0, derived: lv&#39;s tangentialShiftMm minus optiland&#39;s of r10b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/tangentialShiftMm/0; r10b-stand-ins/comparisons.json /comparisons/0/participants/1/recorded/tangentialShiftMm/0</title></polygon>
 <polygon class="dot s4" points="350,342.62 355,333.62 345,333.62"><title>at 10 (r10b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/fieldAngleDeg/1): -9.54e-7, derived: lv&#39;s tangentialShiftMm minus optiland&#39;s of r10b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/tangentialShiftMm/1; r10b-stand-ins/comparisons.json /comparisons/0/participants/1/recorded/tangentialShiftMm/1</title></polygon>
 <polygon class="dot s4" points="624,340 629,331 619,331"><title>at 20 (r10b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/fieldAngleDeg/2): 0, derived: lv&#39;s tangentialShiftMm minus optiland&#39;s of r10b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/tangentialShiftMm/2; r10b-stand-ins/comparisons.json /comparisons/0/participants/1/recorded/tangentialShiftMm/2</title></polygon>
-<g><line class="line s0" x1="76" y1="445" x2="100" y2="445"/><circle class="dot s0" cx="88" cy="445" r="4"></circle><text x="106" y="449">lv, 587.5618 nm</text></g>
-<g><line class="line s1 dash" x1="213" y1="445" x2="237" y2="445"/><rect class="dot s1" x="221" y="441" width="8" height="8"></rect><text x="243" y="449">optiland, 587.5618 nm</text></g>
-<g><line class="line s2" x1="387.2" y1="445" x2="411.2" y2="445"/><polygon class="dot s2" points="399.2,440 404.2,449 394.2,449"></polygon><text x="417.2" y="449">lv, 537.5618 nm</text></g>
-<g><line class="line s3 dash" x1="76" y1="463" x2="100" y2="463"/><polygon class="dot s3" points="88,458 93,463 88,468 83,463"></polygon><text x="106" y="467">optiland, 537.5618 nm</text></g>
-<g><line class="line s4" x1="250.2" y1="463" x2="274.2" y2="463"/><polygon class="dot s4" points="262.2,468 267.2,459 257.2,459"></polygon><text x="280.2" y="467">lv minus optiland, 587.5618 nm</text></g>
-<g><line class="line s5" x1="76" y1="481" x2="100" y2="481"/><polygon class="dot s5" points="86,476 90,476 90,479 93,479 93,483 90,483 90,486 86,486 86,483 83,483 83,479 86,479"></polygon><text x="106" y="485">lv minus optiland, 537.5618 nm</text></g>
-<g><rect class="band" x="306" y="476" width="24" height="10"/><text x="336" y="485">attention ±1.00e-5</text></g>
+<g><line class="line s0" x1="76" y1="445" x2="100" y2="445"/><circle class="dot s0" cx="88" cy="445" r="4"></circle><text x="106" y="449">LensVisualizer, 587.5618 nm</text></g>
+<g><line class="line s1 dash" x1="287.4" y1="445" x2="311.4" y2="445"/><rect class="dot s1" x="295.4" y="441" width="8" height="8"></rect><text x="317.4" y="449">optiland, 587.5618 nm</text></g>
+<g><line class="line s2" x1="76" y1="463" x2="100" y2="463"/><polygon class="dot s2" points="88,458 93,467 83,467"></polygon><text x="106" y="467">LensVisualizer, 537.5618 nm</text></g>
+<g><line class="line s3 dash" x1="287.4" y1="463" x2="311.4" y2="463"/><polygon class="dot s3" points="299.4,458 304.4,463 299.4,468 294.4,463"></polygon><text x="317.4" y="467">optiland, 537.5618 nm</text></g>
+<g><line class="line s4" x1="76" y1="481" x2="100" y2="481"/><polygon class="dot s4" points="88,486 93,477 83,477"></polygon><text x="106" y="485">LensVisualizer minus optiland, 587.5618 nm</text></g>
+<g><line class="line s5" x1="76" y1="499" x2="100" y2="499"/><polygon class="dot s5" points="86,494 90,494 90,497 93,497 93,501 90,501 90,504 86,504 86,501 83,501 83,497 86,497"></polygon><text x="106" y="503">LensVisualizer minus optiland, 537.5618 nm</text></g>
+<g><rect class="band" x="380.4" y="494" width="24" height="10"/><text x="410.4" y="503">review band ±1.00e-5</text></g>
 </svg>

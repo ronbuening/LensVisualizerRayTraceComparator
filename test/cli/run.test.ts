@@ -14,6 +14,7 @@ import { CASES_DIRECTORY, MANIFEST_FILE, SOURCE_CHANGED } from "../../src/core/m
 import type { RunManifest } from "../../src/core/manifest.ts";
 import { STORE_DIRECTORY } from "../../src/core/resultStore.ts";
 import { RUNGS } from "../../src/core/rungs.ts";
+import { OLD_ID_TEXT } from "../../src/vocabulary/index.ts";
 import { DOUBLE_GAUSS, FAKE_PAIR_SUITE, FAKE_ROOT, SINGLET, caseFixture, tempDir } from "../core/support.ts";
 import { FAKE_ENGINE_FILES, FAKE_LENS_FILES, FAKE_LV, closureOf } from "../engines/lv/support.ts";
 
@@ -21,7 +22,7 @@ const BIN = fileURLToPath(new URL("../../bin/lvrtc.mjs", import.meta.url));
 const FAKE_MIXED_SUITE = fileURLToPath(new URL("../fixtures/suites/fake-mixed.json", import.meta.url));
 const FAKE_ENGINE = fileURLToPath(new URL("../../src/engines/fake/engine.ts", import.meta.url));
 const SYNOPSIS =
-  "Usage: lvrtc run <suite.json> [--root <dir>] [--engines <id,...>] [--rungs <id,...>] [--jobs <n>] [--memory-budget <GiB>] [--json]\n";
+  "Usage: lvrtc run <suite.json> [--root <dir>] [--engines <id,...>] [--checks <id,...>] [--jobs <n>] [--memory-budget <GiB>] [--details] [--json]\n";
 /** The environment variable that tells the engine of the SIGKILL test after how many runs to kill its process. */
 const KILL_AFTER_RUNS = "LVRTC_TEST_KILL_AFTER_RUNS";
 
@@ -79,7 +80,7 @@ function rootWith(t: TestContext, engines: unknown, files: Readonly<Record<strin
     contract: CONTRACT_VERSION,
     kind: "suite",
     name: "pair",
-    defaults: { rungs: ["selftest"] },
+    defaults: { rungs: ["pipeline-echo"] },
     runs: [
       { name: "singlet", lens: { kind: "fixture", path: "cases/singlet.json" } },
       { name: "double-gauss", lens: { kind: "fixture", path: "cases/double-gauss.json" } },
@@ -123,7 +124,7 @@ test("run is a registered command", async () => {
   assert.ok(COMMANDS.some((command) => command.name === "run"));
   const out: string[] = [];
   assert.equal(await runCli(["--help"], { stdout: (text) => void out.push(text), stderr: () => {} }), EXIT_OK);
-  assert.match(out.join(""), /^ {2}run +Run a suite on the configured engines, reusing stored results$/m);
+  assert.match(out.join(""), /^ {2}run +Run a suite on its engines, reusing answers already in the result cache$/m);
 });
 
 test("lvrtc run: a line per job and a summary, exit 0; the second run finds every answer in the store", (t) => {
@@ -134,14 +135,17 @@ test("lvrtc run: a line per job and a summary, exit 0; the second run finds ever
   assert.equal(
     first.out,
     [
-      "singlet       selftest  fake-a           ok           computed",
-      "singlet       selftest  fake-b           ok           computed",
-      "singlet       selftest  fake-none        unsupported  negotiated   the engine does not offer selftest.echo",
-      "double-gauss  selftest  fake-a           ok           computed",
-      "double-gauss  selftest  fake-b           ok           computed",
-      "double-gauss  selftest  fake-none        unsupported  negotiated   the engine does not offer selftest.echo",
-      "fake-pair: 6 jobs: 4 ok, 2 unsupported, 0 error, 0 pending (4 computed, 0 cached)",
-      `manifest: ${manifestPath}`,
+      "singlet       pipeline-echo                fake-a                     answered                 asked now",
+      "singlet       pipeline-echo                fake-b                     answered                 asked now",
+      "singlet       pipeline-echo                fake-none                  not computed             not offered      the engine does not offer selftest.echo",
+      "double-gauss  pipeline-echo                fake-a                     answered                 asked now",
+      "double-gauss  pipeline-echo                fake-b                     answered                 asked now",
+      "double-gauss  pipeline-echo                fake-none                  not computed             not offered      the engine does not offer selftest.echo",
+      "The ids in the lines above:",
+      "  Checks: pipeline-echo Pipeline echo (a test of this tool)",
+      "  Engines: fake-a, fake-b, fake-none (defined in this configuration)",
+      "fake-pair: 6 jobs: 4 answered, 2 not computed (4 asked now, 2 not offered)",
+      `run record: ${manifestPath}`,
       "",
     ].join("\n"),
   );
@@ -157,7 +161,9 @@ test("lvrtc run: a line per job and a summary, exit 0; the second run finds ever
   assert.equal(second.code, EXIT_OK, second.err);
   assert.equal(
     second.out,
-    first.out.replaceAll("computed\n", "cached\n").replace("(4 computed, 0 cached)", "(0 computed, 4 cached)"),
+    first.out
+      .replaceAll("asked now\n", "from the cache\n")
+      .replace("(4 asked now, 2 not offered)", "(4 from the result cache, 2 not offered)"),
   );
   assert.equal(readFileSync(manifestPath, "utf8"), manifest, "computed or cached, the manifest is the same bytes");
   assert.equal(readdirSync(join(runsDir, STORE_DIRECTORY)).length, 4);
@@ -176,10 +182,13 @@ test("--engines runs only the engines named, in id order", (t) => {
   const runsDir = join(tempDir(t), "runs");
   const one = fakePair(runsDir, "--engines", "fake-b");
   assert.equal(one.code, EXIT_OK, one.err);
-  assert.deepEqual(one.out.split("\n").slice(0, 3), [
-    "singlet       selftest  fake-b           ok           computed",
-    "double-gauss  selftest  fake-b           ok           computed",
-    "fake-pair: 2 jobs: 2 ok, 0 unsupported, 0 error, 0 pending (2 computed, 0 cached)",
+  assert.deepEqual(one.out.split("\n").slice(0, 6), [
+    "singlet       pipeline-echo                fake-b                     answered                 asked now",
+    "double-gauss  pipeline-echo                fake-b                     answered                 asked now",
+    "The ids in the lines above:",
+    "  Checks: pipeline-echo Pipeline echo (a test of this tool)",
+    "  Engines: fake-b (defined in this configuration)",
+    "fake-pair: 2 jobs: 2 answered (2 asked now)",
   ]);
   assert.deepEqual(
     manifestOf(runsDir, "fake-pair").engines.map((engine) => engine.id),
@@ -197,33 +206,57 @@ test("--engines runs only the engines named, in id order", (t) => {
       "double-gauss fake-none unsupported",
     ],
   );
-  assert.match(two.out, /\(0 computed, 2 cached\)/);
+  assert.match(two.out, /\(2 from the result cache, 2 not offered\)$/m);
 });
 
 test("unsupported is an answer, not a failure: a run of nothing else exits 0", (t) => {
   const runsDir = join(tempDir(t), "runs");
   const ended = fakePair(runsDir, "--engines", "fake-none");
   assert.equal(ended.code, EXIT_OK, ended.err);
-  assert.match(ended.out, /^fake-pair: 2 jobs: 0 ok, 2 unsupported, 0 error, 0 pending \(0 computed, 0 cached\)$/m);
+  assert.match(ended.out, /^fake-pair: 2 jobs: 2 not computed \(2 not offered\)$/m);
   assert.equal(existsSync(join(runsDir, STORE_DIRECTORY)), false);
 });
 
 test("--rungs runs only the rungs named; an unknown rung is a usage error and nothing is written", (t) => {
   const runsDir = join(tempDir(t), "runs");
-  const unknown = fakePair(runsDir, "--rungs", "selftest,R0");
+  const unknown = fakePair(runsDir, "--rungs", "pipeline-echo,R0");
   assert.equal(unknown.code, EXIT_USAGE);
   assert.equal(unknown.out, "");
   assert.match(
     unknown.err,
-    /^lvrtc run: unknown rung "R0": the rungs are selftest, r0, r1, r2, r3, r4, r4f, r5, r5g, r6a, r6b, r6c, r7a, r7b, r8a, r8b, r9a, r9b, r10a, r10b, r11a, r11b, r12b, r13b, r14b$/m,
+    /^lvrtc run: unknown rung "R0": the rungs are pipeline-echo, built-system, first-order, ray-trace, optical-path, geometric-mtf, lv-mtf-replay, mtf-vs-optiland-fft, geometric-mtf-vs-optiland, wave-mtf, mtf-vs-wave-estimate, mtf-vs-optiland-wavefront, spot-rays, spot-vs-optiland, axial-rays, axial-vs-optiland, chief-rays, chief-vs-optiland, field-curve-rays, field-curve-vs-optiland, vignetting-rays, vignetting-vs-flux-estimate, summary-vs-optiland, seidel-vs-optiland, zernike-vs-optiland$/m,
   );
   assert.equal(existsSync(runsDir), false);
 
-  const named = fakePair(runsDir, "--rungs", "selftest", "--engines", "fake-a");
+  const named = fakePair(runsDir, "--rungs", "pipeline-echo", "--engines", "fake-a");
   assert.equal(named.code, EXIT_OK, named.err);
   assert.deepEqual(
     manifestOf(runsDir, "fake-pair").jobs.map((job) => `${job.run} ${job.rung}`),
-    ["singlet selftest", "double-gauss selftest"],
+    ["singlet pipeline-echo", "double-gauss pipeline-echo"],
+  );
+});
+
+test("--checks is the documented name of --rungs: the same jobs and the same run record", (t) => {
+  const byRungs = join(tempDir(t), "runs");
+  const byChecks = join(tempDir(t), "runs");
+  // The older spelling with an old check id: each is read as today's, and the command says so, once each.
+  const rungs = fakePair(byRungs, "--rungs", "selftest", "--engines", "fake-a");
+  const checks = fakePair(byChecks, "--checks", "pipeline-echo", "--engines", "fake-a");
+  assert.equal(checks.code, EXIT_OK, checks.err);
+  assert.equal(checks.code, rungs.code);
+  assert.equal(checks.err, "");
+  assert.deepEqual(rungs.err.split("\n").filter(Boolean), [
+    OLD_ID_TEXT.olderOption,
+    "note: some ids were read under their new names: check selftest is now pipeline-echo; write the new ids; the old " +
+      "ones will stop being read when the catalog is next refreshed",
+  ]);
+  assert.equal(
+    readFileSync(join(byChecks, "fake-pair", MANIFEST_FILE), "utf8"),
+    readFileSync(join(byRungs, "fake-pair", MANIFEST_FILE), "utf8"),
+  );
+  assert.deepEqual(
+    manifestOf(byChecks, "fake-pair").jobs.map((job) => `${job.run} ${job.rung}`),
+    ["singlet pipeline-echo", "double-gauss pipeline-echo"],
   );
 });
 
@@ -234,7 +267,7 @@ test("an unknown engine is a usage error that lists the engines there are, and n
   assert.equal(ended.out, "");
   assert.match(
     ended.err,
-    /^lvrtc run: unknown engine "zemax": the configuration defines fake-a, fake-b, fake-far, fake-human, fake-near, fake-none, fake-py, fake-py-oneshot, fake-pyn; built in: flux, lv, optiland, optiland-wave, ref, ref-seidel, replay, wave$/m,
+    /^lvrtc run: unknown engine "zemax": the configuration defines fake-a, fake-b, fake-far, fake-human, fake-near, fake-none, fake-py, fake-py-oneshot, fake-pyn; built in: flux-of-lv-rays, lv, optiland, otf-of-optiland-wavefront, reference-seidel, reference-tracer, replay-of-lv-mtf, wave-mtf-of-lv-rays$/m,
   );
   assert.equal(existsSync(runsDir), false);
 });
@@ -264,11 +297,16 @@ test("a run that cannot be started exits 1, is reported and recorded, and the ot
   const args = [FAKE_MIXED_SUITE, "--root", FAKE_ROOT, "--engines", "fake-a"];
   const ended = lvrtcRun(runsDir, args, { env: { LVRTC_LV_PATH: "" } });
   assert.equal(ended.code, EXIT_FAILURE);
-  assert.match(ended.out, /^singlet {2}selftest {2}fake-a {11}ok {11}computed$/m);
-  assert.match(ended.out, /^fake-mixed: 1 job: 1 ok, 0 unsupported, 0 error, 0 pending \(1 computed, 0 cached\)$/m);
+  assert.match(ended.out, /^singlet {2}pipeline-echo {16}fake-a {21}answered {17}asked now$/m);
+  assert.match(ended.out, /^fake-mixed: 1 job: 1 answered \(1 asked now\)$/m);
   const lv = "lv-not-configured: LensVisualizer is not configured: set lvPath in lvrtc.local.json or LVRTC_LV_PATH";
   const missing = "lens fixture cases/missing.json: it cannot be read (ENOENT)";
   assert.ok(ended.err.includes(`lvrtc run: run lv-lens was not started: ${lv}\n`), ended.err);
+  // Under a problem's line, what its code means and what to do.
+  assert.match(
+    ended.err,
+    /lv-not-configured: .*\n {4}No LensVisualizer checkout is set, so no lens can be exported\. Set lvPath /,
+  );
   assert.ok(ended.err.includes(`lvrtc run: run missing was not started: ${missing}\n`), ended.err);
   assert.deepEqual(manifestOf(runsDir, "fake-mixed").runs, [
     { name: "lv-lens", caseId: null, problems: [lv] },
@@ -286,15 +324,20 @@ test("a job that ends as an error exits 1, and the console says why where the ma
   const runsDir = join(tempDir(t), "runs");
   const ended = lvrtcRun(runsDir, [join(rootDir, "suite.json"), "--root", rootDir]);
   assert.equal(ended.code, EXIT_FAILURE, ended.err);
-  const lines = ended.out.split("\n");
+  // A job that ended in an error has, under its line, what the code means and what to do, where the vocabulary says.
+  const lines = ended.out.split("\n").filter((line) => !line.startsWith("    "));
+  assert.match(
+    ended.out,
+    /^singlet .* load-failed: engine absent is unavailable .*\n {4}The engine's code could not be loaded: its module is missing or failed to import\. Check the module path in the\s+engine's definition\.$/m,
+  );
   assert.deepEqual(lines.slice(0, 3), [
-    "singlet       selftest  absent         error        unavailable  load-failed: engine absent is unavailable " +
+    "singlet       pipeline-echo                absent                     error                    engine unusable  load-failed: engine absent is unavailable " +
       "(load-failed): its module engines/none.ts does not exist",
-    "singlet       selftest  fake-a         ok           computed",
-    "singlet       selftest  refuses        error        computed     protocol-error: the engine refused the message " +
+    "singlet       pipeline-echo                fake-a                     answered                 asked now",
+    "singlet       pipeline-echo                refuses                    error                    asked now        protocol-error: the engine refused the message " +
       "(fake-failure): the fake engine is set to fail (failMode protocol-error)",
   ]);
-  assert.equal(lines[6], "pair: 6 jobs: 2 ok, 0 unsupported, 4 error, 0 pending (4 computed, 0 cached)");
+  assert.equal(lines[9], "pair: 6 jobs: 2 answered, 4 error (4 asked now, 2 engine unusable)");
 
   const manifest = manifestOf(runsDir, "pair");
   assert.deepEqual(
@@ -356,13 +399,13 @@ test("the suite file and --root are relative to the directory the command is run
   const args = [relative(cwd, FAKE_PAIR_SUITE), "--root", relative(cwd, FAKE_ROOT), "--engines", "fake-a"];
   const ended = lvrtcRun(runsDir, args, { cwd });
   assert.equal(ended.code, EXIT_OK, ended.err);
-  assert.match(ended.out, /^fake-pair: 2 jobs: 2 ok/m);
+  assert.match(ended.out, /^fake-pair: 2 jobs: 2 answered/m);
 
   // A value may follow its option after an equals sign, as for every command.
   const joined = [relative(cwd, FAKE_PAIR_SUITE), `--root=${relative(cwd, FAKE_ROOT)}`, "--engines=fake-a"];
   const again = lvrtcRun(join(tempDir(t), "runs"), joined, { cwd });
   assert.equal(again.code, EXIT_OK, again.err);
-  assert.match(again.out, /^fake-pair: 2 jobs: 2 ok/m);
+  assert.match(again.out, /^fake-pair: 2 jobs: 2 answered/m);
 });
 
 test("a run killed with SIGKILL resumes: only the missing jobs are computed, into a whole run's manifest", (t) => {
@@ -388,7 +431,7 @@ test("a run killed with SIGKILL resumes: only the missing jobs are computed, int
     "fake-b": fake({ id: "fake-b", bias: 0.001 }, "engines/killable.ts"),
   };
   const computedLines = (ended: Ended): number =>
-    ended.out.split("\n").filter((line) => line.endsWith("  computed")).length;
+    ended.out.split("\n").filter((line) => line.endsWith("  asked now")).length;
 
   // An uninterrupted run, from a root of its own into a runs directory of its own.
   const wholeRoot = rootWith(t, engines, { "engines/killable.ts": killable });
@@ -414,7 +457,7 @@ test("a run killed with SIGKILL resumes: only the missing jobs are computed, int
   const resumed = lvrtcRun(runsDir, args);
   assert.equal(resumed.code, EXIT_OK, resumed.err);
   assert.equal(computedLines(resumed), 1, resumed.out);
-  assert.match(resumed.out, /^pair: 4 jobs: 4 ok, 0 unsupported, 0 error, 0 pending \(1 computed, 3 cached\)$/m);
+  assert.match(resumed.out, /^pair: 4 jobs: 4 answered \(1 asked now, 3 from the result cache\)$/m);
   assert.equal(
     readFileSync(join(runsDir, "pair", MANIFEST_FILE), "utf8"),
     readFileSync(join(wholeRuns, "pair", MANIFEST_FILE), "utf8"),
@@ -432,7 +475,7 @@ test("--help prints the usage and runs nothing", async (t) => {
   assert.equal(ended.code, EXIT_OK);
   assert.ok(ended.out.startsWith(SYNOPSIS), ended.out);
   assert.match(ended.out, /^ {2}--root <dir> /m);
-  assert.match(ended.out, /^Exit code: 0 when no job ended as an error/m);
+  assert.match(ended.out, /^Exit code: 0 when no job ended in an error/m);
   assert.equal(ended.err, "");
 });
 
@@ -450,6 +493,12 @@ test("a command line that is not the synopsis is a usage error that shows it", a
     [["suite.json", "--engines", "fake-a", "--engines", "fake-a"], "--engines is given more than once"],
     [["suite.json", "--engines", "fake-a,,fake-b"], '--engines needs ids separated by commas, got "fake-a,,fake-b"'],
     [["suite.json", "--rungs", ""], '--rungs needs ids separated by commas, got ""'],
+    [["suite.json", "--checks"], "--checks needs a value"],
+    [["suite.json", "--checks", "pipeline-echo,"], '--checks needs ids separated by commas, got "pipeline-echo,"'],
+    [
+      ["suite.json", "--checks", "pipeline-echo", "--rungs", "pipeline-echo"],
+      "--checks and --rungs are two spellings of one option: give one of them",
+    ],
   ];
   for (const [args, said] of lines) {
     const ended = await inProcess(args, { rootDir, env: { LVRTC_RUNS_DIR: join(rootDir, "runs") } });
@@ -477,10 +526,13 @@ test("without --root the command's own root is the configuration root, and its r
   assert.equal(
     ended.out,
     [
-      "singlet       selftest  fake-a         ok           computed",
-      "double-gauss  selftest  fake-a         ok           computed",
-      "pair: 2 jobs: 2 ok, 0 unsupported, 0 error, 0 pending (2 computed, 0 cached)",
-      `manifest: ${manifestPath}`,
+      "singlet       pipeline-echo                fake-a                     answered                 asked now",
+      "double-gauss  pipeline-echo                fake-a                     answered                 asked now",
+      "The ids in the lines above:",
+      "  Checks: pipeline-echo Pipeline echo (a test of this tool)",
+      "  Engines: fake-a (defined in this configuration)",
+      "pair: 2 jobs: 2 answered (2 asked now)",
+      `run record: ${manifestPath}`,
       "",
     ].join("\n"),
   );
@@ -491,7 +543,7 @@ test("without --root the command's own root is the configuration root, and its r
   const other = rootWith(t, { "fake-z": fake({ id: "fake-z" }) });
   const elsewhere = await inProcess(["suite.json", "--root", other], { rootDir });
   assert.equal(elsewhere.code, EXIT_OK, elsewhere.err);
-  assert.match(elsewhere.out, /^singlet {7}selftest {2}fake-z {9}ok {11}computed$/m);
+  assert.match(elsewhere.out, /^singlet {7}pipeline-echo {16}fake-z {21}answered {17}asked now$/m);
   assert.ok(existsSync(join(other, "runs", "pair", MANIFEST_FILE)));
 });
 
@@ -510,7 +562,7 @@ test("a configuration without engines runs nothing unless an engine is named: a 
   assert.equal(
     ended.err,
     "lvrtc run: run singlet: it names no engine and the configuration defines none: " +
-      "name the engines to run with --engines (built in: flux, lv, optiland, optiland-wave, ref, ref-seidel, replay, wave)\n",
+      "name the engines to run with --engines (built in: flux-of-lv-rays, lv, optiland, otf-of-optiland-wavefront, reference-seidel, reference-tracer, replay-of-lv-mtf, wave-mtf-of-lv-rays)\n",
   );
   assert.equal(existsSync(join(rootDir, "runs")), false);
 });
@@ -518,23 +570,31 @@ test("a configuration without engines runs nothing unless an engine is named: a 
 test("the built-in engine ref runs under any root when it is named, and only then", async (t) => {
   // A root without a single engine of its own.
   const bare = rootWith(t, {});
-  const named = await inProcess(["suite.json", "--engines", "ref", "--rungs", "r0,r1"], { rootDir: bare });
+  const named = await inProcess(
+    ["suite.json", "--engines", "reference-tracer", "--checks", "built-system,first-order"],
+    {
+      rootDir: bare,
+    },
+  );
   assert.equal(named.code, EXIT_OK, named.err);
   assert.equal(
     named.out,
     [
-      "singlet       r0        ref            ok           computed",
-      "singlet       r1        ref            ok           computed",
-      "double-gauss  r0        ref            ok           computed",
-      "double-gauss  r1        ref            ok           computed",
-      "pair: 4 jobs: 4 ok, 0 unsupported, 0 error, 0 pending (4 computed, 0 cached)",
-      `manifest: ${join(bare, "runs", "pair", MANIFEST_FILE)}`,
+      "singlet       built-system                 reference-tracer           answered                 asked now",
+      "singlet       first-order                  reference-tracer           answered                 asked now",
+      "double-gauss  built-system                 reference-tracer           answered                 asked now",
+      "double-gauss  first-order                  reference-tracer           answered                 asked now",
+      "The ids in the lines above:",
+      "  Checks: built-system Built system; first-order First-order data",
+      "  Engines: reference-tracer Reference tracer",
+      "pair: 4 jobs: 4 answered (4 asked now)",
+      `run record: ${join(bare, "runs", "pair", MANIFEST_FILE)}`,
       "",
     ].join("\n"),
   );
   const [engine] = manifestOf(join(bare, "runs"), "pair").engines;
   assert.ok(engine.status === "available");
-  assert.equal(engine.id, "ref");
+  assert.equal(engine.id, "reference-tracer");
   assert.match(engine.fingerprint, /^[0-9a-f]{64}$/);
 
   // A root with an engine of its own: that one is the default, and ref joins it when it is named.
@@ -545,17 +605,33 @@ test("the built-in engine ref runs under any root when it is named, and only the
     ["fake-a"],
     plain.err,
   );
-  const both = await inProcess(["suite.json", "--engines", "ref,fake-a"], { rootDir });
+  const both = await inProcess(["suite.json", "--engines", "reference-tracer,fake-a"], { rootDir });
   assert.equal(both.code, EXIT_OK, both.err);
   // ref does not answer the conformance quantity, and says so before it is asked.
   assert.match(
     both.out,
-    /^singlet {7}selftest {2}ref {12}unsupported {2}negotiated {3}the engine does not offer selftest\.echo$/m,
+    /^singlet {7}pipeline-echo {16}reference-tracer {11}not computed {13}not offered {6}the engine does not offer selftest\.echo$/m,
   );
-  assert.match(both.out, /^singlet {7}selftest {2}fake-a {9}ok {11}cached$/m);
+  assert.match(both.out, /^singlet {7}pipeline-echo {16}fake-a {21}answered {17}from the cache$/m);
+
+  // Named by the id it had before the rename (`ref`), it is the same engine under today's id, with one note.
+  const old = await inProcess(["suite.json", "--engines", "ref", "--checks", "built-system,first-order"], {
+    rootDir: bare,
+  });
+  assert.equal(old.code, EXIT_OK, old.err);
+  // The same answers: found in the result cache under the engine's id of today.
+  assert.equal(
+    old.out,
+    named.out.replaceAll("asked now", "from the cache").replace("(4 from the cache)", "(4 from the result cache)"),
+  );
+  assert.deepEqual(
+    manifestOf(join(bare, "runs"), "pair").engines.map((each) => each.id),
+    ["reference-tracer"],
+  );
+  assert.match(old.err, /^note: some ids were read under their new names: engine ref is now reference-tracer; /m);
 });
 
-test("--rungs r2 traces the probe rays of a fixture: one job for each set, and a field without rays fails nothing", async (t) => {
+test("--checks ray-trace traces the probe rays of a fixture: one job for each set, and a field without rays fails nothing", async (t) => {
   const suite = (fields: unknown): string =>
     JSON.stringify({
       contract: CONTRACT_VERSION,
@@ -574,15 +650,22 @@ test("--rungs r2 traces the probe rays of a fixture: one job for each set, and a
   );
   // The reference engine traces the rays of every set; the conformance engine says, before it is asked, that it
   // does not trace rays, which is an answer.
-  const angles = await inProcess(["angles.json", "--engines", "ref", "--rungs", "r2"], { rootDir });
+  const angles = await inProcess(["angles.json", "--engines", "reference-tracer", "--checks", "ray-trace"], {
+    rootDir,
+  });
   assert.equal(angles.code, EXIT_OK, angles.err);
   assert.equal(angles.err, "");
   assert.equal(
     angles.out,
     [
-      ...new Array(3).fill("singlet  r2        ref            ok           computed"),
-      "probe: 3 jobs: 3 ok, 0 unsupported, 0 error, 0 pending (3 computed, 0 cached)",
-      `manifest: ${join(rootDir, "runs", "probe", MANIFEST_FILE)}`,
+      ...new Array(3).fill(
+        "singlet  ray-trace                    reference-tracer           answered                 asked now",
+      ),
+      "The ids in the lines above:",
+      "  Checks: ray-trace Ray trace",
+      "  Engines: reference-tracer Reference tracer",
+      "probe: 3 jobs: 3 answered (3 asked now)",
+      `run record: ${join(rootDir, "runs", "probe", MANIFEST_FILE)}`,
       "",
     ].join("\n"),
   );
@@ -592,18 +675,20 @@ test("--rungs r2 traces the probe rays of a fixture: one job for each set, and a
   assert.deepEqual(manifest.runs[0].raySets?.problems, []);
   // The same suite again has the same rays, and so the same manifest, byte for byte: every answer is in the store.
   const bytes = readFileSync(join(rootDir, "runs", "probe", MANIFEST_FILE), "utf8");
-  const again = await inProcess(["angles.json", "--engines", "ref", "--rungs", "r2"], { rootDir });
-  assert.match(again.out, /\(0 computed, 3 cached\)$/m);
+  const again = await inProcess(["angles.json", "--engines", "reference-tracer", "--checks", "ray-trace"], { rootDir });
+  assert.match(again.out, /\(3 from the result cache\)$/m);
   assert.equal(readFileSync(join(rootDir, "runs", "probe", MANIFEST_FILE), "utf8"), bytes);
 
   // r3 asks the very requests of r2: an engine is asked once for both, and the second rung finds the answers.
-  const both = await inProcess(["angles.json", "--engines", "ref", "--rungs", "r3,r2"], { rootDir });
+  const both = await inProcess(["angles.json", "--engines", "reference-tracer", "--checks", "optical-path,ray-trace"], {
+    rootDir,
+  });
   assert.equal(both.code, EXIT_OK, both.err);
-  assert.match(both.out, /^probe: 6 jobs: 6 ok, 0 unsupported, 0 error, 0 pending \(0 computed, 6 cached\)$/m);
+  assert.match(both.out, /^probe: 6 jobs: 6 answered \(6 from the result cache\)$/m);
   const jobs = manifestOf(join(rootDir, "runs"), "probe").jobs;
   assert.deepEqual(
     jobs.map((job) => job.rung),
-    ["r2", "r2", "r2", "r3", "r3", "r3"],
+    ["ray-trace", "ray-trace", "ray-trace", "optical-path", "optical-path", "optical-path"],
   );
   assert.deepEqual(
     jobs.slice(3).map((job) => [job.requestId, job.storeKey]),
@@ -612,9 +697,11 @@ test("--rungs r2 traces the probe rays of a fixture: one job for each set, and a
 
   // Without fields a run takes the fractions 0, 0.5 and 1, of which a case alone can place the axis only: the
   // others are reported, recorded, and no failure.
-  const fractions = await inProcess(["fractions.json", "--engines", "ref", "--rungs", "r2"], { rootDir });
+  const fractions = await inProcess(["fractions.json", "--engines", "reference-tracer", "--checks", "ray-trace"], {
+    rootDir,
+  });
   assert.equal(fractions.code, EXIT_OK, fractions.err);
-  assert.match(fractions.out, /^probe: 1 job: 1 ok, 0 unsupported, 0 error, 0 pending/m);
+  assert.match(fractions.out, /^probe: 1 job: 1 answered /m);
   assert.deepEqual(fractions.err.split("\n"), [
     "lvrtc run: run singlet: a field has no rays: field-fraction-unresolved: a case read from a file states no " +
       "image height to take the fraction 0.5 of; state the field as an angle (fields of kind angles-deg)",
@@ -628,21 +715,23 @@ test("--rungs r2 traces the probe rays of a fixture: one job for each set, and a
   // angles the run has an MTF recipe, so the rung that takes an MTF of the traced rays, r4, asks for them too, and
   // finds every answer in the store; the rung that takes a wave MTF of them, r6a, asks for them and for the same
   // field on the finer lattice. One that names rungs without rays has no ray sets generated for it.
-  const plain = await inProcess(["angles.json", "--engines", "ref"], { rootDir });
+  const plain = await inProcess(["angles.json", "--engines", "reference-tracer"], { rootDir });
   const everyRung = manifestOf(join(rootDir, "runs"), "probe");
   assert.deepEqual(
     [...new Set(everyRung.jobs.map((job) => job.rung))],
-    ["selftest", "r0", "r1", "r2", "r3", "r4", "r6a"],
+    ["pipeline-echo", "built-system", "first-order", "ray-trace", "optical-path", "geometric-mtf", "wave-mtf"],
     plain.err,
   );
   const ofRung = (rung: string) =>
     everyRung.jobs.filter((job) => job.rung === rung).map((job) => [job.requestId, job.storeKey]);
-  assert.deepEqual(ofRung("r4"), ofRung("r2"));
-  assert.deepEqual(ofRung("r6a").slice(0, ofRung("r2").length), ofRung("r2"));
-  assert.equal(ofRung("r6a").length, 2 * ofRung("r2").length);
+  assert.deepEqual(ofRung("geometric-mtf"), ofRung("ray-trace"));
+  assert.deepEqual(ofRung("wave-mtf").slice(0, ofRung("ray-trace").length), ofRung("ray-trace"));
+  assert.equal(ofRung("wave-mtf").length, 2 * ofRung("ray-trace").length);
   assert.equal(everyRung.runs[0].fineRaySets?.sets.length, everyRung.runs[0].raySets?.sets.length);
   assert.deepEqual(everyRung.runs[0].recipe?.recipe?.frequenciesPerMm, [10, 30, 50]);
-  await inProcess(["angles.json", "--engines", "ref", "--rungs", "r0,r1"], { rootDir });
+  await inProcess(["angles.json", "--engines", "reference-tracer", "--checks", "built-system,first-order"], {
+    rootDir,
+  });
   assert.equal(Object.hasOwn(manifestOf(join(rootDir, "runs"), "probe").runs[0], "raySets"), false);
 });
 
@@ -656,7 +745,7 @@ test("a run's own engines and rungs are used, and one that does not exist is a u
     ];
     return JSON.stringify({ contract: CONTRACT_VERSION, kind: "suite", name: "own", runs });
   };
-  writeFileSync(join(rootDir, "own.json"), suite({ engines: ["fake-b"], rungs: ["selftest"] }));
+  writeFileSync(join(rootDir, "own.json"), suite({ engines: ["fake-b"], rungs: ["pipeline-echo"] }));
   const own = await inProcess(["own.json"], { rootDir });
   assert.equal(own.code, EXIT_OK, own.err);
   // The run that names neither gets every configured engine on every rung that compares the engines of a run. A
@@ -678,16 +767,43 @@ test("a run's own engines and rungs are used, and one that does not exist is a u
   );
   assert.deepEqual(
     RUNGS.filter((rung) => rung.needsRecipe === true).map((rung) => rung.id),
-    ["r4", "r4f", "r5", "r5g", "r6a", "r6b", "r6c", "r13b", "r14b"],
+    [
+      "geometric-mtf",
+      "lv-mtf-replay",
+      "mtf-vs-optiland-fft",
+      "geometric-mtf-vs-optiland",
+      "wave-mtf",
+      "mtf-vs-wave-estimate",
+      "mtf-vs-optiland-wavefront",
+      "seidel-vs-optiland",
+      "zernike-vs-optiland",
+    ],
   );
   assert.deepEqual(
     RUNGS.filter((rung) => rung.engines !== undefined).map((rung) => rung.id),
-    ["r4f", "r5", "r5g", "r6b", "r6c", "r7b", "r8b", "r9b", "r10b", "r11b", "r12b", "r13b", "r14b"],
+    [
+      "lv-mtf-replay",
+      "mtf-vs-optiland-fft",
+      "geometric-mtf-vs-optiland",
+      "mtf-vs-wave-estimate",
+      "mtf-vs-optiland-wavefront",
+      "spot-vs-optiland",
+      "axial-vs-optiland",
+      "chief-vs-optiland",
+      "field-curve-vs-optiland",
+      "vignetting-vs-flux-estimate",
+      "summary-vs-optiland",
+      "seidel-vs-optiland",
+      "zernike-vs-optiland",
+    ],
   );
   // No case source of the root generates spot sets of a case read from a file, and the manifest says so.
   assert.deepEqual(
     manifestOf(join(rootDir, "runs"), "own").jobs.map((job) => `${job.run} ${job.rung} ${job.engine}`),
-    [...shared.flatMap((rung) => [`plain ${rung.id} fake-a`, `plain ${rung.id} fake-b`]), "choosy selftest fake-b"],
+    [
+      ...shared.flatMap((rung) => [`plain ${rung.id} fake-a`, `plain ${rung.id} fake-b`]),
+      "choosy pipeline-echo fake-b",
+    ],
   );
   // It has no recipe for a rung to be made from, and the manifest says why.
   const [plain] = manifestOf(join(rootDir, "runs"), "own").runs;
@@ -704,15 +820,15 @@ test("a run's own engines and rungs are used, and one that does not exist is a u
   assert.deepEqual(plain.vignettingRaySets?.sets, []);
   assert.match(plain.vignettingRaySets?.problems[0] ?? "", /^vignetting-sets-unavailable: /);
 
-  writeFileSync(join(rootDir, "worked.json"), suite({ engines: ["ref"], rungs: ["R0"] }));
+  writeFileSync(join(rootDir, "worked.json"), suite({ engines: ["reference-tracer"], rungs: ["R0"] }));
   const worked = await inProcess(["worked.json"], { rootDir });
   assert.equal(worked.code, EXIT_USAGE);
   assert.equal(
     worked.err,
-    'lvrtc run: run choosy: unknown rung "R0": the rungs are selftest, r0, r1, r2, r3, r4, r4f, r5, r5g, r6a, r6b, r6c, r7a, r7b, r8a, r8b, r9a, r9b, r10a, r10b, r11a, r11b, r12b, r13b, r14b\n',
+    'lvrtc run: run choosy: unknown rung "R0": the rungs are pipeline-echo, built-system, first-order, ray-trace, optical-path, geometric-mtf, lv-mtf-replay, mtf-vs-optiland-fft, geometric-mtf-vs-optiland, wave-mtf, mtf-vs-wave-estimate, mtf-vs-optiland-wavefront, spot-rays, spot-vs-optiland, axial-rays, axial-vs-optiland, chief-rays, chief-vs-optiland, field-curve-rays, field-curve-vs-optiland, vignetting-rays, vignetting-vs-flux-estimate, summary-vs-optiland, seidel-vs-optiland, zernike-vs-optiland\n',
   );
   // The flags replace what the run asks for, so with both given the same suite runs.
-  const replaced = await inProcess(["worked.json", "--rungs", "selftest", "--engines", "fake-a"], { rootDir });
+  const replaced = await inProcess(["worked.json", "--checks", "pipeline-echo", "--engines", "fake-a"], { rootDir });
   assert.equal(replaced.code, EXIT_OK, replaced.err);
 });
 
@@ -737,7 +853,7 @@ test("a store entry that cannot be trusted is a warning on the error stream, and
     ended.err,
     new RegExp(`^lvrtc run: warning: store entry ${key}: it is malformed JSON .*; the job is computed again\n$`),
   );
-  assert.match(ended.out, /\(1 computed, 1 cached\)/);
+  assert.match(ended.out, /\(1 asked now, 1 from the result cache\)/);
 });
 
 // ── LensVisualizer lenses ────────────────────────────────────────────────────────────────────────────────────────
@@ -751,7 +867,7 @@ function lvRoot(t: TestContext, engines: unknown, files: Readonly<Record<string,
     contract: CONTRACT_VERSION,
     kind: "suite",
     name: "lv-pair",
-    defaults: { rungs: ["selftest"] },
+    defaults: { rungs: ["pipeline-echo"] },
     runs: [
       { name: "singlet", lens: { kind: "lv", key: "acme-singlet-50" } },
       {
@@ -784,8 +900,8 @@ test("a suite of LensVisualizer lenses has its cases built from the configured c
   // The root's own lvPath is used: nothing of this machine's configuration reaches the child.
   const ended = lvrtcRun(runsDir, args, { env: { LVRTC_LV_PATH: "" } });
   assert.equal(ended.code, EXIT_OK, "finite-conjugate refusals are reported and fail no job");
-  assert.match(ended.out, /^singlet {9}selftest {2}fake-a {9}ok {11}computed$/m);
-  assert.match(ended.out, /^zoom-tele-f8 {4}selftest {2}fake-a {9}ok {11}computed$/m);
+  assert.match(ended.out, /^singlet {9}pipeline-echo {16}fake-a {21}answered {17}asked now$/m);
+  assert.match(ended.out, /^zoom-tele-f8 {4}pipeline-echo {16}fake-a {21}answered {17}asked now$/m);
   // The refocused run states no zoom position of a zoom: it is two runs, one for each end, and neither starts.
   for (const [end, zoom] of [
     ["wide", 0],
@@ -858,7 +974,7 @@ test("a LensVisualizer file edited while the suite runs marks the manifest, warn
     contract: CONTRACT_VERSION,
     kind: "suite",
     name: "lv-pair",
-    defaults: { rungs: ["selftest"] },
+    defaults: { rungs: ["pipeline-echo"] },
     runs: [
       { name: "singlet", lens: { kind: "lv", key: "acme-singlet-50" } },
       { name: "zoom", lens: { kind: "lv", key: "acme-zoom-24-48" } },

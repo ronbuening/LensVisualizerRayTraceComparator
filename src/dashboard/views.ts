@@ -25,6 +25,7 @@ import type { GroupConsensus } from "../report/consensus.ts";
 import { buildReport, reportInputProblems, sectionSetGroups } from "../report/model.ts";
 import type { ReportModel, ReportSection, SupportRow } from "../report/model.ts";
 import type { MtfComparison, MtfFieldFlag } from "../report/mtfComparison.ts";
+import { DASHBOARD_TEXT } from "../report/wording.ts";
 import type { MtfComparisonKind, MtfRowStatus } from "../report/wording.ts";
 import type { NativeDifferenceClass, NativeFieldReason } from "../compare/mtfNative.ts";
 import { NO_CHARTS, baselineHeatMap, buildSectionCharts, runHeatMap } from "./chartViews.ts";
@@ -37,6 +38,10 @@ import type { CompareSummary } from "./compare.ts";
 import { caseNowOf, recordStaleness, stalenessBasis } from "./staleness.ts";
 import type { StalenessBasis } from "./staleness.ts";
 import type { Loaded, PolicyAtHand } from "./sources.ts";
+import { currentCheckId, legacyIdsOfRun } from "../core/legacyIds.ts";
+
+/** How the numbers a view computes are derived, in the words the pages show on hover. */
+const DERIVATIONS = DASHBOARD_TEXT.derivations;
 
 // ── Shared pieces ────────────────────────────────────────────────────────────────────────────────────────────────
 
@@ -151,7 +156,7 @@ export function runInputProblems(
   policy: Loaded<PolicyAtHand>,
 ): string[] {
   if (manifest.state !== "ok" || comparisons.state !== "ok" || policy.state !== "ok") return [];
-  return reportInputProblems(manifest.value, comparisons.value, policy.value.policy);
+  return reportInputProblems(manifest.value, comparisons.value, policy.value.policy).map(DASHBOARD_TEXT.inputProblem);
 }
 
 // ── The index ────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -353,6 +358,12 @@ export interface RunView {
   readonly runs: readonly RunEntry[];
   readonly comparisons: ComparisonsState;
   readonly inputProblems: readonly string[];
+  /**
+   * The old ids its run record or comparisons name (`legacyIdsOfRun`: `check <old>`, `engine <old>`): a run directory
+   * written before a rename, which `compare`, `report` and `baseline write` refuse and whose checks the pages of today
+   * may not show. Empty for a run directory of today's ids.
+   */
+  readonly oldIds: readonly string[];
   /** The support matrix added up: a row per rung, a cell per engine, its requests by status (`SUPPORT_STATUSES`). */
   readonly supportByRung: readonly {
     readonly rung: string;
@@ -437,6 +448,7 @@ export function buildRunView(
       runs: [],
       comparisons: state,
       inputProblems: [],
+      oldIds: [],
       supportByRung: [],
       split: false,
       supportByRun: [],
@@ -486,6 +498,7 @@ export function buildRunView(
     }),
     comparisons: state,
     inputProblems: [...inputProblems],
+    oldIds: legacyIdsOfRun(value, comparisons.state === "ok" ? comparisons.value : null),
     supportByRung,
     split,
     supportByRun: split ? [] : [...rowsByRun].map(([run, rows]) => ({ run, rows })),
@@ -740,7 +753,13 @@ function mtfOf(context: SectionContext, setIndex: number, rung: string, table: M
   const band = (metric: string): Figure | null =>
     context.policyDocument === null
       ? null
-      : optionalFigureAt(context.policyDocument, context.policy, ["rungs", rung, "metrics", metric, "attention"]);
+      : optionalFigureAt(context.policyDocument, context.policy, [
+          "rungs",
+          currentCheckId(rung),
+          "metrics",
+          metric,
+          "attention",
+        ]);
   const onAxis = band(ON_AXIS_METRIC);
   const offAxis = band(OFF_AXIS_METRIC);
   const policyLanding = band(CHIEF_LANDING_METRIC);
@@ -749,17 +768,14 @@ function mtfOf(context: SectionContext, setIndex: number, rung: string, table: M
       ? null
       : policyLanding !== null && Object.is(policyLanding.value, table.bands.chiefLandingMm)
         ? policyLanding
-        : derived(
-            table.bands.chiefLandingMm,
-            "the largest chief-landing limit the two judged columns record at the first field",
-            [at(a, "chiefLandingLimitMm", 0), at(b, "chiefLandingLimitMm", 0)],
-          );
+        : derived(table.bands.chiefLandingMm, DERIVATIONS.largestChiefLandingLimit, [
+            at(a, "chiefLandingLimitMm", 0),
+            at(b, "chiefLandingLimitMm", 0),
+          ]);
 
   const fields = table.fields.map((field, element): MtfFieldView => {
     const largest = (name: string, value: number | null): Derived | null =>
-      value === null
-        ? null
-        : derived(value, `the larger ${name} of the two judged columns`, [at(a, name, element), at(b, name, element)]);
+      value === null ? null : derived(value, DERIVATIONS.larger(name), [at(a, name, element), at(b, name, element)]);
     return {
       element,
       field: fieldAt(element),
@@ -772,7 +788,7 @@ function mtfOf(context: SectionContext, setIndex: number, rung: string, table: M
       chiefLandingMm:
         field.chiefLandingMm === null
           ? null
-          : derived(field.chiefLandingMm, "the distance between the chief-ray landings of the two judged columns", [
+          : derived(field.chiefLandingMm, DERIVATIONS.chiefLandingDistance, [
               at(a, "imageHeightMm", element),
               at(b, "imageHeightMm", element),
             ]),
@@ -804,10 +820,7 @@ function mtfOf(context: SectionContext, setIndex: number, rung: string, table: M
           difference:
             row.difference === null
               ? null
-              : derived(row.difference, "the first judged column minus the second", [
-                  at(a, name, element),
-                  at(b, name, element),
-                ]),
+              : derived(row.difference, DERIVATIONS.judgedDifference, [at(a, name, element), at(b, name, element)]),
           band: row.band === null ? null : row.field === 0 ? onAxis : offAxis,
           status: row.status,
           class: row.class,
@@ -868,7 +881,7 @@ export function buildSectionView(
   const mtf = section.mtf === undefined ? null : mtfOf(context, indices[0], section.rung, section.mtf);
 
   const columns = section.columns.map((column): ColumnView => {
-    const metric = ["rungs", section.rung, "metrics", column.name];
+    const metric = ["rungs", currentCheckId(section.rung), "metrics", column.name];
     const chief = column.name === CHIEF_LANDING_METRIC && mtf !== null && mtf.bands.chiefLandingMm !== null;
     const limit =
       column.limit === undefined || context.policyDocument === null
@@ -996,8 +1009,11 @@ export interface BaselinePairView {
   /** How many requests came to each verdict, as the baseline counts them. */
   readonly verdicts: readonly { readonly verdict: Verdict; readonly requests: Figure }[];
   readonly metrics: readonly BaselineMetricView[];
-  /** A catalog FAIL's classifications: the metric and its class. */
-  readonly failures: readonly { readonly metric: string; readonly class: string }[];
+  /**
+   * The classifications of a FAIL that its suite's list of known failures lists (the catalog's, focus-stations'): the
+   * metric, its class and the entry of docs/gotchas.md that explains it.
+   */
+  readonly failures: readonly { readonly metric: string; readonly class: string; readonly gotcha: string }[];
   readonly stale: readonly StaleReason[];
   readonly notKnown: readonly StaleReason[];
   readonly badge: string;
@@ -1262,7 +1278,11 @@ export function buildBaselineRunView(
               where,
             };
           }),
-          failures: (pair.failures ?? []).map((failure) => ({ metric: failure.metric, class: failure.class })),
+          failures: (pair.failures ?? []).map((failure) => ({
+            metric: failure.metric,
+            class: failure.class,
+            gotcha: failure.gotcha,
+          })),
           ...recordStaleness(baseline, run, pair.a, pair.b, basis),
         };
       }),

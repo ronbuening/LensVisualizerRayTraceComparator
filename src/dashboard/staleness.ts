@@ -8,6 +8,7 @@ import type { Baseline, BaselineEngine } from "../contract/baseline.ts";
 import type { ManifestEngine, RunManifest } from "../core/manifest.ts";
 import type { AskedEngines } from "./identity.ts";
 import type { Loaded } from "./sources.ts";
+import { currentEngineId } from "../core/legacyIds.ts";
 
 /**
  * Whom the engines of a baseline are held to: the engines as asked, as the suite's last run recorded them, or nothing
@@ -41,7 +42,8 @@ export interface RecordStaleness {
 
 /** An engine basis of a list of engines. */
 export function engineBasisOf(kind: "asked" | "last-run", engines: readonly ManifestEngine[]): EngineBasis {
-  return { kind, engines: new Map(engines.map((engine) => [engine.id, engine])) };
+  // By the id of today: a run recorded before a rename names an engine by its old id (`currentEngineId`).
+  return { kind, engines: new Map(engines.map((engine) => [currentEngineId(engine.id), engine])) };
 }
 
 /** A case basis of the runs of a manifest. */
@@ -78,7 +80,7 @@ export function stalenessBasis(
 export function engineStale(engine: BaselineEngine | undefined, basis: EngineBasis): boolean | null {
   if (engine === undefined) return true;
   if (basis.kind === "none") return null;
-  const now = basis.engines.get(engine.id);
+  const now = basis.engines.get(currentEngineId(engine.id));
   if (now === undefined) return null;
   if (now.status !== "available") return true;
   return now.fingerprint !== engine.fingerprint || now.adapterRevision !== engine.adapterRevision;

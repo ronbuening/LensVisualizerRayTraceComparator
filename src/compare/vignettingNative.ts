@@ -38,7 +38,7 @@ import type {
 import { numberText } from "./metricText.ts";
 
 /** The rung of the engines' own vignetting. */
-export const VIGNETTING_NATIVE_RUNG = "r11b";
+export const VIGNETTING_NATIVE_RUNG = "vignetting-vs-flux-estimate";
 
 /** How far apart two answers' chief rays of a field land on the image plane, mm: the limit of the sorting. */
 export const CHIEF_LANDING_METRIC = "chiefLanding.maxAbs";

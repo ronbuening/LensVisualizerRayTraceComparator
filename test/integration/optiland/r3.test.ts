@@ -106,7 +106,10 @@ test(
   { skip, timeout: 600_000 },
   async (t) => {
     const optiland = await createEngineRegistry(optilandRoot(t)).create("optiland");
-    const ref = new RemoteEngineAdapter({ id: "ref", transport: createInProcessTransport(createRefEngine()) });
+    const ref = new RemoteEngineAdapter({
+      id: "reference-tracer",
+      transport: createInProcessTransport(createRefEngine()),
+    });
     t.after(() => Promise.all([optiland.close(), ref.close()]));
 
     // The contract's lens of eleven surfaces and its case of every feature (a finite object, two lines, a rear
@@ -184,7 +187,7 @@ test(
         const index = after[line * surfaces + surfaces - 1];
         for (const [engine, data] of [
           ["optiland", mine],
-          ["ref", theirs],
+          ["reference-tracer", theirs],
         ] as const) {
           const [toLast, toImage] = [f8(data.opticalPath), f8(data.opticalPathToImage)];
           const [exit, landing] = [f8(data.exitPoint), f8(data.imagePoint)];
@@ -219,7 +222,10 @@ test(
   { skip, timeout: 600_000 },
   async (t) => {
     const optiland = await createEngineRegistry(optilandRoot(t)).create("optiland");
-    const ref = new RemoteEngineAdapter({ id: "ref", transport: createInProcessTransport(createRefEngine()) });
+    const ref = new RemoteEngineAdapter({
+      id: "reference-tracer",
+      transport: createInProcessTransport(createRefEngine()),
+    });
     t.after(() => Promise.all([optiland.close(), ref.close()]));
 
     // A lens 2 m from an object point, and the rays from that point twice: with directions that are unit vectors to
@@ -236,7 +242,7 @@ test(
     assert.ok((far * (longer - 1)) / wave > 10 * AGREEMENT["opticalPath.maxAbs"]);
     const cells = latticeCells(opticalCase);
     const targets = [...cells, cells[Math.floor(cells.length / 2)]];
-    const answers: { optiland: RaysTraceData; ref: RaysTraceData }[] = [];
+    const answers: { optiland: RaysTraceData; "reference-tracer": RaysTraceData }[] = [];
     for (const stretch of [1, longer]) {
       const spec = raysAt(opticalCase, 0, 1, targets, true, stretch);
       assert.deepEqual(raysTraceQuantity.validateSpec(spec), [], `directions ${stretch} long`);
@@ -254,11 +260,11 @@ test(
       for (const { name, value } of outcome.metrics) {
         assert.ok(value <= AGREEMENT[name], `directions ${stretch} long: ${name} ${value} waves`);
       }
-      answers.push({ optiland: mine, ref: theirs });
+      answers.push({ optiland: mine, "reference-tracer": theirs });
     }
     // And each engine against itself: the same line has the same path, whatever length its direction was given.
     const moved: Record<string, number> = {};
-    for (const engine of ["optiland", "ref"] as const) {
+    for (const engine of ["optiland", "reference-tracer"] as const) {
       for (const member of ["opticalPath", "opticalPathToImage"] as const) {
         const [unit, stretched] = [f8(answers[0][engine][member]), f8(answers[1][engine][member])];
         const worst = Math.max(...unit.map((path, ray) => Math.abs(stretched[ray] - path) / wave));
@@ -302,8 +308,8 @@ test(
     const cycle = runAndCompare(t, {
       suite: "suite.json",
       name: "made-for-r3",
-      engines: "ref,optiland",
-      rungs: "r2,r3",
+      engines: "reference-tracer,optiland",
+      rungs: "ray-trace,optical-path",
       root: rootDir,
     });
     const { manifest } = cycle;
@@ -318,12 +324,12 @@ test(
     assertTracedOnce(manifest.jobs);
     assert.equal(assertR2(t, "made for R3", cycle).pairs.length, sets);
     const paths = assertR3(t, "made for R3", cycle.comparisons);
-    assert.deepEqual([...new Set(paths.pairs.map((pair) => pair.engines))], ["optiland / ref"]);
+    assert.deepEqual([...new Set(paths.pairs.map((pair) => pair.engines))], ["optiland / reference-tracer"]);
     assert.equal(paths.pairs.length, sets);
     // The probe lattice of a case file states no chief ray: the two paths are judged, and the pair says that the
     // third was not measured. The request above measures it.
     assert.equal(paths.withoutChief.length, sets);
-    assert.deepEqual(Object.keys(paths.worst["optiland / ref"]), PATHS.slice(0, 2));
+    assert.deepEqual(Object.keys(paths.worst["optiland / reference-tracer"]), PATHS.slice(0, 2));
   },
 );
 
@@ -333,8 +339,8 @@ test(
 function assertTracedOnce(jobs: readonly { rung: string; storeKey: string | null }[]): void {
   const answered = (rung: string): (string | null)[] =>
     jobs.filter((job) => job.rung === rung).map((job) => job.storeKey);
-  assert.ok(answered("r3").length > 0 && !answered("r3").includes(null));
-  assert.deepEqual(answered("r3"), answered("r2"), "the answer of a set to R3 is its answer to R2");
+  assert.ok(answered("optical-path").length > 0 && !answered("optical-path").includes(null));
+  assert.deepEqual(answered("optical-path"), answered("ray-trace"), "the answer of a set to R3 is its answer to R2");
 }
 
 /**
@@ -343,7 +349,7 @@ function assertTracedOnce(jobs: readonly { rung: string; storeKey: string | null
  * judged is `PASS`. Says the largest figure of each pair of engines, with its run and its place.
  */
 function assertR4(t: TestContext, suite: string, comparisons: ComparisonFile, runs: number): void {
-  const pairs = pairsOf(comparisons, "r4", RAYS_TRACE);
+  const pairs = pairsOf(comparisons, "geometric-mtf", RAYS_TRACE);
   // Three fields a run, each once whatever the number of its lines, and three pairs of engines.
   assert.equal(pairs.length, 3 * 3 * runs);
   const worst = new Map<string, { value: number; at: string }>();
@@ -363,9 +369,9 @@ function assertR4(t: TestContext, suite: string, comparisons: ComparisonFile, ru
 
 /**
  * A suite on rungs R0 to R4 by all three engines: what Phase 2 states as its benchmark,
- * `lvrtc run <suite> --engines lv,ref,optiland --rungs r0,r1,r2,r3`, with the rung of Phase 3 that asks the same
- * requests, R4, beside them; then `lvrtc compare`, which must find no failure on any rung. R3 and R4 are then held
- * pair by pair; R0, R1 and R2 have tests of their own.
+ * `lvrtc run <suite> --engines lv,reference-tracer,optiland --checks built-system,first-order,ray-trace,optical-path`,
+ * with the rung of Phase 3 that asks the same requests, R4, beside them; then `lvrtc compare`, which must find no
+ * failure on any rung. R3 and R4 are then held pair by pair; R0, R1 and R2 have tests of their own.
  */
 function everyRung(
   t: TestContext,
@@ -374,8 +380,8 @@ function everyRung(
   const cycle = runAndCompare(t, {
     suite: rungSuite(t, suite),
     name: suite,
-    engines: "lv,ref,optiland",
-    rungs: "r0,r1,r2,r3,r4",
+    engines: "lv,reference-tracer,optiland",
+    rungs: "built-system,first-order,ray-trace,optical-path,geometric-mtf",
   });
   const { manifest } = cycle;
   assert.deepEqual(
@@ -387,14 +393,14 @@ function everyRung(
   assert.equal(manifest.jobs.length, 3 * (2 * manifest.runs.length + 3 * sets));
   assertTracedOnce(manifest.jobs);
   const answers = (rung: string) => manifest.jobs.filter((job) => job.rung === rung).map((job) => job.storeKey);
-  assert.deepEqual(answers("r4"), answers("r2"), "the answer of a set to R4 is its answer to R2");
+  assert.deepEqual(answers("geometric-mtf"), answers("ray-trace"), "the answer of a set to R4 is its answer to R2");
   assertR4(t, suite, cycle.comparisons, manifest.runs.length);
   const paths = assertR3(t, suite, cycle.comparisons);
   assert.equal(paths.pairs.length, 3 * sets);
   assert.deepEqual([...new Set(paths.pairs.map((pair) => pair.engines))].sort(), [
     "lv / optiland",
-    "lv / ref",
-    "optiland / ref",
+    "lv / reference-tracer",
+    "optiland / reference-tracer",
   ]);
   t.diagnostic(`${suite}, R0 to R4 on three engines in ${cycle.runSeconds.toFixed(1)} s: ${cycle.verdicts}`);
   t.diagnostic(`${suite}: no chief ray landed in ${paths.withoutChief.length} of ${sets} ray sets`);
@@ -406,17 +412,15 @@ test(
   { skip: skipSuites, timeout: 1_800_000 },
   (t) => {
     const { paths, verdicts, sets } = everyRung(t, "benchmark");
-    // 12 configurations, three fields, the reference line and the five photopic ones.
-    assert.equal(sets, 216);
+    // 12 configurations, three fields, the reference line and the nine photopic ones (LV #988; five before f5b456fec).
+    assert.equal(sets, 12 * 3 * (1 + 9));
     // Measured: optiland within 2.7e-9 waves of ref in every path and relative to every chief ray, over 137 596
     // rays, and LensVisualizer within 6.0e-6 waves of both: every pair inside the gate, so the benchmark has no
-    // floor. A pair is counted in both modes: 24 runs on R0 and on R1, 216 ray sets on R2 and on R3, and 72 fields
-    // on R4, five pairs each. On R4 (LensVisualizer 33ebdb30, closure 78215d72) LensVisualizer is within 3.4e-8 of
-    // both, and optiland within 1.2e-11 of ref, against a gate of 1e-7.
-    assert.match(
-      verdicts,
-      /^benchmark: 2760 pairs: \d+ PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/,
-    );
+    // floor. A pair is counted in both modes: 24 runs on R0 and on R1, 360 ray sets on R2 and on R3, and 72 fields
+    // on R4 (a field is one span of its lines), five pairs each: (24 + 24 + 360 + 360 + 72) x 5. On R4
+    // (LensVisualizer 33ebdb30, closure 78215d72) LensVisualizer is within 3.4e-8 of both, and optiland within 1.2e-11
+    // of ref, against a gate of 1e-7.
+    assert.match(verdicts, /^benchmark: 4200 pairs: 4200 Pass$/);
     // Every chief ray of the benchmark lands, in every engine: the path relative to it is measured in every pair.
     assert.deepEqual(paths.withoutChief, []);
   },
@@ -427,17 +431,16 @@ test(
   { skip: skipSuites, timeout: 1_800_000 },
   (t) => {
     const { paths, verdicts, sets } = everyRung(t, "features");
-    // 16 runs as written, 18 as run: the fixed-iris zoom is run at both ends.
-    assert.equal(sets, 162);
-    assert.match(
-      verdicts,
-      /^features: 2070 pairs: \d+ PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/,
-    );
+    // 16 runs as written, 18 as run: the fixed-iris zoom is run at both ends. Nine runs on the reference line and nine
+    // on the nine photopic lines, three fields each; with R0, R1 and R4 (54 fields), five pairs each:
+    // (18 + 18 + 270 + 270 + 54) x 5.
+    assert.equal(sets, 9 * 3 * (1 + 9));
+    assert.match(verdicts, /^features: 3150 pairs: 3150 Pass$/);
     // Historical at 33ebdb30: optiland within 3.5e-9 waves of ref; two ray sets of the Hologon, at its full field
     // at 470 nm and 510 nm, are floors of LensVisualizer against ref and optiland (2.07e-5 waves to the image and
     // 2.28e-5 relative to the chief ray, where optiland is 4.2e-10 waves from ref). Version 11 grants no floor.
-    // At the wide end of the fixed-iris zoom an aperture stops the chief ray of the full field for all three engines, on every line: six ray sets whose
-    // paths are judged without it.
+    // At the wide end of the fixed-iris zoom an aperture stops the chief ray of the full field for all three engines,
+    // on every line: six ray sets whose paths are judged without it.
     assert.ok(paths.withoutChief.length <= sets / 10, JSON.stringify(paths.withoutChief));
   },
 );

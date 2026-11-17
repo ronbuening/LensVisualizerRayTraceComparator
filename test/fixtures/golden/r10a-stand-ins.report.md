@@ -5,81 +5,78 @@
 | Input | Value |
 |---|---|
 | Suite | r10a-stand-ins |
-| Suite hash | dbba2ef2b8587819e37337050a85f8ebb843e42d1fc473ee7f03a67f8143547c |
 | Contract version | 1.0 |
-| Policy | rungs v1 |
-| Policy hash | a8d7910d3e1e834f658b7aef75b6c8149925d61808072844ab9cc82c4c422aa6 |
+| Limits file | v1 |
 
 ### Engines
 
-| Engine | Status | Version | Fingerprint | Adapter revision |
-|---|---|---|---|---|
-| moved | available | 1 | b7d0684b593261d14a1dfebb903774775bbe481a07ae2955689644dc0ffd919e | 2225e342b4fd8539480e933e59a3ca95a8ae2beeb24f45972b55fd4e4a59d357 |
-| ref | available | 1 | b7d0684b593261d14a1dfebb903774775bbe481a07ae2955689644dc0ffd919e | 2225e342b4fd8539480e933e59a3ca95a8ae2beeb24f45972b55fd4e4a59d357 |
-| stopped | available | 1 | b7d0684b593261d14a1dfebb903774775bbe481a07ae2955689644dc0ffd919e | 2225e342b4fd8539480e933e59a3ca95a8ae2beeb24f45972b55fd4e4a59d357 |
+| Engine | Status | Version |
+|---|---|---|
+| moved | available | 1 |
+| reference-tracer | available | 1 |
+| stopped | available | 1 |
 
 ### Runs
 
-| Run | Case | Status |
-|---|---|---|
-| lens | 5e86575ae0af7493b28942da1d0fa71b4683e02ce17743e04724058ddd28addd | run |
+| Run | Status |
+|---|---|
+| lens | run |
 
 ## Verdict summary
 
-6 of 10 pairs are FAIL or ERROR.
+6 of 10 pairs are Fail or Error.
 
-| Verdict | reference-vs-each | pairwise |
+| Verdict | against the reference | every pair |
 |---|---|---|
-| PASS | 2 | 2 |
-| FLOOR | 0 | 0 |
-| FAIL | 2 | 4 |
-| RECORDED | 0 | 0 |
-| ATTENTION | 0 | 0 |
-| UNSUPPORTED | 0 | 0 |
-| BLOCKED | 0 | 0 |
-| ERROR | 0 | 0 |
+| Pass: within limit | 2 | 2 |
+| Fail: beyond limit | 2 | 4 |
+| Side by side | 0 | 0 |
+| Side by side, worth a look | 0 | 0 |
+| Not computed | 0 | 0 |
+| Not judged (an earlier check failed) | 0 | 0 |
+| Error | 0 | 0 |
 
 ## Consensus
 
-A consensus is looked for on each request of a gated rung that three or more engines were compared on pairwise.
-An engine is placed where a pair of it is within or beyond the gates; a pair that is UNSUPPORTED, BLOCKED or ERROR
-is not judged and places no engine. The consensus is the largest set of placed engines every two of which are
-within the gates of each other, where it is the only largest such set and holds more than half of the engines
-placed. An outlier is beyond the gates of every engine of the consensus; an engine apart is outside the
-consensus and not beyond the gates of all of it. A consensus says which answers are within the gates of each
-other, and no more.
+A consensus is looked for on each request of a check held to a limit that three or more engines were compared
+on, pair by pair. An engine is placed where a pair of it is within or beyond the limits; a pair whose verdict is
+Not computed, Not judged or Error places no engine. The consensus is the largest set of placed engines every two
+of which are within the limits of each other, where it is the only largest such set and holds more than half of
+the engines placed. An outlier is beyond the limits of every engine of the consensus; an engine apart is outside
+the consensus and not beyond the limits of all of it. A consensus says which answers are within the limits of
+each other, and no more.
 
 Of 2 requests with a consensus to look for, 2 have one.
 
 | Requests | Count |
 |---|---|
 | with a consensus | 2 |
-| no consensus: split | 0 |
-| no consensus: no-pair-within | 0 |
-| no consensus: minority | 0 |
+| No consensus: the engines within the limits of each other split into two or more largest sets | 0 |
+| No consensus: no two engines are within the limits of each other | 0 |
+| No consensus: the largest set of engines within the limits of each other holds no more than half of the engines placed | 0 |
 
 | Engine | In the consensus | Outlier | Apart | Placed, no consensus | Not placed |
 |---|---|---|---|---|---|
 | moved | 1 | 1 | 0 | 0 | 0 |
-| ref | 2 | 0 | 0 | 0 | 0 |
+| reference-tracer | 2 | 0 | 0 | 0 | 0 |
 | stopped | 1 | 1 | 0 | 0 | 0 |
 
 ## Support matrix
 
-| Run | Rung | moved | ref | stopped |
+| Run | Check | moved | reference-tracer | stopped |
 |---|---|---|---|---|
-| lens | r10a, request 1 of 2 | ok | ok | ok |
-| lens | r10a, request 2 of 2 | ok | ok | ok |
+| lens | field-curve-rays, request 1 of 2 | ok | ok | ok |
+| lens | field-curve-rays, request 2 of 2 | ok | ok | ok |
 
 ## Results
 
 ### lens
 
-#### r10a, request 1 of 2
+#### Field-curve rays — `field-curve-rays`, request 1 of 2
 
-Quantity `rays.trace`, compared identical-rays, gated. Request `709bbb6dcdac471d6993cd95fe4039d2461bea51584489a2cfd263960368663b`.
+Quantity `rays.trace`: one estimator on each engine's trace of the same rays; held to a limit.
 
-Reference vs each, against `ref`:
+Reference vs each, against `reference-tracer`:
 
 | Engine | landing.maxAbs (≤ 1.00e-8 mm) | mask.mismatches (≤ 0 rays) | mask.rimBand [rays] | sagittalFocus.maxScaled (≤ 1.00e-8 mm) | sagittalFocus.maxAbs [mm] | tangentialFocus.maxScaled (≤ 1.00e-8 mm) | tangentialFocus.maxAbs [mm] | astigmatism.maxAbs [mm] | rays.compared [rays] | rays.dropped [rays] | fields.compared [elements] | Verdict | Note |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -88,27 +85,27 @@ Reference vs each, against `ref`:
 
 Pairwise, the verdict of each two engines and the metric nearest to or furthest past its limit:
 
-| Engine | moved | ref | stopped |
+| Engine | moved | reference-tracer | stopped |
 |---|---|---|---|
 | moved | — | PASS (landing.maxAbs 0 at line 0, ray 0) | FAIL (mask.mismatches 1 at line 0, ray 3, surface 0) |
-| ref | PASS (landing.maxAbs 0 at line 0, ray 0) | — | FAIL (mask.mismatches 1 at line 0, ray 3, surface 0) |
+| reference-tracer | PASS (landing.maxAbs 0 at line 0, ray 0) | — | FAIL (mask.mismatches 1 at line 0, ray 3, surface 0) |
 | stopped | FAIL (mask.mismatches 1 at line 0, ray 3, surface 0) | FAIL (mask.mismatches 1 at line 0, ray 3, surface 0) | — |
 
-Consensus: `moved`, `ref`, every two of them within the gates of each other; outlier: `stopped`, beyond the gates of every engine of the consensus.
+Consensus: `moved`, `reference-tracer`, every two of them within the limits of each other; outlier: `stopped`, beyond the limits of every engine of the consensus.
 
 Recorded values, as each engine reports them. They are listed and never judged:
 
-| Value | moved | ref | stopped |
+| Value | moved | reference-tracer | stopped |
 |---|---|---|---|
 | rays.blocked[0] | 0 | 0 | 1 |
 | rays.failed[0] | 0 | 0 | 0 |
 | rays.ok[0] | 10 | 10 | 9 |
 
-#### r10a, request 2 of 2
+#### Field-curve rays — `field-curve-rays`, request 2 of 2
 
-Quantity `rays.trace`, compared identical-rays, gated. Request `007e6b4dd3ede455414a91d136fe046da004bcc7bd456f8a89f6cfdc3d56054d`.
+Quantity `rays.trace`: one estimator on each engine's trace of the same rays; held to a limit.
 
-Reference vs each, against `ref`:
+Reference vs each, against `reference-tracer`:
 
 | Engine | landing.maxAbs (≤ 1.00e-8 mm) | mask.mismatches (≤ 0 rays) | mask.rimBand [rays] | sagittalFocus.maxScaled (≤ 1.00e-8 mm) | sagittalFocus.maxAbs [mm] | tangentialFocus.maxScaled (≤ 1.00e-8 mm) | tangentialFocus.maxAbs [mm] | astigmatism.maxAbs [mm] | rays.compared [rays] | rays.dropped [rays] | fields.compared [elements] | Verdict | Note |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -117,17 +114,17 @@ Reference vs each, against `ref`:
 
 Pairwise, the verdict of each two engines and the metric nearest to or furthest past its limit:
 
-| Engine | moved | ref | stopped |
+| Engine | moved | reference-tracer | stopped |
 |---|---|---|---|
 | moved | — | FAIL (landing.maxAbs 2.98e-8 at line 1, ray 6) | FAIL (landing.maxAbs 2.98e-8 at line 1, ray 6) |
-| ref | FAIL (landing.maxAbs 2.98e-8 at line 1, ray 6) | — | PASS (landing.maxAbs 0 at line 1, ray 0) |
+| reference-tracer | FAIL (landing.maxAbs 2.98e-8 at line 1, ray 6) | — | PASS (landing.maxAbs 0 at line 1, ray 0) |
 | stopped | FAIL (landing.maxAbs 2.98e-8 at line 1, ray 6) | PASS (landing.maxAbs 0 at line 1, ray 0) | — |
 
-Consensus: `ref`, `stopped`, every two of them within the gates of each other; outlier: `moved`, beyond the gates of every engine of the consensus.
+Consensus: `reference-tracer`, `stopped`, every two of them within the limits of each other; outlier: `moved`, beyond the limits of every engine of the consensus.
 
 Recorded values, as each engine reports them. They are listed and never judged:
 
-| Value | moved | ref | stopped |
+| Value | moved | reference-tracer | stopped |
 |---|---|---|---|
 | rays.blocked[0] | 0 | 0 | 0 |
 | rays.failed[0] | 0 | 0 | 0 |
@@ -137,43 +134,70 @@ Recorded values, as each engine reports them. They are listed and never judged:
 
 What this comparison does not show, whatever its verdicts:
 
-- optiland's FFT and Huygens MTF take no injected rays. An MTF of optiland's own is on optiland's own pupil grid, reference sphere and frequency axes, so rung R5 is recorded and never gated: it sets two methods side by side.
-- A polychromatic curve of optiland's FFT class. It gives a one-line modulus, so several lines have no FFT row in R5 or R6c. R6c's external counterpart is the comparator's complex sum of optiland's raw wavefronts; its synthetic sum proof checks the declared weighting and phase convention, not physical spectral fidelity.
-- optiland's geometric MTF takes no injected rays either. Its rays are an even grid on the stop surface, out to the clip radius; LensVisualizer's are a lattice across the entrance beam; neither is weighted by direction cosine. Rung R5g is recorded and never gated: a difference of the two pupil samplings is written down, not explained.
-- The bins of optiland's geometric MTF. On one line optiland's curve is of landings counted into bins, and a field whose bins move a value by more than a band has no optiland curve. On several lines the sum over optiland's landings is the worker's, without bins, about the axis point of the image plane; LensVisualizer's is about a chief ray's landing.
-- Dispersion and white-light weighting. Every engine is handed the indices and the line weights LensVisualizer states; no glass catalog and no spectrum is checked against another.
+- optiland's FFT and Huygens MTF take no injected rays. An MTF of optiland's own is on optiland's own pupil grid, reference sphere and frequency axes, so check mtf-vs-optiland-fft sets two methods side by side and holds them to no limit.
+- A polychromatic curve of optiland's FFT class. It gives the modulus at one wavelength, so a run of several wavelengths has no FFT row in checks mtf-vs-optiland-fft or mtf-vs-optiland-wavefront. The external counterpart in check mtf-vs-optiland-wavefront is this tool's complex sum of optiland's raw wavefronts; its proof on synthetic sums checks the declared weighting and phase convention, not physical spectral fidelity.
+- optiland's geometric MTF takes no injected rays either. Its rays are an even grid on the stop surface, out to the clip radius; LensVisualizer's are a lattice across the entrance beam; neither is weighted by direction cosine. Check geometric-mtf-vs-optiland sets the two side by side and holds them to no limit: a difference of the two pupil samplings is written down, not explained.
+- The bins of optiland's geometric MTF. At one wavelength optiland's curve is of landings counted into bins, and a field whose bins move a value by more than its convergence band (0.005 on the axis, 0.01 off it) has no optiland curve. At several wavelengths the sum over optiland's landings is this tool's, without bins, about the axis point of the image plane; LensVisualizer's is about a chief ray's landing.
+- Dispersion and white-light weighting. Every engine is handed the refractive indices and the wavelength weights LensVisualizer states; no glass catalog and no spectrum is checked against another.
 - The choice of focus. A best-focus plane is LensVisualizer's own, handed to every engine as a plane; no engine searches for one of its own.
 - The sizing of the stop. The stop radius, wide open and stopped down, is LensVisualizer's, by its own rule.
 - Models of vignetting. Each engine clips rays at the apertures it is handed; how an engine's own MTF fills, samples and calibrates a clipped pupil is its method, and a difference that comes of it is written down, not explained.
-- Zoom and focus positions other than the states a run names, and the catalog beyond these suites.
-- Fields that an engine's own convergence test did not pass. Their figures are shown apart and enter no band.
+- Zoom and focus positions other than the lens states a run names, and the catalog beyond these suites.
+- Fields that an engine's own convergence test did not pass. Their figures are shown apart and enter no review band.
 
 ## How to read this
 
-Each pair of engines that answered one request gets one verdict.
+Each pair of engines that answered one request gets one verdict. The verdict summary shows its label; the other
+tables of this report show its stored value. This is each label, its stored value and what it means:
 
-| Verdict | Meaning |
-|---|---|
-| PASS | A gated rung: every judged metric is at or below its tolerance. |
-| FLOOR | A gated rung: a judged metric is above its tolerance by the known numerical floor of one of the two engines. That engine is within the floor limit of the rung's arbiter, and no other engine sides with it against the arbiter; the note gives the figures, and names a witness that did not corroborate the arbiter. It counts as a pass. |
-| FAIL | A gated rung: a judged metric is above its tolerance, or is not a number. |
-| RECORDED | A recorded rung: the difference is written down. It is not a failure. |
-| ATTENTION | A recorded rung: a metric is outside its attention band. It is worth a look and is not a failure. |
-| UNSUPPORTED | One of the two engines cannot answer the request. That is an answer, not a failure. |
-| BLOCKED | Both engines answered and the pair is not judged: an earlier rung, on which this one rests, failed for the same two engines on the same case. The failure is that rung's, and the note names it. |
-| ERROR | One of the two engines gave no result, or the two results cannot be compared. |
+| Label | Stored value | Meaning |
+|---|---|---|
+| Pass: within limit | `PASS` | A check held to a limit: every judged figure is at or below its limit. |
+| Fail: beyond limit | `FAIL` | A check held to a limit: a judged figure is above its limit, or is not a number. |
+| Side by side | `RECORDED` | A side-by-side comparison with no limit: the difference is written down, inside its review band or with none. It is not a failure. |
+| Side by side, worth a look | `ATTENTION` | A side-by-side comparison with no limit: a figure is outside its review band. It is not a failure. |
+| Not computed | `UNSUPPORTED` | One of the two engines cannot compute what was asked. That is an answer, not a failure. |
+| Not judged (an earlier check failed) | `BLOCKED` | The pair is not judged, whether or not both engines answered: an earlier check that this one rests on failed or ended in an error for the same two engines and the same lens state. |
+| Error | `ERROR` | One of the two engines gave no result, or the two results cannot be compared. |
 
-Only FAIL and ERROR fail a comparison. FLOOR is a pass that is counted apart from PASS. RECORDED and ATTENTION
-are not failures: a recorded rung compares methods that are expected to differ, and its numbers are kept to be
-read, not to be gated. BLOCKED is not a second failure: two engines that built different systems would differ
-in every rung after that one.
+Only Fail (`FAIL`) and Error (`ERROR`) fail a comparison.
+Side by side (`RECORDED`) and Side by side, worth a look (`ATTENTION`) are not failures: a side-by-side check
+compares methods that are expected to differ, and its numbers are kept to be read, not held to a limit. Not
+judged (`BLOCKED`) is not a second failure: two engines that built different systems would differ in every check
+after that one.
 
-A limit is shown in the heading of its metric: `≤` is the tolerance of a gated rung, `band` the attention band
-of a recorded one, and `floor ≤` how far the engine with a floor may be from the arbiter for a FLOOR. A metric
+A limit is shown in the heading of its figure: `≤` is the limit of a check held to a limit, `band` the review
+band of a side-by-side check. A figure
 without a limit is shown and not judged. Where its name begins as a judged one's does, it stands beside that
 one: `pupilZ.maxAbs`, the plain difference, beside `pupilZ.maxScaled`, the one on the scale that is judged.
 Numbers have 3 significant digits, and a whole number, such as a count, is written in full.
-A recorded value has 9 significant digits, or is a whole number in full, and is named with the index of its
+A value written down has 9 significant digits, or is a whole number in full, and is named with the index of its
 element. `—` marks a place with nothing to compare, and `not finite` a number that is a NaN or an infinity.
 The reference-vs-each table and the pairwise matrix judge a pair alike, so a pair that is in both has the same
 verdict in both.
+
+## Identifiers
+
+The hashes that tell one version from another: of the suite file and of the limits file; of each engine's code
+and, for an engine of this tool's own, of this tool's code behind it; of each run's lens state; and of each
+request a section of the results is of.
+
+| Identifier | Value |
+|---|---|
+| Suite file | 0128c41c5f08687d7a3e3b1f55c90f6faf2fc5266f2787cd267a8edd54850948 |
+| Limits file | 2634c37a382cead06434b2495fe329cbdd74e1d13e819058d46c64632ff6e0a6 |
+
+| Engine | Engine code | This tool's code behind it |
+|---|---|---|
+| moved | 1285061cefc83b4538eba70d6a45fc6f0186be2b876f122a3721e150c5a34ed3 | 49ce9a07661a4cb64d5850ff62a4c3ac138b08fee37d05c86596498dcd7db117 |
+| reference-tracer | 1285061cefc83b4538eba70d6a45fc6f0186be2b876f122a3721e150c5a34ed3 | 49ce9a07661a4cb64d5850ff62a4c3ac138b08fee37d05c86596498dcd7db117 |
+| stopped | 1285061cefc83b4538eba70d6a45fc6f0186be2b876f122a3721e150c5a34ed3 | 49ce9a07661a4cb64d5850ff62a4c3ac138b08fee37d05c86596498dcd7db117 |
+
+| Run | Lens state |
+|---|---|
+| lens | 5e86575ae0af7493b28942da1d0fa71b4683e02ce17743e04724058ddd28addd |
+
+| Run | Check | Request |
+|---|---|---|
+| lens | field-curve-rays, request 1 of 2 | 709bbb6dcdac471d6993cd95fe4039d2461bea51584489a2cfd263960368663b |
+| lens | field-curve-rays, request 2 of 2 | 007e6b4dd3ede455414a91d136fe046da004bcc7bd456f8a89f6cfdc3d56054d |

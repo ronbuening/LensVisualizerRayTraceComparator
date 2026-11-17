@@ -112,12 +112,16 @@ test("a run of one lens is refused for its fields, its key's form and its jobs, 
   const dashboard = await served(t, rootDir, runsDir, { memoryBudgetGiB: 2 });
   const { port } = dashboard;
   const token = await tokenOf(port);
-  const valid = { token, lens: LENS, engines: "lv,ref", aperture: "f/8", jobs: "1" };
+  const valid = { token, lens: LENS, engines: "lv,reference-tracer", aperture: "f/8", jobs: "1" };
   for (const [fields, status, reason] of [
     [{ ...valid, lens: "" }, 400, TEXT.noLens],
     [{ ...valid, lens: "../etc/passwd" }, 400, TEXT.badLensKey("../etc/passwd")],
     [{ ...valid, lens: "a key" }, 400, TEXT.badLensKey("a key")],
-    [{ ...valid, engines: "lv,wave" }, 400, TEXT.unknownLensEngine("wave", "lv, ref, optiland")],
+    [
+      { ...valid, engines: "lv,wave-mtf-of-lv-rays" },
+      400,
+      TEXT.unknownLensEngine("wave-mtf-of-lv-rays", "lv, reference-tracer, optiland"),
+    ],
     [{ ...valid, engines: "lv,lv" }, 400, TEXT.repeatedId],
     [{ ...valid, aperture: "f/5.6" }, 400, TEXT.badAperture("f/5.6", "wide-open, f/8")],
     [{ ...valid, profile: "everything" }, 400, TEXT.badLensRun("everything", "benchmark, tabs, both")],
@@ -167,7 +171,7 @@ test("Run this lens from the UI on the fake tree: the catalog read, lvrtc mtf ru
   const token = await tokenOf(port);
 
   // A key of the right form that is not in the catalog: the job reads the catalog and ends there.
-  const missing = await post(port, { token, lens: "acme-nothing-99", engines: "lv,ref", jobs: "1" });
+  const missing = await post(port, { token, lens: "acme-nothing-99", engines: "lv,reference-tracer", jobs: "1" });
   assert.equal(missing.status, 303, missing.body);
   assert.equal(missing.headers.location, "/control/job/1");
   const none = await ended(port, 1);
@@ -184,7 +188,7 @@ test("Run this lens from the UI on the fake tree: the catalog read, lvrtc mtf ru
   assert.ok(visibleText(noneLens).includes(DASHBOARD_TEXT.lens.noRuns), "a job's lens has a page, with no run yet");
 
   // A key of the catalog: lvrtc mtf with the profile benchmark, wide open and at f/8 asked as f/8 alone.
-  const started = await post(port, { token, lens: LENS, engines: "lv,ref", aperture: "f/8", jobs: "1" });
+  const started = await post(port, { token, lens: LENS, engines: "lv,reference-tracer", aperture: "f/8", jobs: "1" });
   assert.equal(started.status, 303, started.body);
   assert.equal(started.headers.location, "/control/job/2");
   // One job at a time: a second run while this one runs is refused.
@@ -196,7 +200,7 @@ test("Run this lens from the UI on the fake tree: the catalog read, lvrtc mtf ru
     job.steps.map((step) => step.command),
     [
       "LVRTC_RUNS_DIR=<runsDir> node bin/lvrtc.mjs lenses list --root <root> --json",
-      `LVRTC_RUNS_DIR=<runsDir> node bin/lvrtc.mjs mtf ${LENS} --profile benchmark --root <root> --engines lv,ref --aperture f/8 --jobs 1`,
+      `LVRTC_RUNS_DIR=<runsDir> node bin/lvrtc.mjs mtf ${LENS} --profile benchmark --root <root> --engines lv,reference-tracer --aperture f/8 --jobs 1`,
     ],
   );
   assert.equal(job.steps[0].state, "exited");
@@ -222,7 +226,7 @@ test("Run this lens from the UI on the fake tree: the catalog read, lvrtc mtf ru
     assert.equal(run.condition.plane.kind, run.run.includes("-best-") ? "lv-best-axial" : "design");
     assert.deepEqual(
       run.requests.map((request) => request.rung),
-      ["r4f", "r6b"],
+      ["lv-mtf-replay", "mtf-vs-wave-estimate"],
     );
   }
   const quick = view.runs[0].requests[0].quick;
@@ -231,11 +235,11 @@ test("Run this lens from the UI on the fake tree: the catalog read, lvrtc mtf ru
   const chosen = JSON.parse((await fetchFrom(port, `/api/lens/${LENS}?${quick}`)).body) as LensView;
   assert.deepEqual(
     chosen.curves.map((curve) => curve.engine),
-    ["lv", "replay"],
+    ["lv", "replay-of-lv-mtf"],
   );
   assert.deepEqual(
     chosen.within?.view.pairs.map((pair) => [pair.a, pair.b]),
-    [["replay", "lv"]],
+    [["replay-of-lv-mtf", "lv"]],
   );
   assert.match(drawn, /<svg class="lvc"/);
   const index = JSON.parse((await fetchFrom(port, "/api/index")).body) as { lenses: { key: string }[] };
@@ -250,7 +254,14 @@ test("Run this lens from the UI on the fake tree: the catalog read, lvrtc mtf ru
 
   // The profile tabs (Stage 8.5): lvrtc mtf --profile tabs writes tabs-<key>, which the compare page gathers beside
   // mtf-<key> by the cases the two share.
-  const tabs = await post(port, { token, lens: LENS, profile: "tabs", engines: "lv,ref", aperture: "f/8", jobs: "1" });
+  const tabs = await post(port, {
+    token,
+    lens: LENS,
+    profile: "tabs",
+    engines: "lv,reference-tracer",
+    aperture: "f/8",
+    jobs: "1",
+  });
   assert.equal(tabs.status, 303, tabs.body);
   const tabsJob = await ended(port, 3);
   assert.deepEqual(
@@ -259,7 +270,7 @@ test("Run this lens from the UI on the fake tree: the catalog read, lvrtc mtf ru
       ["catalog", "LVRTC_RUNS_DIR=<runsDir> node bin/lvrtc.mjs lenses list --root <root> --json"],
       [
         "tabs",
-        `LVRTC_RUNS_DIR=<runsDir> node bin/lvrtc.mjs mtf ${LENS} --profile tabs --root <root> --engines lv,ref --aperture f/8 --jobs 1`,
+        `LVRTC_RUNS_DIR=<runsDir> node bin/lvrtc.mjs mtf ${LENS} --profile tabs --root <root> --engines lv,reference-tracer --aperture f/8 --jobs 1`,
       ],
     ],
   );
@@ -272,7 +283,7 @@ test("Run this lens from the UI on the fake tree: the catalog read, lvrtc mtf ru
     [`mtf-${LENS}`, `tabs-${LENS}`],
     "the condition's case is of both run directories",
   );
-  const r7a = compare.cards.find((card) => card.tab === "coma-bokeh")?.gated.find((line) => line.rung === "r7a");
+  const r7a = compare.cards.find((card) => card.tab === "coma-bokeh")?.gated.find((line) => line.rung === "spot-rays");
   assert.deepEqual(r7a?.source, { kind: "runs", suites: [`tabs-${LENS}`] });
   for (const tab of compare.cards) await holdPage(port, `/compare/${LENS}/${tab.tab}?${compare.query}`);
 });

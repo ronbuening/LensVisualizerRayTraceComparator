@@ -127,7 +127,10 @@ test("an answer is admitted as a run admits one: stored, then its job moved whol
   // The same in lines; the job still pending stays where it is.
   const again = await collect(at.runsDir);
   assert.equal(again.code, EXIT_OK);
-  assert.equal(again.out, `${ENGINE}: 0 collected, 0 rejected, 1 still pending\n`);
+  assert.equal(
+    again.out,
+    `${ENGINE}: 0 answers taken into the result cache, 0 refused, 1 still waiting for the operator\n`,
+  );
 });
 
 test("every answer that is not one is refused and moved to rejected with its reason", async (t) => {
@@ -179,8 +182,11 @@ test("every answer that is not one is refused and moved to rejected with its rea
   assert.deepEqual(list(at, "outbox"), []);
   // Each refusal is a line with its reason; the counts come first.
   const lines = ended.out.split("\n");
-  assert.equal(lines[0], `${ENGINE}: 2 collected, 7 rejected, 0 still pending`);
-  assert.equal(lines.filter((line) => line.startsWith("  rejected ")).length, 7);
+  assert.equal(
+    lines[0],
+    `${ENGINE}: 2 answers taken into the result cache, 7 refused, 0 still waiting for the operator`,
+  );
+  assert.equal(lines.filter((line) => line.startsWith("  refused ")).length, 7);
 
   // A refused job is handed over again by the next run: the operator gets it back.
   assert.equal((await at.adapter.run(request(1), CASE)).status, "pending");
@@ -320,7 +326,10 @@ test("exit codes: 2 for a command line, a root or an engine that cannot be used;
   );
   // Nothing to collect is no failure.
   const quiet = await collect(runsDir);
-  assert.deepEqual([quiet.code, quiet.out], [EXIT_OK, `${ENGINE}: 0 collected, 0 rejected, 0 still pending\n`]);
+  assert.deepEqual(
+    [quiet.code, quiet.out],
+    [EXIT_OK, `${ENGINE}: 0 answers taken into the result cache, 0 refused, 0 still waiting for the operator\n`],
+  );
 
   const rootDir = tempDir(t);
   writeFileSync(
@@ -329,7 +338,7 @@ test("exit codes: 2 for a command line, a root or an engine that cannot be used;
   );
   const broken = await collect(runsDir, [], rootDir);
   assert.equal(broken.code, EXIT_FAILURE);
-  assert.match(broken.out, /^desk: not collected: engine desk is unavailable \(bad-descriptor\): /);
+  assert.match(broken.out, /^desk: nothing collected: engine desk is unavailable \(bad-descriptor\): /);
   rmSync(join(rootDir, CONFIG_FILE));
   const none = await collect(runsDir, [], rootDir);
   assert.deepEqual([none.code, none.out], [EXIT_OK, "no file-exchange engine is configured: nothing to collect\n"]);

@@ -139,8 +139,9 @@ test(
       assert.ok(reference !== null && photopic !== null);
       assert.equal(reference.systemId, photopic.systemId);
       assert.equal(reference.conditions.lines.length, 1);
-      assert.equal(photopic.conditions.lines.length, 5);
-      assert.equal(photopic.conditions.lines[0].wavelengthNm, 555);
+      // Since LV #988 (f5b456fec) the photopic lines are nine, a Gauss-Legendre quadrature of V(λ) from 560 nm.
+      assert.equal(photopic.conditions.lines.length, 9);
+      assert.equal(photopic.conditions.lines[0].wavelengthNm, 560);
       // The benchmark is d-referenced throughout.
       assert.deepEqual(reference.conditions.lines[0], { wavelengthNm: 587.5618, weight: 1, indexSource: "authored" });
     }
@@ -194,7 +195,8 @@ test("each lens of the feature suite has the translation path it is there for", 
   const ePhotopic = await featureCase("e-line-photopic");
   assert.deepEqual(
     ePhotopic.conditions.lines.map((line) => [line.wavelengthNm, line.indexSource]),
-    [555, 470, 510, 610, 650].map((wavelength) => [wavelength, "anchored"]),
+    // LV #988's nine photopic lines (five, 555 nm first, before f5b456fec).
+    [560, 530.82, 589.18, 504.8, 615.2, 484.76, 635.24, 472.87, 647.13].map((wavelength) => [wavelength, "anchored"]),
   );
 
   assert.equal(limits(await featureCase("asphere-a20-ref"))["asphere.maxPower"], 20);
@@ -260,22 +262,32 @@ test(
     // On the fixture root's fake engine, which knows no optics and answers the selftest rung, and on the built-in
     // reference engine, which answers R0 and R1 for every one of these cases: each declines what the other offers.
     // The rungs that trace rays are left out: this is about the cases.
-    const rungs = ["--rungs", "selftest,r0,r1"];
-    const args = [BIN, "run", suitePath("smoke"), "--root", FAKE_ROOT, "--engines", "fake-a,ref", ...rungs];
+    const rungs = ["--checks", "pipeline-echo,built-system,first-order"];
+    const args = [
+      BIN,
+      "run",
+      suitePath("smoke"),
+      "--root",
+      FAKE_ROOT,
+      "--engines",
+      "fake-a,reference-tracer",
+      ...rungs,
+    ];
     const env = { ...process.env, LVRTC_RUNS_DIR: runsDir, LVRTC_LV_PATH: LV_PATH ?? "" };
     const child = spawnSync(process.execPath, args, { encoding: "utf8", cwd: REPO_ROOT, env });
     assert.equal(child.status, 0, child.stderr);
-    assert.match(
-      child.stdout,
-      /^smoke: 30 jobs: 15 ok, 15 unsupported, 0 error, 0 pending \(15 computed, 0 cached\)$/m,
-    );
+    assert.match(child.stdout, /^smoke: 30 jobs: 15 answered, 15 not computed \(15 asked now, 15 not offered\)$/m);
     // The suite's zoom states no position: it is two runs, one for each end.
     const zoomRuns = ["minolta-af-35-70-f4-ref-wide", "minolta-af-35-70-f4-ref-tele"];
     for (const run of ["carl-zeiss-tessar-50f35-ref", "carl-zeiss-tessar-50f35-photopic", ...zoomRuns]) {
-      for (const rung of ["r0", "r1"]) {
-        assert.match(child.stdout, new RegExp(`^${run} +${rung} +ref +ok +computed$`, "m"), `${run} ${rung}`);
+      for (const rung of ["built-system", "first-order"]) {
+        assert.match(
+          child.stdout,
+          new RegExp(`^${run} +${rung} +reference-tracer +answered +asked now$`, "m"),
+          `${run} ${rung}`,
+        );
       }
-      assert.match(child.stdout, new RegExp(`^${run} +selftest +fake-a +ok +computed$`, "m"), run);
+      assert.match(child.stdout, new RegExp(`^${run} +pipeline-echo +fake-a +answered +asked now$`, "m"), run);
     }
 
     const manifest: RunManifest = JSON.parse(readFileSync(join(runsDir, "smoke", MANIFEST_FILE), "utf8"));
@@ -311,26 +323,34 @@ test(
     const ran = lvrtc("run", suitePath("smoke"));
     assert.equal(ran.status, 0, ran.stderr);
     // Five runs, the zoom at both ends, and two engines. Neither answers the conformance quantity, both answer R0
-    // and R1; and the runs have 27 ray sets between them (three fields, at one line four times and at five lines
-    // once), which each engine traces once, for R2, and R3 and R4 find in the store. R4f is about two engines of
-    // its own, lv and the replay of its sampling: one request of each for a run. R6a finds the 27 sets in the store
-    // and has each engine trace the same fields on the finer lattice, 27 sets more; and R6b is about lv and the
-    // wave estimator on its rays, one request of each for a run. R7a has each engine trace the spot sets of the coma
-    // and bokeh tabs, ten a line: 90 sets, at one line four times and at five lines once. R8a has each engine trace
-    // the axial sets of the spherical-aberration and axial-colour sections, two a line and the colour at a line that
-    // is a chromatic channel's (each of the four runs of one line, none of the photopic run): 22 sets. R9a has each
-    // engine trace the chief sets of the distortion, pupils and lateral-colour tabs, four a line: 36 sets. R10a has
-    // each engine trace the curvature sets of the field-curve sections, two a line: 18 sets. R11a has each engine
-    // trace the vignetting tab's stop lattice of each of its fields at every line: 83 sets (LensVisualizer 607ff23ae).
+    // and R1; and the runs have 39 ray sets between them (three fields, at one line four times and at nine lines
+    // once: LV #988's photopic lines, five before f5b456fec), which each engine traces once, for R2, and R3 and R4
+    // find in the store. R4f is about two engines of its own, lv and the replay of its sampling: one request of each
+    // for a run. R6a finds the 39 sets in the store and has each engine trace the same fields on the finer lattice, 39
+    // sets more; and R6b is about lv and the wave estimator on its rays, one request of each for a run. R7a has each
+    // engine trace the spot sets of the coma and bokeh tabs, ten a line: 130 sets, at one line four times and at nine
+    // lines once. R8a has each engine trace the axial sets of the spherical-aberration and axial-colour sections, two a
+    // line and the colour at a line that is a chromatic channel's (each of the four runs of one line, none of the
+    // photopic run): 30 sets. R9a has each engine trace the chief sets of the distortion, pupils and lateral-colour
+    // tabs, four a line: 52 sets. R10a has each engine trace the curvature sets of the field-curve sections, two a
+    // line: 26 sets. R11a has each engine trace the vignetting tab's stop lattice of each of its fields at every line:
+    // 119 sets (LensVisualizer f5b456fec; 83 at 607ff23ae, on five photopic lines).
     assert.match(
       ran.stdout,
-      /^smoke: 818 jobs: 808 ok, 10 unsupported, 0 error, 0 pending \(646 computed, 162 cached\)$/m,
+      /^smoke: 1154 jobs: 1144 answered, 10 not computed \(910 asked now, 234 from the result cache, 10 not offered\)$/m,
     );
-    assert.match(ran.stdout, /^minolta-af-35-70-f4-ref-tele +r6b +wave +ok +computed$/m);
-    assert.match(ran.stdout, /^minolta-af-35-70-f4-ref-tele +r4f +replay +ok +computed$/m);
+    assert.match(
+      ran.stdout,
+      /^minolta-af-35-70-f4-ref-tele +mtf-vs-wave-estimate +wave-mtf-of-lv-rays +answered +asked now$/m,
+    );
+    assert.match(ran.stdout, /^minolta-af-35-70-f4-ref-tele +lv-mtf-replay +replay-of-lv-mtf +answered +asked now$/m);
     for (const end of ["wide", "tele"]) {
-      for (const rung of ["r3", "r4"]) {
-        assert.match(ran.stdout, new RegExp(`^minolta-af-35-70-f4-ref-${end} +${rung} +lv +ok +cached$`, "m"), end);
+      for (const rung of ["optical-path", "geometric-mtf"]) {
+        assert.match(
+          ran.stdout,
+          new RegExp(`^minolta-af-35-70-f4-ref-${end} +${rung} +lv +answered +from the cache$`, "m"),
+          end,
+        );
       }
     }
     const compared = lvrtc("compare", "smoke");
@@ -339,49 +359,62 @@ test(
     // need: at LV 33ebdb30 (engine closure 78215d72) the geometric MTF of LensVisualizer's landings is within
     // 2.2e-8 of the reference engine's on every field of the suite, against a gate of 1e-7.
     // R6a is of a field on both lattices, fifteen fields like R4, and passes wherever it is judged; R6b is
-    // recorded, one pair a run, and whether it is marked for attention is no matter of this test. R7a is of the 90
-    // spot sets, and passes; R8a of the 22 axial sets, and passes; R9a of the chief sets of a pattern at every line,
-    // four spans a run, 20, and passes; R10a of the 18 curvature sets, and passes; R11a of the beam sets of a line,
-    // one span a line, 9, and passes. A pair is counted in both modes.
+    // recorded, one pair a run, and whether it is marked for attention is no matter of this test. R7a is of the 130
+    // spot sets, and passes; R8a of the 30 axial sets, and passes; R9a of the chief sets of a pattern at every line,
+    // four spans a run, 20, and passes; R10a of the 26 curvature sets, and passes; R11a of the beam sets of a line,
+    // one span a line, 13, and passes. A pair is counted in both modes.
     const summary =
-      /^smoke: 536 pairs: 516 PASS, 0 FLOOR, 0 FAIL, (\d+) RECORDED, (\d+) ATTENTION, 10 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/m.exec(
+      /^smoke: 704 pairs: 684 Pass(?:, (\d+) Side by side(?!, worth))?(?:, (\d+) Side by side, worth a look)?, 10 Not computed$/m.exec(
         compared.stdout,
       );
     assert.ok(
       summary !== null,
       compared.stdout.split("\n").find((line) => line.startsWith("smoke: ")),
     );
-    assert.equal(Number(summary[1]) + Number(summary[2]), 10);
-    // R4 is of a field at every line of its run: fifteen fields, where R2 and R3 judge 27 ray sets each.
+    assert.equal(Number(summary[1] ?? 0) + Number(summary[2] ?? 0), 10);
+    // R4 is of a field at every line of its run: fifteen fields, where R2 and R3 judge 39 ray sets each.
     const { comparisons }: ComparisonFile = JSON.parse(readFileSync(join(runsDir, "smoke", COMPARISONS_FILE), "utf8"));
     const sets = (rung: string) => comparisons.filter((set) => set.rung === rung && set.mode === "pairwise");
-    assert.deepEqual([sets("r2").length, sets("r3").length, sets("r4").length], [27, 27, 15]);
+    assert.deepEqual(
+      [sets("ray-trace").length, sets("optical-path").length, sets("geometric-mtf").length],
+      [39, 39, 15],
+    );
     assert.deepEqual(
       [
-        sets("r6a").length,
-        sets("r6b").length,
-        sets("r7a").length,
-        sets("r8a").length,
-        sets("r9a").length,
-        sets("r10a").length,
-        sets("r11a").length,
+        sets("wave-mtf").length,
+        sets("mtf-vs-wave-estimate").length,
+        sets("spot-rays").length,
+        sets("axial-rays").length,
+        sets("chief-rays").length,
+        sets("field-curve-rays").length,
+        sets("vignetting-rays").length,
       ],
-      [15, 5, 90, 22, 20, 18, 9],
+      [15, 5, 130, 30, 20, 26, 13],
     );
-    for (const set of [...sets("r7a"), ...sets("r8a"), ...sets("r9a"), ...sets("r10a"), ...sets("r11a")])
+    for (const set of [
+      ...sets("spot-rays"),
+      ...sets("axial-rays"),
+      ...sets("chief-rays"),
+      ...sets("field-curve-rays"),
+      ...sets("vignetting-rays"),
+    ])
       assert.equal(set.pairs[0].verdict, "PASS", set.run);
-    for (const set of sets("r6a")) {
+    for (const set of sets("wave-mtf")) {
       const [pair] = set.pairs;
-      assert.deepEqual([pair.a, pair.b, pair.verdict], ["lv", "ref", "PASS"], set.run);
+      assert.deepEqual([pair.a, pair.b, pair.verdict], ["lv", "reference-tracer", "PASS"], set.run);
       // A field is judged, or says why its lattice is no arbiter.
       const judged = pair.metrics.some((metric) => metric.name === "waveMtf.maxAbs");
       assert.equal(pair.reason === undefined, judged, `${set.run}: ${pair.reason ?? ""}`);
     }
-    for (const set of sets("r4")) {
+    for (const set of sets("geometric-mtf")) {
       const [pair] = set.pairs;
-      assert.deepEqual([pair.a, pair.b, pair.verdict, pair.reason], ["lv", "ref", "PASS", undefined], set.run);
+      assert.deepEqual(
+        [pair.a, pair.b, pair.verdict, pair.reason],
+        ["lv", "reference-tracer", "PASS", undefined],
+        set.run,
+      );
       const lines = pair.metrics.find((metric) => metric.name === "lines.compared")?.value;
-      assert.equal(lines, set.run.endsWith("-photopic") ? 5 : 1, set.run);
+      assert.equal(lines, set.run.endsWith("-photopic") ? 9 : 1, set.run);
       assert.ok((pair.metrics.find((metric) => metric.name === "rays.compared")?.value ?? 0) > 0, set.run);
     }
     const reported = lvrtc("report", "smoke");
@@ -395,7 +428,7 @@ test(
     }
     assert.deepEqual(
       manifest.engines.map((engine) => engine.id),
-      ["lv", "ref", "replay", "wave"],
+      ["lv", "reference-tracer", "replay-of-lv-mtf", "wave-mtf-of-lv-rays"],
     );
   },
 );

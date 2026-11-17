@@ -73,7 +73,7 @@ export interface BaselineVerdictCount {
 
 /** Two engines over the requests of one rung of one run. */
 export interface BaselinePair {
-  /** Catalog-only classifications; the verdict remains FAIL. */
+  /** Classifications of a suite that lists known failures (`FAILURE_LIST_SUITES`); the verdict remains FAIL. */
   readonly failures?: readonly FailureClass[];
   /** The first engine: the one whose id sorts first. */
   readonly a: string;
@@ -154,6 +154,12 @@ export interface Baseline {
   /** Every run, in suite order. */
   readonly runs: readonly BaselineRun[];
 }
+
+/**
+ * The suites whose baselines may carry classifications of listed failures (`failures`, contract minor 6): the catalog,
+ * and focus-stations since the owner's decision of 2026-11-16. `KNOWN_FAILURE_SUITES` of src/baseline/catalog.ts.
+ */
+export const FAILURE_LIST_SUITES: readonly string[] = Object.freeze(["catalog", "focus-stations"]);
 
 /** The verdicts from the least grave to the gravest: what a pair came to over several requests is the last one met. */
 export const VERDICT_GRAVITY: readonly Verdict[] = [
@@ -277,8 +283,11 @@ export function baselineProblems(baseline: Baseline): string[] {
       });
       for (const pair of rung.pairs) {
         const of = `${at}, ${pair.a} and ${pair.b}`;
-        if (pair.failures !== undefined && (baseline.suite.name !== "catalog" || pair.verdict !== "FAIL"))
-          problems.push(`${of}: classifications require a catalog FAIL`);
+        if (
+          pair.failures !== undefined &&
+          (!FAILURE_LIST_SUITES.includes(baseline.suite.name) || pair.verdict !== "FAIL")
+        )
+          problems.push(`${of}: classifications require a FAIL of a suite that lists known failures`);
         if (pair.failures !== undefined && new Set(pair.failures.map((f) => f.metric)).size !== pair.failures.length)
           problems.push(`${of}: duplicate classified metric`);
 

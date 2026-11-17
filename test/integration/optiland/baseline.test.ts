@@ -49,10 +49,17 @@ for (const [suite, records] of [
       assert.deepEqual(said.errors, []);
       assert.equal(said.records.length - said.counts.NEW, records);
       t.diagnostic(`${suite}: ${JSON.stringify(said.counts)}; stale ${JSON.stringify(said.stale)}`);
-      const current = said.records.filter((record) => record.stale.length === 0 && record.outcome !== "NEW");
+      // A record out of date by its limits file alone holds as REFRESHABLE; one otherwise current is OK.
+      const current = said.records.filter(
+        (record) => record.stale.every((reason) => reason === "policy") && record.outcome !== "NEW",
+      );
       for (const record of current) {
         const at = `${record.run} ${record.rung} ${record.a} ${record.b}`;
-        assert.equal(record.outcome, "OK", `${at}: ${record.moved.join("; ")}`);
+        assert.equal(
+          record.outcome,
+          record.stale.length === 0 ? "OK" : "REFRESHABLE",
+          `${at}: ${record.moved.join("; ")}`,
+        );
         assert.equal(record.verdict, "PASS", `${at}: ${record.verdict}`);
       }
       // With nothing stale the check is the whole baseline, and the command exits 0.

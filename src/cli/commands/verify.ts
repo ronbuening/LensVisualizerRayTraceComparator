@@ -1,13 +1,20 @@
 import {
   KNOWN_FAILURES,
+  KNOWN_FAILURE_SUITES,
   classifyCatalog,
+  knownFailureText,
+  knownFailuresFile,
+  listsKnownFailures,
+  pendingKnownFailures,
   readKnownFailures,
   unclassifiedFailures,
   unusedKnownFailures,
 } from "../../baseline/catalog.ts";
+import { LEGACY_IDS, currentIds } from "../../core/legacyIds.ts";
+import { CONTRACT_VERSION_1_6 } from "../../contract/version.ts";
 import { CATALOG_JSON, CATALOG_MARKDOWN, readCatalogInputs, renderCatalog } from "../../report/catalog.ts";
 import { canonicalJson } from "../../core/numeric/canonicalJson.ts";
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { readFileSync, readdirSync, realpathSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 import { parseBaseline } from "../../baseline/build.ts";
@@ -42,9 +49,12 @@ import {
   STATEMENT_MARKDOWN,
 } from "../../report/statement.ts";
 import { MATRIX_FILES, MATRIX_JSON, MATRIX_MARKDOWN, readMatrixInputs, renderMatrix } from "../../report/matrix.ts";
+import { GLOSSARY_FILE, renderGlossary } from "../../vocabulary/glossary.ts";
+import { VERIFY_OUTPUT_TEXT } from "../../vocabulary/output.ts";
 import { parseArguments } from "../arguments.ts";
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "../command.ts";
 import type { CliCommand } from "../command.ts";
+import { helpText, options, paragraph } from "../help.ts";
 
 /** What `lvrtc verify` is wired to, injected so that tests choose it. */
 export interface VerifyCommandInputs {
@@ -56,36 +66,36 @@ export interface VerifyCommandInputs {
   readonly policy?: Policy;
   /** Where the frozen policies of the snapshot baselines are; this repository's `policy/snapshots/` unless given. */
   readonly policySnapshots?: string;
+  /** The root that requires the glossary even where it is missing; this repository unless given. */
+  readonly repositoryRoot?: string;
 }
 
 const SYNOPSIS = "Usage: lvrtc verify [--root <dir>] [--write]\n";
-const HELP = [
+const HELP = helpText([
   SYNOPSIS,
-  "Holds the committed baselines and the reports rendered from them together, with no engine: neither",
-  "LensVisualizer nor optiland is read. Every <root>/baselines/<suite>.json must be a baseline by its schema and",
-  "its rules, be the canonical text of what it holds, be named after its suite and be judged by the policy at",
-  "hand; <root>/reports/<suite>/rays.md and rays.json must be, byte for byte, what the baseline renders; and no",
-  "such report may be without its baseline. The catalog's two baselines are a dated snapshot: each is held to the",
-  "policy it records, which must be a frozen policy of this repository (policy/snapshots/rungs.v<version>.json, of",
-  "that version and canonical hash), with the gates and bands it records that policy's; never to the policy at",
-  "hand. Everything else about them is held as for any baseline, with their classified failures and the catalog",
-  "report. An MTF baseline, <root>/baselines/<suite>.mtf.json, is held the same",
-  "way with its reports, <root>/reports/<suite>/mtf.md and mtf.json.",
-  "A root with all eight suite baselines also requires reports/validation-statement.{json,md}, byte for",
-  "byte from all eight suite baselines, as lvrtc statement writes it; --write regenerates it too. A root with",
-  "both benchmark baselines also requires reports/benchmark/validation-matrix.{json,md}, byte for byte from",
-  "those two, as lvrtc matrix writes it; --write regenerates it too.",
-  "",
-  "It cannot see a case or an engine that has changed since a baseline was written (STALE): that needs the",
-  "engines, and is what lvrtc baseline check says.",
-  "",
-  "  --root <dir>  the directory that holds baselines/ and reports/ (default: this repository)",
-  "  --write       write the reports anew from the baselines in place of comparing them; a baseline is never",
-  "                written here",
-  "",
-  "Exit code: 0 when everything holds; 1 otherwise.",
-  "",
-].join("\n");
+  ...paragraph(
+    "For maintainers, and part of npm run check. Holds the committed baselines and the reports rendered from them together, with no engine: neither LensVisualizer nor optiland is read. Every <root>/baselines/<suite>.json must be a valid baseline, be the canonical text of what it holds, be named after its suite and be judged by the limits file at hand; <root>/reports/<suite>/rays.md and rays.json must be, byte for byte, what the baseline renders; and no such report may be without its baseline. An MTF baseline, <root>/baselines/<suite>.mtf.json, is held the same way with its reports mtf.md and mtf.json.",
+  ),
+  ...paragraph(
+    "The catalog's two baselines are a dated snapshot: each is held to the limits file it records, which must be a frozen copy kept under policy/snapshots/ of that version and hash, never to the limits file at hand. Everything else about them is held as for any baseline, with their classified failures and the catalog report.",
+  ),
+  ...paragraph(
+    "A root with all eight baselines of the benchmark, features, states and focus-stations suites also needs reports/validation-statement.json and .md, byte for byte as lvrtc statement writes them; a root with both benchmark baselines needs reports/benchmark/validation-matrix.json and .md, as lvrtc matrix writes them; and this repository, or any root with a docs/GLOSSARY.md, needs that file byte for byte as the vocabulary renders it. --write writes each of them anew.",
+  ),
+  ...paragraph(
+    "It cannot see a lens state or an engine that has changed since a baseline was written: that needs the engines, and is what lvrtc baseline check and lvrtc check-lv say.",
+  ),
+  ...options([
+    ["--root <dir>", "the directory that holds baselines/ and reports/ (default: this repository)"],
+    [
+      "--write",
+      "write the reports anew from the baselines in place of comparing them; a baseline is never written here",
+    ],
+  ]),
+  ...paragraph(
+    "Exit code: 0 when everything holds; 1 otherwise; 2 when the command line or the root cannot be used as given.",
+  ),
+]);
 
 function readText(file: string): string | undefined {
   try {
@@ -95,11 +105,20 @@ function readText(file: string): string | undefined {
   }
 }
 
-/** "the catalog is a dated snapshot of policy v15 at LensVisualizer 879c06102", from the baseline alone. */
+/** The real path of a file, or the path resolved when it does not exist. */
+function realPath(path: string): string {
+  try {
+    return realpathSync(path);
+  } catch {
+    return resolve(path);
+  }
+}
+
+/** "the catalog is a dated snapshot of the limits file v15 at LensVisualizer 879c06102", from the baseline alone. */
 function snapshotSaid(suite: string, baseline: Baseline): string {
   const commit = baseline.engines.find((engine) => engine.id === "lv")?.details.commit;
   const at = typeof commit === "string" ? ` at LensVisualizer ${commit.slice(0, 9)}` : "";
-  return `the ${suite} is a dated snapshot of policy v${baseline.policy.version}${at}`;
+  return `the ${suite} is ${VERIFY_OUTPUT_TEXT.snapshot} v${baseline.policy.version}${at}`;
 }
 
 /**
@@ -117,7 +136,9 @@ function snapshotSaid(suite: string, baseline: Baseline): string {
  * is held the same way, to `reports/<suite>/mtf.md` and `mtf.json` as `renderMtfBaselineReport` gives them. Each
  * problem is a line on the error stream; each baseline that holds is a line on the output. A root with the eight
  * suite baselines of the statement, or either statement file, is held to `renderStatement`; a root with the
- * benchmark's two baselines, or either matrix file, to `renderMatrix` (`reports/benchmark/validation-matrix.*`).
+ * benchmark's two baselines, or either matrix file, to `renderMatrix` (`reports/benchmark/validation-matrix.*`). This
+ * repository (`repositoryRoot`, by real path), and any root with a glossary, is held to `renderGlossary`
+ * (`docs/GLOSSARY.md`), with a line on the output when it holds.
  *
  * Exit codes: 0 when nothing is wrong, also when there is no baseline at all; 1 when something is; 2 for a command
  * line that is not the synopsis and a `--root` that is not a directory.
@@ -125,7 +146,7 @@ function snapshotSaid(suite: string, baseline: Baseline): string {
 export function createVerifyCommand(inputs: VerifyCommandInputs): CliCommand {
   return {
     name: "verify",
-    summary: "Check the committed baselines and their reports, with no engine",
+    summary: "Check that the committed results and reports hold together, without running any engine",
     run: async (args, io) => {
       if (args.includes("-h") || args.includes("--help")) {
         io.stdout(HELP);
@@ -167,6 +188,8 @@ export function createVerifyCommand(inputs: VerifyCommandInputs): CliCommand {
       // The suites that have a rays baseline, and those that have an MTF baseline.
       const suites = new Set<string>();
       const mtfSuites = new Set<string>();
+      // The baselines of each suite that parsed, under the ids of today: a suite's listed failures are held to them.
+      const parsed = new Map<string, Baseline[]>();
       const files = list(join(rootDir, BASELINES_DIRECTORY)).filter((name) => name.endsWith(".json"));
       for (const name of files) {
         const at = `${BASELINES_DIRECTORY}/${name}`;
@@ -185,6 +208,7 @@ export function createVerifyCommand(inputs: VerifyCommandInputs): CliCommand {
         const mtf = marked !== undefined && baseline.suite.name !== stem;
         const suite = mtf ? marked : stem;
         (mtf ? mtfSuites : suites).add(suite);
+        parsed.set(suite, [...(parsed.get(suite) ?? []), currentIds(baseline, LEGACY_IDS)]);
         const [reportMarkdown, reportJson] = mtf
           ? [MTF_REPORT_MARKDOWN, MTF_REPORT_JSON]
           : [BASELINE_REPORT_MARKDOWN, BASELINE_REPORT_JSON];
@@ -223,18 +247,27 @@ export function createVerifyCommand(inputs: VerifyCommandInputs): CliCommand {
               `records it`,
           );
         }
-        if (baseline.suite.name !== "catalog") {
-          // Only the catalog admits a classified FAIL; a FAIL or ERROR in any other baseline is never committed.
+        if (!listsKnownFailures(baseline.suite.name)) {
+          // Only a suite that lists known failures admits a classified FAIL (`KNOWN_FAILURE_SUITES`); a FAIL or ERROR
+          // in any other baseline is never committed.
           for (const line of unclassifiedFailures(baseline)) problems.push(`${at}: ${line}: no baseline records it`);
         } else {
           try {
-            const classified = classifyCatalog(baseline, readKnownFailures(rootDir));
-            if (canonicalJson(classified) !== canonicalJson(baseline) || unclassifiedFailures(classified).length)
-              problems.push(`${at}: unknown or changed catalog failure classification`);
+            // The catalog's list keeps the ids it was written with; another suite's is at the ids of today.
+            const held = baseline.suite.name === "catalog" ? baseline : currentIds(baseline, LEGACY_IDS);
+            const classified = classifyCatalog(held, readKnownFailures(rootDir, baseline.suite.name));
+            if (canonicalJson(classified) !== canonicalJson(held) || unclassifiedFailures(classified).length)
+              problems.push(`${at}: unknown or changed ${baseline.suite.name} failure classification`);
           } catch (error) {
             problems.push(`${at}: ${String(error)}`);
           }
         }
+        // Outside the catalog, minor 6 is stated for a classification alone (`classifyCatalog`), never without one.
+        const classifies = baseline.runs.some((run) =>
+          run.rungs.some((rung) => rung.pairs.some((pair) => pair.failures !== undefined)),
+        );
+        if (baseline.suite.name !== "catalog" && baseline.contract === CONTRACT_VERSION_1_6 && !classifies)
+          problems.push(`${at}: states contract ${CONTRACT_VERSION_1_6} and classifies no failure`);
         const rendered = mtf ? renderMtfBaselineReport(baseline) : renderBaselineReport(baseline);
         const reports = mtf ? mtfBaselineReportFiles(rootDir, suite) : baselineReportFiles(rootDir, suite);
         for (const [file, text, said] of [
@@ -260,11 +293,12 @@ export function createVerifyCommand(inputs: VerifyCommandInputs): CliCommand {
             (sum, run) => sum + run.rungs.reduce((n, rung) => n + rung.pairs.length, 0),
             0,
           );
+          const t = VERIFY_OUTPUT_TEXT;
           io.stdout(
-            `${at}: a baseline of ${baseline.runs.length} runs and ${records} records, policy v${baseline.policy.version}; ` +
-              `${REPORTS_DIRECTORY}/${suite}/${reportMarkdown} and ${reportJson} are ${rewrite ? "written from it" : "what it renders"}` +
+            `${at}: ${t.baseline} ${baseline.runs.length} ${baseline.runs.length === 1 ? "run" : "runs"}, ${records} ${records === 1 ? "record" : "records"}, ${t.limitsFile} v${baseline.policy.version}; ` +
+              `${REPORTS_DIRECTORY}/${suite}/${reportMarkdown} and ${reportJson} ${rewrite ? t.written : t.rendered}` +
               (snapshot
-                ? `; ${snapshotSaid(suite, baseline)}, held to ${policySnapshotName(baseline.policy.version)}`
+                ? `; ${snapshotSaid(suite, baseline)}, ${t.heldTo} ${policySnapshotName(baseline.policy.version)}`
                 : "") +
               "\n",
           );
@@ -317,6 +351,26 @@ export function createVerifyCommand(inputs: VerifyCommandInputs): CliCommand {
           problems.push(`catalog: ${String(error)}`);
         }
       }
+      // The listed failures of a suite other than the catalog (whose list is held with its report above): an entry whose
+      // run a committed baseline of the suite holds must classify a FAIL exactly, as the catalog's do; one whose run no
+      // committed baseline holds is pending, listed ahead of the refresh that writes the run, and is said so.
+      for (const suite of KNOWN_FAILURE_SUITES.filter((name) => name !== "catalog")) {
+        const file = knownFailuresFile(suite);
+        if (readText(join(rootDir, file)) === undefined) continue;
+        try {
+          const committed = parsed.get(suite) ?? [];
+          const { pending, held } = pendingKnownFailures(committed, readKnownFailures(rootDir, suite));
+          const unused = unusedKnownFailures(committed, held);
+          if (unused.length > 0) problems.push(`${file}: no ${suite} baseline classifies ${unused.join("; ")}`);
+          if (pending.length > 0)
+            io.stdout(
+              `${file}: ${VERIFY_OUTPUT_TEXT.pending(pending.length, suite)} ` +
+                `${pending.map(knownFailureText).join("; ")}\n`,
+            );
+        } catch (error) {
+          problems.push(`${file}: ${String(error)}`);
+        }
+      }
       // Older partial roots need only their per-suite reports. A complete four-suite root, or either statement file,
       // requires the complete four-suite statement, so deleting both outputs cannot bypass verification.
       if (
@@ -362,16 +416,30 @@ export function createVerifyCommand(inputs: VerifyCommandInputs): CliCommand {
           problems.push(`validation-matrix: ${error instanceof Error ? error.message : String(error)}`);
         }
       }
+      // The glossary is generated from the vocabulary: this repository requires it, so deleting it cannot bypass verify.
+      if (
+        realPath(rootDir) === realPath(inputs.repositoryRoot ?? REPO_ROOT) ||
+        readText(join(rootDir, GLOSSARY_FILE)) !== undefined
+      ) {
+        const glossary = renderGlossary();
+        if (rewrite) {
+          writeFileAtomic(join(rootDir, GLOSSARY_FILE), glossary);
+          io.stdout(`${GLOSSARY_FILE} is written from src/vocabulary\n`);
+        } else if (readText(join(rootDir, GLOSSARY_FILE)) !== glossary) {
+          problems.push(
+            `${GLOSSARY_FILE}: it is missing or is not what src/vocabulary renders; lvrtc verify --write writes it anew`,
+          );
+        } else io.stdout(`${GLOSSARY_FILE} is what src/vocabulary renders\n`);
+      }
       for (const problem of problems) io.stderr(`lvrtc verify: ${problem}\n`);
       const count = `${files.length} ${files.length === 1 ? "baseline" : "baselines"}`;
       io.stdout(
-        `verify: ${count}, ${problems.length} ${problems.length === 1 ? "problem" : "problems"}. No engine was read: a case ` +
-          `or an engine that has changed since (STALE) is seen by lvrtc baseline check, not here.\n`,
+        `verify: ${count}, ${problems.length} ${problems.length === 1 ? "problem" : "problems"}. ${VERIFY_OUTPUT_TEXT.closing}\n`,
       );
       for (const { suite, baseline } of snapshotNotes) {
         io.stdout(
-          `verify: ${snapshotSaid(suite, baseline)}: it is held to the policy it records, not to the policy at hand ` +
-            `(v${policy.version}), and is not refreshed with it\n`,
+          `verify: ${snapshotSaid(suite, baseline)}: ${VERIFY_OUTPUT_TEXT.snapshotHeld} (v${policy.version}), ` +
+            `${VERIFY_OUTPUT_TEXT.snapshotNotRewritten}\n`,
         );
       }
       return problems.length > 0 ? EXIT_FAILURE : EXIT_OK;

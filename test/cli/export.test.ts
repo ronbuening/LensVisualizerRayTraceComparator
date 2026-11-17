@@ -190,10 +190,10 @@ test("--out writes the case to a file relative to the working directory, and pri
 
 /** The summary of the fake tree: five lenses, one of them a zoom. */
 const SUMMARY = [
-  "5 lenses (1 of them zooms, each at both ends), 6 states: 6 exported, 0 not exportable, 0 threw",
-  "  primes       4: 4 exported, 0 not exportable, 0 threw",
-  "  zooms, wide  1: 1 exported, 0 not exportable, 0 threw",
-  "  zooms, tele  1: 1 exported, 0 not exportable, 0 threw",
+  "5 lenses (1 of them zooms, each at both ends), 6 lens states: 6 exported, 0 not exportable, 0 failed with an error",
+  "  primes       4: 4 exported, 0 not exportable, 0 failed with an error",
+  "  zooms, wide  1: 1 exported, 0 not exportable, 0 failed with an error",
+  "  zooms, tele  1: 1 exported, 0 not exportable, 0 failed with an error",
   "",
 ].join("\n");
 
@@ -260,7 +260,8 @@ test("--census writes the census as JSON and Markdown, the same bytes every time
   const directory = join(rootDir, "census", "a");
   assert.equal(
     first.out,
-    `${SUMMARY}` + `census: ${join(directory, CENSUS_FILES.json)}, ${join(directory, CENSUS_FILES.markdown)}\n`,
+    `${SUMMARY}` +
+      `export summary of every lens: ${join(directory, CENSUS_FILES.json)}, ${join(directory, CENSUS_FILES.markdown)}\n`,
   );
   assert.deepEqual(readdirSync(directory).sort(), ["lv-export.json", "lv-export.md"]);
   const json = readFileSync(join(directory, CENSUS_FILES.json), "utf8");
@@ -304,11 +305,11 @@ test("--all counts a lens that cannot be exported under each of its reasons, and
   assert.equal(
     text.out,
     [
-      "6 lenses (1 of them zooms, each at both ends), 7 states: 6 exported, 1 not exportable, 0 threw",
-      "  primes       5: 4 exported, 1 not exportable, 0 threw",
-      "  zooms, wide  1: 1 exported, 0 not exportable, 0 threw",
-      "  zooms, tele  1: 1 exported, 0 not exportable, 0 threw",
-      "not exportable, by reason (states, lenses):",
+      "6 lenses (1 of them zooms, each at both ends), 7 lens states: 6 exported, 1 not exportable, 0 failed with an error",
+      "  primes       5: 4 exported, 1 not exportable, 0 failed with an error",
+      "  zooms, wide  1: 1 exported, 0 not exportable, 0 failed with an error",
+      "  zooms, tele  1: 1 exported, 0 not exportable, 0 failed with an error",
+      "not exportable, by reason (lens states, lenses):",
       "  lens-build-failed  1  1",
       "",
     ].join("\n"),

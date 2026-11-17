@@ -39,7 +39,7 @@ import type { DecodedTrace, Where, WorstRay } from "./raysRead.ts";
 import type { SpanAnswer, SpanMember } from "./span.ts";
 
 /** The rung of the chief rays of identical launches. */
-export const CHIEF_RAYS_RUNG = "r9a";
+export const CHIEF_RAYS_RUNG = "chief-rays";
 
 const DISTORTION_FIGURES = ["distortion.maxScaled", "distortion.maxAbs"] as const;
 const PUPIL_FIGURES = ["exitPupil.maxScaled", "exitPupil.maxAbs"] as const;

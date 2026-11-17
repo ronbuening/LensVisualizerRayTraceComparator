@@ -43,8 +43,8 @@ export function memoryRegistry(loaded: Pick<LoadedConfig, "rootDir" | "config">,
     { ...TRANSPORT_FACTORIES, stdio, oneshot },
     {
       ...BUILTIN_ENGINES,
-      "optiland-wave": {
-        ...BUILTIN_ENGINES["optiland-wave"],
+      "otf-of-optiland-wavefront": {
+        ...BUILTIN_ENGINES["otf-of-optiland-wavefront"],
         transport: (context: Pick<LoadedConfig, "rootDir" | "config">) =>
           wavefrontTransport(transport(optilandDefinition(context), context.rootDir)),
       },

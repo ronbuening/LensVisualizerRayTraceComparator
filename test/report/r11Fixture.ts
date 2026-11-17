@@ -1,9 +1,9 @@
 // Rungs R11a and R11b from end to end on engines that know no LensVisualizer: a suite is run, compared and reported,
 // and each report is a golden file. In R11a the reference engine traces beam sets through a small lens (a lattice of
 // each of three fields, the chief rays of an image mapping after its cells), and three stand-ins answer as it does with
-// one exit direction turned, one ray stopped and one landing moved; in R11b two stand-ins named `lv` and `flux` answer
-// `vignetting.native`, the first as LensVisualizer's tab presents its curve and the second as the flux estimator does.
-// Every number is synthetic.
+// one exit direction turned, one ray stopped and one landing moved; in R11b two stand-ins named `lv` and
+// `flux-of-lv-rays` answer `vignetting.native`, the first as LensVisualizer's tab presents its curve and the second as
+// the flux estimator does. Every number is synthetic.
 import { join } from "node:path";
 
 import { compareManifest } from "../../src/compare/manifest.ts";
@@ -44,11 +44,11 @@ export const R11A_GOLDEN = "r11a-stand-ins";
 export const R11B_GOLDEN = "r11b-stand-ins";
 
 /** A policy of one rung, the rung's entry of the comparator's own policy: its gates, or its limit and units. */
-function policyOf(rung: "r11a" | "r11b"): Policy {
+function policyOf(rung: "vignetting-rays" | "vignetting-vs-flux-estimate"): Policy {
   return { contract: "1.0", kind: "policy", version: 1, rungs: { [rung]: loadPolicy().rungs[rung] } };
 }
-export const R11A_POLICY: Policy = policyOf("r11a");
-export const R11B_POLICY: Policy = policyOf("r11b");
+export const R11A_POLICY: Policy = policyOf("vignetting-rays");
+export const R11B_POLICY: Policy = policyOf("vignetting-vs-flux-estimate");
 
 /** What one cycle of a fixture gave. */
 export interface R11Cycle {
@@ -128,7 +128,7 @@ function beamOf(angle: number): RaysTraceSpec {
 
 /** The rung `r11a` as a case without LensVisualizer's tab can be asked it: the beams of three fields of one line. */
 export const R11A_FIXTURE_RUNG: RungDefinition = {
-  id: "r11a",
+  id: "vignetting-rays",
   quantity: RAYS_TRACE,
   buildRequests: (opticalCase) =>
     [beamOf(0), beamOf(3), beamOf(4)].map((spec) =>
@@ -139,7 +139,10 @@ export const R11A_FIXTURE_RUNG: RungDefinition = {
 /** The reference engine, under the id it is made with, answering as `change` changes its trace. */
 function refLike(change?: (data: RaysTraceData, request: QuantityRequest) => RaysTraceData): EngineMaker {
   return async (id) => {
-    const adapter = new RemoteEngineAdapter({ id: "ref", transport: createInProcessTransport(createRefEngine()) });
+    const adapter = new RemoteEngineAdapter({
+      id: "reference-tracer",
+      transport: createInProcessTransport(createRefEngine()),
+    });
     const described = await adapter.describe();
     const descriptor: EngineDescriptor = { ...described, identity: { ...described.identity, id } };
     return {
@@ -163,15 +166,15 @@ function fieldOf(request: QuantityRequest): number | undefined {
 }
 
 /**
- * The engines of R11a: `ref`; `turned`, which turns the exit direction of cell 41 of the 4-degree beam, a cell of the
- * beam's rim, by 2^-20 along x, beyond the gate of the flux into the image (a cell inside the rim would move it to
- * second order only: the area of a beam in cosine space is of its rim); `stopped`, which stops cell 44 of the 3-degree
- * beam (one that passes) at the stop; and `moved`, which moves the landing of the 4-degree beam's upper chief ray by
- * 2^-26 mm across the axis, beyond the gate of a landing.
+ * The engines of R11a: `reference-tracer`; `turned`, which turns the exit direction of cell 41 of the 4-degree beam, a
+ * cell of the beam's rim, by 2^-20 along x, beyond the gate of the flux into the image (a cell inside the rim would
+ * move it to second order only: the area of a beam in cosine space is of its rim); `stopped`, which stops cell 44 of
+ * the 3-degree beam (one that passes) at the stop; and `moved`, which moves the landing of the 4-degree beam's upper
+ * chief ray by 2^-26 mm across the axis, beyond the gate of a landing.
  */
 function r11aEngines(): { readonly [engine: string]: EngineMaker } {
   return {
-    ref: refLike(),
+    "reference-tracer": refLike(),
     turned: refLike((data, request) =>
       fieldOf(request) === 4
         ? changed(data, (arrays) => {
@@ -198,7 +201,7 @@ export function r11aCycle(runsDir: string): Promise<R11Cycle> {
     runsDir,
     R11A_GOLDEN,
     R11A_FIXTURE_RUNG,
-    [{ name: "lens", opticalCase: LENS, referenceEngine: "ref" }],
+    [{ name: "lens", opticalCase: LENS, referenceEngine: "reference-tracer" }],
     r11aEngines(),
     R11A_POLICY,
   );
@@ -210,9 +213,9 @@ const ASK: VignettingNativeSpec = { lines: [0], maxFieldDeg: 24, fieldAnglesDeg:
 
 /** The rung `r11b` as stand-ins can be asked it: the tab's curve at the first line. */
 export const R11B_FIXTURE_RUNG: RungDefinition = {
-  id: "r11b",
+  id: "vignetting-vs-flux-estimate",
   quantity: VIGNETTING_NATIVE,
-  engines: ["lv", "flux"],
+  engines: ["lv", "flux-of-lv-rays"],
   buildRequests: (opticalCase) => [
     makeRequest({ caseId: opticalCase.id, quantity: VIGNETTING_NATIVE, spec: ASK as unknown as JsonObject }),
   ],
@@ -262,9 +265,10 @@ function body(method: string, fields: VignettingNativeField[]): ResultBody {
 /**
  * The stand-ins of R11b at the axis, 8, 16 and 24 degrees.
  *
- * - At 8 degrees `flux` lets 1/16 more of the beam through (a pupil wider than the axis's, which a sweep of fixed
- *   width does not see) and its image is 1/8 brighter: the geometric transmission and the falloff differ.
- * - At 16 degrees `flux` does not stand by its figures (its two lattices moved apart): numerical, in no figure.
+ * - At 8 degrees `flux-of-lv-rays` lets 1/16 more of the beam through (a pupil wider than the axis's, which a sweep
+ *   of fixed width does not see) and its image is 1/8 brighter: the geometric transmission and the falloff differ.
+ * - At 16 degrees `flux-of-lv-rays` does not stand by its figures (its two lattices moved apart): numerical, in no
+ *   figure.
  * - At 24 degrees the chief rays land 2^-12 mm apart, beyond the limit of 1e-5 mm: data, in no figure, and the
  *   landing marks the pair.
  */
@@ -276,7 +280,7 @@ function r11bEngines(): { readonly [engine: string]: EngineMaker } {
         [0, 8, 16, 24].map((angle) => field(angle, { sampling: { pupilSamples: 192, fieldSamples: 9 } })),
       ),
     ),
-    flux: vignettingEngine(() =>
+    "flux-of-lv-rays": vignettingEngine(() =>
       body("lattice-flux", [
         field(0),
         field(8, { geometricTransmission: 1 - 8 / 64 + 1 / 16, relativeIllumination: 1 - 8 / 32 + 1 / 8 }),

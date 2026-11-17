@@ -25,10 +25,10 @@ test("R6c records four columns and sorts every difference independently; report 
     for (const table of tables) {
       assert.deepEqual(
         table.columns.map((c) => c.engine),
-        ["lv", "wave", "optiland", "optiland-wave"],
+        ["lv", "wave-mtf-of-lv-rays", "optiland", "otf-of-optiland-wavefront"],
       );
       assert.equal(table.peers?.length, 2);
-      assert.equal(table.pair.b, "optiland-wave");
+      assert.equal(table.pair.b, "otf-of-optiland-wavefront");
     }
     const methods = tables.flatMap((t) => [t, ...(t.peers ?? [])]);
     for (const kind of ["unsupported", "data", "numerical", "method"])
@@ -79,7 +79,7 @@ test("R6c selects the answer's several-line chief limit and reports the same sor
   const { buildWavefrontComparison } = await import("../../src/report/mtfComparison.ts");
   const { SPEC, answer } = await import("../compare/mtfNativeSupport.ts");
   const { SINGLET } = await import("../core/support.ts");
-  const policy = loadPolicy().rungs.r6c;
+  const policy = loadPolicy().rungs["mtf-vs-optiland-wavefront"];
   assert.deepEqual(policy.metrics["chiefLanding.maxAbs"], {
     attention: 1e-7,
     attentionSeveralLines: 1e-3,
@@ -110,12 +110,12 @@ test("R6c selects the answer's several-line chief limit and reports the same sor
         suite: "synthetic",
         run: "field",
         caseId: SINGLET.id,
-        rung: "r6c",
+        rung: "mtf-vs-optiland-wavefront",
         quantity: "mtf.native",
         requestId: "1".repeat(64),
         participants: [
           { engine: "lv", fingerprint: "lv", status: "ok", data: a },
-          { engine: "optiland-wave", fingerprint: "raw", status: "ok", data: b },
+          { engine: "otf-of-optiland-wavefront", fingerprint: "raw", status: "ok", data: b },
         ],
         policy,
         comparator: mtfWavefrontComparator,

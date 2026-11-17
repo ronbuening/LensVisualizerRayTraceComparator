@@ -1,7 +1,7 @@
 // The LensVisualizer case source against the fake LV tree: the binding, the exporter and the suite seam together,
 // with no LensVisualizer. The fake's numbers describe no real lens.
 import assert from "node:assert/strict";
-import { appendFileSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { test, type TestContext } from "node:test";
 import { pathToFileURL } from "node:url";
@@ -181,14 +181,15 @@ test("every way a lens has no case is a problem of its run, as <code>: <message>
   );
   assert.deepEqual(problemsOf(custom).map(problemCode), ["lv-best-axial-needs-lv-spectrum"]);
   // The two options only a LensVisualizer lens has do give a case where LensVisualizer has an answer: the stop of
-  // the tab's f/8 comparison (the fake singlet is f/2 with an iris of 6.25 mm), and the fake's best axial focus for
-  // that stop, a 128th of it in front of the design plane.
+  // the tab's comparison (the fake singlet is f/2 with an iris of 6.25 mm, and the fake's preferences resolve the
+  // comparison to f/11, where LensVisualizer's resolve it to f/8), and the fake's best axial focus for that stop, a
+  // 128th of it in front of the design plane.
   const tab = caseOf(
     await source.resolve(
       run("acme-singlet-50", { aperture: { kind: "lv-f8-comparison" }, imagePlane: { kind: "lv-best-axial" } }),
     ),
   );
-  const stop = ((6.25 * 2) / 2) * (2 / 8);
+  const stop = ((6.25 * 2) / 2) * (2 / 11);
   assert.equal(tab.conditions.stopSemiDiameter, stop);
   assert.equal(tab.conditions.imageZ, tab.system.designImageZ + -stop / 128);
   // The lens that has no spectral data still has its reference line.
@@ -197,6 +198,22 @@ test("every way a lens has no case is a problem of its run, as <code>: <message>
   assert.deepEqual(problemsOf(await source.resolve(fixture)), [
     'a lens of kind "fixture" is not a LensVisualizer lens',
   ]);
+});
+
+test("a lens whose image is a curved surface (LV #960) is a coded problem of its run, never a flat case", async (t) => {
+  const lv = freshLv(t);
+  // The fake states the surface as LensVisualizer's lens files do, and compiles it to a shape of the prepared state;
+  // the tree is edited in place, since the case source binds the tree it is given.
+  const file = join(lv, ...SINGLET_FILE.split("/"));
+  const text = readFileSync(file, "utf8");
+  assert.ok(text.includes("  surfaces: ["), SINGLET_FILE);
+  writeFileSync(file, text.replace("  surfaces: [", "  imageSurface: { R: -70, sd: 15 },\n  surfaces: ["));
+  const source = createLvCaseSource(lv);
+  assert.deepEqual(problemsOf(await source.resolve(run("acme-singlet-50"))), [
+    "curved-image-surface: the image surface is spherical (R = -70 mm), where a case's image is the flat plane z = imageZ",
+  ]);
+  // Every other lens of the tree has a flat image, a null image surface, and its case.
+  assert.equal((await source.resolve(run("zenith-doublet-100"))).ok, true);
 });
 
 test("a LensVisualizer that cannot be loaded is the problem of every run, with a code and no path", async (t) => {
@@ -325,7 +342,7 @@ test("a suite of LensVisualizer lenses loads through the source, and its manifes
 
   const runsDir = join(rootDir, "runs");
   const { registry } = watchedRegistry({ "fake-a": fakeEngine() });
-  const result = await runSuite({ suite, registry, runsDir, sources, rungs: ["selftest"] });
+  const result = await runSuite({ suite, registry, runsDir, sources, rungs: ["pipeline-echo"] });
   assert.deepEqual(result.manifest.sources, {
     lv: {
       fingerprint: {
@@ -458,7 +475,7 @@ test("a suite runs a zoom without a position at both ends, as two ordinary runs 
       registry,
       runsDir: join(rootDir, directory),
       sources,
-      rungs: ["selftest"],
+      rungs: ["pipeline-echo"],
     });
     assert.deepEqual(
       result.manifest.runs.map((each) => [each.name, each.caseId]),
@@ -503,7 +520,7 @@ test("a lens file edited between loading the suite and the end of its run marks 
     runsDir: join(rootDir, "runs"),
     sources,
     // The rungs that compare the engines of a run: this registry has no LensVisualizer for a rung of its own.
-    rungs: ["selftest", "r0"],
+    rungs: ["pipeline-echo", "built-system"],
     onJob: () => appendFileSync(join(lv, SINGLET_FILE), "// edited while the suite ran\n"),
   });
   assert.equal(result.manifest.sources?.lv.status, SOURCE_CHANGED);

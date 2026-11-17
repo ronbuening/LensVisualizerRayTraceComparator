@@ -266,7 +266,8 @@ export function renderCensusMarkdown(census: ExportCensus): string {
       "",
       ...(reason === "mixed-reference"
         ? [
-            "LensVisualizer data issue: d- and e-referenced glasses lack wavelength data for a common reference line.",
+            "LensVisualizer data issue: glasses of different index references (d, D or e) lack wavelength data for a " +
+              "common reference line.",
             "",
           ]
         : []),

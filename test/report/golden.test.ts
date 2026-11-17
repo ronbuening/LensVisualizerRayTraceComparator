@@ -36,9 +36,9 @@ for (const suite of GOLDEN_SUITES) {
 
     // A third cycle, into the first directory: nothing an engine answered is computed again, and nothing changes.
     const cached = await cycle(suite, first);
-    assert.match(cached.steps[0].out, /\((\d+) computed, \d+ cached\)$/m);
-    const computedAgain = Number(/\((\d+) computed, /.exec(cached.steps[0].out)?.[1]);
-    const neverStored = (cached.steps[0].out.match(/ error {2,}computed /g) ?? []).length;
+    assert.match(cached.steps[0].out, /^\S+: \d+ jobs?: .*\((\d+ asked now, )?\d+ from the result cache(, .*)?\)$/m);
+    const computedAgain = Number(/\((\d+) asked now, /.exec(cached.steps[0].out)?.[1] ?? 0);
+    const neverStored = (cached.steps[0].out.match(/ error {2,}asked now /g) ?? []).length;
     assert.equal(computedAgain, neverStored, "only an error, which is never stored, is asked for again");
     for (const file of CYCLE_FILES) assert.equal(cached.files[file], one.files[file], file);
 
@@ -56,8 +56,11 @@ for (const suite of GOLDEN_SUITES) {
 test("the benchmark trio is a TypeScript reference, the Python fake inside the tolerance and a fake without quantities", () => {
   // Read from the golden file, so the claim holds also where Python is missing and the suite is not run.
   const golden = readFileSync(goldenFile("fake-3-engines"), "utf8");
-  assert.match(golden, /^\| fake-a \| available \| 1 \| [0-9a-f]{64} \|$/m);
-  assert.match(golden, /^\| fake-pyn \| available \| 1 \| fake-pyn fixture 1 \|$/m);
+  assert.match(golden, /^\| fake-a \| available \| 1 \|$/m);
+  assert.match(golden, /^\| fake-pyn \| available \| 1 \|$/m);
+  // Their code, under Identifiers.
+  assert.match(golden, /^\| fake-a \| [0-9a-f]{64} \|$/m);
+  assert.match(golden, /^\| fake-pyn \| fake-pyn fixture 1 \|$/m);
   assert.match(golden, /^Reference vs each, against `fake-a`:$/m);
   // A PASS that is not zero: the two engines differ, and by less than the tolerance.
   assert.match(golden, /^\| fake-pyn \| 6\.04e-14 \| 2\.04e-14 at index 1 \| PASS \| {2}\|$/m);
@@ -66,7 +69,7 @@ test("the benchmark trio is a TypeScript reference, the Python fake inside the t
     /^\| fake-none \| — \| — \| UNSUPPORTED \| fake-none is unsupported \(quantity selftest\.echo\) \|$/m,
   );
   assert.match(golden, /^\| fake-a \| — \| UNSUPPORTED \| PASS \(sum\.abs 6\.04e-14\) \|$/m);
-  assert.match(golden, /^No pair is FAIL or ERROR, of 10 compared\.$/m);
+  assert.match(golden, /^No pair is Fail or Error, of 10 compared\.$/m);
 });
 
 test("the Python trio and the all-TypeScript trio report the same numbers", () => {
@@ -82,9 +85,9 @@ test("the Python trio and the all-TypeScript trio report the same numbers", () =
 
 test("the faults report shows a FAIL beyond tolerance, an engine error, an unavailable engine and a run not started", () => {
   const golden = readFileSync(goldenFile("fake-faults"), "utf8");
-  assert.match(golden, /^18 of 18 pairs are FAIL or ERROR\.$/m);
-  assert.match(golden, /^\| fake-absent \| unavailable: load-failed \| — \| — \|$/m);
-  assert.match(golden, /^\| singlet \| selftest \| ok \| error: load-failed \| error: protocol-error \| ok \|$/m);
+  assert.match(golden, /^18 of 18 pairs are Fail or Error\.$/m);
+  assert.match(golden, /^\| fake-absent \| unavailable: load-failed \| — \|$/m);
+  assert.match(golden, /^\| singlet \| pipeline-echo \| ok \| error: load-failed \| error: protocol-error \| ok \|$/m);
   assert.match(
     golden,
     /^\| fake-far \| 3\.00e-3 \| 1\.00e-3 at index 1 \| FAIL \| sum\.abs 3\.00e-3 exceeds its tolerance 1\.00e-12; /m,
@@ -92,26 +95,26 @@ test("the faults report shows a FAIL beyond tolerance, an engine error, an unava
   assert.match(golden, /^\| fake-broken \| — \| — \| ERROR \| fake-broken ended as error \(protocol-error\) \|$/m);
   assert.match(
     golden,
-    /^\| missing \| — \| not started: lens fixture cases\/missing\.json: it cannot be read \(ENOENT\) \|$/m,
+    /^\| missing \| not started: lens fixture cases\/missing\.json: it cannot be read \(ENOENT\) \|$/m,
   );
   // The suite names no reference: the first engine with an ok result is it.
   assert.match(golden, /^Reference vs each, against `fake-a`:$/m);
   // Two engines are placed and beyond the gates of each other: no consensus; the two without a result are not placed.
   assert.match(
     golden,
-    /^No consensus: no two engines are within the gates of each other; not placed: `fake-absent`, `fake-broken`, /m,
+    /^No consensus: no two engines are within the limits of each other; not placed: `fake-absent`, `fake-broken`, /m,
   );
 });
 
 test("the group report shows two fakes in a consensus and the third, just beyond the gate, as its outlier", () => {
   const golden = readFileSync(goldenFile("fake-group"), "utf8");
-  assert.match(golden, /^6 of 10 pairs are FAIL or ERROR\.$/m);
+  assert.match(golden, /^6 of 10 pairs are Fail or Error\.$/m);
   // fake-far is beyond the tolerance by little: a bias of 1e-9 against a gate of 1e-12.
   assert.match(golden, /^\| fake-far \| 3\.00e-9 \| 1\.00e-9 at index 1 \| FAIL \| /m);
   assert.match(golden, /^\| fake-near \| PASS \(sum\.abs 6\.04e-14\) \| FAIL \(sum\.abs 3\.00e-9\) \| — \|$/m);
   const sentence =
-    "Consensus: `fake-a`, `fake-near`, every two of them within the gates of each other; outlier: `fake-far`, " +
-    "beyond the gates of every engine of the consensus.";
+    "Consensus: `fake-a`, `fake-near`, every two of them within the limits of each other; outlier: `fake-far`, " +
+    "beyond the limits of every engine of the consensus.";
   assert.equal(golden.split("\n").filter((line) => line === sentence).length, 2);
   assert.match(golden, /\n## Verdict summary\n[^#]*\n## Consensus\n[^#]*\n## Support matrix\n/);
   assert.match(golden, /^Of 2 requests with a consensus to look for, 2 have one\.$/m);

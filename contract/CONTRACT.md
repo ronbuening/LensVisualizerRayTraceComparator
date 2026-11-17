@@ -13,6 +13,22 @@ transport, and between a run and the result store. TypeScript and Python read th
 
 This document fixes what the schemas cannot say: frame, units, signs, identity and versioning.
 
+**Engine ids.** Since Stage 9.8 the six engines the comparator builds are named after what they compute and whose
+data they compute it of: `reference-tracer` (formerly `ref`), `reference-seidel` (`ref-seidel`), `replay-of-lv-mtf`
+(`replay`), `wave-mtf-of-lv-rays` (`wave`), `flux-of-lv-rays` (`flux`) and `otf-of-optiland-wavefront`
+(`optiland-wave`); `lv` and `optiland` keep their ids. The sections below name each engine by its id of today; a
+historical note keeps the id an engine had when it was written, and documents written before the rename (the
+fixtures among them) keep theirs. An engine id is in no request id or spec; the result store keys an answer by it.
+
+**Check ids.** Since Stage 9.7 the checks, once called rungs, are named after what they compare: `built-system`
+(formerly `r0`), `first-order` (`r1`), `ray-trace` (`r2`), `optical-path` (`r3`), `geometric-mtf` (`r4`), ...; the
+whole table is in [docs/REFERENCE.md](../docs/REFERENCE.md#identifiers). The policy's table and the sections that
+say which check an engine serves name each check by its id of today; a heading or a historical note keeps the rung
+it was written of (R0 to R14b). The members that hold a check id keep their names (`rung`, `rungs`,
+`blocksLaterRungs`), and so does the policy file, `policy/rungs.v1.json`; documents written before the rename (the
+fixtures and the catalog snapshot among them) keep the ids they were written with, and code reads an old id as the
+new one. A check id is in no request id or spec.
+
 ## Conventions
 
 | Subject | Rule |
@@ -355,9 +371,10 @@ a case like any other: every engine is asked about `conditions.imageZ`, and none
 from. The engine `lv` recognises it ([its product MTF](#lensvisualizers-product-mtf)), and the
 [MTF recipe](#the-mtf-recipe) of a run names it.
 
-**Lines and indices** are LensVisualizer's decision, not the exporter's. The reference line is the d line, or the
-e line for a lens whose glasses are all e-referenced, and it is traced with the authored `nd`; several lines, and
-a lens that mixes d- and e-referenced glasses, are traced with indices anchored to the authored one. Which applies,
+**Lines and indices** are LensVisualizer's decision, not the exporter's. The reference line is the d line, the
+e line for a lens whose glasses are all e-referenced, or the sodium D line for one whose glasses are all D-referenced
+(LensVisualizer #965), and it is traced with the authored `nd`; several lines, and a lens that mixes index references,
+are traced with indices anchored to the authored one. Which applies,
 and whether LensVisualizer has the glass data for it, is what `assessMtfSupport` says. An explicit list of
 wavelengths takes the indices of a spectral run, where LensVisualizer has them and every wavelength lies between
 its g and C lines, which its anchored indices are fitted between.
@@ -369,6 +386,7 @@ its g and C lines, which its anchored indices are fitted between.
 | `folded-path`, `non-refract-interaction` | has a path that turns at a mirror; a surface that reflects or blocks |
 | `diffractive-surface` | has a surface with a diffractive phase |
 | `tilted-image-plane`, `off-axis-image-plane` | has an image plane that is not perpendicular to the axis, or not on it |
+| `curved-image-surface` | forms its image on a curved surface (LensVisualizer #960: a curved sensor, film gate or focal surface), where a case's image is the flat plane `conditions.imageZ` |
 | `surface-profile-unsupported`, `asphere-coefficient-unknown`, `synthetic-surface-unknown` | has a surface LensVisualizer describes in a way the exporter does not know: a guard against a change in LensVisualizer |
 | `aperture-faster-than-wide-open` | asks for an f-number below the lens's widest |
 | `aperture-beyond-slider-range` | asks for an f-number above the lens's aperture slider maximum |
@@ -602,27 +620,27 @@ Source canaries (`test/integration/lv/canaries.test.ts`) pin every restated expr
 worker's call; an integration test holds the answers for the 12 benchmark configurations to `computeMtf` called
 with a request spelled out a second time, bit for bit.
 
-### The engine `replay`
+### The engine `replay-of-lv-mtf`
 
-`replay` (`src/engines/lv/replayEngine.ts`) is the comparator's own estimators on a replay of LensVisualizer's
-sampling. It is built in, runs on the same LensVisualizer checkout as `lv`, and is no independent engine: its rays
-are LensVisualizer's, launched and traced by LensVisualizer. What is its own is which bundles it asks for, what it
-sums and how: the comparator's reading of LensVisualizer's MTF. Rung `r4f` holds it to `lv`. Its `fingerprint` is
-LensVisualizer's engine closure, as `lv`'s is; its `adapterRevision` is the hash of the comparator's code behind
-it, in which the replay and the estimator are and which is not `lv`'s.
+`replay-of-lv-mtf` (formerly `replay`; `src/engines/lv/replayEngine.ts`) is the comparator's own estimators on a replay
+of LensVisualizer's sampling. It is built in, runs on the same LensVisualizer checkout as `lv`, and is no independent
+engine: its rays are LensVisualizer's, launched and traced by LensVisualizer. What is its own is which bundles it asks
+for, what it sums and how: the comparator's reading of LensVisualizer's MTF. The check `lv-mtf-replay` holds it to `lv`. Its
+`fingerprint` is LensVisualizer's engine closure, as `lv`'s is; its `adapterRevision` is the hash of the comparator's
+code behind it, in which the replay and the estimator are and which is not `lv`'s.
 
 It answers **`mtf.native`** with the method `geometric`, for the request `lv` would make for the same case and
-spec (`lvMtfRequest`, one function for both): what `lv` answers `unsupported`, `replay` answers `unsupported`
+spec (`lvMtfRequest`, one function for both): what `lv` answers `unsupported`, `replay-of-lv-mtf` answers `unsupported`
 with the same item, a case at LensVisualizer's own best axial focus is answered by both, and a case that is stale
 or came from no LensVisualizer lens is treated as `lv` treats it. Its own two refusals, both of code `option`:
 `method.diffraction` (it has the geometric estimator and no other) and `profile` (it is asked by a spec).
 
-Where `lv` hands the request to `computeMtf`, `replay` replays the sampling (`replayLvMtf`,
+Where `lv` hands the request to `computeMtf`, `replay-of-lv-mtf` replays the sampling (`replayLvMtf`,
 `src/engines/lv/replay.ts`):
 
 | Step | Is |
 |---|---|
-| the request before a field is traced | LensVisualizer's own: the first step of `computeMtfSteps` states the support record, the frequencies, the field axis, the focus and each field's target, pending or outside the model |
+| the request before a field is traced | LensVisualizer's own: the first step of `computeMtfSteps` that carries a result (since LensVisualizer #988 its steps are progress, and that one comes once the focus is found) states the support record, the frequencies, the field axis, the focus and each field's target, pending or outside the model |
 | the ladder | `MTF_GRID_LADDER` up to the request's `maxGridSize`, restated from `computeMtfSteps` |
 | the image plane | `state.imgZ` plus the focus's applied shift, restated likewise |
 | a field's launch and footprint | LensVisualizer's `prepareMtfFieldLaunch` and `findMtfFieldFootprint`; a field without the one is `chief-ray-failed`, without the other `vignetted` |
@@ -638,16 +656,16 @@ reason, angle and image height; under `sampling` the same names (`gridSize`, `va
 `footprintExpansions`; `method.name` is `replay-geometric`, and `method.params` hold the request and the `ladder`.
 A value the rounding of a modulus left above 1 is written as 1, the range the contract gives an MTF. A field the
 estimator has no value for is `unavailable` with the reason `estimator-<why>`
-(`OtfUnavailableReason`): it is never left out, and since LensVisualizer has no such reason, rung `r4f` counts it.
+(`OtfUnavailableReason`): it is never left out, and since LensVisualizer has no such reason, the check `lv-mtf-replay` counts it.
 
-### The engine `wave`
+### The engine `wave-mtf-of-lv-rays`
 
-`wave` (`src/engines/lv/waveEngine.ts`) is the comparator's wave estimator on LensVisualizer's own rays. It is built
-in, runs on the same LensVisualizer checkout as `lv`, and is no independent engine: its rays are LensVisualizer's,
-launched and traced by LensVisualizer. What is its own is the estimate, Hopkins' autocorrelation of the pupil
-function from the optical paths (`src/estimators/waveOtf.ts`), and whether a lattice may carry it. Rung `r6b` sets
-it beside `lv`. Its `fingerprint` is LensVisualizer's engine closure; its `adapterRevision` is the hash of the
-comparator's code behind it, in which the estimator is and which is not `lv`'s.
+`wave-mtf-of-lv-rays` (formerly `wave`; `src/engines/lv/waveEngine.ts`) is the comparator's wave estimator on
+LensVisualizer's own rays. It is built in, runs on the same LensVisualizer checkout as `lv`, and is no independent
+engine: its rays are LensVisualizer's, launched and traced by LensVisualizer. What is its own is the estimate, Hopkins'
+autocorrelation of the pupil function from the optical paths (`src/estimators/waveOtf.ts`), and whether a lattice may
+carry it. The check `mtf-vs-wave-estimate` sets it beside `lv`. Its `fingerprint` is LensVisualizer's engine closure; its `adapterRevision` is
+the hash of the comparator's code behind it, in which the estimator is and which is not `lv`'s.
 
 It answers **`mtf.native`** with the method `diffraction`, on the image plane of the case as it is:
 
@@ -671,20 +689,20 @@ number from 2 to 128). A state LensVisualizer's launch does not cover is `unsupp
 reason of LensVisualizer's gate; a case that is stale or came from no LensVisualizer lens is treated as `lv`
 treats it.
 
-### The engine `flux`
+### The engine `flux-of-lv-rays`
 
-`flux` (`src/engines/lv/fluxEngine.ts`) is the comparator's flux estimator on LensVisualizer's own rays. It is built in,
-runs on the same LensVisualizer checkout as `lv`, and is no independent engine: its rays are LensVisualizer's launch
-lattices over each field's beam, launched and traced by LensVisualizer. What is its own is the estimate
-(`src/estimators/illumination.ts`) and whether a lattice may carry it. Rung `r11b` sets it beside `lv`. Its
-`fingerprint` is LensVisualizer's engine closure; its `adapterRevision` is the hash of the comparator's code behind it,
-in which the estimator is and which is not `lv`'s.
+`flux-of-lv-rays` (formerly `flux`; `src/engines/lv/fluxEngine.ts`) is the comparator's flux estimator on
+LensVisualizer's own rays. It is built in, runs on the same LensVisualizer checkout as `lv`, and is no independent
+engine: its rays are LensVisualizer's launch lattices over each field's beam, launched and traced by LensVisualizer.
+What is its own is the estimate (`src/estimators/illumination.ts`) and whether a lattice may carry it. The check
+`vignetting-vs-flux-estimate` sets it beside `lv`. Its `fingerprint` is LensVisualizer's engine closure; its `adapterRevision` is the hash of the
+comparator's code behind it, in which the estimator is and which is not `lv`'s.
 
 It answers **`vignetting.native`** at any line of the case:
 
 | Step | Is |
 |---|---|
-| the rays of a field | LensVisualizer's aimed lattice on the real stop of the field at the line (`lvFieldRaySets`, the generator of the run's [ray sets](#ray-sets), LV #936), at `bundleGrid` cells across and at twice as many, a field's lattices made once whatever line is asked. `bundleGrid` is the engine option of that name: rung `r11b` hands it twice a run's `sampling.bundleGrid`, where the run states one, so the engine's coarser lattice is never the run's own; 64 without it (`LV_FLUX_DEFAULT_GRID`, twice the run's default of 32) |
+| the rays of a field | LensVisualizer's aimed lattice on the real stop of the field at the line (`lvFieldRaySets`, the generator of the run's [ray sets](#ray-sets), LV #936), at `bundleGrid` cells across and at twice as many, a field's lattices made once whatever line is asked. `bundleGrid` is the engine option of that name: the check `vignetting-vs-flux-estimate` hands it twice a run's `sampling.bundleGrid`, where the run states one, so the engine's coarser lattice is never the run's own; 64 without it (`LV_FLUX_DEFAULT_GRID`, twice the run's default of 32) |
 | the trace | LensVisualizer's own, as `lv` answers [`rays.trace`](#raystrace) (`answerLvRays`): the rays taken are the ones it brings to the image |
 | `geometricTransmission` | the share of the finer lattice's samples of the stop (the cells LensVisualizer has a ray for, but those an engine failed) that reach the image, absolute, as LensVisualizer's tab takes it since #931; a lattice on the launch plane has none, and its field is unavailable (`launch-plane-lattice`) |
 | `relativeIllumination` | the flux of the lit cells into the image, weight times the area each covers in the optical direction cosines `n' (L, M)` of its ray's own exit direction, over the axis's (`cosineFlux`), on the finer lattice: the projected solid angle of the exit pupil, Rimmer's method without the tab's reference-sphere referral, with no law of the field angle |
@@ -717,7 +735,7 @@ takes the comparator's default.
 | `imagePlane?` | object | `{ kind: "design" }`, `{ kind: "shift", mm }` along +z from the design plane, or `{ kind: "lv-best-axial" }`: LensVisualizer's own best axial focus for the stop and the lines of the run, which only a LensVisualizer lens has |
 | `frequenciesPerMm?` | number[] | spatial frequencies, each ≥ 0, no repeats |
 | `sampling?` | object | `lvGridCap?` (32, 64, 128 or 256), `bundleGrid?` (integer ≥ 1), `engines?` (options per engine id) |
-| `rungs?` | string[] | rungs of the comparison ladder to evaluate |
+| `rungs?` | string[] | the checks to evaluate, by id (the member keeps its older name) |
 | `engines?` | string[] | engine ids to run |
 | `referenceEngine?` | string | the engine the others are compared against |
 
@@ -726,7 +744,7 @@ takes the comparator's default.
 For the rays of a run ([ray sets](#ray-sets)), a run without `fields` takes the image-height fractions 0, 0.5 and
 1, and one without `sampling.bundleGrid` 32 cells across the beam. `sampling.lvGridCap` is the largest pupil grid
 LensVisualizer's own MTF may refine to, which the engine `lv` takes as its option `lvGridCap`
-([its product MTF](#lensvisualizers-product-mtf)). The rung `r4f` hands it to its two engines, and the image plane
+([its product MTF](#lensvisualizers-product-mtf)). The check `lv-mtf-replay` hands it to its two engines, and the image plane
 `lv-best-axial` and the MTF recipe of a run are of that cap.
 
 How the stop of `lv-f8-comparison` and the plane of `lv-best-axial` are found is said under
@@ -841,7 +859,8 @@ RunSpec, for a run of a suite and for a suite's defaults.
 It reads: take the Double-Gauss fixture as it is, wide open, on its reference line; evaluate on axis and at 10°
 and 14° off axis, at the design image plane, at 10, 20 and 40 cycles/mm; run rungs r0 to r4 with the engines
 `ref` and `optiland`, comparing against `ref`. The object under `sampling.engines.optiland` is read by that
-engine only.
+engine only. The example is a fixture written before the renames, and keeps its ids: it is read as the checks
+`built-system` to `geometric-mtf` with the engines `reference-tracer` and `optiland`.
 
 ### `suite`
 
@@ -967,10 +986,10 @@ worker is the comparator's own, the two are apart, and each has its own hash:
 
 | | Is the hash of | Changes when |
 |---|---|---|
-| `fingerprint` | the engine itself: LensVisualizer's engine files for `lv`, the reference engine's own files for `ref`, optiland and what it computes with for `optiland` | the engine changes |
-| `adapterRevision` | the comparator's code the answer passes through. For `lv` and `ref`: the engine's module and every TypeScript file of the comparator it imports a value from, directly or through other files (`src/engines/adapterRevision.ts`); for `lv` that is its adapter, the exporter it holds a case to, the array codec, the validator and the image projection. For `optiland`: the Python sources of its worker and of the worker kit (`workers/python/lvrtc_optiland`, `workers/python/lvrtc_worker_kit`) | the comparator changes how it asks the engine, reads its answer or writes it down |
+| `fingerprint` | the engine itself: LensVisualizer's engine files for `lv`, the reference engine's own files for `reference-tracer`, optiland and what it computes with for `optiland` | the engine changes |
+| `adapterRevision` | the comparator's code the answer passes through. For `lv` and `reference-tracer`: the engine's module and every TypeScript file of the comparator it imports a value from, directly or through other files (`src/engines/adapterRevision.ts`); for `lv` that is its adapter, the exporter it holds a case to, the array codec, the validator and the image projection. For `optiland`: the Python sources of its worker and of the worker kit (`workers/python/lvrtc_optiland`, `workers/python/lvrtc_worker_kit`) | the comparator changes how it asks the engine, reads its answer or writes it down |
 
-`adapterRevision` is a SHA-256, stated by `lv`, `ref` and `optiland`; an engine whose worker is not the
+`adapterRevision` is a SHA-256, stated by `lv`, `reference-tracer` and `optiland`; an engine whose worker is not the
 comparator's states none. A result carries the one of its engine's descriptor, and the result store keys an answer
 by both: so a fix to the adapter retires the answers the old adapter wrote, and the fingerprint of `lv` stays what
 it says it is, the identity of LensVisualizer's code. A run's manifest records both for each engine.
@@ -1061,7 +1080,7 @@ declares every feature flag and no limit, and offers `system.describe`, `paraxia
 | `entrancePupilZ` | `EPL()`, plus the first vertex | the first surface |
 | `exitPupilZ` | `XPL()`, plus the image plane | the image surface |
 | `entrancePupilSemiDiameter`, `exitPupilSemiDiameter` | half of `EPD()` and of `XPD()`, without the sign | a diameter of optiland is negative where the stop is imaged upside down |
-| `recorded.optilandFNumber` | `FNO()`, which for a stop given by its size is `f2() / EPD()`: the focal length over the diameter of the entrance pupil, whatever the object distance, with the sign of that diameter | |
+| `recorded.optilandFNumber` | `FNO()`, which for a stop given by its size is `abs(f2()) / EPD()` (since optiland `a9e544a2`; `f2() / EPD()` before): the magnitude of the focal length over the diameter of the entrance pupil, whatever the object distance, with the sign of that diameter | |
 | `recorded.magnification`, for a finite object | `magnification()` | |
 
 The vertices and the image plane are read from the optic (`surfaces.positions`). The pupils are images of the stop
@@ -1118,8 +1137,9 @@ where the surface of the case is not, as on the far side of a hemisphere, is a r
 the mask in R2.
 
 **The optical path is optiland's own sum, and one thing is made of it.**
-What optiland's `opd` holds was read in its source (`Surface._trace_real`, `RealRays`, at `4e893f53`) against each
-rule of [`rays.trace`](#raystrace):
+What optiland's `opd` holds was read in its source (`Surface._trace_real`, `RealRays`, at `4e893f53`; at `a9e544a2`
+the same arithmetic runs through its propagation model's `propagate_to_surface`) against each rule of
+[`rays.trace`](#raystrace):
 
 | The contract's path | optiland's `opd` |
 |---|---|
@@ -1217,13 +1237,17 @@ several, whose rays are optiland's and whose sum is the worker's; `method.params
 `maxDelta` and `optilandWarnings`: the counts and the widths are the finer step's, of its first line. `aperture` is
 the FFT's.
 
-**The rays of a request are one batch to optiland**, or several of `maxBatchRays`, and what it answers of a ray
-is not always that ray's alone: the tolerance of its iteration on an asphere is the batch's, raised by the ray
-that is furthest from the surface, a ray that has ended among them. On a curved base that is a matter of
-rounding. On an asphere of a flat base one ray of the batch that was totally reflected further up leaves every
-ray on the base plane, off the surface by its sag, and optiland carries each on from there as a ray that
-arrived: the worker answers it so, and R2 fails the pairs of optiland on that set
-([docs/gotchas.md](../docs/gotchas.md#the-tolerance-of-an-aspheres-iteration-is-that-of-the-batch-it-is-traced-in)).
+**The rays of a request are traced in batches of at most `maxBatchRays`, each shielded from the rays optiland
+ended** (the owner's decision of 2026-11-10). optiland's tolerance on an asphere is its batch's, raised by the ray
+furthest from the surface, a ray that has ended among them: one that was totally reflected just in front of an
+asphere is put 1e14 times its z away, and every ray of the batch is left on the asphere's base (a flat base at
+optiland `4e893f53`; since `a9e544a2` a curved one too). So the worker traces a batch once and, where optiland ends
+no ray, answers that pass; otherwise it answers the rays that ended at the least end surface of a pass from it (a
+ray that came to that surface sideways first, which spoils it) and traces the rest again without them, in order,
+until a pass ends no ray. Every ray is answered from a batch that held no ray optiland had ended before that ray's
+own end, and an ended ray keeps the end and the reason optiland's rows give it; a batch takes at most 2 S + 2
+passes, and more is an error. A ray optiland keeps alive still raises its batch's tolerance, as a ray from far away
+does ([docs/gotchas.md](../docs/gotchas.md#the-tolerance-of-an-aspheres-iteration-is-that-of-the-batch-it-is-traced-in)).
 
 ### `protocol-request` and `protocol-response`
 
@@ -1284,8 +1308,8 @@ A rung:
 `tolerance` is the largest value a metric of a gated rung may have and pass; `attention` is the largest value a
 metric of a recorded rung may have without the pair being marked for attention. Both are ≥ 0 and in `unit`, which
 is `1` for a number without one. A metric the comparison reports and the policy does not name is shown and not
-judged. Several rungs may compare one quantity, each by metrics of its own: `r2`, `r3` and `r4` all compare
-`rays.trace`, and so does `r6a`.
+judged. Several checks may compare one quantity, each by metrics of its own: `ray-trace`, `optical-path` and
+`geometric-mtf` all compare `rays.trace`, and so does `wave-mtf`.
 
 `attentionSeveralLines` is an optional nonnegative alternate band of a recorded metric that also has
 `attention`. R6c's `chiefLanding.maxAbs` keeps `attention: 1e-7` mm for two one-line answers and uses
@@ -1297,22 +1321,22 @@ MTF baselines retain these recorded limits so their reports need no current poli
 On several lines LV's shared launch and optiland's line-0 chief are different rays; a common reference point
 preserves the modulus, so this limit identifies the field rather than asserting one ray's landing.
 
-The comparator's policy, version 13:
+The comparator's policy, version 13, each check by its id of today (its rung id of then in parentheses):
 
-| Rung | Quantity | Mode | Judged |
+| Check | Quantity | Mode | Judged |
 |---|---|---|---|
-| `selftest` | `selftest.echo` | direct | `sum.abs`, `values.maxAbs` ≤ 1e-12 |
-| `r0` | `system.describe` | direct | every count of mismatches 0; `sag.maxScaled` ≤ 1e-12. Blocks the later rungs |
-| `r1` | `paraxial.first-order` | direct | `firstOrder.maxAbs`, `pupilZ.maxScaled`, `pupilRadius.maxScaled` ≤ 1e-9 mm |
-| `r2` | `rays.trace` | identical-rays | hits and landing ≤ 1e-8 mm, direction ≤ 1e-9, `mask.mismatches` 0; no floor |
-| `r3` | `rays.trace` | identical-rays | the three optical paths ≤ 2e-5 waves; no floor |
-| `r4` | `rays.trace` | identical-rays | `mtf.maxAbs` ≤ 1e-7, of a field at every line of the case; no floor ([`rays.trace`](#raystrace)) |
-| `r4f` | `mtf.native` | direct | `mtf.maxAbs` ≤ 1e-9; `sampling.mismatches` and `fields.mismatches` 0. Of the engines `lv` and `replay` only ([`mtf.native`](#mtfnative)) |
-| `r5` | `mtf.native` | independent-method | recorded: `mtfOnAxis.maxAbs` in a band of 0.005, `mtfOffAxis.maxAbs` of 0.01, `chiefLanding.maxAbs` of 1e-7 mm. Of the engines `lv`, `optiland` and `wave` only, and run only where it is named ([`mtf.native`](#rung-r5-the-engines-own-mtf)) |
-| `r5g` | `mtf.native` | independent-method | recorded: `mtfOnAxis.maxAbs` in a band of 0.005, `mtfOffAxis.maxAbs` of 0.01, `chiefLanding.maxAbs` of 1e-3 mm. Of the engines `lv`, `optiland` and `replay` only, and run only where it is named |
-| `r6a` | `rays.trace` | identical-rays | `waveMtf.maxAbs` ≤ 2e-8, of a field at every line of the case on a lattice that is an arbiter; no floor ([`rays.trace`](#raystrace)) |
-| `r6b` | `mtf.native` | independent-method | recorded: `mtfOnAxis.maxAbs` in a band of 0.005, `mtfOffAxis.maxAbs` of 0.01. Of the engines `lv` and `wave` only ([`mtf.native`](#mtfnative)) |
-| `r6c` | `mtf.native` | independent-method | recorded: R5 sorting and its 0.005 / 0.01 bands, chief landing 1e-7 mm for two one-line answers, 1e-3 mm when either records several lines; reference or photopic, only where named; `lv`, `wave`, `optiland`, `optiland-wave` |
+| `pipeline-echo` (`selftest`) | `selftest.echo` | direct | `sum.abs`, `values.maxAbs` ≤ 1e-12 |
+| `built-system` (`r0`) | `system.describe` | direct | every count of mismatches 0; `sag.maxScaled` ≤ 1e-12. Blocks the later rungs |
+| `first-order` (`r1`) | `paraxial.first-order` | direct | `firstOrder.maxAbs`, `pupilZ.maxScaled`, `pupilRadius.maxScaled` ≤ 1e-9 mm |
+| `ray-trace` (`r2`) | `rays.trace` | identical-rays | hits and landing ≤ 1e-8 mm, direction ≤ 1e-9, `mask.mismatches` 0; no floor |
+| `optical-path` (`r3`) | `rays.trace` | identical-rays | the three optical paths ≤ 2e-5 waves; no floor |
+| `geometric-mtf` (`r4`) | `rays.trace` | identical-rays | `mtf.maxAbs` ≤ 1e-7, of a field at every line of the case; no floor ([`rays.trace`](#raystrace)) |
+| `lv-mtf-replay` (`r4f`) | `mtf.native` | direct | `mtf.maxAbs` ≤ 1e-9; `sampling.mismatches` and `fields.mismatches` 0. Of the engines `lv` and `replay-of-lv-mtf` only ([`mtf.native`](#mtfnative)) |
+| `mtf-vs-optiland-fft` (`r5`) | `mtf.native` | independent-method | recorded: `mtfOnAxis.maxAbs` in a band of 0.005, `mtfOffAxis.maxAbs` of 0.01, `chiefLanding.maxAbs` of 1e-7 mm. Of the engines `lv`, `optiland` and `wave-mtf-of-lv-rays` only, and run only where it is named ([`mtf.native`](#rung-r5-the-engines-own-mtf)) |
+| `geometric-mtf-vs-optiland` (`r5g`) | `mtf.native` | independent-method | recorded: `mtfOnAxis.maxAbs` in a band of 0.005, `mtfOffAxis.maxAbs` of 0.01, `chiefLanding.maxAbs` of 1e-3 mm. Of the engines `lv`, `optiland` and `replay-of-lv-mtf` only, and run only where it is named |
+| `wave-mtf` (`r6a`) | `rays.trace` | identical-rays | `waveMtf.maxAbs` ≤ 2e-8, of a field at every line of the case on a lattice that is an arbiter; no floor ([`rays.trace`](#raystrace)) |
+| `mtf-vs-wave-estimate` (`r6b`) | `mtf.native` | independent-method | recorded: `mtfOnAxis.maxAbs` in a band of 0.005, `mtfOffAxis.maxAbs` of 0.01. Of the engines `lv` and `wave-mtf-of-lv-rays` only ([`mtf.native`](#mtfnative)) |
+| `mtf-vs-optiland-wavefront` (`r6c`) | `mtf.native` | independent-method | recorded: R5 sorting and its 0.005 / 0.01 bands, chief landing 1e-7 mm for two one-line answers, 1e-3 mm when either records several lines; reference or photopic, only where named; `lv`, `wave-mtf-of-lv-rays`, `optiland`, `otf-of-optiland-wavefront` |
 
 **The floor.** Policy versions 11 and 12 give no rung or metric a floor. At Stage 3.12, LensVisualizer `ab0fd4cf`
 (closure `94778d3d`, 175 files) uses an intersection tolerance of 1e-12 mm; its worst R2/R3 distances from `ref`
@@ -1358,8 +1382,8 @@ said nothing about whose the excess was, and no longer decides it.
 that built different systems would differ in every ray traced through them, and each such difference would be the
 first one again. So where the pair of two engines in that rung is `FAIL` or `ERROR`, their pair in every later
 rung of the same run is `BLOCKED`: not judged, with a `reason` that names the rung. "Later" is the order of the
-ladder, in which a run evaluates its rungs and its manifest lists their jobs: `selftest`, `r0`, `r1`, `r2`, `r3`,
-`r4`, `r4f`.
+ladder, in which a run evaluates its checks and its manifest lists their jobs: `pipeline-echo`, `built-system`,
+`first-order`, `ray-trace`, `optical-path`, `geometric-mtf`, `lv-mtf-replay`.
 Blocking is per pair of engines and per case; two engines that agree on the system are judged whatever a third one
 built.
 
@@ -1739,7 +1763,7 @@ states after it.
 - **A term of power 2 that an engine's own model does not see.** An engine whose paraxial model reads the base
   radius of a surface alone has no first-order data of a case with a term of power 2 whose coefficient is not 0:
   it answers `unsupported` with one item of code `feature`, `surface.asphere.quadratic-term`, and never with the
-  focal length of the lens without the term. `lv` and `optiland` are such engines; `ref`, whose model is the rule
+  focal length of the lens without the term. `lv` and `optiland` are such engines; `reference-tracer`, whose model is the rule
   above, answers. An engine may name further things of its own model, listed with the engine: `optiland` an
   entrance pupil at infinity ([the engine `optiland`](#the-engine-optiland)).
 
@@ -2134,7 +2158,7 @@ manifest records them under `runs[].axialRaySets`, sets and problems as above, e
 A folded case (`folded-path`), a case whose object is not at infinity (`object-not-at-infinity`), a pupil radius not
 above 0 (`no-pupil`), a launch without a stop (`lv-no-launch`) and rays that would not start in front of the first
 surface (`launch-behind-first-surface`) have no axial sets. A zone LensVisualizer aims no ray at is left out of its set
-(`lv-zone-unaimed`), and a lens that mixes d-line and e-line indices has no colour set (`lv-mixed-reference`). Every
+(`lv-zone-unaimed`), and a lens that mixes index references (d, D or e) has no colour set (`lv-mixed-reference`). Every
 restated line has a source canary, and the sets, traced as the sections trace them (`prepareAimedPupilTrace`, the
 authored indices or a channel's), give the sections' intercepts, best focus, RMS, profile, colour zone and channel foci
 to the bit (`test/integration/lv/axialRays.test.ts`, the colour of a run whose lines are the four channels).
@@ -2323,7 +2347,7 @@ Every fraction lies in (0, 1].
 
 Every z is of the contract frame, mm. An `ok` line has exactly one of `figures` and `rays`; an `unavailable` line
 neither. The schemas, corpus, quantity invariants and the stdlib Python port (`validate_axial_native`) enforce these
-definitions. The engines `lv` (figures) and `optiland` (rays) answer it; `ref` does not.
+definitions. The engines `lv` (figures) and `optiland` (rays) answer it; `reference-tracer` does not.
 
 #### Rung R8b: LensVisualizer's axial sections beside optiland's own rays and focus
 
@@ -2385,8 +2409,8 @@ paraxial pupils give. Nothing of an answer is gated: rung R9b records it.
 Heights and z are of the contract frame, mm. An `ok` field has its landing; of distortion its figures, of lateral
 colour neither figures nor a chief ray, of pupils its figures or its chief ray and not both; an `unavailable` field
 neither. The schemas, corpus, quantity invariants and the stdlib Python port (`validate_chief_native`) enforce these
-definitions. The engines `lv` (figures) and `optiland` (figures of distortion, chief rays of pupils) answer it; `ref`
-does not.
+definitions. The engines `lv` (figures) and `optiland` (figures of distortion, chief rays of pupils) answer it;
+`reference-tracer` does not.
 
 #### Rung R9b: LensVisualizer's chief-ray tabs beside optiland's own
 
@@ -2438,7 +2462,7 @@ own `FieldCurvature` computes. Nothing of an answer is gated: rung R10b records 
 | `method`, `notes` | the engine's name for its method with its settings, and words for people |
 
 The schemas, corpus, quantity invariants and the stdlib Python port (`validate_curvature_native`) enforce these
-definitions. The engines `lv` and `optiland` answer it; `ref` does not.
+definitions. The engines `lv` and `optiland` answer it; `reference-tracer` does not.
 
 #### Rung R10b: LensVisualizer's field curves beside optiland's own
 
@@ -2469,7 +2493,7 @@ Version 1, added at Stage 6.6, changes no existing quantity, contract version or
 vignetting and relative illumination of a system whose object is at infinity, at field angles in object space,
 degrees, in the meridional plane (an object toward +y), the relative illumination relative to the axis: how much of a field's beam gets
 through every aperture, and how bright its image is. What LensVisualizer's vignetting tab presents, and what the engine
-`flux` estimates of LensVisualizer's lattices. Nothing of an answer is gated: rung R11b records it.
+`flux-of-lv-rays` estimates of LensVisualizer's lattices. Nothing of an answer is gated: rung R11b records it.
 
 | Spec member | Meaning |
 |---|---|
@@ -2487,23 +2511,22 @@ through every aperture, and how bright its image is. What LensVisualizer's vigne
 | `method`, `notes` | the engine's name for its method with its settings, and words for people |
 
 The schemas, corpus, quantity invariants and the stdlib Python port (`validate_vignetting_native`) enforce these
-definitions. The engines `lv` and `flux` answer it; `ref` and `optiland` do not (optiland has no analysis of the
-vignetting or the relative illumination).
+definitions. The engines `lv` and `flux-of-lv-rays` answer it; `reference-tracer` and `optiland` do not (optiland has no
+analysis of the vignetting or the relative illumination).
 
 #### Rung R11b: LensVisualizer's vignetting tab beside the comparator's flux in two dimensions
 
-`r11b` asks one `vignetting.native` request (the case source's ask): at the lines of the case LensVisualizer's tab traces
-(its authored reference line; no request of a run of none), at the tab's own field angles, of `lv` and `flux` only, and
-only where it is named. `lv` answers from `computeVignettingCurve`: each field's `geometricTransmission` (since
-LensVisualizer #931 its `unvignettedFraction`, the share of the field's stop lattice samples, neither unaimed nor
-failed, that reach the image) and `relativeIllumination` (Rimmer's: n'² times bulk transmission times each transmitted
-cell's area in the direction cosines of its ray referred to the chief ray's image point through a reference sphere about
-it through the state's exit pupil, over the axis's) as the tab presents them, a field the tab has no figure of
-unavailable with the tab's reason (`lv-<reason>`), and the landing on the design plane of LensVisualizer's solved
-chief ray of the field (`chiefRayImageHeightAccurateForRuntimeLens`), on the design plane only and at a line of the
-authored indices only, decided before the tab is asked; a state the tab draws no curve of is every field unavailable
-with the reason. `flux` answers as its
-section says.
+`r11b` asks one `vignetting.native` request (the case source's ask): at the lines of the case LensVisualizer's tab
+traces (its authored reference line; no request of a run of none), at the tab's own field angles, of `lv` and
+`flux-of-lv-rays` only, and only where it is named. `lv` answers from `computeVignettingCurve`: each field's
+`geometricTransmission` (since LensVisualizer #931 its `unvignettedFraction`, the share of the field's stop lattice
+samples, neither unaimed nor failed, that reach the image) and `relativeIllumination` (Rimmer's: n'² times bulk
+transmission times each transmitted cell's area in the direction cosines of its ray referred to the chief ray's image
+point through a reference sphere about it through the state's exit pupil, over the axis's) as the tab presents them, a
+field the tab has no figure of unavailable with the tab's reason (`lv-<reason>`), and the landing on the design plane of
+LensVisualizer's solved chief ray of the field (`chiefRayImageHeightAccurateForRuntimeLens`), on the design plane only
+and at a line of the authored indices only, decided before the tab is asked; a state the tab draws no curve of is every
+field unavailable with the reason. `flux-of-lv-rays` answers as its section says.
 
 A field is sorted before any difference by R9b's sorting (`classifyChiefField`): R5's `classifyNativeField` first,
 unsupported (no figures), data of other wavelengths, numerical (an answer that does not stand by its figures,
@@ -2511,9 +2534,10 @@ unsupported (no figures), data of other wavelengths, numerical (an answer that d
 chief rays (`chiefLanding.maxAbs`); then method. The rung adds no reason of its own. The figures are
 `chiefLanding.maxAbs`, `geometricTransmission.maxAbs`, `falloff.maxAbs` (of each answer's relative illumination over its
 geometric transmission, of the fields both let light through: the falloff of no vignetting; since LensVisualizer #931
-two Rimmer integrals, the tab's of directions referred to the image point and `flux`'s of the rays' own exit directions)
-and `relativeIllumination.maxAbs`, and counts of fields of each kind. Policy 20 gives `chiefLanding.maxAbs` a limit of 1e-5 mm, the limit of the sorting, and no figure a band.
-`vignettingFactsOfRecorded` repeats the sorting from the values a comparison records.
+two Rimmer integrals, the tab's of directions referred to the image point and `flux-of-lv-rays`'s of the rays' own exit
+directions) and `relativeIllumination.maxAbs`, and counts of fields of each kind. Policy 20 gives `chiefLanding.maxAbs`
+a limit of 1e-5 mm, the limit of the sorting, and no figure a band. `vignettingFactsOfRecorded` repeats the sorting from
+the values a comparison records.
 
 ### `summary.native`
 
@@ -2547,7 +2571,7 @@ answer is gated: rung R12b records it.
 Each value is a number or null where the engine states none under that definition; every value an `ok` line states is
 finite, and an `ok` line states at least one; an `unavailable` line states none and says why. The schemas, corpus,
 quantity invariants and the stdlib Python port (`validate_summary_native`) enforce these definitions. The engines `lv`
-and `optiland` answer it; `ref` does not.
+and `optiland` answer it; `reference-tracer` does not.
 
 `lv` answers from LensVisualizer's summary tab as the analysis drawer asks it (`lvSummaryRequest`: the hook's focal
 length of the prepared state, `computeFocusEFL`, the hook's two radii for the case's stop, the hook's field geometry)
@@ -2609,7 +2633,7 @@ repeats the sorting from the values a comparison records.
 Version 1, added at Stage 6.8, changes no existing quantity, contract version or identity. It is an engine's own
 third-order sums of a system at one line, in lens units (mm), under OpticStudio's names and signs (the owner's principle,
 2026-10-27: match OpticStudio with ray aiming, and CODE V, wherever possible). LensVisualizer presents no Seidel sums; the
-engines that answer are `ref-seidel` and `optiland`. Nothing of an answer is gated: rung R13b records it.
+engines that answer are `reference-seidel` and `optiland`. Nothing of an answer is gated: rung R13b records it.
 
 | Spec member | Meaning |
 |---|---|
@@ -2665,13 +2689,14 @@ An `ok` answer states its invariant and the five totals of third order, every va
 ascend; without dispersion lines it states no chromatic sum. The schemas, corpus, quantity invariants and the stdlib
 Python port (`validate_seidel_native`) enforce these definitions.
 
-`ref-seidel` (`src/engines/refSeidel`) answers from the reference engine's model of the case (`buildRefSystem`,
-`vertexCurvature`), written from the optics alone: the sums above, each surface's sums that can cancel formed with the
-rounding of each product carried, the totals compensated, `tan` a series of basic operations. It states every surface
-and, of dispersion lines, `CLA` and `CTR`; under `sampling` `marginalSlopeImageSpace` and `chiefHeightAtImageMm`. A
-spec naming a line the case does not have is `bad-spec`; a case whose stop has no image in object space is an answer
-`unavailable` (`system.telecentric.object-space`); a folded path and a diffractive surface are not of its features. It
-is an engine of its own beside `ref`, so that nothing of it enters `ref`'s fingerprint or adapter revision.
+`reference-seidel` (formerly `ref-seidel`; `src/engines/refSeidel`) answers from the reference engine's model of the
+case (`buildRefSystem`, `vertexCurvature`), written from the optics alone: the sums above, each surface's sums that can
+cancel formed with the rounding of each product carried, the totals compensated, `tan` a series of basic operations. It
+states every surface and, of dispersion lines, `CLA` and `CTR`; under `sampling` `marginalSlopeImageSpace` and
+`chiefHeightAtImageMm`. A spec naming a line the case does not have is `bad-spec`; a case whose stop has no image in
+object space is an answer `unavailable` (`system.telecentric.object-space`); a folded path and a diffractive surface are
+not of its features. It is an engine of its own beside `reference-tracer`, so that nothing of it enters
+`reference-tracer`'s fingerprint or adapter revision.
 
 `optiland` answers with its own `aberrations` of a verified optic whose one field is `maxFieldDeg`: the totals are the
 negatives of `seidels()` (OpticStudio's sign is the opposite of optiland's on all five, as optiland's own cross-tool test
@@ -2687,22 +2712,22 @@ item of `paraxial.first-order`.
 
 `r13b` asks one `seidel.native` request of each case whose run has a recipe (`seidelNativeSpec`): at line 0, of the
 largest field angle the recipe resolved, with the shortest and the longest of the case's lines as dispersion lines where
-it has two wavelengths or more; of `ref-seidel` and `optiland` only, and only where named. The answers are sorted before
-any difference by R5's sorting (`classifyNativeField`), the Lagrange invariant standing for the landing: unsupported (an
-answer has no sums), data of other wavelengths, data where the invariants lie further apart than `invariant.maxAbs`
-allows or an answer states none, then method. The figures, of answers of two methods: `invariant.maxAbs`; each total's
-difference `SPHA.maxAbs` to `CTR.maxAbs` (mm; one an answer does not state is unmeasured, the engine named);
-`total.maxScaled`, the largest difference of a total of third order over the larger sum of the magnitudes of its
-surfaces' terms in the two answers (the scale of what cancels in it); `surfaces.maxAbs`, the largest difference of one
-surface's sum, with the surface and the sum. Policy 24 (the owner's decision of 2026-10-28) gives `invariant.maxAbs` a
-limit of 3e-14 mm, the limit of the sorting, and `total.maxScaled` a band of 8e-15; the other figures none.
-`seidelFactsOfRecorded` repeats the sorting from the recorded values.
+it has two wavelengths or more; of `reference-seidel` and `optiland` only, and only where named. The answers are sorted
+before any difference by R5's sorting (`classifyNativeField`), the Lagrange invariant standing for the landing:
+unsupported (an answer has no sums), data of other wavelengths, data where the invariants lie further apart than
+`invariant.maxAbs` allows or an answer states none, then method. The figures, of answers of two methods:
+`invariant.maxAbs`; each total's difference `SPHA.maxAbs` to `CTR.maxAbs` (mm; one an answer does not state is
+unmeasured, the engine named); `total.maxScaled`, the largest difference of a total of third order over the larger sum
+of the magnitudes of its surfaces' terms in the two answers (the scale of what cancels in it); `surfaces.maxAbs`, the
+largest difference of one surface's sum, with the surface and the sum. Policy 24 (the owner's decision of 2026-10-28)
+gives `invariant.maxAbs` a limit of 3e-14 mm, the limit of the sorting, and `total.maxScaled` a band of 8e-15; the other
+figures none. `seidelFactsOfRecorded` repeats the sorting from the recorded values.
 
 ### `zernike.native`
 
 Version 1, added at Stage 6.8, changes no existing quantity, contract version or identity. Of each asked field, an
 engine's wavefront at one line, and what a fit of Zernike polynomials makes of it, in vacuum waves. LensVisualizer
-presents no wavefront; the engines that answer are `optiland` and `optiland-wave`. Rung R14b records it.
+presents no wavefront; the engines that answer are `optiland` and `otf-of-optiland-wavefront`. Rung R14b records it.
 
 | Spec member | Meaning |
 |---|---|
@@ -2751,24 +2776,24 @@ to the contract's ordering, the coefficients' count). The RMS, the peak to valle
 `zernike.poly`) and the condition (numpy's `cond` of order 1 of `G`, of optiland's own polynomials) are computed by the
 worker, since optiland has no accessor of them (its `OPD.rms()` keeps the piston). A field optiland raises on is
 `unavailable` with `optiland-raised-<class>`, one of fewer valid samples than terms with `too-few-samples` (the worker's,
-as `optiland-wave`'s); a finite object is unsupported, as for `wavefront.native`.
+as `otf-of-optiland-wavefront`'s); a finite object is unsupported, as for `wavefront.native`.
 
-`optiland-wave` answers with the comparator's estimator (`src/estimators/zernike.ts`) on optiland's own raw samples of
-the same wavefront: one `wavefront.native` request of the spec's line, angles and grid, validated and held to what was
-asked, then a fit by normal equations summed compensated, solved by Cholesky's factorisation and refined twice; the
-figures summed compensated. Same data, another fit: a difference is of the fits and of the figures' arithmetic, never of
-the wavefront.
+`otf-of-optiland-wavefront` (formerly `optiland-wave`) answers with the comparator's estimator
+(`src/estimators/zernike.ts`) on optiland's own raw samples of the same wavefront: one `wavefront.native` request of the
+spec's line, angles and grid, validated and held to what was asked, then a fit by normal equations summed compensated,
+solved by Cholesky's factorisation and refined twice; the figures summed compensated. Same data, another fit: a
+difference is of the fits and of the figures' arithmetic, never of the wavefront.
 
 #### Rung R14b: optiland's Zernike fit beside the comparator's fit of the same samples
 
 `r14b` asks two `zernike.native` requests of each case whose run has a recipe (`zernikeNativeSpecs`): at line 0, of the
-angles the recipe resolved its fields to, on a grid of 128, one Standard of 37 terms and one Fringe of 36 (optiland's 37th
-Fringe polynomial is not OpticStudio's); of `optiland` and `optiland-wave` only, and only where named. Each field is sorted
-before any difference by R5's sorting: unsupported, data (other wavelengths; landings further apart than
-`chiefLanding.maxAbs` allows, or none stated), numerical (an answer states a condition above `fitCondition.max`: R5's
-reason `unconverged`), method. The figures, of fields of two methods: `chiefLanding.maxAbs`, `fitCondition.max` (the
-largest condition either answer states of a field both have figures of), `coefficients.maxAbs` (waves, with the field and
-the term), `rmsToChief.maxAbs`, `pvToChief.maxAbs`, `fitResidualRms.maxAbs`, and the counts `fields.compared`,
+angles the recipe resolved its fields to, on a grid of 128, one Standard of 37 terms and one Fringe of 36 (optiland's
+37th Fringe polynomial is not OpticStudio's); of `optiland` and `otf-of-optiland-wavefront` only, and only where named.
+Each field is sorted before any difference by R5's sorting: unsupported, data (other wavelengths; landings further apart
+than `chiefLanding.maxAbs` allows, or none stated), numerical (an answer states a condition above `fitCondition.max`:
+R5's reason `unconverged`), method. The figures, of fields of two methods: `chiefLanding.maxAbs`, `fitCondition.max`
+(the largest condition either answer states of a field both have figures of), `coefficients.maxAbs` (waves, with the
+field and the term), `rmsToChief.maxAbs`, `pvToChief.maxAbs`, `fitResidualRms.maxAbs`, and the counts `fields.compared`,
 `fields.data`, `fields.numerical`, `fields.unavailable`. Policy 24 (the owner's decision of 2026-10-28) gives
 `chiefLanding.maxAbs` a limit of 1e-9 mm and `fitCondition.max` one of 1e6, the limits of the sorting, and bands of
 4e-11 waves to `coefficients.maxAbs`, 2e-16 to `rmsToChief.maxAbs` and 7e-16 to `fitResidualRms.maxAbs`; a pair with a
@@ -2834,7 +2859,7 @@ An engine samples by its own pattern, states it under `method.params`, and need 
 Lengths are mm, x sagittal and y tangential in the contract frame. An `ok` field has exactly the member of its
 pattern and a null for the other; an `unavailable` field has neither. The schemas, corpus, quantity invariants and
 the stdlib Python port (`validate_spot_native`) enforce these definitions. The engines `lv` and `optiland` answer
-it; `ref` does not.
+it; `reference-tracer` does not.
 
 #### Rung R7b: LensVisualizer's coma and bokeh tabs beside optiland's spot and fan
 
@@ -2854,17 +2879,17 @@ lines; chief rays that land apart beyond the rung's limit; no landing), method. 
 is data, and its pair ATTENTION. The spot and fan figures have no band. A policy without the limit sets no field
 aside by its landing, and every pair then says so.
 
-### Rung R6c and the adapter `optiland-wave`
+### Rung R6c and the adapter `otf-of-optiland-wavefront`
 
-`r6c` uses the one `mtf.native` request of R5, at the recipe's resolved fractions and thinned frequencies, on the
-case plane, on reference or several-line cases. Its four columns are LV's own sheared estimate (`lv`), the wave
-estimator on LV's rays (`wave`), optiland's own FFT MTF (`optiland`), and the comparator's OTF of optiland's raw
-wavefront (`optiland-wave`). It runs only where named. No existing TypeScript optical engine gained a quantity or a new estimator.
-The last adapter owns an ordinary optiland worker connection, negotiates `wavefront.native` version 1 before a
-request, validates its response and its field/line/grid correspondence, and applies the pure TypeScript estimator.
-Its fingerprint is optiland's; its adapter revision combines the worker revision with its own import closure.
-Its lifetime closes the underlying worker. The derived native-shaped answer is the comparator's, never optiland's
-own MTF. Raw requests remain directly available through `optiland`.
+`r6c` uses the one `mtf.native` request of R5, at the recipe's resolved fractions and thinned frequencies, on the case
+plane, on reference or several-line cases. Its four columns are LV's own sheared estimate (`lv`), the wave estimator on
+LV's rays (`wave-mtf-of-lv-rays`), optiland's own FFT MTF (`optiland`), and the comparator's OTF of optiland's raw
+wavefront (`otf-of-optiland-wavefront`, formerly `optiland-wave`). It runs only where named. No existing TypeScript
+optical engine gained a quantity or a new estimator. The last adapter owns an ordinary optiland worker connection,
+negotiates `wavefront.native` version 1 before a request, validates its response and its field/line/grid correspondence,
+and applies the pure TypeScript estimator. Its fingerprint is optiland's; its adapter revision combines the worker
+revision with its own import closure. Its lifetime closes the underlying worker. The derived native-shaped answer is the
+comparator's, never optiland's own MTF. Raw requests remain directly available through `optiland`.
 
 The raw grids are 128 and 256 by default (`wavefrontGrids` may name other ascending even grids). The estimator
 uses each sphere point Q about center C as the radial reference direction `(C-Q)/|C-Q|`, coordinates n times its
@@ -2887,15 +2912,15 @@ The case plane already includes LV's photopic best-axial shift for a best-photop
 focus. This expands R6c under policy 13 and changes no quantity version, spec or contract identity.
 
 The comparator reuses R5's `classifyNativeField`, `factsOfField` and recording. The report reuses `factsOfRecorded`,
-sorting each difference before subtraction: unsupported, data, numerical, method. The table records all four
-columns and three separately classified differences against `optiland-wave` (LV, wave, FFT). Only method fields
-standing by their curves enter R5's bands; numerical differences are shown apart. Chief-landing sorting uses
-R6c's 1e-7 mm for two one-line answers and its policy `attentionSeveralLines` of 1e-3 mm when either answer
-records several lines. A common reference point preserves the modulus; the several-line chief landings
-identify the field, not one shared ray. No gate or floor is added. R6c asks no automatic follow-up: the two raw grids already state
-its convergence; optiland's FFT remains its default ladder. No span is needed because one request has all fields
-and each answer all sampling steps. MTF baselines can add R6c records and render these tables from the records alone;
-Stages 4.1 and 4.3 do not rewrite any baseline or committed report.
+sorting each difference before subtraction: unsupported, data, numerical, method. The table records all four columns and
+three separately classified differences against `otf-of-optiland-wavefront` (LV, wave, FFT). Only method fields standing
+by their curves enter R5's bands; numerical differences are shown apart. Chief-landing sorting uses R6c's 1e-7 mm for
+two one-line answers and its policy `attentionSeveralLines` of 1e-3 mm when either answer records several lines. A
+common reference point preserves the modulus; the several-line chief landings identify the field, not one shared ray. No
+gate or floor is added. R6c asks no automatic follow-up: the two raw grids already state its convergence; optiland's FFT
+remains its default ladder. No span is needed because one request has all fields and each answer all sampling steps. MTF
+baselines can add R6c records and render these tables from the records alone; Stages 4.1 and 4.3 do not rewrite any
+baseline or committed report.
 
 ### `mtf.native`
 
@@ -2904,7 +2929,8 @@ engine presents it to whoever uses it. Nothing of it is the comparator's, and no
 agree on it within a tolerance: it is what the independent-method rungs of the ladder record. No rung sets the MTF
 of two independent engines against each other yet; `lvrtc mtf` presents each engine's answer by itself. One rung,
 `r4f`, asks for it of two engines that are not independent ([below](#rung-r4f-the-fidelity-of-the-replay)). It is
-answered by `lv` ([LensVisualizer's product MTF](#lensvisualizers-product-mtf)), `replay`, `wave` and
+answered by `lv` ([LensVisualizer's product MTF](#lensvisualizers-product-mtf)), `replay-of-lv-mtf`,
+`wave-mtf-of-lv-rays` and
 [`optiland`](#the-engine-optiland), each by a method of its own. F is the number of frequencies.
 
 `spec`:
@@ -2978,13 +3004,13 @@ needs the spec, which data is validated without: whoever sets an answer beside i
 
 #### Rung R4f: the fidelity of the replay
 
-`r4f` asks one `mtf.native` request for a run: the geometric MTF of the run's [recipe](#the-mtf-recipe), with its
-fields as the fractions they were resolved from, its frequencies, and the focus `design`, the image plane of the
-case as it is. It is asked of exactly two engines, `lv` and `replay`, whatever engines the run names, and only for
-a recipe LensVisualizer resolved: a case file has no sampling of LensVisualizer's to replay, and no request. Both
-engines are handed the run's `sampling.lvGridCap` as their option `lvGridCap`. `lv` answers with LensVisualizer's
-own `computeMtf`; `replay` with the comparator's estimator on a replay of the same sampling
-([the engine `replay`](#the-engine-replay)). If the two agree, the comparator understands LensVisualizer's
+`r4f` asks one `mtf.native` request for a run: the geometric MTF of the run's [recipe](#the-mtf-recipe), with its fields
+as the fractions they were resolved from, its frequencies, and the focus `design`, the image plane of the case as it is.
+It is asked of exactly two engines, `lv` and `replay-of-lv-mtf`, whatever engines the run names, and only for a recipe
+LensVisualizer resolved: a case file has no sampling of LensVisualizer's to replay, and no request. Both engines are
+handed the run's `sampling.lvGridCap` as their option `lvGridCap`. `lv` answers with LensVisualizer's own `computeMtf`;
+`replay-of-lv-mtf` with the comparator's estimator on a replay of the same sampling ([the engine
+`replay-of-lv-mtf`](#the-engine-replay-of-lv-mtf)). If the two agree, the comparator understands LensVisualizer's
 sampling: which rays, which reference, which weights, which grids.
 
 The comparator of `mtf.native` for `r4f` (`src/compare/mtfFidelity.ts`):
@@ -3014,14 +3040,14 @@ its own.
 
 #### Rung R6b: LensVisualizer's diffraction MTF beside the wave estimator
 
-`r6b` asks one `mtf.native` request for a run: the diffraction MTF of the run's [recipe](#the-mtf-recipe), at the
-fields the run traces rays for (0, 0.5 and 1 of the image height unless it states others), as fractions, of those
-the recipe resolved to an angle; at the recipe's frequencies thinned to at most eleven (`waveFrequencies`); with
-the focus `design`, the image plane of the case as it is. It is asked of exactly two engines, `lv` and `wave`,
+`r6b` asks one `mtf.native` request for a run: the diffraction MTF of the run's [recipe](#the-mtf-recipe), at the fields
+the run traces rays for (0, 0.5 and 1 of the image height unless it states others), as fractions, of those the recipe
+resolved to an angle; at the recipe's frequencies thinned to at most eleven (`waveFrequencies`); with the focus
+`design`, the image plane of the case as it is. It is asked of exactly two engines, `lv` and `wave-mtf-of-lv-rays`,
 whatever engines the run names, and only for a recipe LensVisualizer resolved. Both are handed the run's
-`sampling.lvGridCap` and `sampling.bundleGrid` as the options `lvGridCap` and `bundleGrid`; each reads its own.
-`lv` answers with LensVisualizer's own `computeMtf`, whose diffraction estimate is its own;
-[`wave`](#the-engine-wave) with the comparator's wave estimator on the rays LensVisualizer launches and traces.
+`sampling.lvGridCap` and `sampling.bundleGrid` as the options `lvGridCap` and `bundleGrid`; each reads its own. `lv`
+answers with LensVisualizer's own `computeMtf`, whose diffraction estimate is its own;
+[`wave-mtf-of-lv-rays`](#the-engine-wave-mtf-of-lv-rays) with the comparator's wave estimator on the rays LensVisualizer launches and traces.
 Two methods, each with its own sampling: the rung is **recorded**, and no figure of it fails anything.
 
 The comparator of `mtf.native` for `r6b` (`src/compare/mtfWave.ts`) gives each field the class of its difference,
@@ -3044,10 +3070,10 @@ different lengths are not comparable (`ERROR`).
 #### Rung R5: the engines' own MTF
 
 `r5` asks the one request of `r6b` of three engines, `lv`, [`optiland`](#the-engine-optiland) and
-[`wave`](#the-engine-wave), whatever engines the run names, only for a recipe LensVisualizer resolved, and only
-where the rung is named. `lv` and `wave` are handed the options `r6b` hands them; `optiland` is handed the recipe's
-angle of each field of the spec as its option `fieldAnglesDeg`. Three methods, each with its own sampling: the rung
-is **recorded**, and no figure of it fails anything.
+[`wave-mtf-of-lv-rays`](#the-engine-wave-mtf-of-lv-rays), whatever engines the run names, only for a recipe LensVisualizer resolved, and only
+where the rung is named. `lv` and `wave-mtf-of-lv-rays` are handed the options `r6b` hands them; `optiland` is handed
+the recipe's angle of each field of the spec as its option `fieldAnglesDeg`. Three methods, each with its own sampling:
+the rung is **recorded**, and no figure of it fails anything.
 
 The comparator of `mtf.native` for `r5` (`src/compare/mtfNative.ts`) sorts each field before any difference is
 taken, by the classes of a difference in their order, and each kind of field has its own figure:

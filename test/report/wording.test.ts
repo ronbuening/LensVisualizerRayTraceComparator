@@ -53,10 +53,14 @@ const CLAIMS: { readonly [name: string]: readonly string[] } = {
     "| lv | optiland | certified |",
   ],
   "mtf-agrees": [
+    "Within gated wave-mtf limits, the wave MTF of identical rays agrees with optiland's, as mtf-vs-optiland-fft records.",
     "LensVisualizer agrees with optiland's diffraction MTF.",
     "The FFT MTF of optiland matches LensVisualizer's within 0.004.",
     "The two MTF curves are consistent.",
     "There is agreement of the product MTF and optiland's.",
+    // A side-by-side counterpart by its engine id, under either spelling, in a sentence that also names identical rays.
+    "Within gated wave-mtf limits on identical rays, the MTF of optiland-wave agrees with LensVisualizer's.",
+    "Within gated wave-mtf limits on identical rays, the MTF of otf-of-optiland-wavefront agrees with LensVisualizer's.",
   ],
   "mtf-confirmed": [
     "optiland confirms the diffraction MTF of LensVisualizer.",
@@ -76,17 +80,25 @@ const CLAIMS: { readonly [name: string]: readonly string[] } = {
     "R5 passes for every lens of the benchmark.",
     "R6c passes for every lens of the benchmark.",
     "| canon-ef-135-f2l-usm-ref | r5 | lv | optiland | PASS |",
+    // The same, under the ids of today: a side-by-side MTF check by its id, whichever of the two.
+    "| canon-ef-135-f2l-usm-ref | mtf-vs-optiland-fft | lv | optiland | PASS |",
+    "| canon-ef-135-f2l-usm-ref | geometric-mtf-vs-optiland | lv | optiland | PASS |",
+    "mtf-vs-optiland-wavefront passes for every lens of the benchmark.",
   ],
   "recorded-authority": [
     "R5 is accurate.",
     "R6c proves the result.",
     "R6b proves the result.",
+    "mtf-vs-wave-estimate proves the result.",
     "The recorded rung is trustworthy.",
   ],
   "counterpart-preference": [
     "The FFT counterpart is better.",
     "We prefer the raw wavefront counterpart.",
     "optiland-wave is the preferred reference.",
+    // The same, under the engine id of today.
+    "otf-of-optiland-wavefront is the preferred reference.",
+    "The otf-of-optiland-wavefront counterpart is better than the FFT.",
     "The FFT counterpart is superior to the wavefront counterpart.",
     "With no preference claimed, the FFT counterpart is better.",
     "With no preference between them, the FFT counterpart is better.",
@@ -171,13 +183,21 @@ test("what a report may say is accepted: every template, and sentences that only
     "sampling.mismatches 0, fields.mismatches 0",
     "| edge | r5 | ok | ok | ok |",
     "Rung R5 is recorded and never gated: it sets two methods side by side.",
+    // The same, under the ids of today; and a gated check whose id begins as a side-by-side one's does.
+    "| geometric-mtf | lv | ref | PASS |\n| mtf-vs-optiland-fft | lv | optiland | RECORDED |",
+    "| edge | mtf-vs-optiland-fft | ok | ok | ok |",
+    "| geometric-mtf | lv | ref | PASS |",
+    "Within gated geometric-mtf and wave-mtf limits, geometric MTF and wave MTF of identical rays agree.",
     "The R6c difference is recorded as method, with numerical rows set aside.",
     "The FFT and raw wavefront counterparts are recorded side by side, with no preference claimed.",
+    "optiland and otf-of-optiland-wavefront are set side by side, with no preference claimed.",
+    "| geometric-mtf | lv | reference-tracer | PASS |\n| mtf-vs-optiland-wavefront | lv | otf-of-optiland-wavefront | RECORDED |",
     "Within gated R4 and R6a limits, geometric MTF and wave MTF of identical rays agree.",
     "| certified-artificial-focus1 | finite-conjugate-unavailable |",
     "| certified-artificial-focus1 | finite-conjugate-unavailable: focus position 1 at zoom 0 is not a station whose " +
       "object distance LensVisualizer certifies; only infinity focus and its documented stations can be exported |",
     "# Validation statement",
+    "A review band is a width for attention, not a limit.",
     // A consensus and its outliers, said with the words a pair's verdicts support, and a claim of error of no
     // consensus or outlier.
     "`fake-far` is an outlier: beyond the gates of every engine of the consensus.",

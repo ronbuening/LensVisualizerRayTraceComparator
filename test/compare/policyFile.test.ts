@@ -12,14 +12,14 @@ import { REPO_ROOT } from "../../src/core/config.ts";
 import { RUNGS, r0Rung, r1Rung, r4Rung, r5Rung, selftestRung } from "../../src/core/rungs.ts";
 import type { RungDefinition } from "../../src/core/rungs.ts";
 import { POLICY_EVERY_MODE, POLICY_LADDER, POLICY_SELFTEST, POLICY_SEVERAL_LINES } from "../contract/corpus.ts";
-import { tempDir } from "../core/support.ts";
+import { atCurrentIds, tempDir } from "../core/support.ts";
 
 test("the policy file is policy/rungs.v1.json, and holds the comparator's own policy", () => {
   assert.equal(POLICY_FILE, join(REPO_ROOT, "policy", "rungs.v1.json"));
   const policy = loadPolicy();
-  assert.equal(policy.version, 24);
+  assert.equal(policy.version, 25);
   assert.equal(policy.contract, "1.3");
-  assert.deepEqual(policy.rungs.selftest, {
+  assert.deepEqual(policy.rungs["pipeline-echo"], {
     quantity: "selftest.echo",
     mode: "direct",
     class: "gated",
@@ -28,7 +28,7 @@ test("the policy file is policy/rungs.v1.json, and holds the comparator's own po
 });
 
 test("r0 is gated on every mismatch at 0 and on the scaled sag at 1e-12, and blocks the rungs after it", () => {
-  const { r0, r1, selftest } = loadPolicy().rungs;
+  const { "built-system": r0, "first-order": r1, "pipeline-echo": selftest } = loadPolicy().rungs;
   assert.deepEqual([r0.quantity, r0.mode, r0.class], ["system.describe", "direct", "gated"]);
   assert.deepEqual(r0.metrics, {
     "aperture.mismatches": { tolerance: 0, unit: "elements" },
@@ -64,7 +64,7 @@ test("r0 is gated on every mismatch at 0 and on the scaled sag at 1e-12, and blo
 });
 
 test("r2 and r3 are gated on identical rays, at the gates of the ladder, without floors", () => {
-  const { r2, r3 } = loadPolicy().rungs;
+  const { "ray-trace": r2, "optical-path": r3 } = loadPolicy().rungs;
   for (const rung of [r2, r3]) {
     assert.deepEqual([rung.quantity, rung.mode, rung.class], ["rays.trace", "identical-rays", "gated"]);
     assert.equal(rung.floor, undefined);
@@ -86,7 +86,7 @@ test("r2 and r3 are gated on identical rays, at the gates of the ladder, without
     "phasePath.maxAbs": waves,
   });
   // What R2 reports and does not judge: the rays in the rim band, and how many rays were compared.
-  const reported = COMPARATORS.get("rays.trace", "r2")?.metrics.map((metric) => metric.name) ?? [];
+  const reported = COMPARATORS.get("rays.trace", "ray-trace")?.metrics.map((metric) => metric.name) ?? [];
   assert.deepEqual(
     reported.filter((name) => !Object.hasOwn(r2.metrics, name)),
     ["mask.rimBand", "rays.compared"],
@@ -99,15 +99,15 @@ test("r2 and r3 are gated on identical rays, at the gates of the ladder, without
 });
 
 test("r4 is gated on identical rays: the MTF at 1e-7, nothing else judged, no floor, and it blocks nothing", () => {
-  const { r4 } = loadPolicy().rungs;
+  const { "geometric-mtf": r4 } = loadPolicy().rungs;
   assert.deepEqual([r4.quantity, r4.mode, r4.class], ["rays.trace", "identical-rays", "gated"]);
   assert.deepEqual(r4.metrics, { "mtf.maxAbs": { tolerance: 1e-7, unit: "1" } });
   assert.equal(r4.floor, undefined);
   assert.equal(r4.blocksLaterRungs, undefined);
   // Its comparator is its own, a comparator of spans, and what it reports beside the MTF is counted and shown:
   // the rays one engine lost are R2's to judge.
-  const comparator = COMPARATORS.get("rays.trace", "r4");
-  assert.equal(comparator?.rung, "r4");
+  const comparator = COMPARATORS.get("rays.trace", "geometric-mtf");
+  assert.equal(comparator?.rung, "geometric-mtf");
   assert.equal(typeof comparator?.spanOf, "function");
   assert.deepEqual(
     comparator?.metrics.map((metric) => `${metric.name} ${metric.unit}`),
@@ -121,20 +121,20 @@ test("r4 is gated on identical rays: the MTF at 1e-7, nothing else judged, no fl
 });
 
 test("r6a is gated on the wave MTF of the traced rays, at the pin of Stage 3.12, with no floor", () => {
-  const { r6a } = loadPolicy().rungs;
+  const { "wave-mtf": r6a } = loadPolicy().rungs;
   assert.deepEqual([r6a.quantity, r6a.mode, r6a.class], ["rays.trace", "identical-rays", "gated"]);
   // Ten times the largest figure of a judged field of the benchmark, 1.18e-9, rounded up to one digit.
   assert.deepEqual(r6a.metrics, { "waveMtf.maxAbs": { tolerance: 2e-8, unit: "1" } });
   assert.equal(r6a.floor, undefined);
   assert.equal(r6a.blocksLaterRungs, undefined);
   // The figure of a lattice that is no arbiter is a metric of the comparator and none of the policy.
-  const reported = COMPARATORS.get("rays.trace", "r6a")?.metrics.map((metric) => metric.name) ?? [];
+  const reported = COMPARATORS.get("rays.trace", "wave-mtf")?.metrics.map((metric) => metric.name) ?? [];
   assert.ok(reported.includes("waveMtf.maxAbs") && reported.includes("waveMtf.flagged"));
-  assert.notEqual(COMPARATORS.get("rays.trace", "r6a"), COMPARATORS.get("rays.trace", "r4"));
+  assert.notEqual(COMPARATORS.get("rays.trace", "wave-mtf"), COMPARATORS.get("rays.trace", "geometric-mtf"));
 });
 
 test("r4f is gated, direct: the MTF at 1e-9, every count at 0, no floor, and it blocks nothing", () => {
-  const { r4f } = loadPolicy().rungs;
+  const { "lv-mtf-replay": r4f } = loadPolicy().rungs;
   assert.deepEqual([r4f.quantity, r4f.mode, r4f.class], ["mtf.native", "direct", "gated"]);
   assert.deepEqual(r4f.metrics, {
     "fields.mismatches": { tolerance: 0, unit: "elements" },
@@ -144,13 +144,13 @@ test("r4f is gated, direct: the MTF at 1e-9, every count at 0, no floor, and it 
   assert.equal(r4f.floor, undefined);
   assert.equal(r4f.blocksLaterRungs, undefined);
   // Every figure its comparator reports is judged.
-  const reported = COMPARATORS.get("mtf.native", "r4f")?.metrics.map((metric) => metric.name) ?? [];
+  const reported = COMPARATORS.get("mtf.native", "lv-mtf-replay")?.metrics.map((metric) => metric.name) ?? [];
   assert.deepEqual(reported.sort(), Object.keys(r4f.metrics).sort());
 });
 
 test("r5 is recorded, of two methods: the plan's bands on and off the axis, and the limit of the chief rays' landing", () => {
-  const { r6b } = loadPolicy().rungs;
-  const r5: RungPolicy = loadPolicy().rungs.r5;
+  const { "mtf-vs-wave-estimate": r6b } = loadPolicy().rungs;
+  const r5: RungPolicy = loadPolicy().rungs["mtf-vs-optiland-fft"];
   assert.deepEqual([r5.quantity, r5.mode, r5.class], ["mtf.native", "independent-method", "recorded"]);
   assert.deepEqual(
     { ...r5.metrics },
@@ -168,13 +168,13 @@ test("r5 is recorded, of two methods: the plan's bands on and off the axis, and 
   assert.equal(r5.floor, undefined);
   assert.equal(r5.blocksLaterRungs, undefined);
   assert.ok(Object.values(r5.metrics).every((metric) => metric.tolerance === undefined && metric.floor === undefined));
-  const comparator = COMPARATORS.get("mtf.native", "r5");
-  assert.equal(comparator?.rung, "r5");
+  const comparator = COMPARATORS.get("mtf.native", "mtf-vs-optiland-fft");
+  assert.equal(comparator?.rung, "mtf-vs-optiland-fft");
   const reported = comparator?.metrics.map((metric) => metric.name) ?? [];
   for (const name of Object.keys(r5.metrics)) assert.ok(reported.includes(name), name);
   // The rung is of three engines, asks the one request of R6b, and is run only where it is named.
   assert.deepEqual([r5Rung.quantity, r5Rung.needsRecipe, r5Rung.onlyWhereNamed], ["mtf.native", true, true]);
-  assert.deepEqual(r5Rung.engines, ["lv", "optiland", "wave"]);
+  assert.deepEqual(r5Rung.engines, ["lv", "optiland", "wave-mtf-of-lv-rays"]);
 });
 
 test("every rung has a policy entry and every entry a rung, with its quantity, a comparator and its metrics", () => {
@@ -182,72 +182,60 @@ test("every rung has a policy entry and every entry a rung, with its quantity, a
   assert.deepEqual(Object.keys(loadPolicy().rungs).sort(), RUNGS.map((rung) => rung.id).sort());
   // Two rungs compare one quantity, each by a comparator of its own.
   for (const rung of RUNGS) assert.ok(COMPARATORS.get(rung.quantity, rung.id) !== undefined, rung.id);
-  assert.notEqual(COMPARATORS.get("rays.trace", "r2"), COMPARATORS.get("rays.trace", "r3"));
+  assert.notEqual(COMPARATORS.get("rays.trace", "ray-trace"), COMPARATORS.get("rays.trace", "optical-path"));
   assert.equal(COMPARATORS.get("rays.trace"), undefined);
 });
 
 test("each way a policy and the code can disagree is reported", () => {
+  // The corpus's policies keep the ids they were written with; a policy at hand is keyed by today's.
+  const selftest = atCurrentIds(POLICY_SELFTEST);
   const other: RungDefinition = { id: "other", quantity: "selftest.echo", buildRequests: () => [] };
-  assert.deepEqual(policyRegistryProblems(POLICY_SELFTEST, [selftestRung], COMPARATORS), []);
-  assert.deepEqual(policyRegistryProblems(POLICY_SELFTEST, [selftestRung, other], COMPARATORS), [
+  assert.deepEqual(policyRegistryProblems(selftest, [selftestRung], COMPARATORS), []);
+  assert.deepEqual(policyRegistryProblems(selftest, [selftestRung, other], COMPARATORS), [
     "rung other has no policy entry",
   ]);
-  assert.deepEqual(policyRegistryProblems(POLICY_SELFTEST, [selftestRung, r0Rung, r1Rung], COMPARATORS), [
-    "rung r0 has no policy entry",
-    "rung r1 has no policy entry",
+  assert.deepEqual(policyRegistryProblems(selftest, [selftestRung, r0Rung, r1Rung], COMPARATORS), [
+    "rung built-system has no policy entry",
+    "rung first-order has no policy entry",
   ]);
-  assert.deepEqual(policyRegistryProblems(POLICY_SELFTEST, [], COMPARATORS), [
+  assert.deepEqual(policyRegistryProblems(selftest, [], COMPARATORS), [
+    "policy entry pipeline-echo is of no registered rung",
+  ]);
+  // A policy written under the old ids is of no registered rung: the policy at hand is keyed by today's ids.
+  assert.deepEqual(policyRegistryProblems(POLICY_SELFTEST, [selftestRung], COMPARATORS), [
+    "rung pipeline-echo has no policy entry",
     "policy entry selftest is of no registered rung",
   ]);
 
-  const entry = POLICY_SELFTEST.rungs.selftest;
+  const entry = selftest.rungs["pipeline-echo"];
   const policyOf = (change: Partial<Policy["rungs"][string]>): Policy => ({
-    ...POLICY_SELFTEST,
-    rungs: { selftest: { ...entry, ...change } },
+    ...selftest,
+    rungs: { "pipeline-echo": { ...entry, ...change } },
   });
   const registered = [selftestRung];
   assert.deepEqual(policyRegistryProblems(policyOf({ quantity: "rays.trace" }), registered, COMPARATORS), [
-    "policy entry selftest names the quantity rays.trace; the rung's is selftest.echo",
+    "policy entry pipeline-echo names the quantity rays.trace; the rung's is selftest.echo",
   ]);
-  assert.deepEqual(policyRegistryProblems(POLICY_SELFTEST, registered, createComparatorLookup([])), [
-    "policy entry selftest: the quantity selftest.echo has no comparator",
+  assert.deepEqual(policyRegistryProblems(selftest, registered, createComparatorLookup([])), [
+    "policy entry pipeline-echo: the quantity selftest.echo has no comparator",
   ]);
   const metrics = { "sum.abs": { tolerance: 1e-12, unit: "mm" }, "values.rms": { tolerance: 1e-12, unit: "1" } };
   assert.deepEqual(policyRegistryProblems(policyOf({ metrics }), registered, COMPARATORS), [
-    "policy entry selftest: metric sum.abs is in mm; the comparator reports 1",
-    "policy entry selftest: the comparator reports no metric values.rms",
+    "policy entry pipeline-echo: metric sum.abs is in mm; the comparator reports 1",
+    "policy entry pipeline-echo: the comparator reports no metric values.rms",
   ]);
-  // A format example is not the comparator's policy: its r1 judges metrics the comparator does not report, and
-  // its other rungs are of later phases or of none.
-  assert.deepEqual(policyRegistryProblems(POLICY_EVERY_MODE, RUNGS, COMPARATORS), [
-    "rung selftest has no policy entry",
-    "rung r0 has no policy entry",
-    "rung r3 has no policy entry",
-    "rung r4 has no policy entry",
-    "rung r4f has no policy entry",
-    "rung r5g has no policy entry",
-    "rung r6a has no policy entry",
-    "rung r6b has no policy entry",
-    "rung r6c has no policy entry",
-    "rung r7a has no policy entry",
-    "rung r7b has no policy entry",
-    "rung r8a has no policy entry",
-    "rung r8b has no policy entry",
-    "rung r9a has no policy entry",
-    "rung r9b has no policy entry",
-    "rung r10a has no policy entry",
-    "rung r10b has no policy entry",
-    "rung r11a has no policy entry",
-    "rung r11b has no policy entry",
-    "rung r12b has no policy entry",
-    "rung r13b has no policy entry",
-    "rung r14b has no policy entry",
+  // A format example is not the comparator's policy: its first-order data judges metrics the comparator does not
+  // report, and its other checks are of later phases or of none.
+  const everyMode = atCurrentIds(POLICY_EVERY_MODE);
+  const entries = new Set(Object.keys(everyMode.rungs));
+  assert.deepEqual(policyRegistryProblems(everyMode, RUNGS, COMPARATORS), [
+    ...RUNGS.filter((rung) => !entries.has(rung.id)).map((rung) => `rung ${rung.id} has no policy entry`),
+    "policy entry first-order: the comparator reports no metric efl.abs",
+    "policy entry first-order: the comparator reports no metric pupil.z.abs",
+    "policy entry mtf-vs-optiland-fft: the comparator reports no metric mtf.maxAbs",
+    "policy entry mtf-vs-optiland-fft: the comparator reports no metric mtf.rms",
     "policy entry notes is of no registered rung",
-    "policy entry r1: the comparator reports no metric efl.abs",
-    "policy entry r1: the comparator reports no metric pupil.z.abs",
-    "policy entry r2: the comparator reports no metric clip.mismatches",
-    "policy entry r5: the comparator reports no metric mtf.maxAbs",
-    "policy entry r5: the comparator reports no metric mtf.rms",
+    "policy entry ray-trace: the comparator reports no metric clip.mismatches",
   ]);
   // A quantity that is compared for other rungs only has no comparator for this one.
   const stray: RungDefinition = { id: "r9", quantity: "rays.trace", buildRequests: () => [] };

@@ -9,8 +9,17 @@ export const BENCHMARK_PROFILE = "benchmark";
 /** The engine the rungs of the engines' own MTF need: they are run only where it is named. */
 export const OWN_MTF_ENGINE = "optiland";
 /** The rungs the profile `benchmark` runs with any engines, and those it adds where `OWN_MTF_ENGINE` is named. */
-export const BENCHMARK_RUNGS: readonly string[] = Object.freeze(["r4", "r4f", "r6a", "r6b"]);
-export const OWN_MTF_RUNGS: readonly string[] = Object.freeze(["r5", "r5g", "r6c"]);
+export const BENCHMARK_RUNGS: readonly string[] = Object.freeze([
+  "geometric-mtf",
+  "lv-mtf-replay",
+  "wave-mtf",
+  "mtf-vs-wave-estimate",
+]);
+export const OWN_MTF_RUNGS: readonly string[] = Object.freeze([
+  "mtf-vs-optiland-fft",
+  "geometric-mtf-vs-optiland",
+  "mtf-vs-optiland-wavefront",
+]);
 
 /** The apertures `--aperture` takes with the profile: wide open, or the MTF tab's own comparison at f/8. */
 export const BENCHMARK_APERTURES: readonly string[] = Object.freeze(["wide-open", `f/${LV_TAB_COMPARISON_F_NUMBER}`]);
@@ -34,19 +43,19 @@ export function benchmarkSuiteName(lensKey: string): string {
  */
 export const TABS_PROFILE = "tabs";
 export const TABS_RUNGS: readonly string[] = Object.freeze([
-  "r0",
-  "r1",
-  "r7a",
-  "r8a",
-  "r9a",
-  "r10a",
-  "r11a",
-  "r7b",
-  "r8b",
-  "r9b",
-  "r10b",
-  "r11b",
-  "r12b",
+  "built-system",
+  "first-order",
+  "spot-rays",
+  "axial-rays",
+  "chief-rays",
+  "field-curve-rays",
+  "vignetting-rays",
+  "spot-vs-optiland",
+  "axial-vs-optiland",
+  "chief-vs-optiland",
+  "field-curve-vs-optiland",
+  "vignetting-vs-flux-estimate",
+  "summary-vs-optiland",
 ]);
 
 /** The suite, and the run directory, of a lens run in the profile `tabs`: `tabs-<lensKey>`. */

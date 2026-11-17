@@ -4,6 +4,12 @@ Behaviours of an engine that a comparison must know about, each with where it li
 it does to a comparison, and how the comparator deals with it. An entry is here because an engine really does
 this, not because a tolerance was hard to meet: no gate is loosened for any of them.
 
+**Identifiers.** The entries below keep the ids of their time: rungs R0 to R14b (`r2`, `--rungs`) and the engines
+`ref`, `ref-seidel`, `replay`, `wave`, `flux` and `optiland-wave`, each a name of the same check or engine as its
+id today (Stages 9.7 and 9.8: R2 is the check `ray-trace`, `ref` the engine `reference-tracer`). The table of old and
+new ids is in [REFERENCE.md](REFERENCE.md#identifiers); `lvrtc glossary <old id>` says what one is now. A heading
+`docs/known-failures.json` links is kept as it is.
+
 Each entry has a **class**, the one the plan's ladder uses when two answers differ:
 
 | Class | The difference comes from |
@@ -231,6 +237,26 @@ by a tracer written afresh, on every ray both engines land of each set and not o
   no land, and reads `rimLand` for nothing; `surfaceAperture` refuses a LensVisualizer whose `evaluateAperture` clips
   elsewhere, an extension at its drawn rim included. A canary holds the lines of each module named above.
 - **Class.** convention.
+
+### A curved image surface is no image plane, and a case has only the plane
+
+- **Where.** LensVisualizer #960 (`500ef5992`): a lens may state `imageSurface` (a curved sensor, film gate or focal
+  surface: a sphere, an asphere, or a cylinder along one side of the frame), compiled to
+  `ImageSurfaceShape` (`src/optics/geometry/imageSurface.ts`) and carried by the prepared state as
+  `state.lens.imageSurface`, its vertex where the flat plane would be; a flat image is `null`. Every analysis then
+  branches on it: `skewImagePlaneIntercept` takes it as a seventh argument and lands a ray on the shape, image
+  heights are measured along it (on a cylinder, along the unrolled film), the MTF's cosines and Rimmer's are taken in
+  its tangent frame, the field curves are measured from it, and a cylinder's frame edge ends the half field.
+- **Effect.** None on a flat image: each branch's flat side is the line it replaced, which the canaries hold (and an
+  `undefined` handed to `skewImagePlaneIntercept` is taken for a shape and fails, reading its `cylinderAngle`). A
+  case states the flat plane `conditions.imageZ` only, so a curved one cannot be compared. At 420b47555 only three
+  hidden reference fixtures have one (`reference-curved-sensor-achromat`, `reference-cylindrical-film-gate`,
+  `reference-concentric-mirror-curved-focus`); no catalog lens and no committed suite does.
+- **Handled.** The exporter refuses the state with the coded problem `curved-image-surface` (`structuralProblems`,
+  read through `lvImageSurface`), before LensVisualizer's gate is asked; it is never exported as flat. Every call of
+  `skewImagePlaneIntercept` hands the state's own surface, null on every state admitted. Expressing a curved image in
+  the contract would be a contract minor, and the owner's.
+- **Class.** unsupported.
 
 ### The wide-open stop radius is the height of a traced ray, and moves with the intersection tolerance
 
@@ -793,16 +819,23 @@ stays for a future engine with synthetic tests; Phase 5's catalog sweep will tes
     quarter-wave validity and tends to the geometric OTF at low frequency.
   - `waveLatticeOtf` reads the path as the comparator does: launch phase, `opticalPathLengthMm`, and the stretch
     to the foot of the perpendicular from the reference, with the same quarter-wave criterion
-    (`waveLatticePhaseStep`).
-  - Both shear along the lines of the lattice: rows for the cut along x, columns for the one along y, the cosine
-    looked up along that line alone. Off the axis a row is no line of constant cosine. The comparator finds the
-    sheared point in both coordinates.
-  - Both take the square root of the flux for the amplitude, without the area of cosine space a cell covers, and a
-    pair is centred on a cell with both ends interpolated, so the overlap of two cells is a product of two ramps
-    and not the area they share. The comparator's modulus is flux over area, each cell is one end of its pairs,
-    and on an even lattice the overlap is the staircase's exactly.
-  - `shearedOtf` traces half the lattice of a meridional field and mirrors it; `waveLatticeOtf` fills the cosines
-    of dark cells along a line by a straight line. Sums are plain.
+    (`waveLatticePhaseStep`), which since LensVisualizer #988 (`f5b456fec`) also asks for a map of cells to cosines
+    that neither folds nor collapses.
+  - `shearedOtf` shears along the lines of the lattice: rows for the cut along x, columns for the one along y, the
+    cosine looked up along that line alone. Off the axis a row is no line of constant cosine. The comparator finds
+    the sheared point in both coordinates, in its own patch's bilinear map. Since #988 `waveLatticeOtf` finds it in
+    both coordinates too, but in a triangle of the lattice (two a cell), where it reads amplitude and path linearly.
+  - `shearedOtf` takes the square root of the flux for the amplitude, without the area of cosine space a cell
+    covers, and a pair is centred on a cell with both ends interpolated, so the overlap of two cells is a product of
+    two ramps and not the area they share. Since #988 `waveLatticeOtf` divides the amplitude by the square root of a
+    cell's area in cosine space (a Jacobian of central differences of its neighbours' cosines), anchors each pair at
+    a lit cell weighted by that area, finds the other end at the whole shear, and averages the pair taken forward
+    and backward. The comparator's modulus is flux over area, each cell is one end of its pairs, and on an even
+    lattice the overlap is the staircase's exactly.
+  - `shearedOtf` traces half the lattice of a meridional field and mirrors it; `waveLatticeOtf` extends the cosines
+    of dark cells along each line of the lattice by a straight line through its nearest lit cells (they enter its
+    areas and triangles, never a flux or a path), where the comparator reads the cosines of no dark cell that is not
+    beside a lit one. Sums are plain.
 - **Handled.** Nothing is ported. The difference between LensVisualizer's sheared estimate and the comparator's
   estimator on the same rays is rung R6b, recorded and not gated: on one grid the two agree to about 5e-4 on the
   benchmark at f/8, and what the rung shows beyond that is the grid LensVisualizer stops at (below). R6a, the
@@ -1266,6 +1299,17 @@ synthetic systems instead: 280 made at random, 2240 probe lattices traced by `re
 an entry says whose error a difference is, the ray was traced in 60-digit decimal arithmetic by a tracer that
 shares no code with any engine.
 
+**Rechecked at optiland `a9e544a2` (2026-11-10; 117 commits after `4e893f53`, the checkout clean).** What changed for
+the worker is said under each entry it touches, the earlier text kept as history: an asphere's iteration seeds a ray
+that misses the base conic on the vertex plane (#935), which also lets a ray optiland ended spoil a batch on a curved
+base, so the worker now shields a batch of given rays from the rays optiland ended (the owner's decision of
+2026-11-10); `FNO()` is `|f2()| / EPD()` (#923); `seidels()` adds up `seidels_per_surface()` (#1107); the chief-ray
+wavefront refers paths to its sphere by a relative length (#990). The surface factory, the geometries but the
+asphere's iteration, the conic solver, the apertures, the ideal material, the MTF, the Zernike fit, the field curves,
+the distortion model, the ray fan and `get_working_FNO` are the code of `4e893f53`; the trace kernel moved into the
+medium's `propagation_model` with the same arithmetic; nothing the worker calls was deprecated. Evidence:
+[REFERENCE](REFERENCE.md#optiland-a9e544a2-adopted).
+
 ### Importing optiland writes into its own checkout
 
 - **Where.** `optiland/backend/numpy_backend/conic.py`, `optiland/scatter.py` and
@@ -1287,6 +1331,8 @@ shares no code with any engine.
   differ. It was found the hard way: a timing
   experiment of Stage 2.1 that ran the interpreter with the variables in one unsplit shell word changed those
   three modification times, and nothing else.
+  At `a9e544a2` a fourth cached kernel is defined, in `optiland/psf/huygens_fresnel_strategies.py`, when the
+  Huygens-Fresnel PSF is first built and not on import; the worker builds none, and it would cache where the others do.
 - **Class.** none of the ladder's: it is no difference between answers, but a rule of the house.
 
 ### optiland has no version that identifies its code
@@ -1299,6 +1345,10 @@ shares no code with any engine.
   version string is no part of it. Where the worker states the version, as the descriptor's `version` and as the
   detail `distVersion`, it leaves the day off (`stated_version`): `0.6.2.post117+g4e893f53`, which names the
   commit, and not `0.6.2.post117+g4e893f53.d20261007`. So no manifest and no report of a run holds a date.
+- **And it is the version of the install, not of the checkout.** An editable install writes its version when it is
+  installed: after the checkout moved to `a9e544a2` the environment still states `0.6.2.post117+g4e893f53`, which
+  names the commit it was installed at. The fingerprint is not misled (commit and sources are read from the checkout),
+  and `test_real.py` fails while the two disagree: the install is refreshed by the owner, never by the worker.
 - **Class.** none of the ladder's.
 
 ### What optiland loads may write to the standard output
@@ -1565,8 +1615,9 @@ shares no code with any engine.
 - **Where.** `FloatByStopAperture.compute_epd` divides the stop diameter by the height that a paraxial ray of
   height 1 has at the stop, and `Paraxial.XPD` is twice the height of the marginal ray in the plane of the exit
   pupil. Either height is negative where the stop is imaged upside down: a stop behind the focus of the lens in
-  front of it, or one that the lens behind it images through its own focus. `FNO()`, `f2() / EPD()`, has the same
-  sign.
+  front of it, or one that the lens behind it images through its own focus. `FNO()`, `f2() / EPD()` up to
+  `4e893f53` and `|f2()| / EPD()` since `a9e544a2` (#923), has the same sign; up to `4e893f53` a negative lens had a
+  negative one too, and since `a9e544a2` it has a positive one (`test_first_order.py` pins both signs).
 - **Effect.** The contract's radius of a pupil is a size, never below 0. A stop 150 mm behind a lens of 50.7 mm
   has `EPD()` = -2.097 mm for a stop diameter of 4 mm.
 - **Handled.** The worker halves the magnitude. optiland's f-number is recorded as optiland gives it, sign and
@@ -1674,7 +1725,8 @@ shares no code with any engine.
 
 ### optiland's optical path is a sum of steps, and a step is a length only along a unit vector
 
-- **Where.** `Surface._trace_real` in `optiland/surfaces/standard_surface.py` adds `t * self.material_pre.n(rays.w)`
+- **Where.** `Surface._trace_real` in `optiland/surfaces/standard_surface.py` (since `a9e544a2` through the medium's
+  `propagation_model.propagate_to_surface`, the same arithmetic) adds `t * self.material_pre.n(rays.w)`
   to `rays.opd` on the way to each surface, with `t` the distance its geometry gives: `-z / N` for a plane, a root
   of `a t^2 + b t + c = 0` with `a = L^2 + M^2 + (1 + k) N^2` for a conic, and where the iteration ends for an
   asphere. That is the parameter of the line `p + t d`, for whatever length `d` has. `RealRays.__init__`
@@ -1837,6 +1889,9 @@ shares no code with any engine.
   `ref` at zero failures; an optiland failure is allowed only on an asphere where both block that very ray at
   that same surface, with every such ray named in a diagnostic. The exception changes no pair verdict, mask
   check or gate; policy version 11 grants no floors.
+  At LV `420b47555` and optiland `a9e544a2`, the batch shielded, the station's renumbered rows (#954) 1 and 2 have 4
+  and 10 such rays at surface 20 in R2 (24 and 22 on the finer lattices of R6a), each blocked there by `lv` and `ref`;
+  optiland's iteration of `4e893f53`, restored in the process, fails the same counts.
   **Stage 5.3, LV `879c06102`, optiland `4e893f53`:** the current XF 8–16 wide and Nikon Z DX 16–50 wide
   each disagree only at full field, **28 and 57 rays at surface 2**, on curved-base aspheres. Native optiland's
   own converged iterates are genuine crossings beyond its aperture, with intensity zero. XF ray 1140 reaches
@@ -1865,9 +1920,27 @@ shares no code with any engine.
   those attempts are not used as confirmations. Attribution there rests on the native residual/root evidence,
   the common LV/ref mask and the analytic synthetic pins. Commands and all original row addresses are in
   [REFERENCE](REFERENCE.md#stage-53-catalog-fail-attribution) and [the evidence ledger](catalog-attribution.json).
+  **Changed at optiland `a9e544a2` (#935).** A ray that has no seed on the base conic is seeded on the vertex plane,
+  at `-z / N` (with 1e-14 for an `N` that is not above it), and kept where the iteration converges in front of it; it
+  is a miss otherwise, as before. So **No start** above is history: the paraboloid made shallow by a term is now met
+  where the contract meets it, to a rounding
+  (`test_an_asphere_whose_base_conic_a_line_misses_is_met_from_its_vertex_plane`), and the phone lenses' lost rays
+  are expected to be met (the catalog is a dated snapshot and was not traced again). The iteration also stops once
+  the only rays it has not settled are NaN, which changes no answer (a settled ray was already held). **Another
+  crossing** and **No convergence** are unchanged: a ray with a seed on the base conic is iterated as before. The
+  seed has a cost on a curved base, below
+  ([the tolerance of a batch](#the-tolerance-of-an-aspheres-iteration-is-that-of-the-batch-it-is-traced-in)).
   **For the owner.** As for LensVisualizer's crossing loss, the class names the origin, not an acceptable answer:
   a ray carried on from an iterate 0.4 to 8 mm off optiland's own surface, with `converged=false`, is optiland's
   behaviour to report upstream if the owner chooses; nothing is filed.
+  **Two focus stations, listed (LV `f5b456fec`, optiland `a9e544a2`, the batch shielded).** The close stations
+  `certified-fujifilm-fujinon-xf-8-16mm-f28-r-lm-wr-zoom0-focus1` (full field, 64.2°: optiland stops 26 rays on surface
+  2, an odd asphere, and fails 14 more there, where `lv` and `reference-tracer` stop all 40 on surface 3) and
+  `certified-fujifilm-xf-23mm-f2-r-wr-zoom0-focus1` (33°: optiland carries 2 rays past surface 7, an asphere with a
+  term of power 3, and fails 20 more there, where both stop all 22 on 7) fail R2's mask in optiland's two pairs, `lv`
+  and `reference-tracer` agreeing on every ray. Another crossing, as at the XF 8-16 mm's wide end above; the owner
+  listed the four pairs in `docs/known-failures.focus-stations.json` (2026-11-16), each with its reproducer under
+  `suites/focus-stations-repro`.
 - **Class.** method.
 
 ### On an asphere optiland is as exact as a plain sum of its terms
@@ -2010,6 +2083,39 @@ shares no code with any engine.
   within 1.5e-12 mm of `ref` in every hit. A request of more than 16 384 rays is traced in batches of that size, in
   the order given. One test puts the far ray into the batch and finds the hit 8e-9 mm off; another puts a
   reflected ray in front of a flat-base asphere and finds its neighbours on the base plane, to the bit.
+- **Since optiland `a9e544a2` a curved base is struck too.** A conic has no distance for a ray without a direction;
+  up to `4e893f53` that no-number raised no tolerance. #935 now seeds such a ray on the vertex plane at `-z / 1e-14`,
+  the same distance as on a flat base, and the batch's tolerance rises to tenths of a millimetre and more: every ray
+  of the batch is left where its line meets the base conic, off the asphere by its departure. The rays that do it are
+  ones every engine had already stopped: optiland carries a ray an aperture stopped on at an intensity of 0, it is
+  totally reflected at the surface just in front of an asphere, and spoils the asphere for the rays that are alive.
+  Measured on LensVisualizer's rays (`420b47555`; ray-trace, wave-mtf, spot-rays, field-curve-rays and
+  vignetting-rays of the Nikkor Z 50 mm f/1.2 and the Touit 50 mm on both spectra, and the certified stations of
+  the Olympus 17 mm, the Sigma 28 mm and the Tamron 70-180 mm): 45 of 348 requests had optiland's hits up to 1.66 mm
+  from `ref`'s (2 to 214 such rays a request, the tolerance 0.39 to 3.8 mm, at case surfaces 24, 5, 20, 2 and 32),
+  where `lv` and `ref` are within 3e-13 mm of the 60-digit trace. With the iteration of `4e893f53` restored in the
+  process, or with those rays left out of the batch, all 348 are within 1.15e-12 mm of `ref`, no mask mismatch.
+  `test_one_ray_without_a_direction_leaves_every_ray_of_its_batch_on_the_base_of_an_asphere` pins both bases.
+- **Handled since the owner's decision of 2026-11-10: the worker shields a batch of given rays from the rays optiland
+  ended** (`trace.trace_batch`, for `rays.trace` and for the trace of `axial.native`'s aimed rays). A batch in which
+  optiland ends no ray is one pass and the same bits as before. Otherwise the rays that ended at the least end surface
+  of a pass are answered from it, and the rest are traced again without them, until a pass ends no ray; every ray is
+  answered from a batch that held no ray optiland had ended before that ray's own end, and an ended ray keeps the end
+  and the reason optiland's rows give it. One ray spoils the very surface it ends at: one that comes to it sideways,
+  the z component of its heading not above optiland's own 1e-14, which optiland seeds 1e14 times its z away where it
+  has no seed on the base conic; of the rays ending at the least surface such rays are answered first, in a pass of
+  their own, and the others traced again without them (`end_keys`). A batch takes at most 2 S + 2 passes, and more is
+  an error, never an answer. On the 348 requests: the 100 with no ended ray are the bytes of one pass; every hit is
+  within 1.15e-12 mm of `ref`'s, every end surface `ref`'s, no mask mismatch; 2 to 16 passes, 4.7 times the time of
+  one. Tests: the batch above through the engine, held to the 60-digit trace, and red with the shield removed; a ray
+  knocked onto a later rim by a reflected one, answered from a clean pass, and red where every ended ray is answered
+  from the first pass; a sideways ray answered before the ray it knocked off the rim of the same surface, red without
+  that order; one pass and the same bits where no ray ends; a pass for each end and the limit; and `axial.native`'s
+  trace of the batch above, red with one pass. **What the shield does not reach**: a ray optiland keeps alive raises
+  the tolerance of its batch as before (the far ray above), and **optiland's own analyses are not shielded**: its
+  aimer's trial traces and the grids of its MTF, spot, ray fan, field curves, wavefront and working f-number are
+  batches of optiland's, and a ray optiland ended there spoils them in the same way; the recorded checks of those
+  analyses may show it, and nothing is corrected. The upstream report stays the owner's (held).
 - **Class.** numerical.
 
 ### optiland's FFT MTF is of one wavelength and gives a modulus: no polychromatic MTF is formed of it
@@ -2287,6 +2393,10 @@ shares no code with any engine.
 - **Effect.** OPD must be negated to use the comparator's path convention. The normalized stop grid is not a grid
   of these sphere coordinates or image-side optical cosines. A non-air image medium affects the sphere path as
   well as the optical cosines. An exit pupil's axial zero can be rounded by its paraxial computation.
+  Since `a9e544a2` (#990) the strategy refers each path to the sphere by a relative length (the directions made unit,
+  the common radius taken out before the subtraction), so the OPD of a distant exit pupil keeps its digits; the sign,
+  units and points are as before, and `WavefrontData` also states the sphere's centre (`reference_center`), which the
+  worker does not read (the chief landing is).
 - **Handled.** `wavefront.native` v1 preserves the raw sign, units, sphere points, center, radius and exit pupil.
   Its consumer `wavefrontOtf` states the reference-sphere model it uses: radial directions, n times transverse
   components, W=-lambda OPD, intensity as midpoint-cell flux. It claims no aberrated exit direction. The pure
@@ -2588,8 +2698,8 @@ Measured at LensVisualizer `a94c0ecd7` (the tree of `879c06102`) and optiland `4
 - **Where.** Both tabs call `traceOffAxisBundleFromSamples(..., undefined)`, with no chromatic channel, so a ray
   sees each surface's authored `nd`. The coma tab lands on the image plane of `computeOffAxisFieldGeometry`, which
   is the design plane.
-- **Effect.** A photopic case's line 0 is 555 nm, which is not the tabs' line. A best-focus case's plane is not
-  the coma tab's plane.
+- **Effect.** A photopic case's line 0 is 560 nm (555 nm before LensVisualizer #988), which is not the tabs' line.
+  A best-focus case's plane is not the coma tab's plane.
 - **Handled.** `lv` answers `spot.native` only for a case whose line 0 has the authored indices; otherwise it
   answers `lines.not-authored-reference`. It answers a coma pattern only on the design plane; otherwise it
   answers `focus.off-design`. On the benchmark these are 264 unsupported pairs of R7b and no error. R7a still
@@ -3473,7 +3583,8 @@ pinned by a test of the real optiland (`test_seidel.py`, `test_zernike.py`).
 ### optiland's Seidel sums are of the opposite sign to OpticStudio's
 
 - **Where.** `optic.aberrations.seidels()` returns `-sum(T) * 2 n' u'` of its per-surface terms of transverse
-  aberration (`_sum_seidels`), which for a positive surface converging a collimated beam is negative; OpticStudio (and
+  aberration (`_sum_seidels`; since `a9e544a2`, #1107, the sum of `seidels_per_surface()`, each surface's `-T 2 n' u'`,
+  which the worker now reads for a surface's sum and holds to `third_order()`'s term times `2 n' u'` to the bit), which for a positive surface converging a collimated beam is negative; OpticStudio (and
   Welford's sums) list it positive, undercorrected. optiland's own cross-tool test of the Hubble telescope against
   OpticStudio 2023 R1.02 compares the five as magnitudes for that reason ("OpticStudio's sign convention is the opposite
   of Optiland's on all five terms").

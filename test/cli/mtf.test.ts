@@ -89,7 +89,8 @@ function recordOf(runsDir: string, name: string): { record: MtfRun; text: string
 
 const USAGE = [
   "Usage: lvrtc mtf <lensKey> [--engines <id,...>] [--profile <name>] [--zoom <t>]",
-  "                 [--aperture wide-open|f/8] [--root <dir>] [--jobs <n>] [--memory-budget <GiB>] [--json]",
+  "                 [--aperture wide-open|f/8] [--root <dir>] [--jobs <n>] [--memory-budget <GiB>]",
+  "                 [--details] [--json]",
   "",
 ].join("\n");
 
@@ -100,7 +101,7 @@ test("mtf is a registered command, and --help prints the usage and loads nothing
   const help = await mtf(["--help"], rootDir);
   assert.equal(help.code, EXIT_OK);
   assert.ok(help.out.startsWith(USAGE));
-  assert.match(help.out, /--profile <name> {2}the request to make \(default: lv-tab-default\)/);
+  assert.match(help.out, /--profile <name> +the request to make \(default: lv-tab-default\)/);
   assert.equal(help.err, "");
 });
 
@@ -176,12 +177,10 @@ test("the tab's request for a lens: a table per engine, and the request, the cas
     run.out,
     [
       "acme-zoom-24-48  ACME Zoom 24-48mm f/4",
-      "profile  lv-tab-default: the tab as it opens, wide open at f/4",
-      "state    zoom 1 (tele), infinity focus",
-      `case     ${record.caseId}`,
-      `request  ${record.request.id}`,
+      "profile     lv-tab-default: the tab as it opens, wide open at f/4",
+      "lens state  zoom 1 (tele), infinity focus",
       "",
-      "lv  ok  computed",
+      "lv  answered  asked now",
       mtfTableText({ spec, data, displayedFrequenciesPerMm: [20, 40], opticalCase }),
       `result: ${file}`,
       "",
@@ -199,8 +198,20 @@ test("the tab's request for a lens: a table per engine, and the request, the cas
   // Asked again, the answer comes from the store, and the record is the same bytes.
   const again = await mtf(["acme-zoom-24-48", "--zoom=1"], rootDir);
   assert.equal(again.code, EXIT_OK, again.err);
-  assert.equal(again.out, run.out.replace("lv  ok  computed", "lv  ok  cached"));
+  assert.equal(again.out, run.out.replace("lv  answered  asked now", "lv  answered  from the cache"));
   assert.equal(readFileSync(file, "utf8"), text);
+  // --details shows the identifiers: the lens state's, the request's and each engine's code.
+  const detailed = await mtf(["acme-zoom-24-48", "--zoom=1", "--details"], rootDir);
+  assert.equal(detailed.code, EXIT_OK, detailed.err);
+  assert.match(
+    detailed.out,
+    new RegExp(
+      `^Identifiers:\\n {2}lens state {2}${record.caseId}\\n {2}request {5}${record.request.id}\\n {2}lv {2}`,
+      "m",
+    ),
+  );
+  assert.match(detailed.out, /^ {2}lv {2}version \S+ {2}engine code [0-9a-f]{64}/m);
+  assert.ok(!run.out.includes(record.caseId) && !run.out.includes(record.request.id), "no hash without --details");
   // Nothing of this machine or of the moment is in what is written.
   for (const absent of [rootDir, "computed", "cached"]) assert.ok(!text.includes(absent), absent);
 });
@@ -210,74 +221,78 @@ test("--aperture f/8 is the tab's own comparison: another case, another run, the
   const wideOpen = await mtf(["acme-zoom-24-48"], rootDir);
   const comparison = await mtf(["acme-zoom-24-48", "--aperture", "f/8"], rootDir);
   assert.deepEqual([wideOpen.code, comparison.code], [EXIT_OK, EXIT_OK], comparison.err);
-  assert.match(comparison.out, /^profile {2}lv-tab-default: the tab's comparison at f\/8$/m);
-  const [open, stopped] = [recordOf(runsDir, "acme-zoom-24-48"), recordOf(runsDir, "acme-zoom-24-48-f8")];
+  // The option names LensVisualizer's default comparison; the comparison is at the f-number the preferences resolve
+  // to, which for the fake is f/11, and the command says so and names its run by it.
+  assert.match(comparison.out, /^profile {5}lv-tab-default: the tab's comparison at f\/11$/m);
+  const [open, stopped] = [recordOf(runsDir, "acme-zoom-24-48"), recordOf(runsDir, "acme-zoom-24-48-f11")];
   assert.deepEqual(stopped.record.request.spec, open.record.request.spec);
   assert.notEqual(stopped.record.caseId, open.record.caseId);
   const params = (stopped.record.answers[0].result?.data as MtfNativeData).method.params;
-  // The fake zoom is f/4 with an iris of 3 mm at its wide end: the comparison traces 3 x 4 / 8.
-  assert.deepEqual([params.view, params.fNumber, params.stopSemiDiameterMm], ["f8-comparison", 8, 1.5]);
-  // --aperture wide-open is the default.
-  assert.equal(
-    (await mtf(["acme-zoom-24-48", "--aperture", "wide-open"], rootDir)).out.split("\n")[3],
-    wideOpen.out.split("\n")[3],
-  );
+  // The fake zoom is f/4 with an iris of 3 mm at its wide end: the comparison traces 3 x 4 / 11.
+  assert.deepEqual([params.view, params.fNumber, params.stopSemiDiameterMm], ["f8-comparison", 11, (3 * 4) / 11]);
+  // --aperture wide-open is the default: the same lens state and request, and the same text but for the answer now
+  // coming from the result cache.
+  const named = await mtf(["acme-zoom-24-48", "--aperture", "wide-open"], rootDir);
+  assert.equal(named.out, wideOpen.out.replaceAll("lv  answered  asked now", "lv  answered  from the cache"));
+  const again = recordOf(runsDir, "acme-zoom-24-48");
+  assert.deepEqual([again.record.caseId, again.record.request.id], [open.record.caseId, open.record.request.id]);
 });
 
 test("a comparison the tab does not offer is said to be none, also where its case is the wide-open one", async (t) => {
   const { rootDir, lv, runsDir } = freshRoot(t);
+  // The fake's preferences resolve the comparison to f/11 (LensVisualizer's to f/8).
   const said = (reason: string) =>
-    `profile  lv-tab-default: the tab's comparison at f/8, which the tab does not offer here: ${reason}`;
+    `profile     lv-tab-default: the tab's comparison at f/11, which the tab does not offer here: ${reason}`;
 
-  // A lens that is f/8 wide open has the stop rule's f/8 stop for its wide-open stop: its comparison is the very case of
-  // the lens wide open, which the engine answers as that. The command does not call it a comparison the tab makes.
-  variantOf(lv, "at-eight", { [ZOOM_FILE]: (text) => text.replace('"fopen": 4,', '"fopen": 8,') });
-  await onTree(rootDir, "at-eight", async () => {
+  // A lens that is f/11 wide open has the stop rule's f/11 stop for its wide-open stop: its comparison is the very case
+  // of the lens wide open, which the engine answers as that. The command does not call it a comparison the tab makes.
+  variantOf(lv, "at-eleven", { [ZOOM_FILE]: (text) => text.replace('"fopen": 4,', '"fopen": 11,') });
+  await onTree(rootDir, "at-eleven", async () => {
     const wideOpen = await mtf(["acme-zoom-24-48"], rootDir);
     const comparison = await mtf(["acme-zoom-24-48", "--aperture", "f/8"], rootDir);
     assert.deepEqual([wideOpen.code, comparison.code], [EXIT_OK, EXIT_OK], comparison.err);
     const reason =
-      "the lens is at f/8 wide open, and LensVisualizer's MTF tab compares with f/8 only a lens that is faster " +
-      "than f/7.95";
+      "the lens is at f/11 wide open, and LensVisualizer's MTF tab compares with f/11 only a lens that is faster " +
+      "than f/10.95";
     assert.equal(comparison.out.split("\n")[1], said(reason));
-    const [open, stopped] = [recordOf(runsDir, "acme-zoom-24-48"), recordOf(runsDir, "acme-zoom-24-48-f8")];
+    const [open, stopped] = [recordOf(runsDir, "acme-zoom-24-48"), recordOf(runsDir, "acme-zoom-24-48-f11")];
     assert.equal(stopped.record.caseId, open.record.caseId);
-    assert.match(comparison.out, /^lv {2}ok {2}cached$/m);
+    assert.match(comparison.out, /^lv {2}answered {2}from the cache$/m);
     const params = (stopped.record.answers[0].result?.data as MtfNativeData).method.params;
-    assert.deepEqual([params.view, params.fNumber], ["wide-open", 8]);
+    assert.deepEqual([params.view, params.fNumber], ["wide-open", 11]);
   });
 
-  // A slower lens has no case of its own for the comparison either since LV #933: the stop rule's f/8 stop is its
-  // wide-open stop. A lens that does not stop down to f/8 has one, and the engine says the same as the command.
+  // A slower lens has no case of its own for the comparison either since LV #933: the stop rule's f/11 stop is its
+  // wide-open stop. A lens that does not stop down to f/11 has one, and the engine says the same as the command.
   variantOf(lv, "short", { [ZOOM_FILE]: (text) => text.replace('"fopen": 4,', '"fopen": 4,\n  "maxFstop": 5.6,') });
   await onTree(rootDir, "short", async () => {
     const comparison = await mtf(["acme-zoom-24-48", "--aperture", "f/8"], rootDir);
     assert.equal(comparison.code, EXIT_OK, comparison.err);
-    const reason = "the lens stops down to f/5.6 at most, so LensVisualizer's MTF tab has no f/8 to compare it with";
+    const reason = "the lens stops down to f/5.6 at most, so LensVisualizer's MTF tab has no f/11 to compare it with";
     assert.equal(comparison.out.split("\n")[1], said(reason));
-    assert.ok(comparison.out.includes(`lv  unsupported  computed\n  feature aperture.f8-comparison: ${reason}\n`));
+    assert.ok(comparison.out.includes(`lv  not computed  asked now\n  feature aperture.f8-comparison: ${reason}\n`));
   });
 });
 
 test("every named engine is asked the one request; one that does not offer the quantity is not asked", async (t) => {
   const { rootDir, runsDir } = freshRoot(t);
-  const run = await mtf(["acme-singlet-50", "--engines", "ref,lv"], rootDir);
+  const run = await mtf(["acme-singlet-50", "--engines", "reference-tracer,lv"], rootDir);
   assert.equal(run.code, EXIT_OK, run.err);
-  assert.match(run.out, /^lv {2}ok {2}computed$/m);
+  assert.match(run.out, /^lv {2}answered {2}asked now$/m);
   assert.match(
     run.out,
-    /^ref {2}unsupported {2}negotiated\n {2}quantity mtf\.native: the engine does not offer mtf\.native$/m,
+    /^reference-tracer {2}not computed {2}not offered\n {2}quantity mtf\.native: the engine does not offer mtf\.native$/m,
   );
   const { record } = recordOf(runsDir, "acme-singlet-50");
   assert.deepEqual(
     record.engines.map((engine) => engine.id),
-    ["lv", "ref"],
+    ["lv", "reference-tracer"],
   );
   assert.deepEqual(
     record.answers.map(({ engine, status, storeKey }) => [engine, status, storeKey === null]),
     [
       ["lv", "ok", false],
-      ["ref", "unsupported", true],
+      ["reference-tracer", "unsupported", true],
     ],
   );
 });
@@ -314,7 +329,7 @@ test("a lens LensVisualizer shows no MTF for is answered as its gate does; a len
     assert.equal(refused.code, EXIT_OK, refused.err);
     assert.match(
       refused.out,
-      /^lv {2}unsupported {2}computed\n {2}feature unverified-scale: Prescription scale needs verification before reporting lp\/mm\.$/m,
+      /^lv {2}not computed {2}asked now\n {2}feature unverified-scale: Prescription scale needs verification before reporting lp\/mm\.$/m,
     );
     const { record } = recordOf(runsDir, "acme-singlet-50");
     assert.deepEqual(
@@ -322,7 +337,7 @@ test("a lens LensVisualizer shows no MTF for is answered as its gate does; a len
       [["unsupported", "unverified-scale"]],
     );
     // An "unsupported" is an answer: it is stored, and found again.
-    assert.match((await mtf(["acme-singlet-50"], rootDir)).out, /^lv {2}unsupported {2}cached$/m);
+    assert.match((await mtf(["acme-singlet-50"], rootDir)).out, /^lv {2}not computed {2}from the cache$/m);
   });
 
   variantOf(lv, "folded", {
@@ -336,13 +351,13 @@ test("a lens LensVisualizer shows no MTF for is answered as its gate does; a len
     // Both ends of the zoom were asked about, and neither has a case: each says so, by its end.
     assert.match(
       folded.err,
-      /^lvrtc mtf: acme-zoom-24-48 \(wide end\): folded-auto-path: .*\n.* \(tele end\): folded-auto-path: /,
+      /^lvrtc mtf: acme-zoom-24-48 \(wide end\): folded-auto-path: .*\n {4}The folded lens .*\n.* \(tele end\): folded-auto-path: /,
     );
     assert.ok(!existsSync(join(runsDir, "mtf", "lv-tab-default", "acme-zoom-24-48")));
     // One position is one state, named without an end.
     const one = await mtf(["acme-zoom-24-48", "--zoom", "0.5"], rootDir);
     assert.equal(one.code, EXIT_FAILURE);
-    assert.match(one.err, /^lvrtc mtf: acme-zoom-24-48: folded-auto-path: [^\n]*\n$/);
+    assert.match(one.err, /^lvrtc mtf: acme-zoom-24-48: folded-auto-path: [^\n]*\n {4}The folded lens [^\n]*\n$/);
   });
 });
 
@@ -371,11 +386,11 @@ test("a zoom without --zoom is asked about at both ends: two tables, wide then t
   assert.equal(blocks.length, 2);
   assert.deepEqual(
     blocks.map((block) => block.split("\n")[2]),
-    ["state    zoom 0 (wide), infinity focus", "state    zoom 1 (tele), infinity focus"],
+    ["lens state  zoom 0 (wide), infinity focus", "lens state  zoom 1 (tele), infinity focus"],
   );
   assert.ok(blocks[0].endsWith(`result: ${join(wide.directory, MTF_RUN_FILE)}\n`));
   assert.ok(blocks[1].endsWith(`result: ${join(tele.directory, MTF_RUN_FILE)}\n`));
-  for (const block of blocks) assert.match(block, /^lv {2}ok {2}computed$/m);
+  for (const block of blocks) assert.match(block, /^lv {2}answered {2}asked now$/m);
   // The fake zoom's iris is 3 mm at the wide end and 6 mm at the tele end, and its curves follow the iris.
   assert.notEqual(blocks[0].split("\n").slice(6).join("\n"), blocks[1].split("\n").slice(6).join("\n"));
 });
@@ -390,7 +405,7 @@ test("--zoom asks about that position only, and the tele table of both ends is t
   assert.deepEqual([both.code, tele.code, wide.code], [EXIT_OK, EXIT_OK, EXIT_OK], both.err + tele.err + wide.err);
   assert.deepEqual([tele.err, wide.err], ["", ""]);
   // One position, one table and one run directory each.
-  for (const run of [tele, wide]) assert.equal(run.out.match(/^state {4}/gm)?.length, 1);
+  for (const run of [tele, wide]) assert.equal(run.out.match(/^lens state {2}/gm)?.length, 1);
   assert.deepEqual(readdirSync(join(second.runsDir, "mtf", "lv-tab-default")).sort(), [
     "acme-zoom-24-48",
     "acme-zoom-24-48-zoom1",
@@ -403,7 +418,7 @@ test("--zoom asks about that position only, and the tele table of both ends is t
   }
   // A position between the ends is neither: it is named by its number alone.
   const middle = await mtf(["acme-zoom-24-48", "--zoom", "0.5"], second.rootDir);
-  assert.equal(middle.out.split("\n")[2], "state    zoom 0.5, infinity focus");
+  assert.equal(middle.out.split("\n")[2], "lens state  zoom 0.5, infinity focus");
   assert.ok(existsSync(join(second.runsDir, "mtf", "lv-tab-default", "acme-zoom-24-48-zoom0.5")));
 });
 
@@ -430,8 +445,8 @@ test("a prime has one state: no end is named, and a zoom position given to it is
   const { rootDir, runsDir } = freshRoot(t);
   const plain = await mtf(["acme-singlet-50"], rootDir);
   assert.deepEqual([plain.code, plain.err], [EXIT_OK, ""]);
-  assert.equal(plain.out.split("\n")[2], "state    zoom 0, infinity focus");
-  assert.equal(plain.out.match(/^state {4}/gm)?.length, 1);
+  assert.equal(plain.out.split("\n")[2], "lens state  zoom 0, infinity focus");
+  assert.equal(plain.out.match(/^lens state {2}/gm)?.length, 1);
   const positioned = await mtf(["acme-singlet-50", "--zoom", "0.5"], rootDir);
   assert.equal(positioned.code, EXIT_OK);
   assert.equal(
@@ -439,7 +454,7 @@ test("a prime has one state: no end is named, and a zoom position given to it is
     "lvrtc mtf: acme-singlet-50 is a prime: it has no zoom position, and --zoom is ignored\n",
   );
   // The same run, found in the store: no second directory for a position the lens does not have.
-  assert.equal(positioned.out, plain.out.replace("lv  ok  computed", "lv  ok  cached"));
+  assert.equal(positioned.out, plain.out.replace("lv  answered  asked now", "lv  answered  from the cache"));
   assert.deepEqual(readdirSync(join(runsDir, "mtf", "lv-tab-default")), ["acme-singlet-50"]);
 });
 
@@ -452,9 +467,12 @@ test("an end the zoom has no case at fails the command, and the other end is ask
   await onTree(rootDir, "folded-tele", async () => {
     const run = await mtf(["acme-zoom-24-48"], rootDir);
     assert.equal(run.code, EXIT_FAILURE);
-    assert.match(run.err, /^lvrtc mtf: acme-zoom-24-48 \(tele end\): folded-auto-path: [^\n]*\n$/);
-    assert.equal(run.out.split("\n")[2], "state    zoom 0 (wide), infinity focus");
-    assert.equal(run.out.match(/^state {4}/gm)?.length, 1);
+    assert.match(
+      run.err,
+      /^lvrtc mtf: acme-zoom-24-48 \(tele end\): folded-auto-path: [^\n]*\n {4}The folded lens [^\n]*\n$/,
+    );
+    assert.equal(run.out.split("\n")[2], "lens state  zoom 0 (wide), infinity focus");
+    assert.equal(run.out.match(/^lens state {2}/gm)?.length, 1);
     assert.deepEqual(readdirSync(join(runsDir, "mtf", "lv-tab-default")), ["acme-zoom-24-48"]);
   });
 });
@@ -468,7 +486,10 @@ test("an engine that fails is an error of the run: its code is recorded, and its
   await onTree(rootDir, "broken", async () => {
     const run = await mtf(["acme-singlet-50"], rootDir);
     assert.equal(run.code, EXIT_FAILURE);
-    assert.match(run.out, /^lv {2}error {2}computed\n {2}engine-failure: LensVisualizer left the field 0 pending$/m);
+    assert.match(
+      run.out,
+      /^lv {2}error {2}asked now\n {2}engine-failure: LensVisualizer left the field 0 pending\n {4}The engine raised an error/m,
+    );
     const { record, text } = recordOf(runsDir, "acme-singlet-50");
     assert.deepEqual(record.answers, [
       { engine: "lv", status: "error", storeKey: null, error: { code: "engine-failure" } },
@@ -496,7 +517,7 @@ test("a command line that is not the synopsis is a usage error, and nothing is w
   );
   await usage(
     ["acme-singlet-50", "--engines", "lv,zemax"],
-    'unknown engine "zemax": the configuration defines no engine; built in: flux, lv, optiland, optiland-wave, ref, ref-seidel, replay, wave',
+    'unknown engine "zemax": the configuration defines no engine; built in: flux-of-lv-rays, lv, optiland, otf-of-optiland-wavefront, reference-seidel, reference-tracer, replay-of-lv-mtf, wave-mtf-of-lv-rays',
   );
   await usage(["acme-singlet-50", "--root", "no-such-root"], "--root no-such-root: not a directory");
   // The tab reaches any other aperture only through its slider: the profile has no request for one.
@@ -550,7 +571,7 @@ function benchmarkOf(
 
 test("--profile benchmark: the lens in its eight conditions, run, compared and reported as a suite of its own", async (t) => {
   const { rootDir, runsDir } = sampledRoot(t);
-  const run = await mtf(["acme-singlet-50", "--profile", "benchmark", "--engines", "lv,ref"], rootDir);
+  const run = await mtf(["acme-singlet-50", "--profile", "benchmark", "--engines", "lv,reference-tracer"], rootDir);
   assert.equal(run.code, EXIT_OK, run.err);
   const { manifest, comparisons, markdown } = benchmarkOf(runsDir, "acme-singlet-50");
 
@@ -565,40 +586,57 @@ test("--profile benchmark: the lens in its eight conditions, run, compared and r
   assert.equal(new Set(manifest.runs.map((each) => each.caseId)).size, 8, "each condition is a case of its own");
   assert.ok(manifest.runs.every((each) => each.caseId !== null));
   // The rungs that need optiland are run only where it is named.
-  assert.deepEqual([...new Set(manifest.jobs.map((job) => job.rung))], ["r4", "r4f", "r6a", "r6b"]);
-  assert.ok(manifest.engines.every((engine) => !["optiland", "optiland-wave"].includes(engine.id)));
-  assert.doesNotMatch(markdown, /^## r6c$/m);
+  assert.deepEqual(
+    [...new Set(manifest.jobs.map((job) => job.rung))],
+    ["geometric-mtf", "lv-mtf-replay", "wave-mtf", "mtf-vs-wave-estimate"],
+  );
+  assert.ok(manifest.engines.every((engine) => !["optiland", "otf-of-optiland-wavefront"].includes(engine.id)));
+  assert.doesNotMatch(markdown, /^## .*`mtf-vs-optiland-wavefront`$/m);
   assert.ok(manifest.jobs.every((job) => job.status === "ok"));
   assert.deepEqual([...new Set(comparisons.comparisons.map((set) => set.run))], names);
 
   // What is printed is the MTF report of the run, which is also written beside it; progress is on the error stream.
   assert.equal(run.out, markdown);
   assert.match(markdown, /^# MTF of acme-singlet-50$/m);
-  assert.match(markdown, /^\| r4 \| rays\.trace \| 8 \| 24 \| lv – ref \| 8 PASS \| 24 PASS \|$/m);
-  assert.match(markdown, /^\| r4f \| mtf\.native \| 8 \| 8 \| lv – replay \| 8 PASS \| 8 PASS \|$/m);
-  assert.match(markdown, /^\| r6a \| rays\.trace \| 8 \| 24 \| lv – ref \| 8 PASS \| 24 PASS \|$/m);
-  assert.match(markdown, /^\| r6b \| mtf\.native \| 8 \| 8 \| lv – wave \| /m);
+  assert.match(
+    markdown,
+    /^\| Geometric MTF of the same rays — `geometric-mtf` \| `rays\.trace` \| 8 \| 24 \| lv – reference-tracer \| 8 Pass \| 24 Pass \|$/m,
+  );
+  assert.match(
+    markdown,
+    /^\| LensVisualizer's MTF sampling, replayed — `lv-mtf-replay` \| `mtf\.native` \| 8 \| 8 \| lv – replay-of-lv-mtf \| 8 Pass \| 8 Pass \|$/m,
+  );
+  assert.match(
+    markdown,
+    /^\| Wave MTF of the same rays — `wave-mtf` \| `rays\.trace` \| 8 \| 24 \| lv – reference-tracer \| 8 Pass \| 24 Pass \|$/m,
+  );
+  assert.match(
+    markdown,
+    /^\| MTF beside the wave estimate of LensVisualizer's rays — `mtf-vs-wave-estimate` \| `mtf\.native` \| 8 \| 8 \| lv – wave-mtf-of-lv-rays \| /m,
+  );
   assert.match(markdown, /^## Not covered$/m);
   assert.deepEqual(wordingProblems(markdown), []);
   assert.match(
     run.err,
-    /^lvrtc mtf: mtf-acme-singlet-50: 8 runs on lv, ref, rungs r4, r4f, r6a, r6b \(r5 and r5g and r6c need optiland\)/,
+    /^lvrtc mtf: mtf-acme-singlet-50: 8 runs on lv, reference-tracer, with the checks geometric-mtf, lv-mtf-replay, wave-mtf, mtf-vs-wave-estimate \(mtf-vs-optiland-fft and geometric-mtf-vs-optiland and mtf-vs-optiland-wavefront need optiland\); what the result cache holds is not computed again$/m,
   );
-  assert.match(run.err, /^lvrtc mtf: acme-singlet-50-f8-best-photopic r6b$/m);
-  assert.ok(run.err.endsWith(`lvrtc mtf: run: ${join(runsDir, "mtf-acme-singlet-50")}\n`));
+  assert.match(run.err, /^lvrtc mtf: {3}Checks: geometric-mtf Geometric MTF of the same rays; lv-mtf-replay /m);
+  assert.match(run.err, /^lvrtc mtf: {3}Engines: lv LensVisualizer; reference-tracer Reference tracer$/m);
+  assert.match(run.err, /^lvrtc mtf: acme-singlet-50-f8-best-photopic mtf-vs-wave-estimate$/m);
+  assert.ok(run.err.endsWith(`lvrtc mtf: run directory: ${join(runsDir, "mtf-acme-singlet-50")}\n`));
   // Nothing is written outside the run directory and the store.
   assert.deepEqual(readdirSync(runsDir).sort(), ["mtf-acme-singlet-50", "store"]);
   assert.equal(existsSync(join(rootDir, "baselines")), false);
 
   // Asked again, every answer is the store's, and the report is the same bytes.
-  const again = await mtf(["acme-singlet-50", "--profile", "benchmark", "--engines", "lv,ref"], rootDir);
+  const again = await mtf(["acme-singlet-50", "--profile", "benchmark", "--engines", "lv,reference-tracer"], rootDir);
   assert.equal(again.code, EXIT_OK, again.err);
   assert.equal(again.out, run.out);
-  assert.match(again.err, /^lvrtc mtf: acme-singlet-50-ref r4f \(cached\)$/m);
+  assert.match(again.err, /^lvrtc mtf: acme-singlet-50-ref lv-mtf-replay \(from the cache\)$/m);
 
   // One aperture is four runs; --json prints the report as one object.
   const f8 = await mtf(
-    ["acme-singlet-50", "--profile", "benchmark", "--engines", "lv,ref", "--aperture", "f/8", "--json"],
+    ["acme-singlet-50", "--profile", "benchmark", "--engines", "lv,reference-tracer", "--aperture", "f/8", "--json"],
     rootDir,
   );
   assert.equal(f8.code, EXIT_OK, f8.err);
@@ -610,7 +648,7 @@ test("--profile benchmark: the lens in its eight conditions, run, compared and r
   );
   assert.deepEqual(
     report.rungs.map((each) => each.rung),
-    ["r4", "r4f", "r6a", "r6b"],
+    ["geometric-mtf", "lv-mtf-replay", "wave-mtf", "mtf-vs-wave-estimate"],
   );
 
   const usage = await mtf(["acme-singlet-50", "--profile", "benchmark", "--aperture", "f/5.6"], rootDir);
@@ -623,25 +661,25 @@ test("--profile benchmark: naming optiland adds r5, r5g and r6c, with r6c on ref
   // Stand-ins offer no optical quantities: exercise selection without Python or a real optiland checkout.
   const module = fileURLToPath(new URL("../../src/engines/fake/engine.ts", import.meta.url));
   const engines = Object.fromEntries(
-    ["optiland", "optiland-wave"].map((id) => [id, { transport: "in-process", module, options: { id } }]),
+    ["optiland", "otf-of-optiland-wavefront"].map((id) => [id, { transport: "in-process", module, options: { id } }]),
   );
   writeFileSync(join(rootDir, CONFIG_FILE), JSON.stringify({ lvPath: "lv", engines }));
   const run = await mtf(
-    ["acme-singlet-50", "--profile", "benchmark", "--engines", "lv,ref,optiland", "--aperture", "f/8"],
+    ["acme-singlet-50", "--profile", "benchmark", "--engines", "lv,reference-tracer,optiland", "--aperture", "f/8"],
     rootDir,
   );
   assert.equal(run.code, EXIT_OK, run.err);
   const { manifest, markdown } = benchmarkOf(runsDir, "acme-singlet-50");
   assert.deepEqual([...new Set(manifest.jobs.map((job) => job.rung))].sort(), [
-    "r4",
-    "r4f",
-    "r5",
-    "r5g",
-    "r6a",
-    "r6b",
-    "r6c",
+    "geometric-mtf",
+    "geometric-mtf-vs-optiland",
+    "lv-mtf-replay",
+    "mtf-vs-optiland-fft",
+    "mtf-vs-optiland-wavefront",
+    "mtf-vs-wave-estimate",
+    "wave-mtf",
   ]);
-  const jobs = manifest.jobs.filter((job) => job.rung === "r6c");
+  const jobs = manifest.jobs.filter((job) => job.rung === "mtf-vs-optiland-wavefront");
   assert.deepEqual(
     [...new Set(jobs.map((job) => job.run))],
     [
@@ -657,18 +695,26 @@ test("--profile benchmark: naming optiland adds r5, r5g and r6c, with r6c on ref
         .filter((job) => job.run === name)
         .map((job) => job.engine)
         .sort(),
-      ["lv", "optiland", "optiland-wave", "wave"],
+      ["lv", "optiland", "otf-of-optiland-wavefront", "wave-mtf-of-lv-rays"],
     );
   }
   assert.equal(run.out, markdown);
-  assert.match(markdown, /^## r6c$/m);
+  assert.match(markdown, /^## MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront`$/m);
   assert.deepEqual(wordingProblems(markdown), []);
 });
 
 test("--profile benchmark: a zoom is run at both ends, or at the position --zoom names", async (t) => {
   const { rootDir, runsDir, lv } = freshRoot(t);
   t.after(() => closeBinding(lv));
-  const args = ["acme-zoom-24-48", "--profile", "benchmark", "--engines", "lv,ref", "--aperture", "wide-open"];
+  const args = [
+    "acme-zoom-24-48",
+    "--profile",
+    "benchmark",
+    "--engines",
+    "lv,reference-tracer",
+    "--aperture",
+    "wide-open",
+  ];
   await mtf(args, rootDir);
   const both = benchmarkOf(runsDir, "acme-zoom-24-48").manifest.runs.map((each) => each.name);
   assert.deepEqual(
@@ -691,15 +737,18 @@ test("--profile benchmark: a gated pair that fails is named on the error stream,
   t.after(() => closeBinding(lv));
   const run = await mtf(["acme-singlet-50", "--profile", "benchmark", "--aperture", "f/8"], rootDir);
   assert.equal(run.code, EXIT_FAILURE);
-  const failing = run.err.split("\n").filter((line) => /: FAIL: /.test(line));
+  const failing = run.err.split("\n").filter((line) => /: Fail: /.test(line));
   assert.equal(failing.length, 4, "each failing pair is named once");
-  assert.match(failing[0], /^lvrtc mtf: acme-singlet-50-f8-ref r4f lv replay: FAIL: /);
-  assert.match(run.out, /^\| r4f \| mtf\.native \| 4 \| 4 \| lv – replay \| 4 FAIL \| 4 FAIL \|$/m);
+  assert.match(failing[0], /^lvrtc mtf: acme-singlet-50-f8-ref lv-mtf-replay lv replay-of-lv-mtf: Fail: /);
+  assert.match(
+    run.out,
+    /^\| LensVisualizer's MTF sampling, replayed — `lv-mtf-replay` \| `mtf\.native` \| 4 \| 4 \| lv – replay-of-lv-mtf \| 4 Fail \| 4 Fail \|$/m,
+  );
 });
 
 test("benchmark --jobs 4 keeps the serial fake-LV manifest, comparisons and report bytes", async (t) => {
   const { rootDir, runsDir } = sampledRoot(t);
-  const args = ["acme-singlet-50", "--profile", "benchmark", "--engines", "lv,ref"];
+  const args = ["acme-singlet-50", "--profile", "benchmark", "--engines", "lv,reference-tracer"];
   const serial = await mtf(args, rootDir);
   assert.equal(serial.code, EXIT_OK, serial.err);
   const before = benchmarkOf(runsDir, "acme-singlet-50");

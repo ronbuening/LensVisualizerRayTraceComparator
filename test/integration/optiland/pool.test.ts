@@ -9,7 +9,7 @@ test(
     skip: OPTILAND_UNAVAILABLE || LV_UNAVAILABLE,
   },
   async (t) => {
-    await benchmarkPool(t, ["lv", "ref", "optiland"]);
+    await benchmarkPool(t, ["lv", "reference-tracer", "optiland"]);
   },
 );
 
@@ -17,6 +17,6 @@ test(
   "gated MTF subset: child preparation and parallel comparison match serial LV/ref/optiland bytes",
   { skip: OPTILAND_UNAVAILABLE || LV_UNAVAILABLE },
   async (t) => {
-    await benchmarkPool(t, ["lv", "ref", "optiland"], ["r4", "r4f", "r6a"]);
+    await benchmarkPool(t, ["lv", "reference-tracer", "optiland"], ["geometric-mtf", "lv-mtf-replay", "wave-mtf"]);
   },
 );

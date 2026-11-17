@@ -16,7 +16,7 @@ import { join } from "node:path";
 import { test } from "node:test";
 
 import { MTF_BASELINE, buildBaseline, parseBaseline } from "../../../src/baseline/build.ts";
-import { checkBaseline } from "../../../src/baseline/check.ts";
+import { checkInIdSpace } from "../../../src/cli/commands/baseline.ts";
 import { mtfBaselineFile } from "../../../src/baseline/files.ts";
 import { MTF_REPORT_MARKDOWN } from "../../../src/baseline/mtfReport.ts";
 import { COMPARISONS_FILE } from "../../../src/compare/comparisonFile.ts";
@@ -34,8 +34,13 @@ const skip = OPTILAND_UNAVAILABLE || LV_UNAVAILABLE;
 /** A lens of the benchmark that is no zoom: its runs have the names the benchmark suite gives them. */
 const LENS = "sigma-45mm-f28-dg-dn-contemporary";
 const RUNS = ["ref", "photopic", "best-ref", "best-photopic"].map((condition) => `${LENS}-f8-${condition}`);
-const GATED = ["r4", "r4f", "r6a"];
-const RECORDED = ["r5", "r5g", "r6b", "r6c"];
+const GATED = ["geometric-mtf", "lv-mtf-replay", "wave-mtf"];
+const RECORDED = [
+  "mtf-vs-optiland-fft",
+  "geometric-mtf-vs-optiland",
+  "mtf-vs-wave-estimate",
+  "mtf-vs-optiland-wavefront",
+];
 
 test(
   "lvrtc mtf --profile benchmark: one lens at f/8 on three engines, every MTF rung, and the committed records of it",
@@ -48,7 +53,7 @@ test(
       "--profile",
       "benchmark",
       "--engines",
-      "lv,ref,optiland",
+      "lv,reference-tracer,optiland",
       "--aperture",
       "f/8",
     ]);
@@ -63,13 +68,17 @@ test(
     assert.deepEqual([...new Set(manifest.jobs.map((job) => job.rung))].sort(), [...GATED, ...RECORDED].sort());
     for (const job of manifest.jobs) {
       // optiland's FFT MTF is of one line: on the photopic lines it says so, and that is an answer.
-      const allowed = ["r5", "r6c"].includes(job.rung) && job.engine === "optiland" ? ["ok", "unsupported"] : ["ok"];
+      const allowed =
+        ["mtf-vs-optiland-fft", "mtf-vs-optiland-wavefront"].includes(job.rung) && job.engine === "optiland"
+          ? ["ok", "unsupported"]
+          : ["ok"];
       assert.ok(allowed.includes(job.status), `${job.run} ${job.rung} ${job.engine}: ${job.status}`);
     }
 
     // What is printed is the report that was written, with every rung, the table and the fixed block.
     assert.equal(ended.out, readFileSync(join(directory, MTF_REPORT_MARKDOWN), "utf8"));
-    for (const rung of [...GATED, ...RECORDED]) assert.match(ended.out, new RegExp(`^## ${rung}$`, "m"));
+    // A check's heading is its title, a dash and its id in code: matched by its id.
+    for (const rung of [...GATED, ...RECORDED]) assert.match(ended.out, new RegExp(`^## .* — \`${rung}\`$`, "m"));
     assert.match(ended.out, /^The engines' own MTF, side by side\./m);
     assert.match(ended.out, /^The engines' own geometric MTF, side by side\./m);
     for (const sentence of NOT_COVERED) assert.ok(ended.out.includes(`- ${sentence}`), sentence);
@@ -96,10 +105,12 @@ test(
       committed.runs.map((run) => run.name),
       RUNS,
     );
-    const records = checkBaseline(committed, fresh, policy);
+    // The committed baseline may name its checks by the ids of before the rename: held as the command holds it.
+    const { records } = checkInIdSpace(committed, fresh, [], policy);
     const added = records.filter((record) => record.outcome === "NEW");
     assert.equal(records.filter((record) => record.outcome === "GONE").length, 0);
-    for (const record of added) assert.ok(record.rung === "r6c" && record.run.endsWith("photopic"));
+    for (const record of added)
+      assert.ok(record.rung === "mtf-vs-optiland-wavefront" && record.run.endsWith("photopic"));
     const current = records.filter(
       (record) => record.outcome !== "NEW" && record.stale.filter((reason) => reason !== "policy").length === 0,
     );

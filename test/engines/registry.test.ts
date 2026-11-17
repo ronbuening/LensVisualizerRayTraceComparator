@@ -580,16 +580,16 @@ test("what a factory rejects with is what create rejects with", async (t) => {
 
 // ── Built-in engines ─────────────────────────────────────────────────────────────────────────────────────────────
 
-test("the built-in engines are lv, optiland, optiland-wave, ref, ref-seidel, replay, wave and flux, and the registry lists them apart from the configured ones", (t) => {
+test("the built-in engines are lv, optiland and the six this tool builds, and the registry lists them apart from the configured ones", (t) => {
   assert.deepEqual(Object.keys(BUILTIN_ENGINES), [
     "lv",
     "optiland",
-    "ref",
-    "replay",
-    "wave",
-    "flux",
-    "optiland-wave",
-    "ref-seidel",
+    "reference-tracer",
+    "replay-of-lv-mtf",
+    "wave-mtf-of-lv-rays",
+    "flux-of-lv-rays",
+    "otf-of-optiland-wavefront",
+    "reference-seidel",
   ]);
   assert.ok(Object.isFrozen(BUILTIN_ENGINES));
   const registry = createEngineRegistry(
@@ -597,25 +597,25 @@ test("the built-in engines are lv, optiland, optiland-wave, ref, ref-seidel, rep
   );
   assert.deepEqual(registry.ids(), ["fake"]);
   assert.deepEqual(registry.builtinIds(), [
-    "flux",
+    "flux-of-lv-rays",
     "lv",
     "optiland",
-    "optiland-wave",
-    "ref",
-    "ref-seidel",
-    "replay",
-    "wave",
+    "otf-of-optiland-wavefront",
+    "reference-seidel",
+    "reference-tracer",
+    "replay-of-lv-mtf",
+    "wave-mtf-of-lv-rays",
   ]);
   assert.deepEqual(registryOf(rootWith(t, {})).builtinIds(), []);
 });
 
 test("a built-in engine is made without a definition, under any root, and answers as the engine it is", async (t) => {
   const registry = createEngineRegistry(loadConfig({ rootDir: rootWith(t, {}), env: {} }));
-  const adapter = await registry.create("ref");
+  const adapter = await registry.create("reference-tracer");
   t.after(() => adapter.close());
   assert.ok(adapter instanceof RemoteEngineAdapter);
   const descriptor = await adapter.describe();
-  assert.equal(descriptor.identity.id, "ref");
+  assert.equal(descriptor.identity.id, "reference-tracer");
   assert.deepEqual(Object.keys(descriptor.capabilities.quantities).sort(), [
     "paraxial.first-order",
     "rays.trace",
@@ -650,23 +650,27 @@ test("a built-in engine is given the configuration, and one made for each adapte
 });
 
 test("a definition replaces a built-in engine of the same id", async (t) => {
-  const rootDir = rootWith(t, { ref: inProcess(FAKE_ENGINE, { id: "ref" }) });
+  const rootDir = rootWith(t, { "reference-tracer": inProcess(FAKE_ENGINE, { id: "reference-tracer" }) });
   const registry = createEngineRegistry(loadConfig({ rootDir, env: {} }));
-  assert.deepEqual(registry.ids(), ["ref"]);
+  assert.deepEqual(registry.ids(), ["reference-tracer"]);
   assert.deepEqual(registry.builtinIds(), [
-    "flux",
+    "flux-of-lv-rays",
     "lv",
     "optiland",
-    "optiland-wave",
-    "ref",
-    "ref-seidel",
-    "replay",
-    "wave",
+    "otf-of-optiland-wavefront",
+    "reference-seidel",
+    "reference-tracer",
+    "replay-of-lv-mtf",
+    "wave-mtf-of-lv-rays",
   ]);
-  const adapter = await registry.create("ref");
+  const adapter = await registry.create("reference-tracer");
   t.after(() => adapter.close());
   const descriptor = await adapter.describe();
-  assert.equal(descriptor.identity.fingerprint, parseFakeOptions({ id: "ref" }).fingerprint, "the fake, as configured");
+  assert.equal(
+    descriptor.identity.fingerprint,
+    parseFakeOptions({ id: "reference-tracer" }).fingerprint,
+    "the fake, as configured",
+  );
 });
 
 test("a built-in engine that cannot be made is create-failed, and one that is not its id is id-mismatch", async (t) => {
@@ -715,10 +719,13 @@ test("an id that is neither configured nor built in is not-configured, and the e
     error.message,
     "engine optiland is unavailable (not-configured): the configuration defines fake-a; built in: alpha, zeta",
   );
-  const bare = await unavailable(registryOf(rootWith(t, {}), undefined, builtins).create("ref"), "not-configured");
+  const bare = await unavailable(
+    registryOf(rootWith(t, {}), undefined, builtins).create("reference-tracer"),
+    "not-configured",
+  );
   assert.equal(
     bare.message,
-    "engine ref is unavailable (not-configured): the configuration defines no engine; built in: alpha, zeta",
+    "engine reference-tracer is unavailable (not-configured): the configuration defines no engine; built in: alpha, zeta",
   );
   // A name every object inherits a member for is no built-in engine either.
   await unavailable(registryOf(rootDir, undefined, builtins).create("constructor"), "not-configured");

@@ -26,7 +26,7 @@ test("R13b: the sums of two methods are recorded, the colour one engine states n
     assert.match(reason, /^total\.maxScaled \S+ is outside its attention band 8\.00e-15/);
     assert.match(reason, /CLA\.maxAbs was not measured: optiland-seidels states none/);
     assert.doesNotMatch(reason, /the rung sets no limit/);
-    const recorded = pairwise.participants.find((participant) => participant.engine === "ref-seidel")?.recorded;
+    const recorded = pairwise.participants.find((participant) => participant.engine === "reference-seidel")?.recorded;
     assert.ok(recorded !== undefined && Number.isFinite(recorded.W040[0]) && Number.isFinite(recorded.W020[0]));
     assert.deepEqual(wordingProblems(report.markdown), []);
     assert.equal(report.markdown, readFileSync(goldenFile(R13B_GOLDEN), "utf8"));

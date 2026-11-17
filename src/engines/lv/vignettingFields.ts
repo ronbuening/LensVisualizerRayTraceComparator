@@ -9,8 +9,9 @@
 // cells whose centre lies in the unit disc (`stopLattice`), aimed through the shared aimed launch (since #936 the MTF's
 // own stop lattice, `prepareAimedStopLattice`, at the authored indices) for the field's scalar off-axis geometry
 // (`computeOffAxisFieldGeometry`), every returned ray traced with every aperture checked and the stop at the launch's
-// clip radius, one half of it mirrored where every surface is mirror-symmetric about the meridian
-// (`mirrorSymmetricAboutMeridian`, which `mtfMirrorSymmetric` hands on). Its vignetting curve is the share of the
+// clip radius, one half of it mirrored where every surface is mirror-symmetric about the meridian, and since LV #960
+// the image surface too (`imageMirrorSymmetricAboutMeridian`, which `mtfMirrorSymmetric` hands on; only an obliquely
+// turned cylinder is not, and the exporter refuses every curved image). Its vignetting curve is the share of the
 // samples, neither unaimed nor failed, that reach the image; its relative illumination Rimmer's: n'^2 times bulk
 // transmission times each lit cell's area in direction cosines referred to the chief ray's image point through a
 // reference sphere, over the axis's. What the tab does inline is restated here, each line with a source canary
@@ -56,7 +57,7 @@ export interface LvVignettingSetup {
   readonly request: LvAnalysisRequest;
   /** The cells across the stop's diameter of each field's lattice: `BEAM_GRID_CELLS`, no count of the drawer's. */
   readonly cells: number;
-  /** True where the tab traces the +x half of each lattice and mirrors it (`mirrorSymmetricAboutMeridian`). */
+  /** True where the tab traces the +x half of each lattice and mirrors it (`imageMirrorSymmetricAboutMeridian`). */
   readonly mirror: boolean;
 }
 
@@ -69,7 +70,7 @@ export interface LvVignettingSetup {
  * if (!mtfSequentialRefractivePath(state)) return none("unsupported-path");
  * if (!mtfAxialImagePlane(state)) return none("tilted-image-plane");
  * const cellsAcross = vignettingCellsAcross(request);   // BEAM_GRID_CELLS without a count of the drawer's
- * const mirrored = mirrorSymmetricAboutMeridian(state);  // vignettingField
+ * const mirrored = imageMirrorSymmetricAboutMeridian(state);  // vignettingField
  * ```
  *
  * A state without a stop is `no-stop`; one outside the MTF's beam model (a fisheye projection, a folded, mirror,

@@ -141,6 +141,7 @@ test("a higher layer can set a nullable value back to null", (t) => {
   assert.equal(loaded.config.engines.optiland.python, null);
   assert.equal(loaded.sources.lvPath, LOCAL_CONFIG_FILE);
   assert.equal(loaded.sources["engines.optiland.python"], LOCAL_CONFIG_FILE);
+  assert.equal(loaded.config.python, "python3");
 });
 
 test("an unknown key is an error naming the key and the file", (t) => {
@@ -216,18 +217,20 @@ test("a file that exists but cannot be read is an error naming the file", (t) =>
 });
 
 // The committed files are loaded from a copy, so a developer's own lvrtc.local.json never reaches these tests.
-test("the committed lvrtc.config.json points at the sibling checkouts", (t) => {
+test("the committed lvrtc.config.json points at no checkout: each machine sets its own in lvrtc.local.json", (t) => {
   const rootDir = rootWith(t, { [CONFIG_FILE]: readFileSync(join(REPO_ROOT, CONFIG_FILE), "utf8") });
   const loaded = loadConfig({ rootDir, env: {} });
   assert.deepEqual(loaded.config, {
-    lvPath: resolve(rootDir, "../../LensVisualizer/LensVisualizer"),
+    lvPath: null,
     python: "python3",
-    engines: { optiland: { python: resolve(rootDir, "../../optiland/optiland/.venv/bin/python") } },
+    engines: { optiland: { python: null } },
     engineDefinitions: {},
     cacheDir: join(rootDir, ".cache"),
     runsDir: join(rootDir, "runs"),
   });
-  for (const key of CONFIG_KEYS) assert.equal(loaded.sources[key], CONFIG_FILE, key);
+  assert.equal(loaded.sources.lvPath, "default");
+  assert.equal(loaded.sources["engines.optiland.python"], "default");
+  for (const key of ["python", "cacheDir", "runsDir"] as const) assert.equal(loaded.sources[key], CONFIG_FILE, key);
 });
 
 test("the example local file is a valid local configuration", (t) => {

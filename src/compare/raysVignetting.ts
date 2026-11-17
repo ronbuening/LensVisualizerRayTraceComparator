@@ -54,7 +54,7 @@ import type { DecodedTrace, Where } from "./raysRead.ts";
 import type { SpanAnswer, SpanMember } from "./span.ts";
 
 /** The rung of the vignetting tab's fields on identical rays. */
-export const VIGNETTING_RAYS_RUNG = "r11a";
+export const VIGNETTING_RAYS_RUNG = "vignetting-rays";
 
 export const ILLUMINATION_METRIC = "illumination.maxAbs";
 export const TRANSMISSION_METRIC = "transmission.maxAbs";

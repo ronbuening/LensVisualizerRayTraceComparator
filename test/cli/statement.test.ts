@@ -6,6 +6,8 @@ import { test } from "node:test";
 import type { TestContext } from "node:test";
 
 import { baselineText } from "../../src/baseline/build.ts";
+import { failureEvidence } from "../../src/baseline/catalog.ts";
+import type { Baseline } from "../../src/contract/baseline.ts";
 import { createStatementCommand } from "../../src/cli/commands/statement.ts";
 import { createVerifyCommand } from "../../src/cli/commands/verify.ts";
 import { runCli } from "../../src/cli/main.ts";
@@ -84,6 +86,50 @@ test("statement command rejects incomplete or malformed inputs before replacing 
   assert.equal((await command(dir, ["statement"])).code, 1);
   assert.equal(readFileSync(join(dir, STATEMENT_JSON), "utf8"), before);
   assert.equal((await command(dir, ["verify"])).code, 1);
+});
+
+test("statement command holds a listed failure's classification to its list, as verify does, before writing", async (t) => {
+  const dir = root(t);
+  const file = join(dir, "baselines", "focus-stations.json");
+  const baseline = structuredClone(
+    statementInputs().find((input) => input.file === "focus-stations.json")!.baseline,
+  ) as Baseline & { contract: string };
+  const rung = baseline.runs[0].rungs.find((each) => each.rung === "ray-trace")!;
+  const at = rung.pairs.findIndex((pair) => pair.b === "optiland");
+  const failing = {
+    ...rung.pairs[at],
+    verdict: "FAIL" as const,
+    verdicts: [
+      { verdict: "PASS" as const, count: 1 },
+      { verdict: "FAIL" as const, count: 1 },
+    ],
+    metrics: [{ name: "mask.mismatches", value: 2, tolerance: 0, unit: "rays" }],
+  };
+  const entry = {
+    run: baseline.runs[0].name,
+    rung: "ray-trace",
+    engines: ["lv", "optiland"],
+    metric: "mask.mismatches",
+    class: "method" as const,
+    gotcha: "docs/gotchas.md#artificial-example",
+    reproducer: "node bin/lvrtc.mjs run suites/focus-stations-repro/artificial.json --checks ray-trace --jobs 4",
+    evidenceHash: failureEvidence(rung.requests, failing),
+  };
+  const { run: _run, rung: _rung, engines: _engines, ...classification } = entry;
+  (rung.pairs as unknown[])[at] = { ...failing, failures: [classification] };
+  baseline.contract = "1.6";
+  writeFileSync(file, baselineText(baseline));
+  // No list: the classification is the list's no longer, and nothing is written.
+  const refused = await command(dir, ["statement"]);
+  assert.equal(refused.code, 1, refused.err);
+  assert.match(refused.err, /focus-stations\.json: unknown or changed focus-stations failure classification/);
+  assert.throws(() => readFileSync(join(dir, STATEMENT_JSON), "utf8"));
+  // Listed as it is: written, with the owner's clause.
+  mkdirSync(join(dir, "docs"));
+  writeFileSync(join(dir, "docs", "known-failures.focus-stations.json"), JSON.stringify([entry]));
+  const written = await command(dir, ["statement"]);
+  assert.equal(written.code, 0, written.err);
+  assert.match(readFileSync(join(dir, STATEMENT_MARKDOWN), "utf8"), /is listed \(1, optiland's, where LensVisualizer/);
 });
 
 test("statement command help and usage errors", async (t) => {

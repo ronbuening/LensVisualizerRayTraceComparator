@@ -81,31 +81,31 @@ test("the rungs are selftest, r0 to r4, r4f, r5, r5g, r6a to r6c, r7a, r7b, r8a,
   assert.deepEqual(
     RUNGS.map((definition) => definition.id),
     [
-      "selftest",
-      "r0",
-      "r1",
-      "r2",
-      "r3",
-      "r4",
-      "r4f",
-      "r5",
-      "r5g",
-      "r6a",
-      "r6b",
-      "r6c",
-      "r7a",
-      "r7b",
-      "r8a",
-      "r8b",
-      "r9a",
-      "r9b",
-      "r10a",
-      "r10b",
-      "r11a",
-      "r11b",
-      "r12b",
-      "r13b",
-      "r14b",
+      "pipeline-echo",
+      "built-system",
+      "first-order",
+      "ray-trace",
+      "optical-path",
+      "geometric-mtf",
+      "lv-mtf-replay",
+      "mtf-vs-optiland-fft",
+      "geometric-mtf-vs-optiland",
+      "wave-mtf",
+      "mtf-vs-wave-estimate",
+      "mtf-vs-optiland-wavefront",
+      "spot-rays",
+      "spot-vs-optiland",
+      "axial-rays",
+      "axial-vs-optiland",
+      "chief-rays",
+      "chief-vs-optiland",
+      "field-curve-rays",
+      "field-curve-vs-optiland",
+      "vignetting-rays",
+      "vignetting-vs-flux-estimate",
+      "summary-vs-optiland",
+      "seidel-vs-optiland",
+      "zernike-vs-optiland",
     ],
   );
   assert.deepEqual(
@@ -392,8 +392,8 @@ test("a run that names no rungs gets every rung but those run only where named, 
         definition !== r14bRung,
     ),
   );
-  assert.deepEqual(selectRungs(["r5", "r0"]), [r0Rung, r5Rung]);
-  assert.deepEqual(selectRungs(["r5g", "r5"]), [r5Rung, r5gRung]);
+  assert.deepEqual(selectRungs(["mtf-vs-optiland-fft", "built-system"]), [r0Rung, r5Rung]);
+  assert.deepEqual(selectRungs(["geometric-mtf-vs-optiland", "mtf-vs-optiland-fft"]), [r5Rung, r5gRung]);
   const named: RungDefinition = { ...rung("b"), onlyWhereNamed: true };
   assert.deepEqual(
     selectRungs(undefined, [rung("a"), named]).map((definition) => definition.id),
@@ -404,12 +404,16 @@ test("a run that names no rungs gets every rung but those run only where named, 
   assert.deepEqual(selectRungs(undefined, three), three);
   assert.notEqual(selectRungs(undefined, three), three, "a list of its own");
   // A rung that traces rays is a rung like any other, in its place on the ladder.
-  assert.deepEqual(selectRungs(["r3", "r0"]), [r0Rung, r3Rung]);
+  assert.deepEqual(selectRungs(["optical-path", "built-system"]), [r0Rung, r3Rung]);
 });
 
 test("named rungs come in ladder order, each once, however they were named", () => {
-  assert.deepEqual(selectRungs(["selftest"]), [selftestRung]);
-  assert.deepEqual(selectRungs(["r1", "selftest", "r0", "r1"]), [selftestRung, r0Rung, r1Rung]);
+  assert.deepEqual(selectRungs(["pipeline-echo"]), [selftestRung]);
+  assert.deepEqual(selectRungs(["first-order", "pipeline-echo", "built-system", "first-order"]), [
+    selftestRung,
+    r0Rung,
+    r1Rung,
+  ]);
   const three = [rung("a"), rung("b"), rung("c")];
   const ids = (selected: RungDefinition[]): string[] => selected.map((definition) => definition.id);
   assert.deepEqual(ids(selectRungs(["c", "a"], three)), ["a", "c"]);
@@ -420,11 +424,11 @@ test("named rungs come in ladder order, each once, however they were named", () 
 test("an unknown rung is a usage error that names it and lists the rungs there are", () => {
   assert.equal(
     usageError(() => selectRungs(["R0"])),
-    'unknown rung "R0": the rungs are selftest, r0, r1, r2, r3, r4, r4f, r5, r5g, r6a, r6b, r6c, r7a, r7b, r8a, r8b, r9a, r9b, r10a, r10b, r11a, r11b, r12b, r13b, r14b',
+    'unknown rung "R0": the rungs are pipeline-echo, built-system, first-order, ray-trace, optical-path, geometric-mtf, lv-mtf-replay, mtf-vs-optiland-fft, geometric-mtf-vs-optiland, wave-mtf, mtf-vs-wave-estimate, mtf-vs-optiland-wavefront, spot-rays, spot-vs-optiland, axial-rays, axial-vs-optiland, chief-rays, chief-vs-optiland, field-curve-rays, field-curve-vs-optiland, vignetting-rays, vignetting-vs-flux-estimate, summary-vs-optiland, seidel-vs-optiland, zernike-vs-optiland',
   );
   assert.equal(
-    usageError(() => selectRungs(["R4", "selftest", "R0", "R4"])),
-    'unknown rungs "R4", "R0": the rungs are selftest, r0, r1, r2, r3, r4, r4f, r5, r5g, r6a, r6b, r6c, r7a, r7b, r8a, r8b, r9a, r9b, r10a, r10b, r11a, r11b, r12b, r13b, r14b',
+    usageError(() => selectRungs(["R4", "pipeline-echo", "R0", "R4"])),
+    'unknown rungs "R4", "R0": the rungs are pipeline-echo, built-system, first-order, ray-trace, optical-path, geometric-mtf, lv-mtf-replay, mtf-vs-optiland-fft, geometric-mtf-vs-optiland, wave-mtf, mtf-vs-wave-estimate, mtf-vs-optiland-wavefront, spot-rays, spot-vs-optiland, axial-rays, axial-vs-optiland, chief-rays, chief-vs-optiland, field-curve-rays, field-curve-vs-optiland, vignetting-rays, vignetting-vs-flux-estimate, summary-vs-optiland, seidel-vs-optiland, zernike-vs-optiland',
   );
   const three = [rung("a"), rung("b"), rung("c")];
   assert.equal(
@@ -449,7 +453,7 @@ test("an unknown rung is a usage error that names it and lists the rungs there a
 test("naming no rung at all is a usage error", () => {
   assert.equal(
     usageError(() => selectRungs([])),
-    "no rung was named: the rungs are selftest, r0, r1, r2, r3, r4, r4f, r5, r5g, r6a, r6b, r6c, r7a, r7b, r8a, r8b, r9a, r9b, r10a, r10b, r11a, r11b, r12b, r13b, r14b",
+    "no rung was named: the rungs are pipeline-echo, built-system, first-order, ray-trace, optical-path, geometric-mtf, lv-mtf-replay, mtf-vs-optiland-fft, geometric-mtf-vs-optiland, wave-mtf, mtf-vs-wave-estimate, mtf-vs-optiland-wavefront, spot-rays, spot-vs-optiland, axial-rays, axial-vs-optiland, chief-rays, chief-vs-optiland, field-curve-rays, field-curve-vs-optiland, vignetting-rays, vignetting-vs-flux-estimate, summary-vs-optiland, seidel-vs-optiland, zernike-vs-optiland",
   );
 });
 
@@ -628,13 +632,16 @@ test("r12b asks one summary.native request at the lines of the prescription's ow
 
 test("r11b hands the engine flux twice a run's stated lattice, and nothing without one or to lv", () => {
   const stated: RunSpec = { ...RUN, sampling: { bundleGrid: 32 } };
-  assert.deepEqual(r11bRung.engineOptions?.(stated, NO_RUNG_INPUTS, "flux"), { bundleGrid: 64 });
-  assert.deepEqual(r11bRung.engineOptions?.({ ...RUN, sampling: { bundleGrid: 16 } }, NO_RUNG_INPUTS, "flux"), {
-    bundleGrid: 32,
-  });
+  assert.deepEqual(r11bRung.engineOptions?.(stated, NO_RUNG_INPUTS, "flux-of-lv-rays"), { bundleGrid: 64 });
+  assert.deepEqual(
+    r11bRung.engineOptions?.({ ...RUN, sampling: { bundleGrid: 16 } }, NO_RUNG_INPUTS, "flux-of-lv-rays"),
+    {
+      bundleGrid: 32,
+    },
+  );
   assert.equal(r11bRung.engineOptions?.(stated, NO_RUNG_INPUTS, "lv"), undefined);
-  assert.equal(r11bRung.engineOptions?.(RUN, NO_RUNG_INPUTS, "flux"), undefined);
-  assert.deepEqual(r11bRung.engines, ["lv", "flux"]);
+  assert.equal(r11bRung.engineOptions?.(RUN, NO_RUNG_INPUTS, "flux-of-lv-rays"), undefined);
+  assert.deepEqual(r11bRung.engines, ["lv", "flux-of-lv-rays"]);
   assert.equal(r11bRung.onlyWhereNamed, true);
 });
 
@@ -686,7 +693,7 @@ test("r13b asks one seidel.native request of the recipe's largest field, with di
   assert.deepEqual(r13bRung.buildRequests(SINGLET, RUN, NO_RUNG_INPUTS), []);
   const none: MtfRecipe = { ...SEIDEL_RECIPE, fields: [{ fraction: 1, angleDeg: null, targetImageHeightMm: 21.5 }] };
   assert.equal(seidelNativeSpec(SINGLET, none), null);
-  assert.deepEqual(r13bRung.engines, ["ref-seidel", "optiland"]);
+  assert.deepEqual(r13bRung.engines, ["reference-seidel", "optiland"]);
   assert.equal(r13bRung.onlyWhereNamed, true);
   assert.equal(r13bRung.needsRecipe, true);
 });
@@ -706,6 +713,6 @@ test("r14b asks the Standard and the Fringe fit of the recipe's fields, of optil
   };
   assert.deepEqual(zernikeNativeSpecs(missing), []);
   assert.deepEqual(r14bRung.buildRequests(SINGLET, RUN, NO_RUNG_INPUTS), []);
-  assert.deepEqual(r14bRung.engines, ["optiland", "optiland-wave"]);
+  assert.deepEqual(r14bRung.engines, ["optiland", "otf-of-optiland-wavefront"]);
   assert.equal(r14bRung.onlyWhereNamed, true);
 });

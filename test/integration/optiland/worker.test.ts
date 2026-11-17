@@ -312,7 +312,7 @@ test(
     const command = createRunCommand({ rootDir, env: {}, cwd: rootDir });
     const io = { stdout: (text: string) => void out.push(text), stderr: (text: string) => void err.push(text) };
     const every = RUNGS.map((rung) => rung.id);
-    const code = await runCli(["run", "suite.json", "--engines", "optiland", "--rungs", every.join(",")], io, [
+    const code = await runCli(["run", "suite.json", "--engines", "optiland", "--checks", every.join(",")], io, [
       command,
     ]);
     // The standard error names the fields a case file gives no rays for; that fails nothing.
@@ -336,33 +336,33 @@ test(
     assert.deepEqual(
       every.filter((rung) => !rungs.includes(rung)),
       [
-        "r4",
-        "r4f",
-        "r5",
-        "r5g",
-        "r6a",
-        "r6b",
-        "r6c",
-        "r7a",
-        "r7b",
-        "r8a",
-        "r8b",
-        "r9a",
-        "r9b",
-        "r10a",
-        "r10b",
-        "r11a",
-        "r11b",
-        "r12b",
-        "r13b",
-        "r14b",
+        "geometric-mtf",
+        "lv-mtf-replay",
+        "mtf-vs-optiland-fft",
+        "geometric-mtf-vs-optiland",
+        "wave-mtf",
+        "mtf-vs-wave-estimate",
+        "mtf-vs-optiland-wavefront",
+        "spot-rays",
+        "spot-vs-optiland",
+        "axial-rays",
+        "axial-vs-optiland",
+        "chief-rays",
+        "chief-vs-optiland",
+        "field-curve-rays",
+        "field-curve-vs-optiland",
+        "vignetting-rays",
+        "vignetting-vs-flux-estimate",
+        "summary-vs-optiland",
+        "seidel-vs-optiland",
+        "zernike-vs-optiland",
       ],
     );
     assert.ok(manifest.jobs.length >= rungs.length);
     assert.deepEqual([...new Set(manifest.jobs.map((job) => job.rung))].sort(), [...rungs].sort());
     // The two rungs of traced rays ask the same request, of the one field a case file has rays for, the axis: the
     // worker traces the set once, and the second rung finds the answer in the store.
-    const answered = ["r0", "r1", "r2", "r3"];
+    const answered = ["built-system", "first-order", "ray-trace", "optical-path"];
     for (const job of manifest.jobs) {
       const status = answered.includes(job.rung) ? "ok" : "unsupported";
       assert.deepEqual([job.engine, job.status], ["optiland", status], job.rung);
@@ -370,8 +370,8 @@ test(
     for (const rung of answered) assert.equal(manifest.jobs.filter((job) => job.rung === rung).length, 1, rung);
     const traced = manifest.jobs.filter((job) => job.quantity === "rays.trace");
     assert.deepEqual([...new Set(traced.map((job) => job.storeKey))].length, 1);
-    assert.match(out.join(""), /^singlet {2}r2 +optiland {7}ok +computed$/m);
-    assert.match(out.join(""), /^singlet {2}r3 +optiland {7}ok +cached$/m);
+    assert.match(out.join(""), /^singlet {2}ray-trace +optiland +answered +asked now$/m);
+    assert.match(out.join(""), /^singlet {2}optical-path +optiland +answered +from the cache$/m);
     const [engine] = manifest.engines;
     assert.ok(engine.id === "optiland" && engine.status === "available");
     assert.match(engine.adapterRevision ?? "", SHA256);
@@ -386,14 +386,15 @@ test("lvrtc doctor reports the fingerprint of the optiland it finds", { skip }, 
   assert.equal(found.details.commit, optilandCommit());
 
   // And the command itself, as it is run: on this repository's own configuration, whose caches are gitignored.
-  const ended = spawnSync(process.execPath, [BIN, "doctor"], {
+  const ended = spawnSync(process.execPath, [BIN, "doctor", "--details"], {
     encoding: "utf8",
     env: { ...process.env, LVRTC_OPTILAND_PYTHON: OPTILAND_PYTHON ?? "" },
     timeout: 600_000,
   });
   assert.equal(ended.status, 0, ended.stderr);
   const section = ended.stdout.slice(ended.stdout.lastIndexOf("\noptiland\n"));
-  assert.match(section, new RegExp(`^  engine       fingerprint ${found.fingerprint}$`, "m"));
+  assert.match(section, /^ {2}engine {7}answers$/m);
+  assert.match(section, new RegExp(`^  code hash    ${found.fingerprint}$`, "m"));
   assert.match(section, new RegExp(`^  git          ${String(found.details.commit)} \\((dirty|clean)\\)$`, "m"));
   assert.match(
     section,
@@ -401,7 +402,7 @@ test("lvrtc doctor reports the fingerprint of the optiland it finds", { skip }, 
   );
   assert.match(section, /^ {2}versions {5}Python \d+\.\d+\.\d+, numpy \d+\.\S+, scipy \d+\.\S+, numba \d+\.\S+$/m);
   assert.match(section, /^ {2}jit {10}on$/m);
-  assert.match(section, new RegExp(`^  adapter      ${found.adapterRevision}$`, "m"));
+  assert.match(section, new RegExp(`^  tool code    ${found.adapterRevision}$`, "m"));
   // The environment the tests gave the interpreter is the worker's own: stated once, used by both.
   assert.equal(optilandEnvironment().MPLBACKEND, "Agg");
 });

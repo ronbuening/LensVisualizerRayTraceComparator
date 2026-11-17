@@ -26,7 +26,10 @@ import { DOUBLE_GAUSS } from "../../core/support.ts";
 import { caseOf, sphere } from "./support.ts";
 
 function refEngine(t: TestContext): RemoteEngineAdapter {
-  const adapter = new RemoteEngineAdapter({ id: "ref", transport: createInProcessTransport(createRefEngine()) });
+  const adapter = new RemoteEngineAdapter({
+    id: "reference-tracer",
+    transport: createInProcessTransport(createRefEngine()),
+  });
   t.after(() => adapter.close());
   return adapter;
 }

@@ -16,14 +16,15 @@ import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE, runCli } from "../../src/cli/main.ts
 import type { Baseline } from "../../src/contract/baseline.ts";
 import { REPO_ROOT, loadConfig } from "../../src/core/config.ts";
 import { canonicalJson } from "../../src/core/numeric/canonicalJson.ts";
-import { escapeHtml, renderBaseline, renderBaselineRun } from "../../src/dashboard/html.ts";
+import { escapeHtml, renderBaseline, renderBaselineRun, renderRun } from "../../src/dashboard/html.ts";
 import { createViews, pathSegments, startDashboard } from "../../src/dashboard/server.ts";
 import type { Dashboard } from "../../src/dashboard/server.ts";
 import { createSources } from "../../src/dashboard/sources.ts";
 import { DASHBOARD_TEXT, wordingProblems } from "../../src/report/wording.ts";
+import { codeTextOf } from "../../src/vocabulary/index.ts";
 import { COMPARE_TABS } from "../../src/dashboard/compare.ts";
 import { FAKE_PAIR_SUITE, tempDir } from "../core/support.ts";
-import { buildFixture, fetchFrom, titleTexts, treeOf, visibleText, walkView } from "./support.ts";
+import { buildFixture, everyPage, fetchFrom, titleTexts, treeOf, visibleText, walkView } from "./support.ts";
 import type { DashboardFixture } from "./support.ts";
 
 let fixture: DashboardFixture;
@@ -82,45 +83,33 @@ after(async () => {
   fixture.remove();
 });
 
-/** Every page path of a dashboard, read from its own index, run and baseline pages. */
-async function everyPage(port: number): Promise<string[]> {
-  const index = JSON.parse((await fetchFrom(port, "/api/index")).body);
-  const paths = ["/"];
-  const viewOf = async (path: string) => JSON.parse((await fetchFrom(port, `/api${path}`)).body);
-  for (const run of index.runs as { name: string }[]) {
-    const path = `/run/${encodeURIComponent(run.name)}`;
-    paths.push(path);
-    const view = await viewOf(path);
-    const sections: { section: number }[] = [...view.sections];
-    for (const { place } of view.runs as { place: number }[]) {
-      paths.push(`${path}/run/${place}`);
-      if (view.split) sections.push(...(await viewOf(`${path}/run/${place}`)).sections);
-    }
-    for (const section of sections) paths.push(`${path}/section/${section.section}`);
+test("a run directory written before the rename of the check ids is shown with a notice, its old ids named", (t) => {
+  // A copy of the fake pair's run directory whose run record and comparisons name its check by its old id.
+  const runsDir = join(tempDir(t), "runs");
+  cpSync(join(fixture.runsDir, "fake-pair"), join(runsDir, "fake-pair"), { recursive: true });
+  for (const file of ["manifest.json", "comparisons.json"]) {
+    const path = join(runsDir, "fake-pair", file);
+    const text = readFileSync(path, "utf8");
+    assert.ok(text.includes('"rung":"pipeline-echo"'), file);
+    writeFileSync(path, text.replaceAll('"rung":"pipeline-echo"', '"rung":"selftest"'));
   }
-  for (const baseline of index.baselines as { stem: string }[]) {
-    const path = `/baseline/${encodeURIComponent(baseline.stem)}`;
-    paths.push(path);
-    for (const { place } of (await viewOf(path)).runs as { place: number }[]) paths.push(`${path}/run/${place}`);
-  }
-  // The compare pages of each lens compared (Stage 8.5): every condition its chips reach, and each tab's details.
-  for (const { key } of index.compared as { key: string }[]) {
-    const base = `/compare/${encodeURIComponent(key)}`;
-    const queries = [""];
-    for (let at = 0; at < queries.length; at++) {
-      const view = await viewOf(`${base}${queries[at] === "" ? "" : `?${queries[at]}`}`);
-      for (const facet of view.facets as { options: { query: string }[] }[]) {
-        for (const option of facet.options) if (!queries.includes(option.query)) queries.push(option.query);
-      }
-    }
-    for (const query of queries) {
-      const suffix = query === "" ? "" : `?${query}`;
-      paths.push(`${base}${suffix}`);
-      for (const tab of COMPARE_TABS) paths.push(`${base}/${tab.tab}${suffix}`);
-    }
-  }
-  return paths;
-}
+  const views = createViews(createSources({ rootDir: fixture.rootDir, runsDir }), () => ({ state: "not-asked" }));
+  const old = views.run("fake-pair");
+  assert.deepEqual(old.oldIds, ["check selftest"]);
+  const words = codeTextOf("written-before-id-rename");
+  assert.ok(words !== undefined);
+  const page = renderRun(old);
+  assert.ok(page.includes(escapeHtml(words.sentence)), "the code's sentence");
+  assert.ok(page.includes(escapeHtml(words.remedy)), "and its remedy");
+  assert.ok(page.includes("<li><code>check selftest</code></li>"));
+  assert.deepEqual(wordingProblems(visibleText(page)), []);
+  // A run directory of today's ids has no notice.
+  const today = createViews(createSources({ rootDir: fixture.rootDir, runsDir: fixture.runsDir }), () => ({
+    state: "not-asked",
+  })).run("fake-pair");
+  assert.deepEqual(today.oldIds, []);
+  assert.ok(!renderRun(today).includes(escapeHtml(words.sentence)));
+});
 
 test("it listens on 127.0.0.1 alone, and answers its own host by address or as localhost", async () => {
   assert.match(dashboard.url, /^http:\/\/127\.0\.0\.1:\d+\/$/);
@@ -145,7 +134,7 @@ test("a Host header other than its own is refused with 403, whatever the path", 
     `127.0.0.1:${dashboard.port + 1}`,
     "127.0.0.1",
   ]) {
-    for (const path of ["/", "/api/index", "/run/fake-pair"]) {
+    for (const path of ["/", "/api/index", "/run/fake-pair", "/help", "/api/checks"]) {
       const answer = await fetchFrom(dashboard.port, path, { host });
       assert.equal(answer.status, 403, `${host} ${path}`);
       assert.doesNotMatch(answer.body, /fake-pair/);
@@ -155,9 +144,11 @@ test("a Host header other than its own is refused with 403, whatever the path", 
 
 test("only GET and HEAD: any other method is 405, and HEAD has GET's headers and no body", async () => {
   for (const method of ["POST", "PUT", "DELETE", "PATCH", "OPTIONS"]) {
-    const answer = await fetchFrom(dashboard.port, "/", { method });
-    assert.equal(answer.status, 405, method);
-    assert.equal(answer.headers.allow, "GET, HEAD");
+    for (const path of ["/", "/help", "/checks", "/api/checks"]) {
+      const answer = await fetchFrom(dashboard.port, path, { method });
+      assert.equal(answer.status, 405, `${method} ${path}`);
+      assert.equal(answer.headers.allow, "GET, HEAD");
+    }
   }
   const got = await fetchFrom(dashboard.port, "/run/fake-pair");
   const head = await fetchFrom(dashboard.port, "/run/fake-pair", { method: "HEAD" });
@@ -191,6 +182,11 @@ test("a name the server did not list is 404, and so is every way of climbing out
     "/api/baseline/no-such",
     "/api",
     "/api/",
+    "/help/",
+    "/help/terms",
+    "/checks/r2",
+    "/api/help/x",
+    "/api/checks/",
   ];
   for (const path of paths) {
     const answer = await fetchFrom(dashboard.port, path);
@@ -233,17 +229,21 @@ test("the HTML page and its JSON twin agree: the twin is the view, and the page 
       const built =
         path === "/"
           ? views.index()
-          : segments[0] === "compare"
-            ? views.compare(segments[1], query, segments[2] ?? null)
-            : segments[0] === "baseline"
-              ? segments.length === 4
-                ? views.baselineRun(segments[1], Number(segments[3]))
-                : views.baseline(segments[1])
-              : segments.length === 4
-                ? segments[2] === "section"
-                  ? views.section(segments[1], Number(segments[3]))
-                  : views.runPart(segments[1], Number(segments[3]))
-                : views.run(segments[1]);
+          : path === "/help"
+            ? views.help()
+            : path === "/checks"
+              ? views.checks()
+              : segments[0] === "compare"
+                ? views.compare(segments[1], query, segments[2] ?? null)
+                : segments[0] === "baseline"
+                  ? segments.length === 4
+                    ? views.baselineRun(segments[1], Number(segments[3]))
+                    : views.baseline(segments[1])
+                  : segments.length === 4
+                    ? segments[2] === "section"
+                      ? views.section(segments[1], Number(segments[3]))
+                      : views.runPart(segments[1], Number(segments[3]))
+                    : views.run(segments[1]);
       assert.equal(twin.body, `${canonicalJson(built)}\n`, `${path}: the twin is the view`);
       for (const { figure } of walkView(view).figures) {
         assert.ok(
@@ -447,7 +447,7 @@ test("asking the engines again from the control page re-runs the same runner, an
     for (const [action, fields] of [
       ["ask", ""],
       ["collect", ""],
-      ["start", "&suite=fake-pair&rungs=selftest"],
+      ["start", "&suite=fake-pair&rungs=pipeline-echo"],
     ]) {
       const busy = await post(action, fields);
       assert.equal(busy.status, 409, action);
@@ -479,7 +479,7 @@ test("a section page is of its store entries: one rewritten, then removed, under
     const path = `/run/r5-stand-ins/section/${section}`;
     const manifest = JSON.parse(readFileSync(join(runsDir, "r5-stand-ins", "manifest.json"), "utf8"));
     const wave = manifest.jobs.find(
-      (job: { run: string; engine: string }) => job.run === "edge" && job.engine === "wave",
+      (job: { run: string; engine: string }) => job.run === "edge" && job.engine === "wave-mtf-of-lv-rays",
     );
     const entry = join(runsDir, "store", `${wave.storeKey}.json.gz`);
     const first = (await fetchFrom(served.port, path)).body;
@@ -487,10 +487,13 @@ test("a section page is of its store entries: one rewritten, then removed, under
     writeFileSync(entry, gzipSync("{ not an entry"));
     const rewritten = (await fetchFrom(served.port, path)).body;
     assert.notEqual(rewritten, first);
-    assert.match(visibleText(rewritten), /The store entry for wave cannot be read, so that answer is not drawn/);
+    assert.match(
+      visibleText(rewritten),
+      /The result cache entry for wave-mtf-of-lv-rays cannot be read, so that answer is not drawn/,
+    );
     rmSync(entry);
     const removed = (await fetchFrom(served.port, path)).body;
-    assert.ok(visibleText(removed).includes(DASHBOARD_TEXT.charts.storeMissing("wave", wave.storeKey)));
+    assert.ok(visibleText(removed).includes(DASHBOARD_TEXT.charts.storeMissing("wave-mtf-of-lv-rays", wave.storeKey)));
   } finally {
     await served.close();
   }
@@ -608,7 +611,10 @@ test("a baseline page is a summary: a catalog of 1,341 runs stays within a few h
   // The fixture's pair baseline, its runs repeated to the catalog's 1,341, five rungs a run.
   const pair = JSON.parse(readFileSync(join(fixture.rootDir, "baselines", "fake-pair.json"), "utf8")) as Baseline;
   const [template] = pair.runs;
-  const rungs = ["r0", "r1", "r2", "r3", "r4"].map((rung) => ({ ...template.rungs[0], rung }));
+  const rungs = ["built-system", "first-order", "ray-trace", "optical-path", "geometric-mtf"].map((rung) => ({
+    ...template.rungs[0],
+    rung,
+  }));
   const large: Baseline = {
     ...pair,
     runs: Array.from({ length: 1341 }, (_unused, index) => ({ ...template, name: `lens-${index}-wide`, rungs })),

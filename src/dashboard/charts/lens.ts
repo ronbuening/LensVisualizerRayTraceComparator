@@ -47,7 +47,7 @@ export function renderLensOverlay(key: string, curves: readonly LensCurveView[],
     const series = curveEngine(curve);
     const label =
       curve.state === "unavailable"
-        ? CHARTS.legendState(curveLabel(curve), curve.state, curve.reason ?? "no reason stated")
+        ? CHARTS.legendState(curveLabel(curve), curve.state, curve.reason ?? CHARTS.noReasonStated)
         : drawable(curve)
           ? curveLabel(curve)
           : CHARTS.legendNoCurves(curveLabel(curve), "missing");

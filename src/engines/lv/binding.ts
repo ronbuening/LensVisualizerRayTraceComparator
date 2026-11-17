@@ -18,7 +18,7 @@ import { lvGitState } from "./gitState.ts";
 import type { LvGitState } from "./gitState.ts";
 import { LV_IMPORT_MANIFEST } from "./manifest.ts";
 import type { LvManifestModule } from "./manifest.ts";
-import type { LvApi, LvLensData, LvSurface } from "./types.ts";
+import type { LvApi, LvImageSurfaceShape, LvLensData, LvPreparedState, LvSurface } from "./types.ts";
 
 /** The file whose presence makes a directory a LensVisualizer checkout, relative to its root. */
 export const LV_MARKER = "src/optics/buildLens.ts";
@@ -301,4 +301,14 @@ export function loadLvBinding(lvPath: string | null): Promise<LvBinding> {
 export function syntheticKind(surface: LvSurface): string | null {
   const source = (surface as { readonly source?: { readonly synthetic?: unknown } }).source;
   return typeof source?.synthetic === "string" ? source.synthetic : null;
+}
+
+/**
+ * The curved image surface of a prepared state (LV #960, `state.lens.imageSurface`), or null for a flat image. A
+ * LensVisualizer from before #960 has no such member, and no curved image: its states read null, so the comparator
+ * still runs on an older checkout. Every reader of the member goes through here: the exporter refuses a state with one
+ * (`curved-image-surface`), and every call of `skewImagePlaneIntercept` hands it on, as LensVisualizer's tabs do.
+ */
+export function lvImageSurface(state: LvPreparedState): LvImageSurfaceShape | null {
+  return state.lens.imageSurface ?? null;
 }

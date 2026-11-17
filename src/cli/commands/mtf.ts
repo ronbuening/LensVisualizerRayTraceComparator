@@ -50,6 +50,7 @@ import { LV_TAB_COMPARISON_F_NUMBER, LV_TAB_PROFILE } from "../../engines/lv/tab
 import { ZOOM_ENDS, primeZoomNote, zoomEndAt } from "../../engines/lv/zoomEnds.ts";
 import type { ZoomEnd } from "../../engines/lv/zoomEnds.ts";
 import { createEngineRegistry } from "../../engines/registry.ts";
+import { aliasEngineId } from "../../core/legacyIds.ts";
 import { mtfNativeQuantity } from "../../quantities/mtfNative.ts";
 import { mtfTableRows, mtfTableText } from "../../report/mtfTable.ts";
 import type { MtfTableRow } from "../../report/mtfTable.ts";
@@ -68,6 +69,17 @@ import {
   lensProfileSuiteName,
 } from "../benchmarkProfile.ts";
 import { REPORT_JSON_FILE, REPORT_MARKDOWN_FILE, renderReport } from "../../report/index.ts";
+import { JOBS_OPTIONS, ROOT_OPTION, checkNames, checksByKind, helpText, options, paragraph, wrap } from "../help.ts";
+import type { OptionRow } from "../help.ts";
+import {
+  IDENTIFIERS_TEXT,
+  JOB_SOURCE_TEXT,
+  JOB_STATUS_TEXT,
+  MTF_OUTPUT_TEXT,
+  verdictLabel,
+  verdictShort,
+} from "../../vocabulary/index.ts";
+import { codeLines, columns, engineIdentifierLines, explainedProblem, legendLines } from "../output.ts";
 
 /** What `lvrtc mtf` is wired to, injected so that tests choose all three. */
 export interface MtfCommandInputs {
@@ -87,57 +99,61 @@ const DEFAULT_ENGINES: readonly string[] = ["lv"];
 
 const SYNOPSIS = [
   "Usage: lvrtc mtf <lensKey> [--engines <id,...>] [--profile <name>] [--zoom <t>]",
-  `                 [--aperture wide-open|f/${LV_TAB_COMPARISON_F_NUMBER}] [--root <dir>] [--jobs <n>] [--memory-budget <GiB>] [--json]`,
+  `                 [--aperture wide-open|f/${LV_TAB_COMPARISON_F_NUMBER}] [--root <dir>] [--jobs <n>] [--memory-budget <GiB>]`,
+  "                 [--details] [--json]",
   "",
 ].join("\n");
-const HELP = [
+const BENCHMARK_KINDS = checksByKind(lensProfileRungs(BENCHMARK_PROFILE, []));
+const TABS_KINDS = checksByKind(lensProfileRungs(TABS_PROFILE, []));
+const HELP = helpText([
   SYNOPSIS,
-  "Asks each engine for its own MTF of a LensVisualizer lens (the quantity mtf.native) as a profile requests it, and",
-  "prints what each answered: a row per field with the image height, the field angle, the status and the sagittal",
-  "and tangential MTF at the frequencies the profile shows, then the focus shift the engine applied, the aperture it",
-  "traced, the lines it computed with and its notes. The request, the case and the answers are written to",
-  "<runsDir>/mtf/<profile>/<run>/mtf.json; an answer the result store already holds is not computed again.",
-  "",
-  "A zoom is asked about at both ends unless --zoom names one position: the wide end (zoom 0) and then the tele end",
-  "(zoom 1), each with its own request, its own table, labelled wide or tele, and its own run directory.",
-  "",
-  `  --engines <ids>   the engines to ask (default: ${DEFAULT_ENGINES.join(",")})`,
-  `  --profile <name>  the request to make (default: ${LV_TAB_PROFILE}). ${LV_TAB_PROFILE} is the request of`,
-  "                    LensVisualizer's MTF tab as it opens: its default method, spectrum, focus, grid cap, fields",
-  "                    and frequencies, with the stop and pupil radii of its own hook.",
-  `                    ${BENCHMARK_PROFILE} is no one request: the lens wide open and at the tab's f/8, at its design`,
-  "                    plane and at LensVisualizer's best axial focus, on the reference line and on the photopic",
-  "                    lines (eight runs; --aperture names one aperture, four runs), run and compared on the named",
-  "                    engines as a suite is: rungs r4, r4f and r6a judged, r6b recorded and, where optiland is",
-  "                    named, r5, r5g and r6c recorded. It prints the MTF report of that run (lvrtc mtf <lensKey>",
-  `                    --profile ${BENCHMARK_PROFILE} --engines lv,ref,optiland) and writes the run to`,
-  "                    <runsDir>/mtf-<lensKey>/, with mtf.md and mtf.json; lvrtc compare and lvrtc report read it",
-  "                    as the run of a suite named mtf-<lensKey>. Progress is on the error stream: the engines'",
-  "                    own MTF of a fast lens wide open takes minutes a run.",
-  `                    ${TABS_PROFILE} is the same conditions with the rungs of LensVisualizer's other tabs: r0 and r1,`,
-  "                    the gated rays of the coma and bokeh, axial, chief-ray, field-curve and vignetting tabs",
-  "                    (r7a to r11a), and those tabs and the summary beside an engine's own analysis (r7b to r12b,",
-  "                    recorded, each asked of its own engines). It prints the report of that run and writes the run",
-  "                    to <runsDir>/tabs-<lensKey>/, with report.md and report.json",
-  "  --zoom <t>        one zoom position from 0 (wide) to 1 (tele), in place of both ends of a zoom; a prime has",
-  "                    no zoom position",
-  `  --aperture <a>    wide-open (default), or f/${LV_TAB_COMPARISON_F_NUMBER}: the tab's own comparison at f/8`,
-  "  --root <dir>      the directory that holds lvrtc.config.json (default: this repository)",
-  "  --jobs <n>        benchmark, tabs: concurrent jobs in isolated processes (default: 1, serial)",
-  "  --memory-budget <GiB>  replica RSS budget (default: 25% of installed RAM minus 2 GiB);",
-  "                         jobs are capped at 2.5 GiB each, 4 GiB when R6c is selected",
-  "  --json            print one JSON object in place of the lines: the record of the run, or, for both ends of",
-  "                    a zoom, an object with the record of each end under wide and tele",
-  "",
-  `With --profile ${BENCHMARK_PROFILE} or ${TABS_PROFILE} --json prints the report as one JSON object, and the exit code is`,
-  "1 also when a pair of engines is FAIL or ERROR.",
-  "",
-  "Exit code: 0 when every engine answered (unsupported is an answer, not a failure); 1 when an engine ended in an",
-  "error, when the lens has no case in a state that was asked about (each reason is printed with its code) or when",
-  "LensVisualizer cannot be loaded; 2 when the command line cannot be used as given, which includes a key that is",
-  "not in the catalog.",
-  "",
-].join("\n");
+  ...paragraph(
+    "Asks each engine for its own MTF of a LensVisualizer lens as a profile requests it, and prints what each answered: a row per field with the image height, the field angle, the status and the sagittal and tangential MTF at the frequencies the profile shows, then the focus shift the engine applied, the aperture it traced, the wavelengths it computed with and its notes. The request, the lens state and the answers are written to <runsDir>/mtf/<profile>/<run>/mtf.json; an answer already in the result cache is not computed again.",
+  ),
+  ...paragraph(
+    "A zoom is asked about at both ends unless --zoom names one position: the wide end (zoom 0), then the tele end (zoom 1), each with its own request, its own table, labelled wide or tele, and its own run directory.",
+  ),
+  ...options([
+    ["--engines <ids>", `the engines to ask (default: ${DEFAULT_ENGINES.join(",")})`],
+    [
+      "--profile <name>",
+      `the request to make (default: ${LV_TAB_PROFILE}). ${LV_TAB_PROFILE} is the request of LensVisualizer's MTF tab as it opens: its default method, wavelengths, focus, sampling, fields and frequencies, with the stop and pupil of the tab itself.`,
+      (column) => [
+        ...wrap(
+          `${BENCHMARK_PROFILE} is no one request but a comparison of the lens's MTF: the lens wide open and at the tab's f/8, at its design image plane and at LensVisualizer's best axial focus, at its reference wavelength and in white light (eight runs, a zoom sixteen; --aperture keeps one aperture, half as many), run and compared on the named engines as a suite is. The checks held to a limit are ${checkNames(BENCHMARK_KINDS.limit)}; side by side, ${checkNames(BENCHMARK_KINDS.sideBySide)}, and where optiland is named ${checkNames(OWN_MTF_RUNGS)}. It prints the MTF report of that run (lvrtc mtf <lensKey> --profile ${BENCHMARK_PROFILE} --engines lv,reference-tracer,optiland) and writes the run to <runsDir>/mtf-<lensKey>/, with mtf.md and mtf.json; lvrtc compare and lvrtc report read it as the run of a suite named mtf-<lensKey>. Progress is on the error stream: the engines' own MTF of a fast lens wide open takes minutes a run.`,
+          column,
+          " ".repeat(column),
+        ),
+        ...wrap(
+          `${TABS_PROFILE} is the same conditions with the checks of LensVisualizer's other tabs: held to a limit, ${checkNames(TABS_KINDS.limit)}; side by side, each asked of its own engines, ${checkNames(TABS_KINDS.sideBySide)}. It prints the report of that run and writes it to <runsDir>/tabs-<lensKey>/, with report.md and report.json.`,
+          column,
+          " ".repeat(column),
+        ),
+      ],
+    ],
+    [
+      "--zoom <t>",
+      "one zoom position from 0 (wide) to 1 (tele), in place of both ends of a zoom; a prime has no zoom position",
+    ],
+    [
+      "--aperture <a>",
+      `wide-open (default), or f/${LV_TAB_COMPARISON_F_NUMBER}: the tab's own comparison at f/${LV_TAB_COMPARISON_F_NUMBER}`,
+    ],
+    ROOT_OPTION,
+    ["--details", IDENTIFIERS_TEXT.option],
+    ...JOBS_OPTIONS.map(([name, description]): OptionRow => [
+      name,
+      `${BENCHMARK_PROFILE} and ${TABS_PROFILE}: ${description}`,
+    ]),
+    [
+      "--json",
+      `print one JSON object in place of the lines: the record of the run, or, for both ends of a zoom, an object with the record of each end under wide and tele; with --profile ${BENCHMARK_PROFILE} or ${TABS_PROFILE}, the report`,
+    ],
+  ]),
+  ...paragraph(
+    `Exit code: 0 when every engine answered (an answer that something is not computed is an answer, not a failure); 1 when an engine ended in an error, when the lens has no lens state at a position that was asked about (each reason is printed with its code), when LensVisualizer cannot be loaded, and, with --profile ${BENCHMARK_PROFILE} or ${TABS_PROFILE}, when a pair of engines is "${verdictLabel("FAIL")}" or "${verdictLabel("ERROR")}"; 2 when the command line cannot be used as given, which includes a key that is not in the catalog.`,
+  ),
+]);
 
 const VALUE_OPTIONS = ["--engines", "--profile", "--zoom", "--aperture", "--root", "--jobs", "--memory-budget"];
 
@@ -212,18 +228,22 @@ interface MtfArguments {
   readonly root: string | undefined;
   readonly jobs: number;
   readonly memoryBudgetGiB: number;
+  readonly details: boolean;
   readonly json: boolean;
 }
 
 /** Reads the arguments. Throws a `UsageError` for anything that is not the command line the synopsis shows. */
 function readArguments(args: readonly string[]): MtfArguments {
-  const { positionals: keys, values, flags } = parseArguments(args, VALUE_OPTIONS, ["--json"]);
+  const { positionals: keys, values, flags } = parseArguments(args, VALUE_OPTIONS, ["--json", "--details"]);
   if (keys.length === 0) throw new UsageError("no lens key was given");
   if (keys.length > 1) throw new UsageError(`unexpected argument "${keys[1]}"`);
-  const engines = values.get("--engines")?.split(",") ?? [...DEFAULT_ENGINES];
-  if (engines.includes("")) {
+  const named = values.get("--engines")?.split(",") ?? [...DEFAULT_ENGINES];
+  if (named.includes("")) {
     throw new UsageError(`--engines needs ids separated by commas, got "${values.get("--engines")}"`);
   }
+  // An engine named by the id it had before it was renamed is that engine (a configuration cannot define an engine
+  // under an old id), and the command says so once (`aliasEngineId`).
+  const engines = named.map((id) => aliasEngineId(id));
   const profile = values.get("--profile") ?? LV_TAB_PROFILE;
   const ofLens = LENS_PROFILES.includes(profile);
   if (!Object.hasOwn(PROFILES, profile) && !ofLens) {
@@ -247,6 +267,7 @@ function readArguments(args: readonly string[]): MtfArguments {
     root: values.get("--root"),
     jobs,
     memoryBudgetGiB,
+    details: flags.has("--details"),
     json: flags.has("--json"),
   };
 }
@@ -274,7 +295,7 @@ function engineOf(id: string, descriptor: EngineDescriptor): ManifestEngine {
 /** The lines of one engine's part: how it ended, then its table, or why it has none. */
 function engineText(asked: Asked, request: Extract<ProfileRequest, { ok: true }>): string {
   const { answer, source, detail } = asked;
-  const head = `${answer.engine}  ${answer.status}  ${source}`;
+  const head = `${answer.engine}  ${JOB_STATUS_TEXT[answer.status] ?? answer.status}  ${JOB_SOURCE_TEXT[source] ?? source}`;
   if (answer.status === "ok" && answer.result?.data !== undefined) {
     const data = answer.result.data as MtfNativeData;
     const { spec, displayedFrequenciesPerMm, opticalCase } = request;
@@ -285,7 +306,8 @@ function engineText(asked: Asked, request: Extract<ProfileRequest, { ok: true }>
     return `${[head, ...items].join("\n")}\n`;
   }
   const code = answer.error === undefined ? "" : `${answer.error.code}: `;
-  return `${head}\n  ${code}${detail ?? ""}\n`;
+  const said = `${code}${detail ?? ""}`;
+  return [head, `  ${said}`, ...codeLines(answer.error?.code ?? null, 4, answer.engine, said), ""].join("\n");
 }
 
 /** The fields of each "ok" answer at the shown frequencies, as plain numbers: what `--json` adds to the record. */
@@ -388,10 +410,12 @@ async function runBenchmark(
       profile !== BENCHMARK_PROFILE || engines.includes(OWN_MTF_ENGINE)
         ? ""
         : ` (${OWN_MTF_RUNGS.join(" and ")} need ${OWN_MTF_ENGINE})`;
+    const m = MTF_OUTPUT_TEXT;
     io.stderr(
-      `lvrtc mtf: ${name}: ${suite.runs.length} runs on ${engines.join(", ")}, rungs ${rungs.join(", ")}${own}; ` +
-        "what the result store holds is not computed again\n",
+      `lvrtc mtf: ${name}: ${suite.runs.length} ${m.runsOn} ${engines.join(", ")}, ${m.withChecks} ${rungs.join(", ")}${own}; ` +
+        `${m.cacheNote}\n`,
     );
+    for (const line of legendLines({ checks: rungs, engines }, 2)) io.stderr(`lvrtc mtf: ${line}\n`);
     let stage = "";
     const result = await runSuite({
       suite,
@@ -403,10 +427,12 @@ async function runBenchmark(
       rungs,
       followUps: followUpsOf(policy),
       // One line a rung of a run, when its first job has ended (`onJob` is called with a job as it finishes): with
-      // the engines in the order lv, ref, optiland that is before optiland's own MTF, the slow part, is asked.
+      // the engines in the order lv, reference-tracer, optiland that is before optiland's own MTF, the slow part, is
+      // asked.
       onJob: ({ job, source }) => {
         const now = `${job.run} ${job.rung}`;
-        if (now !== stage) io.stderr(`lvrtc mtf: ${now}${source === "computed" ? "" : ` (${source})`}\n`);
+        if (now !== stage)
+          io.stderr(`lvrtc mtf: ${now}${source === "computed" ? "" : ` (${JOB_SOURCE_TEXT[source] ?? source})`}\n`);
         stage = now;
       },
     });
@@ -429,17 +455,27 @@ async function runBenchmark(
     let failed = false;
     for (const run of suite.runs) {
       if (run.opticalCase !== null) continue;
-      for (const problem of run.problems) io.stderr(`lvrtc mtf: run ${run.spec.name} was not started: ${problem}\n`);
+      for (const problem of run.problems)
+        io.stderr(explainedProblem(`lvrtc mtf: run ${run.spec.name} ${m.notStarted}: `, problem));
       failed = true;
     }
     for (const engine of manifest.engines) {
       if (engine.status === "available") continue;
-      io.stderr(`lvrtc mtf: engine ${engine.id} could not be used (${engine.code})\n`);
+      const said = [
+        `lvrtc mtf: engine ${engine.id} ${m.engineUnusable} (${engine.code})`,
+        ...codeLines(engine.code, 4, engine.id),
+      ];
+      io.stderr(`${said.join("\n")}\n`);
       failed = true;
     }
     for (const { job, detail } of result.outcomes) {
       if (job.status !== "error") continue;
-      io.stderr(`lvrtc mtf: ${job.run} ${job.rung} ${job.engine}: ${job.error?.code ?? "error"}: ${detail ?? ""}\n`);
+      io.stderr(
+        explainedProblem(
+          `lvrtc mtf: ${job.run} ${job.rung} ${job.engine}: `,
+          `${job.error?.code ?? "error"}: ${detail ?? ""}`,
+        ),
+      );
       failed = true;
     }
     for (const warning of result.warnings) io.stderr(`lvrtc mtf: warning: ${warning}\n`);
@@ -450,13 +486,13 @@ async function runBenchmark(
       for (const pair of set.pairs) {
         if (!FAILING_VERDICTS.includes(pair.verdict)) continue;
         const [a, b] = [pair.a, pair.b].sort();
-        failing.add(`${set.run} ${set.rung} ${a} ${b}: ${pair.verdict}: ${pair.reason ?? ""}`);
+        failing.add(`${set.run} ${set.rung} ${a} ${b}: ${verdictShort(pair.verdict)}: ${pair.reason ?? ""}`);
       }
     }
     for (const line of failing) io.stderr(`lvrtc mtf: ${line}\n`);
     if (failing.size > 0) failed = true;
     io.stdout(asked.json ? `${JSON.stringify(JSON.parse(rendered.json), null, 2)}\n` : rendered.markdown);
-    io.stderr(`lvrtc mtf: run: ${directory}\n`);
+    io.stderr(`lvrtc mtf: ${m.runDirectory}: ${directory}\n`);
     return failed ? EXIT_FAILURE : EXIT_OK;
   } finally {
     await pool?.close();
@@ -498,7 +534,7 @@ async function runBenchmark(
 export function createMtfCommand(inputs: MtfCommandInputs): CliCommand {
   return {
     name: "mtf",
-    summary: "Ask engines for their own MTF of a lens, as LensVisualizer's MTF tab requests it",
+    summary: "Print a lens's MTF as LensVisualizer's MTF tab asks for it, or compare it across engines",
     run: async (args, io) => {
       if (args.includes("-h") || args.includes("--help")) {
         io.stdout(HELP);
@@ -570,7 +606,8 @@ export function createMtfCommand(inputs: MtfCommandInputs): CliCommand {
           const resolved = await PROFILES[asked.profile].resolve(binding, asked.lensKey, zoomT, asked.aperture);
           if (!resolved.ok) {
             const which = bothEnds ? ` (${end} end)` : "";
-            for (const problem of resolved.problems) io.stderr(`lvrtc mtf: ${asked.lensKey}${which}: ${problem}\n`);
+            for (const problem of resolved.problems)
+              io.stderr(explainedProblem(`lvrtc mtf: ${asked.lensKey}${which}: `, problem));
             failed = true;
             continue;
           }
@@ -642,13 +679,23 @@ export function createMtfCommand(inputs: MtfCommandInputs): CliCommand {
             [
               ...(tables++ === 0 ? [] : [""]),
               `${asked.lensKey}  ${opticalCase.label.name}`,
-              `profile  ${asked.profile}: ${resolved.said}`,
-              `state    ${position}${end === undefined ? "" : ` (${end})`}, infinity focus`,
-              `case     ${opticalCase.id}`,
-              `request  ${request.id}`,
+              ...columns([
+                [MTF_OUTPUT_TEXT.profile, `${asked.profile}: ${resolved.said}`],
+                [MTF_OUTPUT_TEXT.state, `${position}${end === undefined ? "" : ` (${end})`}, infinity focus`],
+              ]),
+              ...(asked.details
+                ? [
+                    `${IDENTIFIERS_TEXT.title}:`,
+                    ...columns([
+                      [IDENTIFIERS_TEXT.lensState, opticalCase.id],
+                      [IDENTIFIERS_TEXT.request, request.id],
+                    ]).map((line) => `  ${line}`),
+                    ...engineIdentifierLines(askeds.map(({ engine }) => engine)),
+                  ]
+                : []),
               "",
               ...askeds.map((one) => engineText(one, resolved)),
-              `result: ${file}`,
+              `${MTF_OUTPUT_TEXT.result}: ${file}`,
               "",
             ].join("\n"),
           );

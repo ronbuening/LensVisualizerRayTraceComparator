@@ -1,38 +1,40 @@
 # Catalog statistics
 
-Both catalog baselines are present; duplicate R4 pairs are counted once.
+These are the statistics of the catalog sweep: every lens of LensVisualizer's catalog at the snapshot's commit, at each end of a zoom, wide open, at the reference wavelength and on the design image plane, rendered from the catalog's two baselines alone. The catalog's baselines are a dated snapshot, not refreshed with the others.
 
-State statuses use the gravest pair verdict; pair counts use one aggregate per run, rung and engine pair, with feature groups overlapping.
+Both catalog baselines are present; the pairs of check r4, which is in both, are counted once.
+
+A lens state's status is the worst verdict of its pairs; a pair count counts one record a run, check and pair of engines, and the groups of lens features overlap.
 
 ## Status counts
 
-| Scope | States | State statuses | Pair statuses |
+| Scope | Lens states | Lens states by status | Pairs by status |
 |---|---|---|---|
-| catalog | 1341 | {"FAIL":12,"PASS":1304,"UNSUPPORTED":25} | {"FAIL":24,"PASS":24878,"UNSUPPORTED":47} |
-| Feature: aperture.annular | 6 | {"UNSUPPORTED":6} | {"PASS":47,"UNSUPPORTED":25} |
-| Feature: aperture.unclipped | 263 | {"FAIL":2,"PASS":261} | {"FAIL":4,"PASS":4967} |
-| Feature: path.folded | 8 | {"UNSUPPORTED":8} | {"PASS":65,"UNSUPPORTED":31} |
-| Feature: surface.asphere.even | 648 | {"FAIL":6,"PASS":640,"UNSUPPORTED":2} | {"FAIL":12,"PASS":12178,"UNSUPPORTED":4} |
-| Feature: surface.asphere.flat-base | 2 | {"PASS":2} | {"PASS":38} |
-| Feature: surface.asphere.odd | 83 | {"FAIL":2,"PASS":81} | {"FAIL":4,"PASS":1573} |
-| Feature: surface.conic | 305 | {"FAIL":4,"PASS":301} | {"FAIL":8,"PASS":5787} |
-| Feature: surface.diffractive | 8 | {"UNSUPPORTED":8} | {"PASS":80,"UNSUPPORTED":16} |
-| Census reason: field-fraction-unresolved | 17 | {"UNSUPPORTED":17} | {"PASS":145,"UNSUPPORTED":47} |
-| Census reason: folded-auto-path | 6 | {"UNSUPPORTED":6} | {} |
-| Census reason: folded-post-path-reflection | 1 | {"UNSUPPORTED":1} | {} |
-| Census reason: mixed-reference | 1 | {"UNSUPPORTED":1} | {} |
-| Census reason: off-axis-image-plane | 2 | {"UNSUPPORTED":2} | {} |
-| Census reason: outside-modeled-field | 56 | {"PASS":56} | {"PASS":1064} |
-| Census reason: surface-profile-unsupported | 2 | {"UNSUPPORTED":2} | {} |
-| Census reason: tilted-image-plane | 2 | {"UNSUPPORTED":2} | {} |
-| Census reason: tilted-surface | 1 | {"UNSUPPORTED":1} | {} |
-| Census reason: unsupported-path | 35 | {"PASS":19,"UNSUPPORTED":16} | {"PASS":259,"UNSUPPORTED":47} |
+| catalog | 1341 | 1304 Pass; 12 Fail; 25 Not computed | 24878 Pass; 24 Fail; 47 Not computed |
+| Lens feature: aperture.annular | 6 | 6 Not computed | 47 Pass; 25 Not computed |
+| Lens feature: aperture.unclipped | 263 | 261 Pass; 2 Fail | 4967 Pass; 4 Fail |
+| Lens feature: path.folded | 8 | 8 Not computed | 65 Pass; 31 Not computed |
+| Lens feature: surface.asphere.even | 648 | 640 Pass; 6 Fail; 2 Not computed | 12178 Pass; 12 Fail; 4 Not computed |
+| Lens feature: surface.asphere.flat-base | 2 | 2 Pass | 38 Pass |
+| Lens feature: surface.asphere.odd | 83 | 81 Pass; 2 Fail | 1573 Pass; 4 Fail |
+| Lens feature: surface.conic | 305 | 301 Pass; 4 Fail | 5787 Pass; 8 Fail |
+| Lens feature: surface.diffractive | 8 | 8 Not computed | 80 Pass; 16 Not computed |
+| Reason of the census: field-fraction-unresolved | 17 | 17 Not computed | 145 Pass; 47 Not computed |
+| Reason of the census: folded-auto-path | 6 | 6 Not computed | none |
+| Reason of the census: folded-post-path-reflection | 1 | 1 Not computed | none |
+| Reason of the census: mixed-reference | 1 | 1 Not computed | none |
+| Reason of the census: off-axis-image-plane | 2 | 2 Not computed | none |
+| Reason of the census: outside-modeled-field | 56 | 56 Pass | 1064 Pass |
+| Reason of the census: surface-profile-unsupported | 2 | 2 Not computed | none |
+| Reason of the census: tilted-image-plane | 2 | 2 Not computed | none |
+| Reason of the census: tilted-surface | 1 | 1 Not computed | none |
+| Reason of the census: unsupported-path | 35 | 19 Pass; 16 Not computed | 259 Pass; 47 Not computed |
 
-## Unsupported census
+## Codes, by lens state and by engine
 
-Source codes count distinct states; engine codes count distinct run, rung and engine refusals.
+A census code counts the distinct lens states that carry it (such a state may still be compared: see the status counts); an engine code counts the distinct runs, checks and engines that refused with it.
 
-| Code | Source states | Engine rungs |
+| Code | Lens states with the code | Checks an engine refused |
 |---|---|---|
 | feature folded-stop-not-visited | 0 | 3 |
 | feature lv-folded-first-order-unavailable | 0 | 6 |
@@ -48,13 +50,13 @@ Source codes count distinct states; engine codes count distinct run, rung and en
 | tilted-surface | 1 | 0 |
 | unsupported-path | 35 | 0 |
 
-## Gated pair figures
+## Figures of the checks held to a limit
 
-Quantiles interpolate linearly at (n - 1)p over finite gated pair figures; nonfinite figures are counted separately and ranked first in each worst-ten list.
+Quantiles interpolate linearly at (n - 1)p over the finite figures of the pairs of the checks held to a limit; figures that are not finite are counted apart and ranked first in each list of the worst ten.
 
-### r0 / aperture.mismatches (elements)
+### Built system — `r0`: aperture.mismatches (elements)
 
-| Pairs | Nonfinite | Min | Median | p90 | p99 | Max |
+| Pairs | Not finite | Min | Median | p90 | p99 | Max |
 |---|---|---|---|---|---|---|
 | 3996 | 0 | 0 | 0 | 0 | 0 | 0 |
 
@@ -71,9 +73,9 @@ Quantiles interpolate linearly at (n - 1)p over finite gated pair figures; nonfi
 | catalog-agfa-solagon-50mm-f2 | optiland / ref | 0 |
 | catalog-angenieux-dem-180mm-f23-apo | lv / optiland | 0 |
 
-### r0 / index.mismatches (elements)
+### Built system — `r0`: index.mismatches (elements)
 
-| Pairs | Nonfinite | Min | Median | p90 | p99 | Max |
+| Pairs | Not finite | Min | Median | p90 | p99 | Max |
 |---|---|---|---|---|---|---|
 | 3996 | 0 | 0 | 0 | 0 | 0 | 0 |
 
@@ -90,9 +92,9 @@ Quantiles interpolate linearly at (n - 1)p over finite gated pair figures; nonfi
 | catalog-agfa-solagon-50mm-f2 | optiland / ref | 0 |
 | catalog-angenieux-dem-180mm-f23-apo | lv / optiland | 0 |
 
-### r0 / layout.mismatches (elements)
+### Built system — `r0`: layout.mismatches (elements)
 
-| Pairs | Nonfinite | Min | Median | p90 | p99 | Max |
+| Pairs | Not finite | Min | Median | p90 | p99 | Max |
 |---|---|---|---|---|---|---|
 | 3996 | 0 | 0 | 0 | 0 | 0 | 0 |
 
@@ -109,9 +111,9 @@ Quantiles interpolate linearly at (n - 1)p over finite gated pair figures; nonfi
 | catalog-agfa-solagon-50mm-f2 | optiland / ref | 0 |
 | catalog-angenieux-dem-180mm-f23-apo | lv / optiland | 0 |
 
-### r0 / sag.maxScaled (1)
+### Built system — `r0`: sag.maxScaled, with no unit
 
-| Pairs | Nonfinite | Min | Median | p90 | p99 | Max |
+| Pairs | Not finite | Min | Median | p90 | p99 | Max |
 |---|---|---|---|---|---|---|
 | 3996 | 0 | 0 | 2.366780245165288e-16 | 3.5910853961160744e-16 | 4.2955779145094114e-16 | 6.651645067245058e-16 |
 
@@ -128,9 +130,9 @@ Quantiles interpolate linearly at (n - 1)p over finite gated pair figures; nonfi
 | catalog-sigma-70-200mm-f28-dg-dn-os-sports-tele | optiland / ref | 5.450879944546598e-16 |
 | catalog-sigma-70-200mm-f28-dg-dn-os-sports-wide | optiland / ref | 5.450879944546598e-16 |
 
-### r0 / shape.mismatches (elements)
+### Built system — `r0`: shape.mismatches (elements)
 
-| Pairs | Nonfinite | Min | Median | p90 | p99 | Max |
+| Pairs | Not finite | Min | Median | p90 | p99 | Max |
 |---|---|---|---|---|---|---|
 | 3996 | 0 | 0 | 0 | 0 | 0 | 0 |
 
@@ -147,9 +149,9 @@ Quantiles interpolate linearly at (n - 1)p over finite gated pair figures; nonfi
 | catalog-agfa-solagon-50mm-f2 | optiland / ref | 0 |
 | catalog-angenieux-dem-180mm-f23-apo | lv / optiland | 0 |
 
-### r1 / firstOrder.maxAbs (mm)
+### First-order data — `r1`: firstOrder.maxAbs (mm)
 
-| Pairs | Nonfinite | Min | Median | p90 | p99 | Max |
+| Pairs | Not finite | Min | Median | p90 | p99 | Max |
 |---|---|---|---|---|---|---|
 | 3965 | 0 | 0 | 3.552713678800501e-14 | 3.694822225952521e-13 | 4.8157744458876695e-12 | 4.729372449219227e-11 |
 
@@ -166,9 +168,9 @@ Quantiles interpolate linearly at (n - 1)p over finite gated pair figures; nonfi
 | catalog-nikon-ai-zoom-nikkor-360-1200mm-f11-ed-tele | optiland / ref | 1.8189894035458565e-11 |
 | catalog-canon-ef-200400-f4l-is-usm-extender-14x-in-tele | lv / ref | 1.659827830735594e-11 |
 
-### r1 / pupilRadius.maxScaled (mm)
+### First-order data — `r1`: pupilRadius.maxScaled (mm)
 
-| Pairs | Nonfinite | Min | Median | p90 | p99 | Max |
+| Pairs | Not finite | Min | Median | p90 | p99 | Max |
 |---|---|---|---|---|---|---|
 | 3965 | 0 | 0 | 3.552713678800501e-15 | 1.7763568394002505e-14 | 1.1368683772161603e-13 | 6.33959193075498e-11 |
 
@@ -185,9 +187,9 @@ Quantiles interpolate linearly at (n - 1)p over finite gated pair figures; nonfi
 | catalog-nikon-tv-nikkor-115-69-f12-s100-wide | lv / optiland | 2.6147972675971687e-12 |
 | catalog-nikon-tv-nikkor-115-69-f12-s100-tele | lv / ref | 2.5863755581667647e-12 |
 
-### r1 / pupilZ.maxScaled (mm)
+### First-order data — `r1`: pupilZ.maxScaled (mm)
 
-| Pairs | Nonfinite | Min | Median | p90 | p99 | Max |
+| Pairs | Not finite | Min | Median | p90 | p99 | Max |
 |---|---|---|---|---|---|---|
 | 3965 | 0 | 0 | 1.4210854715202004e-14 | 1.3642420526593794e-13 | 1.8189894035458565e-12 | 1.424921413329168e-10 |
 
@@ -204,9 +206,9 @@ Quantiles interpolate linearly at (n - 1)p over finite gated pair figures; nonfi
 | catalog-nikon-tv-nikkor-115-69-f12-s100-tele | lv / ref | 6.0254023992456496e-12 |
 | catalog-nikon-tv-nikkor-115-69-f12-s100-wide | lv / ref | 6.0254023992456496e-12 |
 
-### r2 / direction.maxAbs (1)
+### Ray trace — `r2`: direction.maxAbs, with no unit
 
-| Pairs | Nonfinite | Min | Median | p90 | p99 | Max |
+| Pairs | Not finite | Min | Median | p90 | p99 | Max |
 |---|---|---|---|---|---|---|
 | 3939 | 0 | 2.220446049250313e-16 | 4.6629367034256575e-15 | 1.6586731987899843e-14 | 1.8395174272711654e-13 | 2.045452696108896e-11 |
 
@@ -223,9 +225,9 @@ Quantiles interpolate linearly at (n - 1)p over finite gated pair figures; nonfi
 | catalog-samsung-galaxy-s9-main-wide | optiland / ref | 3.593458863804244e-12 |
 | catalog-fujifilm-fujinon-xf-8-16mm-f28-r-lm-wr-wide | lv / ref | 3.456311625793518e-12 |
 
-### r2 / hits.maxDistance (mm)
+### Ray trace — `r2`: hits.maxDistance (mm)
 
-| Pairs | Nonfinite | Min | Median | p90 | p99 | Max |
+| Pairs | Not finite | Min | Median | p90 | p99 | Max |
 |---|---|---|---|---|---|---|
 | 3939 | 0 | 0 | 1.6500289822270631e-13 | 1.1557862675897628e-12 | 6.979542688226601e-12 | 5.65747569560608e-10 |
 
@@ -242,9 +244,9 @@ Quantiles interpolate linearly at (n - 1)p over finite gated pair figures; nonfi
 | catalog-fujifilm-fujinon-xf-14mm-f28-r | optiland / ref | 3.687196356532563e-11 |
 | catalog-fujifilm-fujinon-xf-8-16mm-f28-r-lm-wr-tele | optiland / ref | 3.218467112809489e-11 |
 
-### r2 / landing.maxDistance (mm)
+### Ray trace — `r2`: landing.maxDistance (mm)
 
-| Pairs | Nonfinite | Min | Median | p90 | p99 | Max |
+| Pairs | Not finite | Min | Median | p90 | p99 | Max |
 |---|---|---|---|---|---|---|
 | 3939 | 0 | 1.1374233532693354e-14 | 1.9077082118786527e-13 | 7.278258669200484e-13 | 8.294919077856132e-12 | 5.903148477621695e-10 |
 
@@ -261,9 +263,9 @@ Quantiles interpolate linearly at (n - 1)p over finite gated pair figures; nonfi
 | catalog-fujifilm-fujinon-xf-14mm-f28-r | lv / optiland | 5.868854556428912e-11 |
 | catalog-russar-22-70f8 | lv / ref | 4.828848859639943e-11 |
 
-### r2 / mask.mismatches (rays)
+### Ray trace — `r2`: mask.mismatches (rays)
 
-| Pairs | Nonfinite | Min | Median | p90 | p99 | Max |
+| Pairs | Not finite | Min | Median | p90 | p99 | Max |
 |---|---|---|---|---|---|---|
 | 3939 | 0 | 0 | 0 | 0 | 0 | 1078 |
 
@@ -280,9 +282,9 @@ Quantiles interpolate linearly at (n - 1)p over finite gated pair figures; nonfi
 | catalog-russar-22-70f8 | lv / optiland | 120 |
 | catalog-russar-22-70f8 | optiland / ref | 120 |
 
-### r3 / opd.maxAbs (waves)
+### Optical path — `r3`: opd.maxAbs (waves)
 
-| Pairs | Nonfinite | Min | Median | p90 | p99 | Max |
+| Pairs | Not finite | Min | Median | p90 | p99 | Max |
 |---|---|---|---|---|---|---|
 | 3917 | 0 | 4.837228940071327e-11 | 6.772120516099858e-10 | 1.9348915760285307e-9 | 4.250956792534731e-9 | 4.327626871234813e-7 |
 
@@ -299,9 +301,9 @@ Quantiles interpolate linearly at (n - 1)p over finite gated pair figures; nonfi
 | catalog-russar-21-60f18 | lv / optiland | 3.008756400724365e-8 |
 | catalog-fujifilm-fujinon-xf-14mm-f28-r | lv / optiland | 2.51535904883709e-8 |
 
-### r3 / opticalPath.maxAbs (waves)
+### Optical path — `r3`: opticalPath.maxAbs (waves)
 
-| Pairs | Nonfinite | Min | Median | p90 | p99 | Max |
+| Pairs | Not finite | Min | Median | p90 | p99 | Max |
 |---|---|---|---|---|---|---|
 | 3923 | 0 | 1.8139608525267477e-11 | 4.837228940071327e-10 | 2.2734976018335237e-9 | 3.8107689589881794e-9 | 3.750787320131307e-7 |
 
@@ -318,9 +320,9 @@ Quantiles interpolate linearly at (n - 1)p over finite gated pair figures; nonfi
 | catalog-samsung-galaxy-s9-main-wide | optiland / ref | 2.1371482110852633e-8 |
 | catalog-fujifilm-fujinon-xf-8mm-f35-r-wr | lv / optiland | 2.118706275751241e-8 |
 
-### r3 / opticalPathToImage.maxAbs (waves)
+### Optical path — `r3`: opticalPathToImage.maxAbs (waves)
 
-| Pairs | Nonfinite | Min | Median | p90 | p99 | Max |
+| Pairs | Not finite | Min | Median | p90 | p99 | Max |
 |---|---|---|---|---|---|---|
 | 3923 | 0 | 4.837228940071327e-11 | 5.804674728085593e-10 | 1.8865192866278177e-9 | 5.403184726059488e-9 | 4.3160175217786414e-7 |
 
@@ -337,9 +339,9 @@ Quantiles interpolate linearly at (n - 1)p over finite gated pair figures; nonfi
 | catalog-fujifilm-fujinon-xf-14mm-f28-r | lv / optiland | 2.558894109297732e-8 |
 | catalog-fujifilm-fujinon-xf-8mm-f35-r-wr | lv / optiland | 2.2686603728934524e-8 |
 
-### r3 / phasePath.maxAbs (waves)
+### Optical path — `r3`: phasePath.maxAbs (waves)
 
-| Pairs | Nonfinite | Min | Median | p90 | p99 | Max |
+| Pairs | Not finite | Min | Median | p90 | p99 | Max |
 |---|---|---|---|---|---|---|
 | 8 | 0 | 5.166717923049818e-15 | 5.904820483485506e-14 | 1.1219158918622461e-13 | 1.493919582321833e-13 | 1.5352533257062316e-13 |
 
@@ -354,9 +356,9 @@ Quantiles interpolate linearly at (n - 1)p over finite gated pair figures; nonfi
 | catalog-canon-rf600mmf11-is-stm | optiland / ref | 2.3619281933942026e-14 |
 | catalog-canon-ef-70-300mm-f45-56-do-is-usm-wide | optiland / ref | 5.166717923049818e-15 |
 
-### r4 / mtf.maxAbs (1)
+### Geometric MTF of the same rays — `r4`: mtf.maxAbs, with no unit
 
-| Pairs | Nonfinite | Min | Median | p90 | p99 | Max |
+| Pairs | Not finite | Min | Median | p90 | p99 | Max |
 |---|---|---|---|---|---|---|
 | 3891 | 0 | 6.561418075534675e-14 | 1.860379905682663e-12 | 8.497869075085873e-12 | 4.48888717863304e-11 | 1.985938941073684e-9 |
 
@@ -373,9 +375,9 @@ Quantiles interpolate linearly at (n - 1)p over finite gated pair figures; nonfi
 | catalog-fujifilm-fujinon-xf-8-16mm-f28-r-lm-wr-wide | lv / ref | 4.1855702237469927e-10 |
 | catalog-fujifilm-fujinon-xf-14mm-f28-r | lv / ref | 3.6986025353513696e-10 |
 
-### r4f / fields.mismatches (elements)
+### LensVisualizer's MTF sampling, replayed — `r4f`: fields.mismatches (elements)
 
-| Pairs | Nonfinite | Min | Median | p90 | p99 | Max |
+| Pairs | Not finite | Min | Median | p90 | p99 | Max |
 |---|---|---|---|---|---|---|
 | 1297 | 0 | 0 | 0 | 0 | 0 | 0 |
 
@@ -392,9 +394,9 @@ Quantiles interpolate linearly at (n - 1)p over finite gated pair figures; nonfi
 | catalog-apple-iphone-7-wide-camera-lens | lv / replay | 0 |
 | catalog-bertele-sonnar-50f2-scaled | lv / replay | 0 |
 
-### r4f / mtf.maxAbs (1)
+### LensVisualizer's MTF sampling, replayed — `r4f`: mtf.maxAbs, with no unit
 
-| Pairs | Nonfinite | Min | Median | p90 | p99 | Max |
+| Pairs | Not finite | Min | Median | p90 | p99 | Max |
 |---|---|---|---|---|---|---|
 | 1297 | 0 | 1.124100812432971e-15 | 7.216449660063518e-15 | 1.1213252548714081e-14 | 1.4437340212225532e-14 | 1.7985612998927536e-14 |
 
@@ -411,9 +413,9 @@ Quantiles interpolate linearly at (n - 1)p over finite gated pair figures; nonfi
 | catalog-nikon-nikkor-afs-20mm-f18g | lv / replay | 1.509903313490213e-14 |
 | catalog-panasonic-lumix-s-pro-16-35f4-tele | lv / replay | 1.4988010832439613e-14 |
 
-### r4f / sampling.mismatches (elements)
+### LensVisualizer's MTF sampling, replayed — `r4f`: sampling.mismatches (elements)
 
-| Pairs | Nonfinite | Min | Median | p90 | p99 | Max |
+| Pairs | Not finite | Min | Median | p90 | p99 | Max |
 |---|---|---|---|---|---|---|
 | 1297 | 0 | 0 | 0 | 0 | 0 | 0 |
 
@@ -430,9 +432,9 @@ Quantiles interpolate linearly at (n - 1)p over finite gated pair figures; nonfi
 | catalog-apple-iphone-7-wide-camera-lens | lv / replay | 0 |
 | catalog-bertele-sonnar-50f2-scaled | lv / replay | 0 |
 
-### r6a / waveMtf.maxAbs (1)
+### Wave MTF of the same rays — `r6a`: waveMtf.maxAbs, with no unit
 
-| Pairs | Nonfinite | Min | Median | p90 | p99 | Max |
+| Pairs | Not finite | Min | Median | p90 | p99 | Max |
 |---|---|---|---|---|---|---|
 | 2400 | 0 | 1.0624834345662748e-12 | 4.0146150293018934e-11 | 3.81931247739331e-10 | 8.726096564076729e-10 | 1.272838057175818e-9 |
 
@@ -449,11 +451,11 @@ Quantiles interpolate linearly at (n - 1)p over finite gated pair figures; nonfi
 | catalog-fujifilm-fujinon-xf-18-135mm-f35-56-r-lm-ois-wr-wide | optiland / ref | 1.1024095525336008e-9 |
 | catalog-sony-fe-pz-16-35-f4-g-tele | optiland / ref | 1.0601600153314905e-9 |
 
-## Classified FAILs
+## Failures, classified
 
-Listed failures remain FAIL; each failing metric retains its class, evidence hash, gotcha and one-run reproducer.
+A listed failure keeps its verdict, Fail; each failing figure keeps its class, the hash of its evidence, the entry of docs/gotchas.md that explains it and a command that reproduces it in one run.
 
-| Run | Rung | Engines | Metric | Class | Gotcha | Reproducer |
+| Run | Check | Engines | Figure | Class | Gotcha | Reproducer |
 |---|---|---|---|---|---|---|
 | catalog-bertele-sonnar-50f2-scaled | r2 | lv / optiland | mask.mismatches | method | docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost | node bin/lvrtc.mjs run suites/catalog-repro/catalog-bertele-sonnar-50f2-scaled.json --rungs r2 --jobs 4 |
 | catalog-bertele-sonnar-50f2-scaled | r2 | lv / ref | mask.mismatches | method | docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost | node bin/lvrtc.mjs run suites/catalog-repro/catalog-bertele-sonnar-50f2-scaled.json --rungs r2 --jobs 4 |
@@ -480,6 +482,35 @@ Listed failures remain FAIL; each failing metric retains its class, evidence has
 | catalog-russar-22-70f8 | r2 | lv / optiland | mask.mismatches | method | docs/gotchas.md#a-conic-is-met-in-front-of-the-ray-inside-the-aperture-or-else-on-its-far-side | node bin/lvrtc.mjs run suites/catalog-repro/catalog-russar-22-70f8.json --rungs r2 --jobs 4 |
 | catalog-russar-22-70f8 | r2 | optiland / ref | mask.mismatches | method | docs/gotchas.md#a-conic-is-met-in-front-of-the-ray-inside-the-aperture-or-else-on-its-far-side | node bin/lvrtc.mjs run suites/catalog-repro/catalog-russar-22-70f8.json --rungs r2 --jobs 4 |
 
+## How to read this
+
+A lens state is one run of the sweep; a pair is two engines on one check of one run. A status or a verdict is
+shown by its label; the stored value is what the catalog's baselines hold:
+
+| Label | Stored value | Meaning |
+|---|---|---|
+| Pass: within limit | `PASS` | A check held to a limit: every judged figure is at or below its limit. |
+| Fail: beyond limit | `FAIL` | A check held to a limit: a judged figure is above its limit, or is not a number. |
+| Not computed | `UNSUPPORTED` | One of the two engines cannot compute what was asked. That is an answer, not a failure. |
+
+The checks of the sweep, by the id a heading names:
+
+| Check | Id | Compares |
+|---|---|---|
+| Built system | `r0` | Built layout, shape, aperture, index and sampled sag. |
+| First-order data | `r1` | First-order quantities and pupils. |
+| Ray trace | `r2` | Hits, directions, image landings and masks of identical rays. |
+| Optical path | `r3` | Optical path, path to image and chief-relative OPD of identical rays. |
+| Geometric MTF of the same rays | `r4` | This tool's geometric MTF of identical rays, as each engine traces them. |
+| LensVisualizer's MTF sampling, replayed | `r4f` | LensVisualizer's geometric MTF beside a replay of its own sampling. |
+| Wave MTF of the same rays | `r6a` | This tool's wave MTF of identical rays, as each engine traces them, in fields whose sampling settled. |
+
+In the table of failures, Class says where a difference comes from, decided in the order unsupported, data, convention, numerical, method (method: the two engines' methods differ), and not that an engine is right; Gotcha is the entry of docs/gotchas.md that explains the difference, and Reproducer the command that reproduces it in one run:
+
+| Class | Stored value |
+|---|---|
+| the methods differ | `method` |
+
 ## Sources
 
 - baselines/catalog.json: 3c0b12e2415347a3f48a68212d69b172b1ddc2de76c0b6b9d630985e4db1211c
@@ -487,15 +518,15 @@ Listed failures remain FAIL; each failing metric retains its class, evidence has
 
 ## Not covered
 
-- optiland's FFT and Huygens MTF take no injected rays. An MTF of optiland's own is on optiland's own pupil grid, reference sphere and frequency axes, so rung R5 is recorded and never gated: it sets two methods side by side.
+- optiland's FFT and Huygens MTF take no injected rays. An MTF of optiland's own is on optiland's own pupil grid, reference sphere and frequency axes, so check r5 sets two methods side by side and holds them to no limit.
 
-- A polychromatic curve of optiland's FFT class. It gives a one-line modulus, so several lines have no FFT row in R5 or R6c. R6c's external counterpart is the comparator's complex sum of optiland's raw wavefronts; its synthetic sum proof checks the declared weighting and phase convention, not physical spectral fidelity.
+- A polychromatic curve of optiland's FFT class. It gives the modulus at one wavelength, so a run of several wavelengths has no FFT row in checks r5 or r6c. The external counterpart in check r6c is this tool's complex sum of optiland's raw wavefronts; its proof on synthetic sums checks the declared weighting and phase convention, not physical spectral fidelity.
 
-- optiland's geometric MTF takes no injected rays either. Its rays are an even grid on the stop surface, out to the clip radius; LensVisualizer's are a lattice across the entrance beam; neither is weighted by direction cosine. Rung R5g is recorded and never gated: a difference of the two pupil samplings is written down, not explained.
+- optiland's geometric MTF takes no injected rays either. Its rays are an even grid on the stop surface, out to the clip radius; LensVisualizer's are a lattice across the entrance beam; neither is weighted by direction cosine. Check r5g sets the two side by side and holds them to no limit: a difference of the two pupil samplings is written down, not explained.
 
-- The bins of optiland's geometric MTF. On one line optiland's curve is of landings counted into bins, and a field whose bins move a value by more than a band has no optiland curve. On several lines the sum over optiland's landings is the worker's, without bins, about the axis point of the image plane; LensVisualizer's is about a chief ray's landing.
+- The bins of optiland's geometric MTF. At one wavelength optiland's curve is of landings counted into bins, and a field whose bins move a value by more than its convergence band (0.005 on the axis, 0.01 off it) has no optiland curve. At several wavelengths the sum over optiland's landings is this tool's, without bins, about the axis point of the image plane; LensVisualizer's is about a chief ray's landing.
 
-- Dispersion and white-light weighting. Every engine is handed the indices and the line weights LensVisualizer states; no glass catalog and no spectrum is checked against another.
+- Dispersion and white-light weighting. Every engine is handed the refractive indices and the wavelength weights LensVisualizer states; no glass catalog and no spectrum is checked against another.
 
 - The choice of focus. A best-focus plane is LensVisualizer's own, handed to every engine as a plane; no engine searches for one of its own.
 
@@ -503,6 +534,6 @@ Listed failures remain FAIL; each failing metric retains its class, evidence has
 
 - Models of vignetting. Each engine clips rays at the apertures it is handed; how an engine's own MTF fills, samples and calibrates a clipped pupil is its method, and a difference that comes of it is written down, not explained.
 
-- Zoom and focus positions other than the states a run names, and the catalog beyond these suites.
+- Zoom and focus positions other than the lens states a run names, and the catalog beyond these suites.
 
-- Fields that an engine's own convergence test did not pass. Their figures are shown apart and enter no band.
+- Fields that an engine's own convergence test did not pass. Their figures are shown apart and enter no review band.

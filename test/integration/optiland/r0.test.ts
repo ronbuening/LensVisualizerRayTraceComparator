@@ -36,7 +36,7 @@ import type { RungPair } from "./support.ts";
 const skip = OPTILAND_UNAVAILABLE;
 /** The suites are of LensVisualizer lenses: they need both. */
 const skipSuites = OPTILAND_UNAVAILABLE || LV_UNAVAILABLE;
-const R0 = loadPolicy().rungs.r0;
+const R0 = loadPolicy().rungs["built-system"];
 const COUNTS = ["layout.mismatches", "shape.mismatches", "aperture.mismatches", "index.mismatches"] as const;
 
 /** What `lvrtc run` on rung R0 and `lvrtc compare` gave for a suite. */
@@ -49,9 +49,9 @@ interface R0Cycle {
 }
 
 function r0Cycle(t: TestContext, suite: string, name: string, engines: string, root?: string): R0Cycle {
-  const { manifest, comparisons, verdicts } = runAndCompare(t, { suite, name, engines, rungs: "r0", root });
-  assert.ok(comparisons.comparisons.every((set) => set.rung === "r0"));
-  return { manifest, pairs: pairsOf(comparisons, "r0", SYSTEM_DESCRIBE), verdicts };
+  const { manifest, comparisons, verdicts } = runAndCompare(t, { suite, name, engines, rungs: "built-system", root });
+  assert.ok(comparisons.comparisons.every((set) => set.rung === "built-system"));
+  return { manifest, pairs: pairsOf(comparisons, "built-system", SYSTEM_DESCRIBE), verdicts };
 }
 
 /** Holds every pair to R0's gates as PASS, and says the worst sag of the pairs of optiland. */
@@ -66,7 +66,7 @@ function assertAllPass(t: TestContext, suite: string, pairs: readonly RungPair[]
   }
   const optiland = pairs.filter((pair) => pair.engines.includes("optiland"));
   assert.ok(optiland.length > 0);
-  for (const other of ["ref", "lv"]) {
+  for (const other of ["reference-tracer", "lv"]) {
     const against = optiland.filter((pair) => pair.engines.split(" / ").includes(other));
     if (against.length === 0) continue;
     const [scaled, plain] = [worstOf(against, "sag.maxScaled"), worstOf(against, "sag.maxAbs")];
@@ -97,10 +97,16 @@ test(
     };
     writeFileSync(join(rootDir, "suite.json"), JSON.stringify(suite));
 
-    const { manifest, pairs, verdicts } = r0Cycle(t, "suite.json", "contract-cases", "ref,optiland", rootDir);
+    const { manifest, pairs, verdicts } = r0Cycle(
+      t,
+      "suite.json",
+      "contract-cases",
+      "reference-tracer,optiland",
+      rootDir,
+    );
     assert.deepEqual(
       manifest.jobs.map((job) => [job.run, job.rung, job.engine, job.status]),
-      names.flatMap((name) => ["optiland", "ref"].map((engine) => [name, "r0", engine, "ok"])),
+      names.flatMap((name) => ["optiland", "reference-tracer"].map((engine) => [name, "built-system", engine, "ok"])),
     );
     const optiland = manifest.engines.find((engine) => engine.id === "optiland");
     assert.ok(optiland !== undefined && optiland.status === "available");
@@ -109,13 +115,10 @@ test(
     assert.match(optiland.version, /^\d+\.\d+/);
 
     // Each request is compared against a reference and pair by pair: with two engines, the same pair twice.
-    assert.equal(
-      verdicts,
-      "contract-cases: 6 pairs: 6 PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR",
-    );
+    assert.equal(verdicts, "contract-cases: 6 pairs: 6 Pass");
     assert.deepEqual(
       pairs.map((pair) => [pair.run, pair.engines]),
-      names.map((name) => [name, "optiland / ref"]),
+      names.map((name) => [name, "optiland / reference-tracer"]),
     );
     assertAllPass(t, "contract-cases", pairs);
     // Measured: the largest sag difference of the three cases is 8.9e-16 mm, and 2.9e-16 on the scale of a rounding,
@@ -205,22 +208,24 @@ test(
   "the benchmark on R0: lv, ref and optiland built the same system for all 24 runs, at the reference and photopic lines",
   { skip: skipSuites, timeout: 900_000 },
   (t) => {
-    const { manifest, pairs, verdicts } = r0Cycle(t, rungSuite(t, "benchmark"), "benchmark", "lv,ref,optiland");
+    const { manifest, pairs, verdicts } = r0Cycle(
+      t,
+      rungSuite(t, "benchmark"),
+      "benchmark",
+      "lv,reference-tracer,optiland",
+    );
     // 12 configurations, each at the reference line and at the five photopic lines; one request for each engine.
     assert.equal(manifest.runs.length, 24);
     assert.equal(manifest.jobs.length, 24 * 3);
-    assert.ok(manifest.jobs.every((job) => job.status === "ok" && job.rung === "r0"));
+    assert.ok(manifest.jobs.every((job) => job.status === "ok" && job.rung === "built-system"));
     // Against a reference two pairs for each run, and pair by pair three.
-    assert.equal(
-      verdicts,
-      "benchmark: 120 pairs: 120 PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR",
-    );
+    assert.equal(verdicts, "benchmark: 120 pairs: 120 Pass");
     // Three pairs of two engines for each run.
     assert.equal(pairs.length, 24 * 3);
     assert.deepEqual([...new Set(pairs.map((pair) => pair.engines))].sort(), [
       "lv / optiland",
-      "lv / ref",
-      "optiland / ref",
+      "lv / reference-tracer",
+      "optiland / reference-tracer",
     ]);
     assertAllPass(t, "benchmark", pairs);
   },
@@ -230,7 +235,7 @@ test(
   "the feature suite on R0: every translation path passes three ways, and optiland declares nothing unsupported",
   { skip: skipSuites, timeout: 900_000 },
   (t) => {
-    const { manifest, pairs, verdicts } = r0Cycle(t, suitePath("features"), "features", "lv,ref,optiland");
+    const { manifest, pairs, verdicts } = r0Cycle(t, suitePath("features"), "features", "lv,reference-tracer,optiland");
     // 16 runs as written, 18 as run: the fixed-iris zoom is run at both ends.
     assert.equal(manifest.runs.length, 18);
     assert.ok(manifest.runs.every((run) => run.caseId !== null && run.problems.length === 0));
@@ -242,10 +247,7 @@ test(
       refused.map((job) => [job.run, job.engine, job.status, job.unsupported ?? job.error]),
       [],
     );
-    assert.equal(
-      verdicts,
-      "features: 90 pairs: 90 PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR",
-    );
+    assert.equal(verdicts, "features: 90 pairs: 90 Pass");
     assert.equal(pairs.length, 18 * 3);
     assertAllPass(t, "features", pairs);
   },

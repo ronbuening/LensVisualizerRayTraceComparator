@@ -24,6 +24,7 @@ import { DASHBOARD_TEXT } from "../report/wording.ts";
 import { figureAt, optionalFigureAt, pointerOf, resolvePointer } from "./figure.ts";
 import type { Curve, Derived, DocumentName, Figure, Source } from "./figure.ts";
 import type { Loaded } from "./sources.ts";
+import { currentCheckId } from "../core/legacyIds.ts";
 
 const TEXT = DASHBOARD_TEXT.charts;
 
@@ -31,7 +32,7 @@ const TEXT = DASHBOARD_TEXT.charts;
 export type StoreReader = (key: string) => Loaded<StoreEntry>;
 
 /** The rung whose `rays.trace` requests have a per-surface deviation chart. */
-export const DEVIATION_RUNG = "r2";
+export const DEVIATION_RUNG = "ray-trace";
 /** The metric of R2 the largest bar of a deviation chart is held to, and whose tolerance is its line. */
 export const DEVIATION_METRIC = "hits.maxDistance";
 /** The most runs a heat map draws a row for; a run directory or a baseline of more has none on its page. */
@@ -323,7 +324,7 @@ function limitOf(inputs: SectionChartInputs, onAxis: boolean | null): Pick<MtfDi
   const { policyDocument, policy, rung } = inputs;
   if (policyDocument === null) return { limit: null, limitKind: null };
   const at = (metric: string, kind: "attention" | "tolerance"): Figure | null =>
-    optionalFigureAt(policyDocument, policy, ["rungs", rung, "metrics", metric, kind]);
+    optionalFigureAt(policyDocument, policy, ["rungs", currentCheckId(rung), "metrics", metric, kind]);
   if (onAxis !== null) {
     const attention = at(onAxis ? ON_AXIS_METRIC : OFF_AXIS_METRIC, "attention");
     if (attention !== null) return { limit: attention, limitKind: "attention" };
@@ -474,7 +475,7 @@ function deviationOf(
     [a, one],
     [b, two],
   ] as const) {
-    if (answer === undefined) problems.push(TEXT.noAnswer(engine, "not in the manifest"));
+    if (answer === undefined) problems.push(TEXT.noAnswer(engine, TEXT.notInRunRecord));
     else if (answer.missing !== null) problems.push(answer.missing);
   }
   const none = (problem: readonly string[]): DeviationView => {

@@ -134,7 +134,7 @@ function distinct(...lists: (readonly number[])[]): number[] {
  * and no requests, one problem each; so has a case whose tabs' pupil radius is not above 0 (`no-pupil`), one without a
  * stop to aim at (`lv-no-launch`), and one whose rays would not start in front of its first surface
  * (`launch-behind-first-surface`). A zone LensVisualizer aims no ray at is left out of its set and named
- * (`lv-zone-unaimed`); a lens that mixes d-line and e-line indices has no colour set (`lv-mixed-reference`).
+ * (`lv-zone-unaimed`); a lens that mixes index references (d, D or e) has no colour set (`lv-mixed-reference`).
  */
 export function lvAxialRaySets(api: LvAxialSetApi, model: LvCaseModel): AxialSetResolution {
   const refused = caseProblem(model);
@@ -171,7 +171,7 @@ export function lvAxialRaySets(api: LvAxialSetApi, model: LvCaseModel): AxialSet
   ];
   if (channels === null) {
     const message =
-      "the lens mixes d-line and e-line indices: no channel of LensVisualizer's chromatic tab is of one line";
+      "the lens mixes index references (d, D or e): no channel of LensVisualizer's chromatic tab is of one line";
     problems.push(rayProblem("lv-mixed-reference", message));
   }
   const sets: RaysTraceSpec[] = [];

@@ -718,7 +718,7 @@ test("lv-tab-default follows a change of LensVisualizer's defaults: nothing of t
       text
         .replace('method: "diffraction"', 'method: "geometric"')
         .replace('focus: "best-axial"', 'focus: "design"')
-        .replace('spectrum: "photopic"', 'spectrum: "cdf"')
+        .replace('regularSpectrum: "photopic"', 'regularSpectrum: "cdf"')
         .replace("fieldStepPercent: 25", "fieldStepPercent: 50")
         .replace("maxGridSize: 64", "maxGridSize: 256")
         .replace("Object.freeze([20, 40])", "Object.freeze([10])"),
@@ -778,7 +778,8 @@ test("lv-tab-default is about the tab's own case: other lines, another stop or a
       "photopic lines, as lvrtc mtf does",
   );
 
-  // Stopped down to f/5.6 the stop is neither the tab's wide-open one nor that of its f/8 comparison.
+  // Stopped down to f/5.6 the stop is neither the tab's wide-open one nor that of its comparison, at the f-number the
+  // fake's preferences resolve to, f/11 (LensVisualizer's resolve to f/8): 6 x 4 / 11.
   const stopped = await modelOf(binding, ZOOM, {
     state: { zoomT: 1 },
     aperture: { kind: "f-number", value: 5.6 },
@@ -788,7 +789,7 @@ test("lv-tab-default is about the tab's own case: other lines, another stop or a
   assert.equal(
     await codeOf(stopped.opticalCase, tab.spec),
     `the profile lv-tab-default is not about this case: the stop radius of the case, ${stop} mm, is neither the ` +
-      "one LensVisualizer's MTF tab traces wide open, 6 mm, nor that of its f/8 comparison, 3 mm",
+      `one LensVisualizer's MTF tab traces wide open, 6 mm, nor that of its f/11 comparison, ${(6 * 4) / 11} mm`,
   );
 
   // A spec that names the profile states what the profile is, and nothing else.
@@ -813,28 +814,30 @@ test("lv-tab-default is about the tab's own case: other lines, another stop or a
 
 // ── The f/8 comparison ───────────────────────────────────────────────────────────────────────────────────────────
 
-test("the f/8 comparison is the tab's request with both radii scaled by N over 8, on a case with that stop", async (t) => {
+test("the comparison is the tab's request with both radii scaled by N over the comparison's, on a case with that stop", async (t) => {
   const binding = await bind(t, freshLv(t));
   const wideOpen = await tabOf(binding, ZOOM, "wide-open", 1);
   const comparison = await tabOf(binding, ZOOM, "f8-comparison", 1);
-  // The fake zoom is f/4 with an iris of 6 mm at its long end: at f/8 the tab traces 6 x 4 / 8.
-  assert.deepEqual([comparison.view, comparison.fNumber], ["f8-comparison", 8]);
-  assert.equal(comparison.opticalCase.conditions.stopSemiDiameter, 3);
+  // The fake zoom is f/4 with an iris of 6 mm at its long end, and its preferences resolve the comparison to f/11
+  // (LensVisualizer's to f/8): the tab traces 6 x 4 / 11.
+  const stop = (6 * 4) / 11;
+  assert.deepEqual([comparison.view, comparison.fNumber], ["f8-comparison", 11]);
+  assert.equal(comparison.opticalCase.conditions.stopSemiDiameter, stop);
   assert.deepEqual(comparison.spec, wideOpen.spec);
   assert.notEqual(comparison.opticalCase.id, wideOpen.opticalCase.id);
 
   const { api, asked } = watched(binding);
   const answer = answerLvMtf(api, await modelOfCase(binding, comparison.opticalCase), comparison.spec);
   assert.ok("data" in answer, JSON.stringify(answer));
-  assert.deepEqual([asked[0].stopSemiDiameterMm, asked[0].pupilSemiDiameterMm], [3, 3]);
+  assert.deepEqual([asked[0].stopSemiDiameterMm, asked[0].pupilSemiDiameterMm], [stop, stop]);
   assert.deepEqual(
     [answer.data.method.params.view, answer.data.method.params.fNumber, answer.data.method.params.stopSemiDiameterMm],
-    ["f8-comparison", 8, 3],
+    ["f8-comparison", 11, stop],
   );
-  assert.deepEqual(answer.data.focus, { mode: "best-axial", appliedShiftMm: -3 / 128 });
+  assert.deepEqual(answer.data.focus, { mode: "best-axial", appliedShiftMm: -stop / 128 });
 });
 
-test("a lens the tab offers no f/8 comparison for is unsupported, with the tab's reason", async (t) => {
+test("a lens the tab offers no comparison for is unsupported, with the tab's reason", async (t) => {
   const lv = freshLv(t);
   const reasonOf = async (name: string, edit: (text: string) => string) => {
     const binding = await bind(t, variantOf(lv, name, { [ZOOM_FILE]: edit }));
@@ -853,10 +856,11 @@ test("a lens the tab offers no f/8 comparison for is unsupported, with the tab's
   };
   assert.equal(
     await reasonOf("short", (text) => text.replace('"fopen": 4,', '"fopen": 4,\n  "maxFstop": 5.6,')),
-    "the lens stops down to f/5.6 at most, so LensVisualizer's MTF tab has no f/8 to compare it with",
+    "the lens stops down to f/5.6 at most, so LensVisualizer's MTF tab has no f/11 to compare it with",
   );
-  // A lens that is f/8 or slower wide open has the stop rule's f/8 stop for its wide-open one (LV #933): the
-  // comparison has no case of its own, and its case is the wide-open one, which the engine answers as such.
+  // A lens as slow as the comparison wide open (f/11, the fake's; f/8 with LensVisualizer's defaults) has the stop
+  // rule's stop at it for its wide-open one (LV #933): the comparison has no case of its own, and its case is the
+  // wide-open one, which the engine answers as such.
   const binding = await bind(
     t,
     variantOf(lv, "slow", { [ZOOM_FILE]: (text) => text.replace('"fopen": 4,', '"fopen": 11,') }),
@@ -865,7 +869,8 @@ test("a lens the tab offers no f/8 comparison for is unsupported, with the tab's
   const wideOpen = await tabOf(binding, ZOOM, "wide-open", 1);
   assert.equal(
     slow.unavailable,
-    "the lens is at f/11 wide open, and LensVisualizer's MTF tab compares with f/8 only a lens that is faster than f/7.95",
+    "the lens is at f/11 wide open, and LensVisualizer's MTF tab compares with f/11 only a lens that is faster than " +
+      "f/10.95",
   );
   assert.equal(slow.opticalCase.id, wideOpen.opticalCase.id);
   const data = dataOf(await ask(engineOn(t, binding), slow.opticalCase, slow.spec));

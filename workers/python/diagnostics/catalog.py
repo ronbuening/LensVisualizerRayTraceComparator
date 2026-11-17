@@ -13,6 +13,11 @@ import warnings
 from decimal import Decimal as D
 from pathlib import Path
 
+# The reference tracer, by its engine id since the rename of the engine ids (Stage 9.8); a run written before it names
+# the engine "ref", which is read as the same engine.
+REFERENCE = "reference-tracer"
+OLD_ENGINE_IDS = {"ref": REFERENCE}
+
 
 def main() -> None:
     from lvrtc_optiland.hygiene import prepare
@@ -40,19 +45,20 @@ def main() -> None:
     values = lambda wire: decode_ndarray(wire).values()
     requests = {}
     for job in manifest["jobs"]:
-        assert job["rung"] == "r2"
+        # The ray-trace check, by its id since the rename of the check ids or by its id before it.
+        assert job["rung"] in ("r2", "ray-trace")
         with gzip.open(directory / "store" / (job["storeKey"] + ".json.gz"), "rt") as file:
             entry = json.load(file)
         request = requests.setdefault(job["requestId"], {"spec": entry["request"]["spec"], "answers": {}})
-        request["answers"][job["engine"]] = entry["result"]["data"]
+        request["answers"][OLD_ENGINE_IDS.get(job["engine"], job["engine"])] = entry["result"]["data"]
     output = {"run": run["name"], "caseId": case["id"], "requests": [], "rays": []}
     for request_id, request in requests.items():
         spec, answers = request["spec"], request["answers"]
         states = {name: (values(data["status"]), values(data["endSurface"])) for name, data in answers.items()}
         ends = {name: [math.inf if s == 0 else e for s, e in zip(*state)] for name, state in states.items()}
-        count = len(ends["ref"])
+        count = len(ends[REFERENCE])
         disputes = [ray for ray in range(count) if any(
-            states[name][0][ray] != 2 and states["ref"][0][ray] != 2 and ends[name][ray] != ends["ref"][ray]
+            states[name][0][ray] != 2 and states[REFERENCE][0][ray] != 2 and ends[name][ray] != ends[REFERENCE][ray]
             for name in ("lv", "optiland"))]
         origins = np.array(values(spec["origins"])).reshape(count, 3)
         directions = np.array(values(spec["directions"])).reshape(count, 3)
@@ -64,12 +70,12 @@ def main() -> None:
         checked = 0
         solves = {}
         for ray in disputes:
-            expected = (states["ref"][0][ray], states["ref"][1][ray])
+            expected = (states[REFERENCE][0][ray], states[REFERENCE][1][ray])
             row = {"request": request_id, "field": spec["groups"]["field"], "ray": ray,
                    "engines": {name: [s[ray], e[ray]] for name, (s, e) in states.items()}}
             # LV/ref disagreements require the independent full trace; an unsettled calculation aborts.
             # On optiland-only disagreements the evidence is its native rows below, not a Newton guess.
-            if ends["lv"][ray] != ends["ref"][ray]:
+            if ends["lv"][ray] != ends[REFERENCE][ray]:
                 exact = exact_trace(case, tuple(origins[ray]), tuple(directions[ray]), spec["line"])
                 row["decimal60"] = [exact.status, exact.end]
                 assert (exact.status, exact.end) == expected, (ray, expected, exact)
@@ -78,12 +84,12 @@ def main() -> None:
                 assert at < len(exact.hits)
                 q, p = exact.hits[at], exact.hits[at - 1]
                 assert q[2] < p[2]
-                ref_hits = values(answers["ref"]["hits"])
+                ref_hits = values(answers[REFERENCE]["hits"])
                 row["backwardMm"] = str(q[2] - p[2])
                 row["decimalHitDeltaMm"] = max(abs(float(q[a]) - ref_hits[(at * count + ray) * 3 + a])
                                                for a in range(3))
-            if ends["optiland"][ray] != ends["ref"][ray]:
-                at = int(min(ends["optiland"][ray], ends["ref"][ray]))
+            if ends["optiland"][ray] != ends[REFERENCE][ray]:
+                at = int(min(ends["optiland"][ray], ends[REFERENCE][ray]))
                 geometry = optic.surfaces[at + 1].geometry
                 point = [float(getattr(native, k)[at + 1, ray]) for k in ("x", "y", "z")]
                 before = [float(getattr(native, k)[at, ray]) for k in ("x", "y", "z")]
@@ -121,8 +127,8 @@ def main() -> None:
                     disc = b*b - 4*a*c
                     roots = [(-b - disc.sqrt())/(2*a), (-b + disc.sqrt())/(2*a)] if disc >= 0 else []
                     row["native"]["sheetFactors60"] = [str(1 - k1*(p[2] + t*d[2])/radius) for t in roots]
-                if ends["ref"][ray] > at:
-                    hit = values(answers["ref"]["hits"])[(at * count + ray)*3:(at * count + ray)*3 + 3]
+                if ends[REFERENCE][ray] > at:
+                    hit = values(answers[REFERENCE]["hits"])[(at * count + ray)*3:(at * count + ray)*3 + 3]
                     row["native"]["refHitRadiusMm"] = math.hypot(*hit[:2])
                     from tests.optiland.exact import exact_sag
                     r = (D(hit[0])**2 + D(hit[1])**2).sqrt()

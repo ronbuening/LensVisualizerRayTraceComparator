@@ -51,7 +51,7 @@ const skip = OPTILAND_UNAVAILABLE;
 /** The suites, the stations and the catalog are of LensVisualizer lenses: they need both. */
 const skipLv = OPTILAND_UNAVAILABLE || LV_UNAVAILABLE;
 const POLICY = loadPolicy();
-const R1 = POLICY.rungs.r1;
+const R1 = POLICY.rungs["first-order"];
 /** The metrics of R1 that are judged, each with the plain figure that is shown beside it, where it has one. */
 const JUDGED = ["firstOrder.maxAbs", "pupilZ.maxScaled", "pupilRadius.maxScaled"] as const;
 const SHOWN = ["pupilZ.maxAbs", "pupilRadius.maxAbs"] as const;
@@ -261,27 +261,24 @@ test(
     );
     const made = Object.fromEntries(Object.entries(ANSWERED).map(([name, system]) => [name, caseOf(...system)]));
     const names = [...Object.keys(fixtures), ...Object.keys(made)];
-    const name = writeSuite(rootDir, "first-order", { ...fixtures, ...made });
+    const name = writeSuite(rootDir, "first-order-cases", { ...fixtures, ...made });
 
     const { manifest, comparisons, verdicts } = runAndCompare(t, {
       suite: `${name}.json`,
       name,
-      engines: "ref,optiland",
-      rungs: "r0,r1",
+      engines: "reference-tracer,optiland",
+      rungs: "built-system,first-order",
       root: rootDir,
     });
     assert.deepEqual(notOk(manifest.jobs), []);
     assert.equal(manifest.jobs.length, names.length * 2 * 2);
     // Each request is compared against a reference and pair by pair: with two engines, the same pair twice.
     const pairs = names.length * 2 * 2;
-    assert.equal(
-      verdicts,
-      `${name}: ${pairs} pairs: ${pairs} PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR`,
-    );
-    const r1 = pairsOf(comparisons, "r1", PARAXIAL_FIRST_ORDER);
+    assert.equal(verdicts, `${name}: ${pairs} pairs: ${pairs} Pass`);
+    const r1 = pairsOf(comparisons, "first-order", PARAXIAL_FIRST_ORDER);
     assert.deepEqual(
       r1.map((pair) => [pair.run, pair.engines]),
-      names.map((run) => [run, "optiland / ref"]),
+      names.map((run) => [run, "optiland / reference-tracer"]),
     );
     assertR1Passes(t, name, r1);
     // Measured: no value of these systems is more than 5.4e-14 mm apart in the two engines.
@@ -290,14 +287,17 @@ test(
     // What each engine only records travels with the comparison: optiland's f-number, and for the two cases with a
     // finite object the magnification both engines give.
     const recordedBy = (run: string, engine: string): Record<string, readonly (number | null)[]> => {
-      const set = comparisons.comparisons.find((each) => each.run === run && each.rung === "r1");
+      const set = comparisons.comparisons.find((each) => each.run === run && each.rung === "first-order");
       return set?.participants.find((participant) => participant.engine === engine)?.recorded ?? {};
     };
     assert.deepEqual(Object.keys(recordedBy("singlet", "optiland")), ["optilandFNumber"]);
-    assert.deepEqual(recordedBy("singlet", "ref"), {});
+    assert.deepEqual(recordedBy("singlet", "reference-tracer"), {});
     for (const run of ["finite-object", "all-features"]) {
       assert.deepEqual(Object.keys(recordedBy(run, "optiland")), ["magnification", "optilandFNumber"], run);
-      const [mine, theirs] = [recordedBy(run, "optiland").magnification, recordedBy(run, "ref").magnification];
+      const [mine, theirs] = [
+        recordedBy(run, "optiland").magnification,
+        recordedBy(run, "reference-tracer").magnification,
+      ];
       assert.equal(mine.length, theirs.length);
       mine.forEach((value, line) => {
         const other = theirs[line];
@@ -320,34 +320,32 @@ test(
     const { manifest, comparisons, verdicts } = runAndCompare(t, {
       suite: `${name}.json`,
       name,
-      engines: "ref,optiland",
-      rungs: "r0,r1",
+      engines: "reference-tracer,optiland",
+      rungs: "built-system,first-order",
       root: rootDir,
     });
     const item = (item: string | null): unknown => (item === null ? "ok" : [{ code: "feature", item }]);
     assert.deepEqual(
       manifest.jobs.map((job) => [job.run, job.rung, job.engine, job.status === "ok" ? "ok" : job.unsupported]),
       names.flatMap((run) => [
-        [run, "r0", "optiland", "ok"],
-        [run, "r0", "ref", "ok"],
-        [run, "r1", "optiland", item(REFUSED[run].optiland)],
-        [run, "r1", "ref", item(REFUSED[run].ref)],
+        [run, "built-system", "optiland", "ok"],
+        [run, "built-system", "reference-tracer", "ok"],
+        [run, "first-order", "optiland", item(REFUSED[run].optiland)],
+        [run, "first-order", "reference-tracer", item(REFUSED[run].ref)],
       ]),
     );
     const pairs = names.length * 2;
-    assert.equal(
-      verdicts,
-      `${name}: ${2 * pairs} pairs: ${pairs} PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, ${pairs} UNSUPPORTED, 0 BLOCKED, 0 ERROR`,
-    );
+    assert.equal(verdicts, `${name}: ${2 * pairs} pairs: ${pairs} Pass, ${pairs} Not computed`);
     // The system is built and echoed whatever its first-order data: a term of power 2 is in optiland's sag.
-    for (const pair of pairsOf(comparisons, "r0", SYSTEM_DESCRIBE)) assert.equal(pair.verdict, "PASS", pair.run);
-    const r1 = pairsOf(comparisons, "r1", PARAXIAL_FIRST_ORDER);
+    for (const pair of pairsOf(comparisons, "built-system", SYSTEM_DESCRIBE))
+      assert.equal(pair.verdict, "PASS", pair.run);
+    const r1 = pairsOf(comparisons, "first-order", PARAXIAL_FIRST_ORDER);
     assert.deepEqual(
       r1.map((pair) => [pair.run, pair.verdict, pair.reason]),
       names.map((run) => {
         const said = [
           `optiland is unsupported (feature ${REFUSED[run].optiland})`,
-          ...(REFUSED[run].ref === null ? [] : [`ref is unsupported (feature ${REFUSED[run].ref})`]),
+          ...(REFUSED[run].ref === null ? [] : [`reference-tracer is unsupported (feature ${REFUSED[run].ref})`]),
         ];
         return [run, "UNSUPPORTED", said.join("; ")];
       }),
@@ -364,24 +362,21 @@ test(
     const { manifest, comparisons, verdicts } = runAndCompare(t, {
       suite: rungSuite(t, "benchmark"),
       name: "benchmark",
-      engines: "lv,ref,optiland",
-      rungs: "r0,r1",
+      engines: "lv,reference-tracer,optiland",
+      rungs: "built-system,first-order",
     });
     // 12 configurations, each at the reference line and at the five photopic lines; two rungs, three engines.
     assert.equal(manifest.runs.length, 24);
     assert.deepEqual(notOk(manifest.jobs), []);
     assert.equal(manifest.jobs.length, 24 * 2 * 3);
     // For each request two pairs against a reference, and three pair by pair.
-    assert.equal(
-      verdicts,
-      "benchmark: 240 pairs: 240 PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR",
-    );
-    const pairs = pairsOf(comparisons, "r1", PARAXIAL_FIRST_ORDER);
+    assert.equal(verdicts, "benchmark: 240 pairs: 240 Pass");
+    const pairs = pairsOf(comparisons, "first-order", PARAXIAL_FIRST_ORDER);
     assert.equal(pairs.length, 24 * 3);
     assert.deepEqual([...new Set(pairs.map((pair) => pair.engines))].sort(), [
       "lv / optiland",
-      "lv / ref",
-      "optiland / ref",
+      "lv / reference-tracer",
+      "optiland / reference-tracer",
     ]);
     assertR1Passes(t, "benchmark", pairs);
     // Measured: the largest difference of the suite is 1.8e-12 mm, the front focal point of the 400 mm lens.
@@ -397,8 +392,8 @@ test(
     const { manifest, comparisons, verdicts } = runAndCompare(t, {
       suite: suitePath("features"),
       name: "features",
-      engines: "lv,ref,optiland",
-      rungs: "r0,r1",
+      engines: "lv,reference-tracer,optiland",
+      rungs: "built-system,first-order",
     });
     // 16 runs as written, 18 as run: the fixed-iris zoom is run at both ends.
     assert.equal(manifest.runs.length, 18);
@@ -406,11 +401,8 @@ test(
     // An odd asphere, an e line, a term of power 20, a flat base, a rear plate, a zoom, a stop inside an element:
     // none of them is a term of power 1 or 2, so optiland's first-order data is asked of each and answers each.
     assert.deepEqual(notOk(manifest.jobs), []);
-    assert.equal(
-      verdicts,
-      "features: 180 pairs: 180 PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR",
-    );
-    const pairs = pairsOf(comparisons, "r1", PARAXIAL_FIRST_ORDER);
+    assert.equal(verdicts, "features: 180 pairs: 180 Pass");
+    const pairs = pairsOf(comparisons, "first-order", PARAXIAL_FIRST_ORDER);
     assert.equal(pairs.length, 18 * 3);
     assertR1Passes(t, "features", pairs);
     // Measured: the largest difference of the suite is 1.2e-13 mm, the exit pupil of the zoom at its tele end.
@@ -421,11 +413,14 @@ test(
 
 // ── In this process: the stations, the stored constants and the catalog ──────────────────────────────────────────
 
-/** `lv` on the real LensVisualizer and `ref` in this process, `optiland` in its worker, and LensVisualizer's exporter. */
+/** `lv` on the real LensVisualizer and `reference-tracer` in this process, `optiland` in its worker, and LensVisualizer's exporter. */
 async function engines(t: TestContext) {
   const binding = await loadLvBinding(LV_PATH);
   const lv = new RemoteEngineAdapter({ id: "lv", transport: createInProcessTransport(createLvEngineOn(binding)) });
-  const ref = new RemoteEngineAdapter({ id: "ref", transport: createInProcessTransport(createRefEngine()) });
+  const ref = new RemoteEngineAdapter({
+    id: "reference-tracer",
+    transport: createInProcessTransport(createRefEngine()),
+  });
   const optiland = await createEngineRegistry(optilandRoot(t)).create("optiland");
   t.after(() => Promise.all([lv.close(), ref.close(), optiland.close()]));
   return { binding, exporter: createLvExporter(binding), lv, ref, optiland };
@@ -446,7 +441,7 @@ function refusal(result: ResultEnvelope): string {
 
 /** The pairs of some answers to one request of a rung, each two engines once, judged as `lvrtc compare` judges. */
 function judged(
-  rung: "r0" | "r1",
+  rung: "built-system" | "first-order",
   request: QuantityRequest,
   opticalCase: OpticalCase,
   at: string,
@@ -515,7 +510,7 @@ test(
       const { opticalCase } = exported;
       assert.equal(opticalCase.conditions.object.kind, "finite", at);
       for (const rung of [r0Rung, r1Rung]) {
-        const id = rung.id as "r0" | "r1";
+        const id = rung.id as "built-system" | "first-order";
         const [request] = rung.buildRequests(opticalCase, runOf(key));
         const answers: Record<string, JsonObject> = {};
         for (const [engine, adapter] of Object.entries({ lv, optiland, ref })) {
@@ -527,7 +522,7 @@ test(
           assert.equal(pair.verdict, "PASS", `${at} ${id} ${pair.a} / ${pair.b}: ${pair.reason ?? ""}`);
           if (pair.a === "optiland" || pair.b === "optiland") worst.see(pair, at);
         }
-        if (id !== "r1") continue;
+        if (id !== "first-order") continue;
         // The paraxial magnification of the object plane, from three kernels: LensVisualizer's, the reference
         // engine's ray-transfer matrix and optiland's marginal ray from the axial object point.
         const m = Object.fromEntries(
@@ -643,13 +638,13 @@ test(
         assert.equal(opticalCase.conditions.lines.length, 1, at);
         counts.cases++;
         for (const rung of [r0Rung, r1Rung]) {
-          const id = rung.id as "r0" | "r1";
+          const id = rung.id as "built-system" | "first-order";
           const [request] = rung.buildRequests(opticalCase, runOf(entry.key));
           const [mine, theirs] = [await optiland.run(request, opticalCase), await ref.run(request, opticalCase)];
           assert.equal(theirs.status, "ok", `${at} ${id} ref: ${refusal(theirs)}`);
           if (mine.status !== "ok") {
             if (
-              id === "r1" &&
+              id === "first-order" &&
               opticalCase.features.includes("surface.diffractive") &&
               mine.status === "unsupported" &&
               mine.unsupported?.length === 1 &&
@@ -661,14 +656,14 @@ test(
             }
             // A case optiland did not build, or built as another system, is an error of R0; what it has no
             // first-order data of is an "unsupported" of R1. Either is named with the lens and the reason.
-            (id === "r0" ? notBuilt : noFirstOrder).push(`${at}: ${refusal(mine)}`);
+            (id === "built-system" ? notBuilt : noFirstOrder).push(`${at}: ${refusal(mine)}`);
             continue;
           }
           const [pair] = judged(id, request, opticalCase, at, {
             optiland: mine.data as JsonObject,
-            ref: theirs.data as JsonObject,
+            "reference-tracer": theirs.data as JsonObject,
           });
-          counts[id]++;
+          counts[id === "built-system" ? "r0" : "r1"]++;
           if (pair.verdict !== "PASS") failed.push(`${at} ${id}: ${pair.verdict} ${pair.reason ?? ""}`);
           worst.see(pair, at);
         }

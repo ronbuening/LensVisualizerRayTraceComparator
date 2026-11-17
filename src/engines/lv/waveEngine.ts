@@ -1,8 +1,9 @@
-// The engine `wave`: the comparator's wave estimator on LensVisualizer's own rays. It answers `mtf.native` for the
-// method "diffraction", and where the engine `lv` hands such a request to LensVisualizer's `computeMtf`, whose
-// diffraction estimate is LensVisualizer's own, this engine launches LensVisualizer's lattice over the beam of
-// each field, has LensVisualizer trace it, and takes Hopkins' autocorrelation of the pupil function the optical
-// paths give (src/estimators/waveOtf.ts). Rung R6b sets the two answers beside each other.
+// The engine `wave-mtf-of-lv-rays` (`wave` before Stage 9.8): the comparator's wave estimator on LensVisualizer's own
+// rays. It answers `mtf.native` for the method "diffraction", and where the engine `lv` hands such a request to
+// LensVisualizer's `computeMtf`, whose diffraction estimate is LensVisualizer's own, this engine launches
+// LensVisualizer's lattice over the beam of each field, has LensVisualizer trace it, and takes Hopkins' autocorrelation
+// of the pupil function the optical paths give (src/estimators/waveOtf.ts). Rung R6b sets the two answers beside each
+// other.
 //
 // It is no independent engine: its rays are LensVisualizer's, launched and traced by LensVisualizer, the very sets
 // a run asks every engine to trace (`lvFieldRaySets`) and the very trace `lv` answers `rays.trace` with
@@ -39,7 +40,7 @@ import type { LvLaunchSetup, LvRaySetApi } from "./raySets.ts";
 import { answerLvRays } from "./rays.ts";
 
 /** The id of the engine that is the comparator's wave estimator on LensVisualizer's own rays. */
-export const LV_WAVE_ENGINE_ID = "wave";
+export const LV_WAVE_ENGINE_ID = "wave-mtf-of-lv-rays";
 
 /** The version of the engine, for people. Results are keyed by its fingerprint and its adapter revision. */
 export const LV_WAVE_ENGINE_VERSION = "1";
@@ -319,17 +320,17 @@ const IDENTITY: LvBackedIdentity = {
 };
 
 /**
- * The engine `wave` on a bound LensVisualizer checkout, as a protocol handler: `mtf.native` by `answerLvWave`, and
- * for a case everything the engine `lv` does (`createLvBackedEngine`): a case that is no longer what
- * LensVisualizer gives is "stale-case", and a case from any other source "unsupported".
+ * The engine `wave-mtf-of-lv-rays` on a bound LensVisualizer checkout, as a protocol handler: `mtf.native` by
+ * `answerLvWave`, and for a case everything the engine `lv` does (`createLvBackedEngine`): a case that is no longer
+ * what LensVisualizer gives is "stale-case", and a case from any other source "unsupported".
  */
 export function createLvWaveEngineOn(binding: LvBinding): ProtocolHandler {
   return createLvBackedEngine(binding, IDENTITY, ANSWERED);
 }
 
 /**
- * The engine `wave` on the LensVisualizer checkout at `lvPath`. Rejects with an `EngineUnavailableError` when
- * LensVisualizer cannot be bound, as the engine `lv` does.
+ * The engine `wave-mtf-of-lv-rays` on the LensVisualizer checkout at `lvPath`. Rejects with an `EngineUnavailableError`
+ * when LensVisualizer cannot be bound, as the engine `lv` does.
  */
 export async function createLvWaveEngine(lvPath: string | null): Promise<ProtocolHandler> {
   return createLvWaveEngineOn(await bindLvFor(LV_WAVE_ENGINE_ID, lvPath));

@@ -569,6 +569,16 @@ test("each thing the contract cannot express is a problem with its code, and no 
     [tripletModel({ normal: [1e-9, 0, 1] }), "tilted-image-plane", /not perpendicular/],
     [tripletModel({ normal: [0, 0, -1] }), "tilted-image-plane", /not perpendicular/],
     [tripletModel({ imagePoint: [0, 12] }), "off-axis-image-plane", /not centred/],
+    [
+      tripletModel({ imageSurface: { kind: "spherical", radius: -69.25, cylinderAngle: null } }),
+      "curved-image-surface",
+      /^the image surface is spherical \(R = -69\.25 mm\), where a case's image is the flat plane z = imageZ$/,
+    ],
+    [
+      tripletModel({ imageSurface: { kind: "cylindrical", radius: -90, cylinderAngle: 0 } }),
+      "curved-image-surface",
+      /cylindrical \(R = -90 mm\)/,
+    ],
     [withSurface(6, { synthetic: "sensorStack" }), "synthetic-surface-unknown", /RP1b \(sensorStack\)$/],
     [withSurface(4, { kind: "tilted-plane" }), "surface-profile-unsupported", /surface 5 has/],
     [withSurface(1, { asphere: { K: 0, B4: 1 } }), "asphere-coefficient-unknown", /"B4"/],
@@ -582,6 +592,19 @@ test("each thing the contract cannot express is a problem with its code, and no 
   }
   // An image-plane normal within LensVisualizer's own tolerance of +z is perpendicular.
   assert.equal(exportCase(inputFor(tripletModel({ normal: [5e-11, -5e-11, 1] }))).ok, true);
+  // A flat image is a null image surface (LV #960), and a LensVisualizer from before #960 states none: both export,
+  // to the same case.
+  const flat = exported(exportCase(inputFor(tripletModel({ imageSurface: null }))));
+  assert.deepEqual(flat, exported(exportCase(inputFor(tripletModel()))));
+});
+
+test("a curved image surface is refused before LensVisualizer's gate or its focus is asked about the lens", () => {
+  const never: Partial<LvExportApi> = {
+    assessMtfSupport: () => assert.fail("the gate was asked about a lens with a curved image surface"),
+  };
+  const model = tripletModel({ imageSurface: { kind: "aspheric", radius: 120, cylinderAngle: null } });
+  const options = { lines: { kind: "photopic" }, imagePlane: { kind: "lv-best-axial" } } as const;
+  assert.deepEqual(codesOf(exportCase(inputFor(model, options, never))), ["curved-image-surface"]);
 });
 
 test("every problem of a lens is reported together, and LensVisualizer's gate is not asked about a lens it rejects", () => {

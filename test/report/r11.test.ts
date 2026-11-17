@@ -19,15 +19,18 @@ test("R11a: a turned rim direction fails as the flux into the image, a stopped r
       set.pairs.map((pair) => `${pair.a}-${pair.b} ${pair.verdict}`),
     ]);
     assert.deepEqual(verdicts, [
-      ["reference-vs-each", ["ref-moved FAIL", "ref-stopped FAIL", "ref-turned FAIL"]],
+      [
+        "reference-vs-each",
+        ["reference-tracer-moved FAIL", "reference-tracer-stopped FAIL", "reference-tracer-turned FAIL"],
+      ],
       [
         "pairwise",
         [
-          "moved-ref FAIL",
+          "moved-reference-tracer FAIL",
           "moved-stopped FAIL",
           "moved-turned FAIL",
-          "ref-stopped FAIL",
-          "ref-turned FAIL",
+          "reference-tracer-stopped FAIL",
+          "reference-tracer-turned FAIL",
           "stopped-turned FAIL",
         ],
       ],

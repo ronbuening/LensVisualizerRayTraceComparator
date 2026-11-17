@@ -1,5 +1,5 @@
 import { canonicalJson } from "../core/numeric/canonicalJson.ts";
-import { failureEvidence } from "./catalog.ts";
+import { failureEvidence, listsKnownFailures } from "./catalog.ts";
 // What `lvrtc baseline check` decides: a committed baseline set against the baseline of the same suite as it runs
 // today. Both are baselines, so this reads no engine and no file, and is a pure function.
 import { FAILING_VERDICTS } from "../contract/comparison.ts";
@@ -158,16 +158,17 @@ export function checkBaseline(committed: Baseline, fresh: Baseline, policy: Poli
         if ([a, b].some((id) => !sameEngine(engineOf(committed, id), engineOf(fresh, id)))) stale.push("engine");
         if (policyStale) stale.push("policy");
         const moved = movedBetween(pair, now, rung.requests === rungToday.requests, policy, rung.rung);
-        const catalogFailure = fresh.suite.name === "catalog" && now.verdict === "FAIL";
+        // A FAIL of a suite that lists known failures (the catalog, focus-stations) is held as listed or drifts.
+        const listedSuiteFailure = listsKnownFailures(fresh.suite.name) && now.verdict === "FAIL";
         const knownFailure =
-          catalogFailure &&
+          listedSuiteFailure &&
           pair.verdict === "FAIL" &&
           !!pair.failures?.length &&
           !!now.failures?.length &&
           failureEvidence(rung.requests, pair) === failureEvidence(rungToday.requests, now) &&
           canonicalJson(pair.failures) === canonicalJson(now.failures) &&
           changesBetween(pair, now).length === 0;
-        if (catalogFailure && !knownFailure) moved.push("new, changed or unclassified catalog FAIL");
+        if (listedSuiteFailure && !knownFailure) moved.push(`new, changed or unclassified ${fresh.suite.name} FAIL`);
         const recorded = Object.hasOwn(policy.rungs, rung.rung) && policy.rungs[rung.rung].class === "recorded";
         const outcome = moved.length > 0 ? (recorded ? "MOVED" : "DRIFT") : stale.length > 0 ? "REFRESHABLE" : "OK";
         const changes = changesBetween(pair, now);
@@ -189,14 +190,23 @@ export function checkBaseline(committed: Baseline, fresh: Baseline, policy: Poli
       const rungBefore = before?.rungs.find((each) => each.rung === rung.rung);
       for (const pair of rung.pairs) {
         if (rungBefore?.pairs.some((each) => each.a === pair.a && each.b === pair.b)) continue;
+        // A FAIL of a suite that lists known failures is DRIFT in a record the baseline lacks; but of a suite other
+        // than the catalog, one listed exactly (classified, `classifyCatalog`) is NEW, as its list has it pending
+        // until a baseline holds its run (`pendingKnownFailures`). The catalog keeps its rule: a new FAIL is DRIFT.
+        const listedNew =
+          listsKnownFailures(fresh.suite.name) &&
+          fresh.suite.name !== "catalog" &&
+          pair.verdict === "FAIL" &&
+          pair.failures !== undefined;
         records.push({
           run: run.name,
           rung: rung.rung,
           a: pair.a,
           b: pair.b,
           stale: [],
-          outcome: fresh.suite.name === "catalog" && pair.verdict === "FAIL" ? "DRIFT" : "NEW",
+          outcome: listsKnownFailures(fresh.suite.name) && pair.verdict === "FAIL" && !listedNew ? "DRIFT" : "NEW",
           verdict: pair.verdict,
+          ...(listedNew ? { knownFailure: true } : {}),
           moved: [],
         });
       }

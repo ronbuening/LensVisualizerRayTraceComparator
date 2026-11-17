@@ -21,7 +21,7 @@ import type { RungPolicy } from "../../src/contract/policy.ts";
 import type { ZernikeNativeData } from "../../src/contract/quantities/zernikeNative.ts";
 import { ZERNIKE_DATA_FRINGE, ZERNIKE_DATA_STANDARD } from "../contract/corpus.ts";
 
-const POLICY: RungPolicy = loadPolicy().rungs.r14b;
+const POLICY: RungPolicy = loadPolicy().rungs["zernike-vs-optiland"];
 
 function compared(
   a: ZernikeNativeData,
@@ -192,7 +192,7 @@ test("policy 24: the limits of the landing and the fit's condition, and the band
   const pairOf = (b: ZernikeNativeData) =>
     comparePair(
       { engine: "optiland", fingerprint: "a", status: "ok", data: ZERNIKE_DATA_FRINGE as unknown as JsonObject },
-      { engine: "optiland-wave", fingerprint: "b", status: "ok", data: b as unknown as JsonObject },
+      { engine: "otf-of-optiland-wavefront", fingerprint: "b", status: "ok", data: b as unknown as JsonObject },
       POLICY,
       zernikeNativeComparator,
     );

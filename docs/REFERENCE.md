@@ -1,10 +1,50 @@
 # Reference
 
 Everything the [README](../README.md) leaves out: every command's options and exit codes, how LensVisualizer is
-loaded and exported, the engines, the rungs with their gates and measured results, the result store, configuration
+loaded and exported, the engines, the checks (once called rungs) with their limits and measured results, the result store, configuration
 and workers. The contract itself is in [contract/CONTRACT.md](../contract/CONTRACT.md), the plan in
 [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md), and what an engine does that a comparison has to know about in
 [gotchas.md](gotchas.md).
+
+## Identifiers
+
+Stage 9.7 renamed the checks (once called rungs) and Stage 9.8 the engines this tool builds, so that each id says
+what it compares or computes. **This file keeps the ids of its time** (R0 to R14b, `r2`, `--rungs r0,r1`, `ref`,
+`replay`, `wave`, `flux`, `ref-seidel`, `optiland-wave`): each is a name of the same check or engine as its new id
+below. Code, suites other than the catalog's, the limits file (`policy/rungs.v1.json`, version 25) and new run
+directories use the new ids; files written before the rename keep theirs, and lvrtc reads an old id as the new one
+with one note per command until the end-of-project catalog refresh (`lvrtc glossary r2`, `lvrtc checks r2`). The
+catalog snapshot (its baselines, reports, suite files, reproducers and `docs/known-failures.json`) keeps the old ids
+and is checked in them. [gotchas.md](gotchas.md) and [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) point here.
+
+| Old check id | New check id | Old check id | New check id |
+|---|---|---|---|
+| selftest | `pipeline-echo` | r5 | `mtf-vs-optiland-fft` |
+| r0 | `built-system` | r5g | `geometric-mtf-vs-optiland` |
+| r1 | `first-order` | r6b | `mtf-vs-wave-estimate` |
+| r2 | `ray-trace` | r6c | `mtf-vs-optiland-wavefront` |
+| r3 | `optical-path` | r7b | `spot-vs-optiland` |
+| r4 | `geometric-mtf` | r8b | `axial-vs-optiland` |
+| r4f | `lv-mtf-replay` | r9b | `chief-vs-optiland` |
+| r6a | `wave-mtf` | r10b | `field-curve-vs-optiland` |
+| r7a | `spot-rays` | r11b | `vignetting-vs-flux-estimate` |
+| r8a | `axial-rays` | r12b | `summary-vs-optiland` |
+| r9a | `chief-rays` | r13b | `seidel-vs-optiland` |
+| r10a | `field-curve-rays` | r14b | `zernike-vs-optiland` |
+| r11a | `vignetting-rays` | | |
+
+| Old engine id | New engine id |
+|---|---|
+| ref | `reference-tracer` |
+| ref-seidel | `reference-seidel` |
+| replay | `replay-of-lv-mtf` |
+| wave | `wave-mtf-of-lv-rays` |
+| flux | `flux-of-lv-rays` |
+| optiland-wave | `otf-of-optiland-wavefront` |
+
+`lv` and `optiland` kept their ids. The map is `src/core/legacyIds.ts` (`LEGACY_CHECK_IDS`, `LEGACY_ENGINE_IDS`);
+`lvrtc checks` and [GLOSSARY.md](GLOSSARY.md) show each old id beside its new one. The command-line option
+`--rungs` is the older spelling of `--checks`.
 
 ## Validation statement (Stage 4.5)
 
@@ -1729,7 +1769,7 @@ for such a case and is asked about every other as before.
 Values are layered, lowest precedence first:
 
 1. built-in defaults;
-2. `lvrtc.config.json` (committed): sibling-relative defaults for the LensVisualizer and optiland checkouts;
+2. `lvrtc.config.json` (committed): names no LensVisualizer or optiland checkout, so each machine sets its own;
 3. `lvrtc.local.json` (gitignored): per-machine overrides; copy `lvrtc.local.example.json` to start;
 4. the environment: `LVRTC_LV_PATH`, `LVRTC_PYTHON`, `LVRTC_OPTILAND_PYTHON`, `LVRTC_RUNS_DIR`.
 
@@ -2291,7 +2331,7 @@ of the run's case, each engine's id, fingerprint and adapter revision with the c
 version and hash. It holds no ray, no prescription, no time and no path, and is canonical JSON: the same run gives
 the same bytes anywhere.
 
-**To write the two that are committed**, on the checkouts of `lvrtc.config.json`:
+**To write the two that are committed**, on the configured checkouts:
 
 ```bash
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r0,r1,r2,r3,r4
@@ -3969,7 +4009,7 @@ measure (`no-rays`, `no-flux`, `no-reference`) is unmeasured, not failed.
 
 | Item | When |
 |---|---|
-| `lines.not-authored-reference` | Line 0 is not the authored indices: the tabs trace no chromatic channel. Every photopic run, whose line 0 is 555 nm. |
+| `lines.not-authored-reference` | Line 0 is not the authored indices: the tabs trace no chromatic channel. Every photopic run, whose line 0 is 560 nm (555 nm before LensVisualizer #988). |
 | `focus.off-design` | A coma pattern off the design plane. Every best-focus run. |
 | `pupil.rings` | A bokeh tile of other rings than LensVisualizer's own. |
 | `fields.angles-deg` | Fields as angles. |
@@ -6643,3 +6683,618 @@ policy 24. It ran on the real store, through a private clone of LensVisualizer (
   - The benchmark MTF run at `--jobs 2`: 63 minutes, recomputing `lv`, `replay`, `wave`, optiland and
     `optiland-wave`. Its check, on the warm store: 4 minutes.
   - Each rays suite: at most 10 minutes for its run, compare, check and write.
+
+## LensVisualizer 420b47555 adopted
+
+LensVisualizer main `420b47555` (clean), engine closure `c5c5ba6d`, 187 files: the 184 of `4669921b` (`25f65d4b4`) and
+three new ones, `optics/geometry/imageSurface.ts`, `optics/prescription/imageSurfaceSection.ts` and
+`optics/prescription/validate/imageSurface.ts`. Ten PRs since `25f65d4b4`:
+
+- #960 (`500ef5992`): curved image surfaces. This is the one engine change the comparator reads.
+- #955, #956, #958, #959 and #961: six lenses each. They add the glasses Hoya CF5 and NBFD1, Sumita LASKN3 and Schott
+  N-BK10, and partial dispersions (`PgF`) of catalogue entries that no index reads.
+- #962: lens stories and aperture metadata.
+- #966: doublet badges. Two lenses lose a `cemented` flag; neither is in a committed suite.
+- #967 and #968: the diagram.
+
+No name of the binding was added or lost. `skewImagePlaneIntercept` takes a seventh argument.
+
+### What changed, and what the comparator did
+
+| Change | LensVisualizer | The comparator |
+|---|---|---|
+| #960, the image surface | A lens may state `imageSurface`: a sphere or an asphere (`R`, `asphere`), or a cylinder curved along the long or short side of its frame (`cylindrical`, `curvedAlong`). It is compiled to an `ImageSurfaceShape` (`createImageSurfaceShape`) on `CompiledPrescription.imageSurface`. `null` is a flat image. The prepared state carries it as `state.lens.imageSurface` and in its trace geometry. The vertex is where the flat plane would be. | `curved-image-surface`, a structural export problem (`structuralProblems`, read through `lvImageSurface`). A case states the flat plane `conditions.imageZ` only, so such a state is never exported as flat. A vocabulary entry, a row of `CONTRACT.md`'s table and a gotcha. |
+| #960, the intercept | `skewImagePlaneIntercept(x, y, ux, uy, lastSurfZ, imagePlaneZ, imageSurface)` lands a ray on a curved surface, in image coordinates and with its `z`. Null is the straight transfer of before, without a `z`. | `LvApi` and `lvBokehChiefLanding` (`spot.ts`), and the spot, chief and curvature tests, hand the state's surface. The six-argument calls had crashed `lv`'s `spot.native` and four `test:lv` tests: `undefined` was read as a shape. |
+| #960, every analysis | Each lands on the surface where it is not null. The MTF uses `mtfFlatImagePoint` or `mtfCurvedImagePoint`, cosines along the surface's tangents (`mtfImageAxisCosine`) and a sag-aware nearest image plane. Image heights go through `imageHeightAfterTransfer`, the spherical section through `transverseCoordinateAtPlane(…, imageSurface)` and the chromatic heights through the curved landing. The field curves are measured from the chief ray's landing `z`, Rimmer's cosines in the surface's tangent frame, and the vignetting tab mirrors by `imageMirrorSymmetricAboutMeridian`. A cylinder's frame edge ends the half field (`fieldExtentMm`). | Nine canaries restated with each flat branch, which is the line it replaced, and the dispatch on the surface. A new canary holds a flat image to null and the hook's `withImageSurfaceSection` to the authored lens unless it is a cylinder. |
+| The six packages | 30 lenses with 14 certified focus stations. | `focus-stations` grows from 74 to 88 runs. The census is rewritten. |
+
+### Design choices
+
+1. **A curved image is refused, not approximated.** LensVisualizer measures a curved image's heights along the
+   surface, and on a cylinder along the unrolled film. It takes the MTF's frequencies along the surface's tangents and
+   Rimmer's cosines in its tangent frame. None of that has a place in a case, whose image is a plane. A contract minor
+   that states the surface would need landings on it in `reference-tracer` and optiland, and estimators that measure
+   along it. That is the owner's decision. The refusal is structural, so LensVisualizer's MTF gate is not asked: the
+   gate covers a curved image, adding a limitation.
+2. **One reader of the member.** `lvImageSurface` reads `state.lens.imageSurface`, and gives null where a
+   LensVisualizer before #960 states none. The comparator therefore still runs on an older checkout's extract, and
+   every intercept is handed exactly what LensVisualizer's tabs hand.
+3. **The fake tree mirrors #960 rather than ignoring it.** Its intercept throws for any surface but null, so a call
+   that forgets the argument fails in the hermetic tier, as it fails in LensVisualizer.
+
+### Measured at 420b47555, 2026-11-10
+
+- **Tiers before the adoption.** `npm run test:lv` passed 126 of 139. The 13 failures were:
+  - the 9 canaries above;
+  - the spot (×2), chief and curvature ray tests, on the `cylinderAngle` of an `undefined` image surface.
+
+  `test:optiland`'s R7b runs had `lv` `engine-failure` on the same error.
+- **The MTF tab** (`mtf.test.ts`): the 12 configurations print the same case, spectrum, shift and figures as the
+  pinned ones. Pinned at `c5c5ba6d`.
+- **R4f** (`fidelity.test.ts`): 96 runs. The worst `mtf.maxAbs` is 1.2989609388114332e-14 again, and the 24 opening
+  runs have the same cases and grids. Pinned at `c5c5ba6d`.
+- **The summary tab** (`summary.test.ts`): 138 states, 86 of them finite. The worst margins are 15, 0, 19 and 3 units
+  again; the worst focal-length and image-space f/# margins are the Olympus 7-14 mm's station of zoom 32. Measured on
+  every case: the 124 of `MEASURED_CASES`, and the 14 new focus stations, which join it.
+- **The suites' cases** (each suite expanded through the case source at `420b47555`, against its committed baseline):
+  - benchmark 96, states 128, features 18 and diffractive 9 runs: every name and case as recorded;
+  - folded 16 runs: 15 as recorded. The Maksutov-Cassegrain reference is recorded as refused at ray-set
+    confirmation (`folded-post-path-reflection`), which a suite's expansion does not reach;
+  - focus-stations 88 runs: the 74 of its baseline with the same cases, and 14 new certified stations:
+    - `canon-ef-50mm-f25-compact-macro`;
+    - `canon-ef-s-60mm-f28-macro-usm`;
+    - `canon-rf-85mm-f14-l-vcm`;
+    - `fujifilm-fujinon-xf-150-600mm-f56-8-r-lm-ois-wr` at zoom 0 and zoom 17;
+    - `minolta-af-24mm-f28` and `minolta-af-50mm-f28-macro`;
+    - `pentax-fa-star-300mm-f28-ed-if`;
+    - `sigma-17mm-f4-dg-dn-contemporary`, `sigma-20mm-f14-dg-dn-art`, `sigma-35mm-f2-dg-dn-contemporary` and
+      `sigma-500mm-f4-dg-os-hsm-sports`;
+    - `vivitar-series1-90f25-macro`;
+    - `zeiss-otus-ml-85mm-f14`.
+
+    Until the refresh, `baseline check focus-stations` sees them as NEW.
+- **Every catalog lens at both commits** (exported at both zoom ends on the reference line, the photopic lines and C,
+  d, F, through the comparator of this adoption; `25f65d4b4` as a `git archive` extract, outside both checkouts):
+  - 4,299 exports at `25f65d4b4` (1,433 states × 3), of which 4,029 are exported at both commits.
+  - Four moved, all of one lens: the Canon EF 100-300 mm f/5.6, photopic and C, d, F, at both ends. #956 relabelled
+    an element's glass as Hoya CF5, which the catalogue now has, so its several-line indices are CF5's polynomial.
+    Its reference-line cases did not move. No committed suite has the lens.
+  - No other existing lens's case moved, on any line: the new glass entries (NBFD1, LASKN3, N-BK10) are no token of
+    an existing lens.
+  - 102 new exports, the 33 new lenses' 34 states:
+    - the three curved fixtures, refused `curved-image-surface` on every line;
+    - the Canon FL-F 500 mm, the Schneider 28 mm LS and the Voigtländer Skoparon 35 mm, refused
+      `spectral-data-unavailable` on several lines (LensVisualizer's gate).
+  - Each committed suite expanded at both commits: the same names and cases, the folded Maksutov's included (its
+    baseline records it refused at ray-set confirmation). The 14 new stations are the only change.
+- **The checkout moved during the measurement.** LensVisualizer's checkout went from `420b47555` to `e4c7cf11a` (#973,
+  changelog entries and update archives) while `test:lv` ran.
+  - #973 changes 585 files, none of the 187 of the engine closure (`c5c5ba6d` at both) and none a canary reads, and no
+    lens file.
+  - Every case of every suite is the same at both commits.
+  - The census and the export comparison above are at `e4c7cf11a`. The tiers ran at both commits.
+- **`npm run test:lv`:** 140 of 140, 22 minutes. The MTF tab's pins, R4f's grids and the summary's margins were
+  compared at `c5c5ba6d` and held.
+  - The summary held 138 states (86 finite), with worst margins 15, 0, 19 and 3.
+  - The export sweep refused exactly the three curved fixtures, and gave `curved-image-surface` to no other state.
+- **`npm run check`:** passes, with LensVisualizer and optiland pointing nowhere.
+  - 2,268 hermetic tests and 399 Python tests.
+  - `verify`: 12 baselines, 0 problems.
+- **The 14 new stations on the engines.** A temporary suite of the 13 lenses' `certified-focus` stations: `lv`,
+  `reference-tracer` and optiland, wide open, reference line, design plane. Temporary `LVRTC_RUNS_DIR`, `--jobs 4`;
+  the rays checks were run and compared, then the MTF checks.
+  - Rays checks: 755 pairs PASS, no mask mismatch.
+  - Worst figures among the three pairs:
+
+    | Check | Figure | Worst |
+    |---|---|---|
+    | built-system | sag, scaled | 4.0e-16 |
+    | first-order | first-order value | 4.8e-12 mm |
+    | first-order | pupil position, scaled | 1.4e-12 mm |
+    | ray-trace | hit | 1.34e-12 mm |
+    | ray-trace | direction | 1.8e-14 |
+    | ray-trace | landing | 1.1e-12 mm |
+    | optical-path | path | 3.05e-9 waves (the Sigma 20 mm) |
+    | geometric-mtf | MTF | 1.44e-11 |
+
+  - MTF checks: 438 pairs PASS.
+    - lv-mtf-replay: 28 pairs, `mtf.maxAbs` 1.6e-14, no sampling or field mismatch.
+    - wave-mtf, judged fields: `lv` against `reference-tracer` 3.71e-10 and against optiland 1.17e-10, optiland against
+      `reference-tracer` 3.65e-10, within the 2e-9 that `r6a.test.ts` holds that pair to.
+    - Flagged fields: up to 6.0e-10. The Sigma 17 mm's lattices move by 0.056 on doubling, so its fields are flagged.
+  - The Sigma 20 mm's full field lies beyond LensVisualizer's modeled field. Its 21.65 mm against 20.98 mm is the coded
+    problem `outside-modeled-field` of that field, and fails nothing.
+- **The census** (`reports/census`, at `e4c7cf11a`; closure `c5c5ba6d`, 187 files):
+  - 1,101 lenses (1,068 at `25f65d4b4`), 366 zooms (365) and 1,467 states (1,433).
+  - 1,456 exported. 11 refused: the 8 refused before, for the same reasons, and the three curved fixtures,
+    `curved-image-surface`. None threw.
+  - `aperture.unclipped` 287 (284), `surface.asphere.even` 700 (694), `surface.conic` 325 (321). The limits did not
+    move.
+- **Identities.**
+  - The fingerprint of `lv`, `replay`, `wave` and `flux` (LensVisualizer's closure) moved, `4669921b` to `c5c5ba6d`.
+  - Their adapter revisions moved with `spot.ts`, `exportCase.ts`, `exportProblems.ts`, `binding.ts` and
+    `vignettingFields.ts`, each in all four closures:
+    - `lv` `afad9cb8` to `2a10ac61`;
+    - `replay` `6f0c41d6` to `971fd882`;
+    - `wave` `8a272b3a` to `461b0dae`;
+    - `flux` `6ecb3bb3` to `58918afc`.
+  - `reference-tracer` (`49ce9a07`), `reference-seidel` (`c847050f`) and the TypeScript closure of
+    `otf-of-optiland-wavefront` (`501c2a99`) did not move.
+  - The migration guard now keeps the engine rename's evidence in columns of its own, the revision at the rename and
+    before it, apart from today's pins.
+  - No baseline was written or checked.
+
+## optiland a9e544a2 adopted
+
+optiland main `a9e544a2` (2026-11-08), 117 commits after `4e893f53`. The checkout is clean (the earlier one carried
+local changes to `pyproject.toml` and `uv.lock`): source hash `1d35bfa2`, 611 files. Python 3.14.8, numpy 2.3.5, scipy
+1.16.3, numba 0.65.1, unchanged. The core dependencies are unchanged; only the optional `manufacturing` and `gui`
+extras moved. Most of the commits are the GUI, optimisation, non-sequential tracing, file formats, GRIN media and new
+analyses, none of which the worker calls. The code of `4e893f53` is unchanged in the surface factory, the geometries
+but the asphere's iteration, the conic solver, the physical apertures, the ideal material, `optiland/mtf`,
+`optiland/zernike`, `psf/fft.py`, the field curves, the distortion model, the ray fan, the ray-aiming initialisation and
+`get_working_FNO`. No call the worker makes was deprecated.
+
+### What changed, and what the comparator did
+
+| Change | optiland | The comparator |
+|---|---|---|
+| #935 (`e4a8ac6f`), the asphere's seed | `NewtonRaphsonGeometry._solve_distance_primal` seeds a ray that has no distance to the base conic on the vertex plane, `-z / N` (1e-14 for an `N` not above it), and keeps it where the iteration converges in front of the ray; it stops once only NaN rays are unsettled. | A line that misses the base conic and meets the asphere is now met (the pin `test_an_asphere_whose_base_conic_a_line_misses_is_met_from_its_vertex_plane`, which was "lost"). A ray with a point and no direction is seeded `1e14 z` away and raises the batch's tolerance on a curved base too: the shield below. |
+| #935, the robust aimer | Its four edge probes are solved as one batch; an iterative solve holds a ray whose line search accepted no step. | Nothing: optiland's own analyses, read back as before. |
+| #923, `FNO()` | `abs(f2()) / EPD()`, positive for a negative lens. | `optilandFNumber` (recorded) changes sign where `f2 < 0`; `imageSpaceFNumber` (R12b, `|FNO()|`) is the same bits. A new pin. |
+| #1107, `seidels_per_surface()` | Each surface's `-T 2 n' u'`; `seidels()` is their sum. | R13b reads a surface's sum from it, held to the term of `third_order()` times `2 n' u'` to the bit, with three deliberate faults. The totals move by the new order of summing, a rounding. |
+| #990, the chief-ray wavefront | Paths referred to the sphere by a relative length (unit directions, the common radius taken out first); `WavefrontData.reference_center`. | Nothing: `wavefront.native`'s OPD moves by a rounding (more exact for a distant exit pupil), and with it R5's FFT MTF, R6c and R14b. The centre is not read. |
+| #916, #937, the paraxial aimer | A finite object closer than its virtual entrance pupil is launched toward the lens; vignetting is applied once, in `RayGenerator`. | Nothing: no field of the worker is vignetted, and only `workingFNumberUnaimed` (recorded) is of the paraxial aimer at a finite object. |
+| #436, #1113, the kernel | `Surface._trace_real` hands the step to the medium's `propagation_model.propagate_to_surface`, the indices of a refraction come from `_real_indices`, the paraxial transfer from `paraxial_transfer`; evaluation epochs memoise within one `RealRayTracer` call. | The same arithmetic for a homogeneous medium, the case's only one; `rays.trace` calls `optic.surfaces.trace` and opens no epoch. Docstrings re-read. |
+
+### The shield (the owner's decision of 2026-11-10)
+
+`test:optiland` at `a9e544a2` before any change: 41 of 51 files passed. The optiland pairs failed in `r2`, `r3`,
+`stations`, `r6a`, `r10` and `r11`. The worker's Python tests failed three tests: the identity test (below) and the
+two pins #935 changed.
+
+A scratch run of the failing runs (the Nikkor Z 50 mm f/1.2 and the Zeiss Touit 50 mm on both spectra, and the
+certified stations of the Olympus 17 mm, the Sigma 28 mm and the Tamron 70-180 mm, with ray-trace, wave-mtf,
+spot-rays, field-curve-rays and vignetting-rays on `lv`, `reference-tracer` and `optiland`) has 348 `rays.trace`
+requests. Results:
+
+- **45 requests were off.** optiland's hits were up to 1.66 mm from `reference-tracer`'s, with mask mismatches on the
+  finer and vignetting lattices.
+- **Every pair that failed names optiland.** `lv` against `reference-tracer` passed everywhere.
+- **The cause is the same in all 45.** In each, the batch in front of one curved-base asphere holds rays that have a
+  point and no direction:
+
+  | Run | Asphere (case surface) | Such rays a request | Tolerance, mm |
+  |---|---|---|---|
+  | Z 50 mm f/1.2 | 24 | 10 to 214 | 1.8 to 3.8 |
+  | Touit 50 mm | 5 | 3 to 12 | 0.44 to 0.93 |
+  | Olympus 17 mm, stations 1 and 2 | 20 | 38 to 208 | 0.39 to 0.44 |
+  | Sigma 28 mm, station 1 | 2 | 38 to 164 | 1.8 |
+  | Tamron 70-180 mm, zoom 2 station 1 | 32 | 2 to 16 | 0.49 to 0.57 |
+
+  These are rays `reference-tracer` had already blocked, at case surfaces 18 (Z 50), 0 (Touit), 15 (Olympus), 0 and
+  24 (Sigma) and 16 and 18 (Tamron). optiland carried them on at an intensity of 0, and they were totally reflected at
+  the surface in front of the asphere.
+- **optiland's new seed explains it.** The seed puts each such ray 1e14 times its z away (1.6e15 mm on the Z 50 mm),
+  so the tolerance rises as in the table. The iteration stops at once (0 to 88 steps), and every live ray stays on
+  the base conic.
+- **60 digits agree with `reference-tracer`.** On the worst ray of each request where the 60-digit trace reaches the
+  surface, `reference-tracer` is within 6.0e-14 mm of it and `lv` within 2.9e-13 mm. optiland is 0.08 to 1.66 mm off.
+- **Leaving those rays out of each batch** puts all 45 within 1.14e-12 mm of `reference-tracer`, with no mask
+  mismatch.
+- **Restoring `4e893f53`'s `_solve_distance_primal`** in the process, on `a9e544a2`, puts all 348 within 1.15e-12 mm,
+  with no mask mismatch.
+- **#935's fix met no ray here.** In those requests no ray with a direction was met by the plane seed.
+
+The owner decided to shield a batch (2026-11-10). The rule is `trace.trace_batch` (`trace.shielded`), for
+`rays.trace` and for the trace of `axial.native`'s aimed rays:
+
+1. A batch is traced once.
+2. Where optiland ends no ray, that pass is the answer.
+3. Otherwise the rays that ended at the least end surface of a pass are answered from it. S counts as the end surface
+   of a ray that left the last surface and did not land.
+4. Of the rays ending at that surface, those that came to it sideways are answered first, in a pass of their own
+   (`end_keys`). Sideways means the z component of the heading in front of it is not above 1e-14 in magnitude,
+   optiland's own bound. optiland seeds such a ray 1e14 times its z away when it has no seed on the base conic, so it
+   spoils the very surface it ends at.
+5. The rest are traced again, without the rays answered, in the order given, until a pass ends no ray.
+
+Every ray is answered from a batch that held no ray optiland had ended before that ray's own end. An ended ray keeps
+the end and the reason `settle` reads.
+
+- **Passes.** A pass answers at least one key: two for each surface, one for S. So a batch takes at most 2 S + 2
+  passes (`shield_pass_limit`); more raises `ShieldPassesExceeded`, an error.
+- **Large requests.** Batches above `MAX_BATCH_RAYS` are shielded each on its own, in order.
+- **Unchanged.** The request, the answer's format and the diagnostics' `batches` are unchanged.
+- **Axial read-back.** `axial.native` holds each aimed ray's stop crossing to its point on the pass the ray is answered
+  from.
+- **What the shield does not reach.** A ray optiland keeps alive still raises its batch's tolerance, like the far ray
+  of the gotcha.
+
+On the same 348 requests:
+
+- **No ended ray, same bytes.** The 100 requests in which optiland ends no ray are the bytes of one pass.
+- **The rest agree with `reference-tracer`.** Every hit is within 1.149e-12 mm of `reference-tracer`'s, every end
+  surface is `reference-tracer`'s, and no mask differs.
+- **Passes per request:**
+
+  | Passes | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 |
+  |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+  | Requests | 100 | 37 | 11 | 25 | 22 | 8 | 5 | 21 | 33 | 6 | 8 | 10 | 17 | 17 | 19 | 9 |
+
+- **Cost.** Tracing took 23.7 s against 5.0 s for one pass, 4.7 times as long.
+
+The tests (`test_trace.py`):
+
+- **The contaminated batch, through the engine.** Two live rays and a reflected one, before a flat-base and a
+  curved-base asphere, held to the 60-digit trace within 1e-12 mm. With the shield replaced by one pass they are not
+  (the fault made on purpose).
+- **One pass where nothing ends.** A batch without an ended ray is one pass and the same bits.
+- **The pass count and its limit.** A batch with ends at 0 and 1 takes three passes, the limit is 2 S + 2, and a
+  lower limit raises.
+- **The least-surface rule.** A live ray knocked onto a later rim by a reflected one is answered from a clean pass and
+  arrives. Answering every ended ray from the first pass leaves it blocked: red.
+- **The sideways rule.** A ray at a z component of 1e-15 spoils the curved asphere it ends at, knocking another ray off
+  that surface's rim. It is answered first, and the other arrives. Without that order both end there: red.
+- **Axial.** `test_axial.py` traces two zones of the reflecting lens. The live zone leaves the lens within 1e-12 mm of
+  the exact ray from its launch; with one pass it does not: red.
+- **optiland's own behaviour, still pinned.** `test_one_ray_without_a_direction_leaves_every_ray_of_its_batch_on_the_base_of_an_asphere`
+  holds both bases, on optiland's own single pass.
+
+optiland's own analyses are not shielded: its aimer's trial traces and its MTF, spot, ray fan, field-curve,
+wavefront and working-f-number grids are optiland's batches. The upstream report stays held.
+
+### The stated version
+
+The environment's editable install was made at `4e893f53` and still states `0.6.2.post117+g4e893f53`. The descriptor's
+`version` and `details.distVersion` therefore name the commit of the install, while `details.commit` is `a9e544a2`.
+`test_real.py::test_the_worker_identifies_the_optiland_it_runs` fails until the owner refreshes the install. The
+fingerprint reads the checkout and is right.
+
+### Measured after the changes, 2026-11-10
+
+Each command was run alone, against LensVisualizer `420b47555` and optiland `a9e544a2`.
+
+- **The worker's Python tests on the real optiland:** 402 run, one failure, the identity test above (the stale install).
+  The two pins of #935 are rewritten as history, with the new behaviour pinned. The new tests are the five shield
+  tests of `test_trace.py`, the shield of `test_axial.py`, the f-number pin and the Seidel faults.
+- **The hermetic tier, `npm run test:python`:** passes.
+- **`r2.test.ts`:** 5 of 5 pass.
+  - Benchmark: 216 pairs of each kind PASS, and optiland fails no ray.
+  - optiland against `reference-tracer`, worst hit: 1.16e-12 mm on the benchmark and 1.24e-12 mm on the features
+    suite.
+  - JIT off: the answers are the same bytes.
+- **`r3.test.ts`:** 5 of 5 pass. optiland against `reference-tracer`, worst path: 2.42e-9 waves on the benchmark and
+  3.17e-9 on the features suite.
+- **`stations.test.ts`:** passes.
+  - 247 pairs of each kind PASS.
+  - Worst hit: 2.66e-12 mm. Worst path: 3.48e-9 waves.
+  - optiland fails 14 rays, at the Olympus 17 mm's stations 1 and 2, surface 20 (4 and 10). `lv` and
+    `reference-tracer` each block every one of them at that same surface: `assertR2`'s exception.
+  - optiland's iteration of `4e893f53`, restored, fails the same counts.
+- **`r6a.test.ts`:** passes. 255 pairs PASS. optiland against `reference-tracer` within 1.03e-9, `lv` against optiland
+  within 1.47e-10.
+- **`r8.test.ts`** (`axial.native`, now through the shield): passes.
+- **`r10.test.ts`:** passes.
+- **`r11.test.ts`:** passes. R11a optiland against `reference-tracer`: illumination within 2.5e-14, landing within
+  1.5e-13 mm.
+- **Order of the runs.** `r2`, `r3`, `stations` and `r8` were run after the sideways rule and the axial shield were
+  added. `r6a`, `r10` and `r11` were run before; the 348 requests give the same answers both ways.
+- **The full tier.** The whole `test:optiland` tier with the first shield passed 50 of 51 files, the identity test the
+  one failure.
+
+### Identity
+
+- **The worker's adapter revision** moved, `98f36151` to `59039a7b`, through `trace.py`, `axial.py` and `seidel.py`
+  and the docstrings of `first_order.py`, `summary.py` and `folded.py`.
+- **`otf-of-optiland-wavefront`'s whole revision** moved with it, `9cdfad1a` to `3dc91d1a`; its TypeScript part
+  (`501c2a99`) did not.
+- **optiland's fingerprint** moved with the checkout: commit, source hash and dirty flag.
+- **Every record of `optiland` and `otf-of-optiland-wavefront` was STALE(engine)** until the owner's refresh ("The
+  Stage 9.9 refresh", below). No baseline was written or checked at the adoption.
+- **At that refresh,** the recorded checks of optiland's own analyses (R5, R5g, R6c, R7b to R14b) may move by the
+  changes above. The rays checks' optiland pairs are the shielded answers.
+
+## LensVisualizer f5b456fec adopted
+
+LensVisualizer main `f5b456fec` (#972, clean, a private clone pinned at that commit), engine closure `f0066505`, 193
+files: the 187 of `c5c5ba6d` (`420b47555`, `e4c7cf11a`) and six more:
+
+- `optics/analysis/mtf/mtfConjugateConsistency.ts` and `optics/prescription/sourceMagnification.ts` (#990's audit);
+- `optics/analysis/mtf/mtfIncidentFlux.ts` (a diagnostic of #988, exported, never called by the comparator);
+- `optics/chromatic/glassCatalogEntries/lzos.ts` (#984);
+- `types/sourceProvenanceSchema.ts`;
+- `types/mtf.ts`, now loaded for the wavelength limits of the spectrum "single".
+
+Fifteen PRs since `e4c7cf11a`:
+
+- #988 (`5953e6ed5`): the November MTF audit. The engine change the comparator reads most.
+- #965 (`499565095`): native sodium-D references, and the EBC Fujinon W 24 mm.
+- #990 (`f8481c8ab`): close-focus conjugates certified from patents (about 410 states), and a conjugate audit that
+  reads a conjugate's `sourceMagnification`.
+- #963, #964, #969, #970, #971 and #972: lens packages (38 lenses). #969 and #971 add Hoya, Ohara and CDGM glasses; #984
+  adds LZOS TK14, TK21 and STK3 for the KMZ Zenitars.
+- #976, #977, #978, #981 and #983: folder maps, audit queues, a usage search, catalogue metadata and the relationship
+  map. No engine change.
+
+### What changed, and what the comparator did
+
+| Change | LensVisualizer | The comparator |
+|---|---|---|
+| #988, the steps of an MTF | `computeMtfSteps` is a `Generator<MtfProgress, MtfResult>`: each step is a phase (geometry, focus, aperture, a field's grid and line), and `{ phase: { kind: "aperture" }, result }` is the first to carry the result, once the focus has moved the plane and the axial readout (working f-number, magnification, axial vignetting) is written. A refused request, and one without a field axis, returns without one. | `lvMtfRequestResult` (`tabRequest.ts`) takes the first progress with a result, or the return value. `lvAxialFocus`, the recipe and the replay read the request through it; the type is `LvMtfProgress`. The worker's `stationSteps`, the job builder `mtfJobForRequest` and its job cache are canaried. |
+| #988, the tab's preferences | `resolveMtfPreferences(stored, L.isZoom)`: with Advanced off, the regular spectrum, the default wavelength (546.074 nm), the comparison f/8 and the regular view. `resolveMtfSpectrum` takes the wavelength; a "single" spectrum is requested at it. The comparison is `mtfComparisonFNumbers(fNumber, maxFstop).includes(comparisonFNumber)` and `mtfRequestAtAperture`, refocused by the default `comparisonFocus`. | `resolveMtfPreferences`, `MTF_COMPARISON_F_NUMBERS` and `isMtfComparisonFNumber` are bound; `lvTabRequest` resolves LensVisualizer's defaults and restates the spectrum's spread. `lvTabComparison` reads the resolved `comparisonFNumber` (`lvTabComparisonFNumber`) and offers it where `lvTabComparisonFNumbers`, `mtfComparisonFNumbers` restated, does; with LensVisualizer's defaults that is f/8, the same stop and pupil as before. The fake tree resolves f/11, so the hermetic tests tell the preference from a constant. |
+| #988, the photopic lines | `MTF_PHOTOPIC_LINES` is a nine-point Gauss-Legendre quadrature of V(λ), 470 to 650 nm, 560 nm first (five lines from 555 nm before). | Every photopic case moves with its lines. The comparator follows LensVisualizer's gate; no code of it names the lines. A fourth spectrum, "single", is not asked (`LV_MTF_SPECTRA`). |
+| #988, the unresolved share | `mtfUnresolvedFluxFraction` weights each line's transmitted and unresolved flux by its incident weight; `assessUnresolvedFlux` takes the method third and words its note by it. | Both bound and called by the replay, whose `fieldAtGrid` restates `fluxWeights`. The hermetic test has two lines whose shares differ, so a missing weight turns it red. |
+| #988, the gate | A rejected path names its causes (`pathReasons`); `assessMtfSupport` takes an internal audit's `checks`; the scale check is at the state's zoom position. | The rejection restated; the comparator never hands `checks`. |
+| #988, `waveLatticeOtf` | A triangle mesh in cosine space, a Jacobian of central differences, the other end of a pair at the whole shear from a lit anchor, forward and backward averaged. | No product path. Canaried, and docs/gotchas.md, "LensVisualizer has two wave estimates", rewritten for it. |
+| #965, sodium D | `LINE_NM.D` 589.2938 nm; `D_LINE_CHANNEL_WAVELENGTH_NM` (C, D, F, g); `lensChromaticReference` names the shared reference or "d" for a mix; a D element's catalogue glass is anchored at D, its partial dispersion read in D's coordinate. | `D_LINE_CHANNEL_WAVELENGTH_NM` is bound (`sodiumChannelWavelengthsNm`); `lvChannelLines` returns it for a D lens and null for any mix. One catalog lens, `minor-us1360667-figure-2`, states D indices. |
+| #990, the conjugates | About 410 close-focus states certified from patents; `mtfFiniteConjugate` carries a `sourceMagnification`, which only the audit reads. | `focus-stations` grows from 88 to 518 runs. |
+
+The fake LensVisualizer tree mirrors each name: `resolveMtfPreferences` and the new preferences (its default spectrum
+"single", its regular one photopic, so a hermetic test sees the resolution), `D_LINE_CHANNEL_WAVELENGTH_NM`,
+`mtfUnresolvedFluxFraction`, the progress steps and the new `lensChromaticReference`. No fake file was added.
+
+### Measured at f5b456fec, 2026-11-16
+
+- **Canaries.** 12 of 51 tests failed at first, on 39 lines; all are restated, and the 51 pass.
+- **`npm run test:lv`:** 139 of 140, 25 minutes. The one failure is `diffractive.test.ts`'s comparison of
+  benchmark and features requests with a `git archive HEAD`: the archived comparator reads `computeMtfSteps`'s first
+  step as a result, and crashes on the progress. It passes once this adoption is HEAD. Its claim for this tree is
+  covered by the suite expansions below.
+- **The MTF tab** (`mtf.test.ts`): every case moved with its photopic lines, and every figure with it. Pinned anew at
+  `f0066505`:
+
+  | Configuration | Shift (mm) | Axis, S10 T10 S30 T30 | 70 %, S10 T10 S30 T30 |
+  |---|---|---|---|
+  | Canon EF 135 mm | -0.0269 → -0.0224 | 0.9492 0.9492 0.7546 0.7546 → 0.9582 0.9582 0.7844 0.7844 | 0.9428 0.9430 0.6692 0.7050 → 0.9440 0.9467 0.6637 0.7178 |
+  | Fujinon GF 63 mm | -0.0420 → -0.0439 | 0.9693 0.9693 0.8786 0.8786 → 0.9711 0.9711 0.8897 0.8897 | 0.8312 0.8813 0.5938 0.6326 → 0.8329 0.8830 0.5976 0.6407 |
+  | Sigma 35 mm | -0.0257 → -0.0228 | 0.9564 0.9564 0.7684 0.7684 → 0.9642 0.9642 0.7973 0.7973 | 0.7230 0.8358 0.4802 0.5524 → 0.7326 0.8413 0.4742 0.5638 |
+  | Nikkor Z 50 mm | -0.0507 → -0.0511 | 0.9756 0.9756 0.8540 0.8540 → 0.9781 0.9781 0.8713 0.8713 | 0.8431 0.9277 0.6152 0.6973 → 0.8462 0.9290 0.6211 0.7144 |
+  | Sony FE 20 mm | -0.0394 → -0.0397 | 0.9715 0.9715 0.8630 0.8630 → 0.9719 0.9719 0.8656 0.8656 | 0.7606 0.3210 0.1453 0.0447 → 0.7611 0.3209 0.1428 0.0436 |
+  | Sony FE 400 mm | 0.0512 → 0.0516 | 0.9768 0.9768 0.9209 0.9209 → 0.9772 0.9772 0.9240 0.9240 | 0.9737 0.9669 0.9017 0.8865 → 0.9744 0.9673 0.9072 0.8902 |
+  | Sigma 105 mm | -0.0191 → -0.0192 | 0.9733 0.9733 0.9023 0.9023 → 0.9738 0.9738 0.9061 0.9061 | 0.9545 0.9191 0.7555 0.5763 → 0.9542 0.9198 0.7536 0.5808 |
+  | Z 24-70 mm, 24 mm | -0.0729 → -0.0743 | 0.9663 0.9663 0.8785 0.8785 → 0.9664 0.9664 0.8792 0.8792 | 0.9640 0.9222 0.8718 0.6402 → 0.9648 0.9262 0.8775 0.6649 |
+  | Z 24-70 mm, 70 mm | 0.0153 → 0.0152 | 0.9688 0.9688 0.9024 0.9024 → 0.9688 0.9688 0.9032 0.9032 | 0.8553 0.8808 0.5863 0.6755 → 0.8549 0.8839 0.5873 0.6820 |
+  | Z MC 105 mm | 0.0304 → 0.0308 | 0.9756 0.9756 0.9167 0.9167 → 0.9761 0.9761 0.9199 0.9199 | 0.9721 0.9389 0.8889 0.7269 → 0.9721 0.9406 0.8891 0.7378 |
+  | Z 135 mm Plena | -0.0088 → -0.0097 | 0.9804 0.9804 0.9167 0.9167 → 0.9807 0.9807 0.9185 0.9185 | 0.9657 0.9660 0.8237 0.8605 → 0.9662 0.9669 0.8269 0.8653 |
+  | Sigma 45 mm | -0.0315 → -0.0327 | 0.9376 0.9376 0.7729 0.7729 → 0.9389 0.9389 0.7796 0.7796 | 0.9519 0.9148 0.7649 0.6872 → 0.9530 0.9172 0.7718 0.6984 |
+
+  No axial marginal ray is vignetted, as before, and no configuration is traced off its prepared iris.
+- **R4f** (`fidelity.test.ts`): 96 runs, 480 fields, every pair PASS. The 12 reference-line opening runs have the same
+  cases and grids. The 12 photopic ones have new cases; three grids moved: the Canon EF 135 mm's axis 64 → 32, the
+  Z 50 mm's 75 % field 64 → 128, the Sony FE 400 mm's full field 64 → 128. The worst `mtf.maxAbs` is
+  1.2989609388114332e-14 again, on a reference-line run. Pinned at `f0066505`.
+- **The summary tab** (`summary.test.ts`): 563 states, 511 of them finite. The worst margins are 15, 0, 19 and 3 units
+  again, on the Olympus 7-14 mm's station. `MEASURED_CASES` holds the 138 cases of `c5c5ba6d` and the 425 new focus
+  stations.
+- **Counts that follow the lines.** `test:lv` held counts of five photopic lines; each was measured anew:
+  - benchmark R0 to R3, `lv` against `reference-tracer`: 1,440 ray sets, 6,144 pairs PASS (3,840 before);
+  - features: 270 ray sets, 1,152 pairs PASS (720); the whole suite 8,438 jobs (5,142), 4,338 pairs (2,826);
+  - smoke: 39 ray sets, 1,154 jobs (818), 704 pairs (536);
+  - `test:optiland`'s R2 and R3 on three engines: the benchmark's 12 × 3 × (1 + 9) = 360 ray sets (216), 1,800 R2 pairs
+    (1,080) and 4,200 pairs of R0 to R4 (2,760); the features' 9 × 3 × (1 + 9) = 270 (162), 1,350 (810) and 3,150
+    (2,070); R6a's photopic run 3 × 9 sets a lattice (3 × 5), R11a's 9 fields × 9 lines (9 × 5). Each file passes;
+    `stations.test.ts` fails on the two optiland FAILs below;
+  - the nearly telecentric Viltrox AF 75 mm at the photopic lines: its exit pupil 6.4e-9 mm apart at 615.2 nm,
+    29 m away (3.0e-9 mm at 650 nm before), 2.2e-10 on the scale R1 judges; its radius 2.5e-9 mm apart, 8.6e-11 on
+    that scale. R1 PASS, as before.
+- **The certified focus stations** (`engine.test.ts`): 511 stations, every R0 and R1 pair within its gates. The test now
+  holds a pupil's position and radius as R1 judges them, on the scale of the pupil's distance from the image plane
+  (worst 2.7e-11, the far entrance pupil of the Pentax A 200 mm f/4 macro's close station, 5.8 m away and 1.56e-10 mm
+  apart plainly), and every value that is no pupil's plainly (within 6e-12 mm), each under 1e-10 as before. Until
+  then it held one plain maximum over all of them, which that pupil exceeds.
+- **The census** (`reports/census`, at `f5b456fec`; closure `f0066505`, 193 files):
+  - 1,139 lenses (1,101 at `e4c7cf11a`), 372 zooms (366) and 1,511 states (1,467).
+  - 1,500 exported. 11 refused, the same 11 for the same reasons. None threw.
+  - `aperture.unclipped` 297 (287), `surface.asphere.even` 717 (700), `surface.conic` 330 (325). The limits did not
+    move.
+- **Every catalog lens at both commits** (exported at both zoom ends on the reference line, the photopic lines and C,
+  d, F; `e4c7cf11a` as a `git archive` extract with the committed comparator, `f5b456fec` with this one):
+  - 4,401 exports at `e4c7cf11a` (1,467 states × 3), of which 4,116 are exported at both commits and 285 refused at
+    both, each for the same codes. No export or refusal changed.
+  - Every photopic case moved: 1,330 of 1,330, on 984 lenses (nine lines). No reference-line case and no C, d, F case
+    of an existing lens moved: the new glass entries (Hoya, Ohara, CDGM, LZOS) are no token of an existing lens, and a
+    D element is new with #965.
+  - 132 new exports, the 38 new lenses' 44 states. The Pentax Super-Takumar 300 mm f/4 is refused
+    `spectral-data-unavailable` on several lines (LensVisualizer's gate); every other is exported.
+- **Each committed suite expanded at both commits** (names and cases through the case source):
+  - benchmark 96 runs, states 128 and features 18: the same names; the 48, 64 and 9 photopic runs have new cases, every
+    other run its case of before.
+  - folded 16 and diffractive 9: every name and case as before.
+  - focus-stations 518 runs (88): the 88 the same; 430 new certified stations, of which 425 export and 5 more fisheye
+    stations are refused `finite-conjugate-unavailable`, as the two before. Until the refresh, `baseline check
+    focus-stations` sees the new stations as NEW (the baseline holds 74 runs).
+- **The 425 new stations on the engines.** A temporary suite of each new station's state, `lv`, `reference-tracer` and
+  optiland, wide open, reference line, design plane; every run is the case of its certified station. Temporary
+  `LVRTC_RUNS_DIR`, `--jobs 4`; the rays checks were run and compared (49 s and 18 s), then the MTF checks (4 min 54 s
+  and 2 min).
+  - Rays checks: 13,458 pairs, 13,454 PASS, 4 FAIL. Each FAIL is a pair of optiland's on `ray-trace`'s mask; `lv` and
+    `reference-tracer` agree on every ray of both:
+    - the Fujinon XF 8-16 mm's close station (zoom 0) at its full field, 64.2°: optiland stops 26 rays on surface 2,
+      an asphere with odd terms, and fails 14 more there, where `lv` and `reference-tracer` stop all 40 on surface 3.
+      This is "Another crossing" of docs/gotchas.md, "On an asphere optiland's iteration starts at the base conic, and
+      goes where that leads", which the catalog snapshot lists for the same lens at infinity focus.
+    - the Fujifilm XF 23 mm f/2's close station at 33°: optiland carries 2 rays past surface 7, an asphere with a term
+      of power 3, to surface 8, and fails 20 more on surface 7, where `lv` and `reference-tracer` stop all 22 on surface
+      7: the same entry.
+  - Worst figures of the pairs that pass:
+
+    | Check | Figure | `lv` – `reference-tracer` | `lv` – optiland | optiland – `reference-tracer` |
+    |---|---|---|---|---|
+    | built-system | sag, scaled | | 5.5e-16 (largest) | |
+    | first-order | first-order value | | 2.9e-11 mm (largest) | |
+    | first-order | pupil position, scaled | | 6.0e-11 (largest; the Pentax A 200 mm macro's far pupil) | |
+    | ray-trace | hit | 1.45e-10 mm | 2.0e-11 mm | 3.1e-11 mm |
+    | ray-trace | direction | 5.0e-12 | 6.5e-13 | 9.9e-13 |
+    | optical-path | path to the image | 8.6e-8 waves | 1.5e-7 waves | 2.3e-7 waves |
+    | geometric-mtf | MTF | 4.4e-10 | 1.35e-9 | 1.58e-9 |
+
+    The ray-trace, optical-path and geometric-mtf figures are each the XF 8-16 mm's, at a close station.
+  - MTF checks: 12,970 pairs PASS (both modes).
+    - lv-mtf-replay: 425 pairs, `mtf.maxAbs` 2.3e-14, no sampling or field mismatch.
+    - wave-mtf: 401 fields judged in each pair, 811 flagged. Judged: `lv` against `reference-tracer` 8.5e-10, against
+      optiland 1.10e-9; optiland against `reference-tracer` 1.05e-9, within the 2e-9 that `r6a.test.ts` holds that
+      pair to.
+- **Identities.**
+  - The fingerprint of `lv`, `replay`, `wave` and `flux` (LensVisualizer's closure) moved, `c5c5ba6d` to `f0066505`.
+  - Their adapter revisions moved with `manifest.ts`, `tabRequest.ts`, `focus.ts`, `mtf.ts`, `axialZones.ts`,
+    `axial.ts`, `chief.ts`, `curvature.ts`, `curvatureFields.ts`, `exportAperture.ts` and `exportProblems.ts` (all four
+    closures) and `replay.ts` (the replay's):
+    - `lv` `2a10ac61` to `674d26ff`;
+    - `replay` `971fd882` to `0f8e411d`;
+    - `wave` `461b0dae` to `5541b54d`;
+    - `flux` `58918afc` to `30c7115b`.
+  - `reference-tracer` (`49ce9a07`), `reference-seidel` (`c847050f`) and the TypeScript closure of
+    `otf-of-optiland-wavefront` (`501c2a99`) did not move. The worker's did not either.
+  - No baseline was written or checked. At the owner's refresh, every photopic record is stale by case as well as by
+    engine, and focus-stations gains 425 stations, two of which carry optiland's FAILs above.
+
+## Known failures of focus-stations (owner decision 2026-11-16)
+
+The owner decided to list the four optiland FAILs that the new close stations of LensVisualizer `f5b456fec` carry
+(above) as known failures of focus-stations, extending the catalog's mechanism to a second suite, and to let the
+validation statement say so in one clause he signed off word for word.
+
+- **The list.** `docs/known-failures.focus-stations.json`, the schema of `docs/known-failures.json` (which stays the
+  catalog's, byte for byte, with its old ids) at today's check and engine ids. `KNOWN_FAILURE_SUITES` (catalog,
+  focus-stations) in `src/baseline/catalog.ts` and `FAILURE_LIST_SUITES` in `src/contract/baseline.ts` name the
+  suites that may list; `knownFailuresFile(suite)` names a suite's file and `readKnownFailures(root, suite)` reads it
+  (for a suite other than the catalog, no file is no entry; the catalog's file is required as before).
+- **The entries.** Each is a pair of optiland's on `ray-trace`, metric `mask.mismatches`, class method, gotcha
+  [On an asphere optiland's iteration starts at the base conic, and goes where that leads](gotchas.md#on-an-asphere-optilands-iteration-starts-at-the-base-conic-and-goes-where-that-leads)
+  ("Another crossing"; the entry now names both stations), three requests a pair:
+
+  | Run | Pair | Mask mismatches | Evidence hash |
+  |---|---|---:|---|
+  | `certified-fujifilm-fujinon-xf-8-16mm-f28-r-lm-wr-zoom0-focus1` | `lv` – optiland | 26 | `b938e96d47d2a986ac17b7b479753c1df0e8ed8616852a8424ccb0dcd5e75453` |
+  | `certified-fujifilm-fujinon-xf-8-16mm-f28-r-lm-wr-zoom0-focus1` | optiland – `reference-tracer` | 26 | `a2e9355b14748ce32bf19fefe6e00f206e371f261f52a1b23930a42a228820b5` |
+  | `certified-fujifilm-xf-23mm-f2-r-wr-zoom0-focus1` | `lv` – optiland | 2 | `f1f8d09be75ca72fe0009d3d9b352d6c73463e48f792246bfd2e51246b298507` |
+  | `certified-fujifilm-xf-23mm-f2-r-wr-zoom0-focus1` | optiland – `reference-tracer` | 2 | `862becfd4934f13e22528efe19f8499ffbe26ce498eafcb0ce53eacb22845099` |
+
+  Each hash is `failureEvidence(requests, pair)` of the pair's aggregate record, measured on the evidence run of the
+  425 new stations and again on each entry's reproducer at the committed code (LensVisualizer `f5b456fec`, optiland
+  `a9e544a2`): the same four hashes.
+- **Reproducers.** `node bin/catalog-case.mjs --suite focus-stations <run> suites/focus-stations-repro/<run>.json`
+  writes a one-run suite named `focus-stations-repro` (`reproducerSuiteName`; never `focus-stations`, whose run
+  directory `baseline write` records) from the case source's expansion, without a prescription; the entry's command
+  runs it with `--checks ray-trace --jobs 4`. Each of the two, run into a temporary `LVRTC_RUNS_DIR` and compared,
+  gives its station's three requests and two FAILs with the hashes above (`lv` – `reference-tracer` PASS).
+- **Write, check, verify.** `baseline write focus-stations` classifies the run with the list (`classifyCatalog`) and
+  admits a FAIL only where every failing figure has its entry with that pair's evidence; it then states contract 1.6,
+  and only then (the annotation minor 6 added). An unlisted FAIL or any ERROR is refused, the refusal naming the list.
+  `baseline check` holds an unchanged listed FAIL OK (or REFRESHABLE) and a changed, unlisted or reclassified one
+  DRIFT (`new, changed or unclassified focus-stations FAIL`), as the catalog's; unlike the catalog's, a listed FAIL of
+  a run the baseline does not hold yet is NEW, an unlisted one DRIFT. `verify` holds each committed focus-stations
+  baseline's classifications to the list and, for the list, splits its entries by whether a committed focus-stations
+  baseline holds their run (`pendingKnownFailures`): an entry of a held run must classify a FAIL exactly, or it is
+  unused, a problem; an entry of a run no committed baseline holds is **pending**, a note and no problem. Today the
+  four are pending: the committed baseline holds 74 runs, and the stations are among the 444 runs the owner's refresh
+  adds as NEW (14 from LensVisualizer `420b47555`, 430 from `f5b456fec`).
+  An entry that can never be met is refused with the code `known-failure-of-no-run` (`knownFailuresOfNoRun`): by
+  `baseline write focus-stations` where the rays baseline it writes holds no run of the entry (a run name mistyped),
+  and by `baseline check` where the run is in neither the committed baseline nor today's run (a station
+  LensVisualizer renumbered), as an error of the check. Outside the catalog contract 1.6 is stated only where a pair
+  is classified: `verify` reports a baseline that states it without one.
+- **Comparing and refreshing.** `lvrtc compare focus-stations` exits 1 by design while a listed FAIL stands, as every
+  comparison with a FAIL does (and as `lvrtc run` does on diffractive and folded for their source refusals). The
+  refresh runs `lvrtc baseline check focus-stations && lvrtc baseline write focus-stations` (each with `--mtf` after),
+  which exit 0 on exactly listed FAILs; a refresh script must not stop at `compare`.
+  `verify:real` names each suite's own list in its lines and counts a listed FAIL clean, as the catalog's.
+- **Reports and dashboard.** A baseline's report other than the catalog's (whose report is its own) has a section
+  "Failures, classified" after the summary, with each failing figure's run, check, engines, class (its label and the
+  stored value), gotcha and reproducer, and the classes in "How to read this", only where the baseline holds one; every other report keeps its
+  bytes. The dashboard shows, for any baseline, each classified figure with its class and its gotcha.
+- **The statement.** A FAIL listed exactly no longer blocks the supportable sentence; an unlisted FAIL or ERROR still
+  does. The configurations with a listed failure leave the count and the quoted figures (as every configuration
+  whose pairs do not all pass does), the statement lists the failures (`listedFailures`, "Failures, classified"), and
+  the sentence gains the clause the owner signed off on 2026-11-16, before "Dispersion, white-light weighting…":
+  "Configurations at which a known failure of one engine is listed (2, optiland's, where LensVisualizer and the
+  reference tracer agree) are not counted." The count is the baselines' (`listedFailureClause`). The clause cannot be
+  said, and the statement refuses the sentence as before, where the listed pairs name more than one engine besides
+  LensVisualizer and the reference tracer, where that engine is not optiland (the signed words name it), or where a
+  LensVisualizer–reference-tracer pair of those configurations on a gated check is not Pass. `lvrtc statement` holds
+  each baseline's classifications to its suite's list before writing (`statementClassificationProblems`), as `verify`
+  does. Without a listed failure
+  nothing is added: the committed `reports/validation-statement.*` and the synthetic goldens are byte for byte as
+  before.
+- **Tests.** `test/baseline/listedFailures.test.ts` (classification, contract minor, check outcomes, pending and
+  unused, the committed list and its reproducers), the focus-stations round trip of `test/cli/baseline.test.ts`
+  (write refused then admitted, check, verify pending, used, unused and changed),
+  `test/report/statement.test.ts` (the clause in the owner's words, its count, and each refusal),
+  `test/dashboard/listedFailures.test.ts`; `test/integration/optiland/stations.test.ts` runs focus-stations three
+  ways and accepts exactly the listed failures (a classification as `baseline write` makes it, every entry met,
+  nothing else failing).
+- **Measured** (LensVisualizer `f5b456fec`, optiland `a9e544a2`; `stations.test.ts`, serial, 4 min 25 s): 511
+  stations of 319 lenses with a case, 1,459 ray sets; 14,590 pairs (pairwise and against the reference engine),
+  14,584 PASS and 6 FAIL, the four listed pairs (the two of optiland and `reference-tracer` counted in both modes),
+  each met exactly. On R2 1,295,597 rays are ok in all three engines; optiland fails 74 rays, each blocked by `lv` and
+  `reference-tracer`: at the XF 8-16 mm's station 14 of them on surface 2, which both block on surface 3 (the listed
+  difference of where rays end), the rest where both block them. The XF 8-16 mm's listed request keeps the 26 rays
+  optiland iterated beyond the rim in its batch, which raises the batch's tolerance (the tolerance of a batch,
+  docs/gotchas.md): optiland – `reference-tracer` there are hits 3.96e-10 mm and paths 2.37e-7 waves apart, within
+  the gates (1e-8 mm, R3 PASS) but beyond the exact tracers' bounds the test holds every other pair to (1e-10 mm,
+  1e-7 waves); the test holds the pairs of optiland and the reference tracer on those two requests alone to the gates
+  and says their figures, and there lets the others block optiland's failed rays on the next surface; every other
+  request of the two runs keeps the bounds. The XF 23 mm's are 1.4e-12 mm and 2.1e-9 waves. Every other figure is within the bounds as before (worst `lv` –
+  `reference-tracer` hit 1.45e-10 mm, path 8.6e-8 waves).
+- **A station without rays.** `certified-pentax-a-200mm-f4-macro-ed-zoom0-focus2`, new at `f5b456fec`, exports a case
+  but has no ray set: LensVisualizer finds no chief ray that reaches the image plane at any of its three fields
+  (`chief-ray-failed`, coded, failing nothing). The test, which held every station to have rays, now admits a station
+  whose every field is such a coded problem (`chief-ray-failed`, `vignetted`, `outside-modeled-field`), and pins the
+  stations without rays to exactly this one.
+
+## The Stage 9.9 refresh
+
+**Done, 2026-11-16**, by the owner, at LensVisualizer `f5b456fec` (engine closure `f0066505`, 193 files, through a
+pinned clone), optiland `a9e544a2` (the editable install refreshed first: it states `0.6.2.post234+ga9e544a2`), limits
+file v25, on the real store. The recipe is the plan's (Stage 9.9): each of the ten baselines other than the catalog's
+checked and written straight after its own check, the benchmark's MTF at `--jobs 2`, then `statement`, `matrix` and
+`verify` (12 baselines, 0 problems). No gate, band or floor moved; no `--replace`. The limits-file transition
+(`src/compare/policyTransition.ts`) was then removed: `verify` again holds every baseline but the catalog's to the
+exact version and hash of the limits file at hand.
+
+What made every record stale:
+- **Limits file**: v24 to v25, the same limits under the new check ids.
+- **Engines**: `lv`, `replay-of-lv-mtf`, `wave-mtf-of-lv-rays` and `flux-of-lv-rays` (LensVisualizer `25f65d4b4` to
+  `f5b456fec`, and the rename), `optiland` and `otf-of-optiland-wavefront` (optiland `4e893f53` to `a9e544a2`, the
+  shield), `reference-tracer` and `reference-seidel` (the rename alone).
+- **Cases**: every photopic run, by LensVisualizer's nine photopic lines (48 of the benchmark's 96 runs, 9 of
+  features' 18, 64 of states' 128). No other case of an existing run moved.
+
+| Baseline | Runs | New runs | Verdicts written |
+|---|---:|---:|---|
+| benchmark (rays) | 96 | 0 | 32,976 Pass |
+| benchmark (MTF) | 96 | 0 | 1,824 Pass; 1,478 Side by side; 106 worth a look; 240 Not computed |
+| features (rays) | 18 | 0 | 6,183 Pass |
+| features (MTF) | 18 | 0 | 342 Pass |
+| states (rays) | 128 | 0 | 43,968 Pass |
+| states (MTF) | 128 | 0 | 2,432 Pass |
+| focus-stations (rays) | 518 | 444 | 16,193 Pass; 4 Fail, listed |
+| focus-stations (MTF) | 518 | 444 | 9,265 Pass |
+| diffractive (rays) | 9 | 0 | 584 Pass; 16 Not computed |
+| folded (rays) | 16 | 0 | 97 Pass; 47 Not computed |
+
+focus-stations' new runs are the 14 certified stations of `420b47555` and the 430 of `f5b456fec`; 511 of its 518
+runs export (seven fisheye stations are `finite-conjugate-unavailable`), and one, the Pentax A 200 mm macro's second
+station, has no ray set. Its four FAILs are the listed known failures ("Known failures of focus-stations", above),
+classified in the baseline and no longer pending. No unlisted FAIL and no ERROR anywhere.
+
+**The benchmark's MTF check stopped on three DRIFT records, and the owner had the baseline written over them**
+(2026-11-16). All three are `wave-mtf` of `canon-ef-135-f2l-usm-best-photopic` (`lv`–optiland, `lv`–
+`reference-tracer`, optiland–`reference-tracer`), Pass before and after. In the committed baseline every field of
+that run was set aside, its lattice unsettled (phase step 0.414 waves against the quarter wave, a move of 0.0114 on
+doubling against 0.01), so `waveMtf.maxAbs` was not measured. Under the nine photopic lines the axis and middle fields
+settle (phase step 0.244 waves; moves 0.0011 and 0.0032) and are judged, at 1.8e-12 to 5.3e-12 against the gate of
+2e-8; the edge field (9.17°) is still set aside. A figure that goes from not measured to measured is DRIFT by the
+check's rule, which is why the check stopped. Seven MOVED records failed nothing: four side-by-side figures of the same
+run, measured for the same reason; the Plena photopic pair of `lv` and `otf-of-optiland-wavefront`, now worth a look;
+one field of the Z 24-70 mm's tele best-focus photopic `geometric-mtf-vs-optiland`, worth a look in two pairs. The
+check of the other nine baselines found no DRIFT.
+
+**The validation statement** counts 508 configurations (276 before). 753 configurations export; the supportable
+sentence counts those where `lv` passes against both optiland and the reference tracer, with a measured figure, on
+`ray-trace`, `optical-path`, `geometric-mtf` and `wave-mtf`, less the two configurations of the listed failures, which
+its owner-signed clause now names. focus-stations gives 277 of its 511 (46 of 72 before); the others have no judged
+`wave-mtf` field. The benchmark covers ten wavelengths (the reference line and the nine photopic lines). Its figures: worst landing
+3.2e-11 mm, optical path 9.3e-9 waves, geometric MTF 3.5e-10, wave MTF 1.1e-9; LensVisualizer's diffraction MTF beside
+the OTF of optiland's wavefront differs by up to 0.0078 (0.0074 before).

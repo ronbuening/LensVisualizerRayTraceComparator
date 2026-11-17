@@ -4,7 +4,14 @@ import { ASPHERIC_POLYNOMIAL_TERMS } from "../../types/asphericSchema.js";
 import { wideOpenStopAtZoom } from "./aperture.js";
 import { FLAT_R_THRESHOLD } from "../geometry.js";
 import { fakeChannelIndex } from "../analysis/axial.js";
-import type { FakeLensData, FakeRuntimeLens, FakeState, FakeStateSurface, FakeSurfaceData } from "../types.js";
+import type {
+  FakeImageSurfaceShape,
+  FakeLensData,
+  FakeRuntimeLens,
+  FakeState,
+  FakeStateSurface,
+  FakeSurfaceData,
+} from "../types.js";
 
 
 export function buildLens(data: FakeLensData): FakeRuntimeLens {
@@ -75,6 +82,18 @@ function profileOf(surface: FakeSurfaceData): FakeStateSurface["profile"] {
   return { kind, sag, slope, finiteRadiusLimit: () => (edge > 0 ? 1 / Math.sqrt(edge) : null) };
 }
 
+/** The image surface a lens states, compiled as LV #960 compiles one (a cylinder viewed along its curve), or null. */
+function imageSurfaceOf(data: FakeLensData): FakeImageSurfaceShape | null {
+  const surface = data.imageSurface;
+  if (surface === undefined) return null;
+  return Object.freeze({
+    kind: surface.cylindrical ? "cylindrical" : "spherical",
+    radius: surface.R,
+    cylinderAngle: surface.cylindrical ? 0 : null,
+    semiDiameter: surface.sd,
+  });
+}
+
 export function prepareRuntimeState(L: FakeRuntimeLens, focusT: number, zoomT: number, aberrationT = 0): FakeState {
   void aberrationT;
   const zoomGaps = L.isZoom ? (L.source.zoomGaps ?? null) : null;
@@ -131,6 +150,8 @@ export function prepareRuntimeState(L: FakeRuntimeLens, focusT: number, zoomT: n
         quality: surface.nd === 1 ? "air" : "abbe",
         indexAt: (channel: string) => fakeChannelIndex(surface.nd, channel),
       })),
+      // LV #960: the curved image surface the lens states, or null for a flat image (every lens of the fake).
+      imageSurface: imageSurfaceOf(L.source),
     },
     focusT,
     zoomT,

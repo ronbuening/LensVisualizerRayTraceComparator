@@ -27,7 +27,13 @@ import { decodeNdArray, ndRow } from "../../core/numeric/ndarray.ts";
 /** The LensVisualizer exports a chief-ray figure is answered with. */
 export type LvChiefAnswerApi = LvChiefSetupApi &
   LvChiefFieldsApi &
-  Pick<LvAxialAnswerApi, "chromaticChannelWavelengthsNm" | "eLineChannelWavelengthsNm" | "lensChromaticReference"> &
+  Pick<
+    LvAxialAnswerApi,
+    | "chromaticChannelWavelengthsNm"
+    | "eLineChannelWavelengthsNm"
+    | "sodiumChannelWavelengthsNm"
+    | "lensChromaticReference"
+  > &
   Pick<
     LvApi,
     | "computeDistortionCurve"
@@ -123,7 +129,7 @@ function refusals(api: LvChiefAnswerApi, model: LvCaseModel, spec: ChiefNativeSp
     const channels = lvChannelLines(api, model);
     if (channels === null) {
       const message =
-        "the lens mixes d-line and e-line indices: no channel of LensVisualizer's chromatic tab is of one line";
+        "the lens mixes index references (d, D or e): no channel of LensVisualizer's chromatic tab is of one line";
       refused.push({ code: FEATURE, item: "lines.mixed-reference", message });
     } else if (!spec.lines.some((line) => channelAt(channels, conditions.lines[line]?.wavelengthNm) !== null)) {
       const message = `no line asked is a channel of LensVisualizer's chromatic tab (${Object.values(channels).join(", ")} nm)`;
@@ -389,8 +395,8 @@ function lateral(api: LvChiefAnswerApi, model: LvCaseModel, spec: ChiefNativeSpe
  * - Every figure is on the design image plane; the request is the drawer's (`lvChiefRequest`).
  *
  * Unsupported: a finite object, a folded path, a line the case does not have (`line`), distortion or pupils at a line
- * that is not the authored reference line, distortion of a fisheye lens, lateral colour of a lens that mixes d-line and
- * e-line indices or at no line of a channel, a case off the design plane, and fields other than the tab's own.
+ * that is not the authored reference line, distortion of a fisheye lens, lateral colour of a lens that mixes index
+ * references (d, D or e) or at no line of a channel, a case off the design plane, and fields other than the tab's own.
  */
 export function answerLvChief(api: LvChiefAnswerApi, model: LvCaseModel, spec: ChiefNativeSpec): LvChiefAnswer {
   // What the case and the spec decide comes first, before LensVisualizer is asked anything but its channels.

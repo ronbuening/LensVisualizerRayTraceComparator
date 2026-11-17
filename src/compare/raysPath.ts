@@ -151,7 +151,7 @@ function compare(dataA: JsonObject, dataB: JsonObject, context?: ComparisonConte
  */
 export const raysPathComparator: QuantityComparator = Object.freeze({
   quantity: RAYS_TRACE,
-  rung: "r3",
+  rung: "optical-path",
   metrics: Object.freeze([
     { name: "opticalPath.maxAbs", unit: "waves" },
     { name: "opticalPathToImage.maxAbs", unit: "waves" },

@@ -7,7 +7,14 @@ import type { StatementInput } from "../../src/report/statement.ts";
 
 export const STATEMENT_POLICY: Policy = { contract: "1.3", kind: "policy", version: 1, rungs: {} };
 const policy = { version: 1, hash: hashCanonical(STATEMENT_POLICY) };
-const engines = ["lv", "optiland", "optiland-wave", "ref", "replay", "wave"].map((id) => ({
+const engines = [
+  "lv",
+  "optiland",
+  "otf-of-optiland-wavefront",
+  "reference-tracer",
+  "replay-of-lv-mtf",
+  "wave-mtf-of-lv-rays",
+].map((id) => ({
   id,
   version: "stand-in",
   fingerprint: "a".repeat(64),
@@ -16,23 +23,23 @@ const engines = ["lv", "optiland", "optiland-wave", "ref", "replay", "wave"].map
 
 function gated(id: string): BaselineRung {
   const metric =
-    id === "r2"
+    id === "ray-trace"
       ? "landing.maxDistance"
-      : id === "r3"
+      : id === "optical-path"
         ? "opticalPath.maxAbs"
-        : id === "r6a"
+        : id === "wave-mtf"
           ? "waveMtf.maxAbs"
-          : id.startsWith("r4")
+          : id.startsWith("geometric-mtf")
             ? "mtf.maxAbs"
             : "synthetic.maxAbs";
-  const unit = id === "r2" ? "mm" : id === "r3" ? "waves" : "1";
-  const pairs = (id === "r4f" ? ["replay"] : ["optiland", "ref"]).map((b) => ({
+  const unit = id === "ray-trace" ? "mm" : id === "optical-path" ? "waves" : "1";
+  const pairs = (id === "lv-mtf-replay" ? ["replay-of-lv-mtf"] : ["optiland", "reference-tracer"]).map((b) => ({
     a: "lv",
     b,
     verdict: "PASS" as const,
     verdicts: [{ verdict: "PASS" as const, count: 2 }],
     metrics: [
-      { name: metric, value: 1 / 64, tolerance: 1 / 8, unit, measured: id === "r6a" ? 1 : 2, where: { field: 0 } },
+      { name: metric, value: 1 / 64, tolerance: 1 / 8, unit, measured: id === "wave-mtf" ? 1 : 2, where: { field: 0 } },
       { name: "synthetic.zero", value: 0, tolerance: 0, unit: "elements" },
     ],
   }));
@@ -46,7 +53,12 @@ function gated(id: string): BaselineRung {
 }
 
 function native(id: string, several: boolean): BaselineRung {
-  const engine = id === "r6c" ? "optiland-wave" : id === "r6b" ? "wave" : "optiland";
+  const engine =
+    id === "mtf-vs-optiland-wavefront"
+      ? "otf-of-optiland-wavefront"
+      : id === "mtf-vs-wave-estimate"
+        ? "wave-mtf-of-lv-rays"
+        : "optiland";
   const recorded = (external: boolean) => ({
     field: [0, 0.5, 1],
     lineWavelengthNm: several ? [400, 600] : [500],
@@ -72,7 +84,7 @@ function native(id: string, several: boolean): BaselineRung {
     ],
     pairs: [pair],
   };
-  if (id === "r5" && several) {
+  if (id === "mtf-vs-optiland-fft" && several) {
     const unsupported = { a: "lv", b: engine, verdict: "UNSUPPORTED" as const, metrics: [] };
     return {
       rung: id,
@@ -110,14 +122,19 @@ export function statementInputs(): StatementInput[] {
       caseId: (several ? "c" : "b").repeat(64),
       rungs: mtf
         ? [
-            gated("r4"),
-            gated("r4f"),
-            gated("r6a"),
+            gated("geometric-mtf"),
+            gated("lv-mtf-replay"),
+            gated("wave-mtf"),
             ...(suite === "benchmark"
-              ? [native("r5", several), native("r5g", several), native("r6b", several), native("r6c", several)]
+              ? [
+                  native("mtf-vs-optiland-fft", several),
+                  native("geometric-mtf-vs-optiland", several),
+                  native("mtf-vs-wave-estimate", several),
+                  native("mtf-vs-optiland-wavefront", several),
+                ]
               : []),
           ]
-        : ["r0", "r1", "r2", "r3", "r4"].map(gated),
+        : ["built-system", "first-order", "ray-trace", "optical-path", "geometric-mtf"].map(gated),
     }));
     const baseline: Baseline = {
       contract: "1.3",

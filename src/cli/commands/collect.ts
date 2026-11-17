@@ -14,24 +14,24 @@ import { parseArguments } from "../arguments.ts";
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "../command.ts";
 import type { CliCommand } from "../command.ts";
 import type { RunTargetInputs } from "../runTarget.ts";
+import { ROOT_OPTION, helpText, options, paragraph } from "../help.ts";
+import { COLLECT_OUTPUT_TEXT } from "../../vocabulary/index.ts";
 
 const SYNOPSIS = "Usage: lvrtc collect [<engine>...] [--root <dir>] [--json]\n";
-const HELP = [
+const HELP = helpText([
   SYNOPSIS,
-  "Collects the answers operators left for file-exchange engines: each <runsDir>/exchange/<engine>/inbox/<job>.json",
-  "is admitted as a run admits an engine's answer (negotiation, the result store, the adapter's validation, the",
-  "quantity's data) and, once stored, its job moves to collected/; an answer that is refused moves with its job to",
-  "rejected/<job>/ with reason.txt. A job with no answer stays in outbox or pending. The next lvrtc run finds the",
-  "collected answers in the store.",
-  "",
-  "  <engine>      file-exchange engines to collect for (default: every one the configuration defines)",
-  "  --root <dir>  the directory that holds lvrtc.config.json (default: this repository)",
-  "  --json        print one JSON object in place of the lines",
-  "",
-  "Exit code: 0 when nothing was refused; 1 when an answer was refused or an engine could not be used; 2 when the",
-  "command line, the root or an engine named cannot be used as asked.",
-  "",
-].join("\n");
+  ...paragraph(
+    "Collects the answers that operators left for file-exchange engines: engines a person operates, who reads each job from <runsDir>/exchange/<engine>/outbox/ and leaves the answer in inbox/<job>.json. Each answer is admitted as a run admits an engine's answer, through the same checks of its format and content, and once it is in the result cache its job moves to collected/. An answer that is refused moves with its job to rejected/<job>/, with reason.txt. A job with no answer stays where it is. The next lvrtc run finds the collected answers in the result cache.",
+  ),
+  ...options([
+    ["<engine>", "the file-exchange engines to collect for (default: every one the configuration defines)"],
+    ROOT_OPTION,
+    ["--json", "print one JSON object in place of the lines"],
+  ]),
+  ...paragraph(
+    "Exit code: 0 when nothing was refused; 1 when an answer was refused or an engine could not be used; 2 when the command line, the root or an engine named cannot be used as asked.",
+  ),
+]);
 
 /** What one engine's collection came to: its collection, or why the engine could not be used. */
 type Outcome = { readonly engine: string } & ({ readonly collection: Collection } | { readonly unavailable: string });
@@ -73,11 +73,12 @@ async function collectFor(
 
 /** The lines of one engine's outcome. */
 function outcomeText(outcome: Outcome): string {
-  if ("unavailable" in outcome) return `${outcome.engine}: not collected: ${outcome.unavailable}\n`;
+  const t = COLLECT_OUTPUT_TEXT;
+  if ("unavailable" in outcome) return `${outcome.engine}: ${t.notCollected}: ${outcome.unavailable}\n`;
   const { collected, rejected, pending } = outcome.collection;
   const lines = [
-    `${outcome.engine}: ${collected.length} collected, ${rejected.length} rejected, ${pending.length} still pending`,
-    ...rejected.map(({ job, reason }) => `  rejected ${job}: ${reason}`),
+    `${outcome.engine}: ${collected.length} ${t.collected}, ${rejected.length} ${t.rejected}, ${pending.length} ${t.pending}`,
+    ...rejected.map(({ job, reason }) => `  ${t.rejectedJob} ${job}: ${reason}`),
   ];
   return `${lines.join("\n")}\n`;
 }
@@ -96,7 +97,7 @@ function outcomeText(outcome: Outcome): string {
 export function createCollectCommand(inputs: RunTargetInputs): CliCommand {
   return {
     name: "collect",
-    summary: "Collect the answers of file-exchange engines into the result store",
+    summary: "Collect the answers operators left for file-exchange engines into the result cache",
     run: async (args, io) => {
       if (args.includes("-h") || args.includes("--help")) {
         io.stdout(HELP);
@@ -153,7 +154,7 @@ export function createCollectCommand(inputs: RunTargetInputs): CliCommand {
               },
         );
         io.stdout(`${JSON.stringify({ engines: report }, null, 2)}\n`);
-      } else if (outcomes.length === 0) io.stdout("no file-exchange engine is configured: nothing to collect\n");
+      } else if (outcomes.length === 0) io.stdout(`${COLLECT_OUTPUT_TEXT.none}\n`);
       else for (const outcome of outcomes) io.stdout(outcomeText(outcome));
 
       const failed = outcomes.some((outcome) => "unavailable" in outcome || outcome.collection.rejected.length > 0);

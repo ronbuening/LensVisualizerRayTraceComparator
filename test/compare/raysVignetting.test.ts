@@ -93,9 +93,9 @@ function judged(a: SpanAnswer, b: SpanAnswer) {
     data: data as unknown as JsonObject,
   });
   return comparePair(
-    participant("ref", a),
+    participant("reference-tracer", a),
     participant("lv", b),
-    loadPolicy().rungs.r11a,
+    loadPolicy().rungs["vignetting-rays"],
     raysVignettingComparator,
     undefined,
     CONTEXT,

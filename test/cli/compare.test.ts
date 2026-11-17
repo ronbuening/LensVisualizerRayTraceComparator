@@ -74,8 +74,8 @@ test("compare and report are registered commands, with help", async () => {
   assert.ok(COMMANDS.some((command) => command.name === "compare"));
   assert.ok(COMMANDS.some((command) => command.name === "report"));
   const list = lvrtc("unused", ["--help"]);
-  assert.match(list.out, /^ {2}compare +Compare the engines of a run, against a reference and pairwise$/m);
-  assert.match(list.out, /^ {2}report +Write the report of a compared run as JSON and Markdown$/m);
+  assert.match(list.out, /^ {2}compare +Compare the answers of a run's engines and give each pair a verdict$/m);
+  assert.match(list.out, /^ {2}report +Write the report of a compared run, as Markdown and JSON$/m);
   for (const [command, synopsis] of [
     ["compare", COMPARE_SYNOPSIS],
     ["report", REPORT_SYNOPSIS],
@@ -99,17 +99,21 @@ test("run, compare, report through the binary: the all-TypeScript trio exits 0 t
   assert.equal(
     compared.out,
     [
-      "singlet       selftest  reference-vs-each  fake-a     fake-near  PASS",
-      "singlet       selftest  reference-vs-each  fake-a     fake-none  UNSUPPORTED  fake-none is unsupported (quantity selftest.echo)",
-      "singlet       selftest  pairwise           fake-a     fake-near  PASS",
-      "singlet       selftest  pairwise           fake-a     fake-none  UNSUPPORTED  fake-none is unsupported (quantity selftest.echo)",
-      "singlet       selftest  pairwise           fake-near  fake-none  UNSUPPORTED  fake-none is unsupported (quantity selftest.echo)",
-      "double-gauss  selftest  reference-vs-each  fake-a     fake-near  PASS",
-      "double-gauss  selftest  reference-vs-each  fake-a     fake-none  UNSUPPORTED  fake-none is unsupported (quantity selftest.echo)",
-      "double-gauss  selftest  pairwise           fake-a     fake-near  PASS",
-      "double-gauss  selftest  pairwise           fake-a     fake-none  UNSUPPORTED  fake-none is unsupported (quantity selftest.echo)",
-      "double-gauss  selftest  pairwise           fake-near  fake-none  UNSUPPORTED  fake-none is unsupported (quantity selftest.echo)",
-      "fake-3-engines-ts: 10 pairs: 4 PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 6 UNSUPPORTED, 0 BLOCKED, 0 ERROR",
+      "Checks: pipeline-echo Pipeline echo (a test of this tool)",
+      "Engines: fake-a, fake-near, fake-none (defined in this configuration)",
+      'Pairs: "against the reference" sets each engine beside the reference engine (fake-a); "every pair" sets every two',
+      "       engines beside each other",
+      "singlet       pipeline-echo  against the reference  fake-a     fake-near  Pass",
+      "singlet       pipeline-echo  against the reference  fake-a     fake-none  Not computed  fake-none is unsupported (quantity selftest.echo)",
+      "singlet       pipeline-echo  every pair             fake-a     fake-near  Pass",
+      "singlet       pipeline-echo  every pair             fake-a     fake-none  Not computed  fake-none is unsupported (quantity selftest.echo)",
+      "singlet       pipeline-echo  every pair             fake-near  fake-none  Not computed  fake-none is unsupported (quantity selftest.echo)",
+      "double-gauss  pipeline-echo  against the reference  fake-a     fake-near  Pass",
+      "double-gauss  pipeline-echo  against the reference  fake-a     fake-none  Not computed  fake-none is unsupported (quantity selftest.echo)",
+      "double-gauss  pipeline-echo  every pair             fake-a     fake-near  Pass",
+      "double-gauss  pipeline-echo  every pair             fake-a     fake-none  Not computed  fake-none is unsupported (quantity selftest.echo)",
+      "double-gauss  pipeline-echo  every pair             fake-near  fake-none  Not computed  fake-none is unsupported (quantity selftest.echo)",
+      "fake-3-engines-ts: 10 pairs: 4 Pass, 6 Not computed",
       `comparisons: ${join(directory, COMPARISONS_FILE)}`,
       "",
     ].join("\n"),
@@ -141,12 +145,11 @@ test("compare exits 1 when a pair is FAIL or ERROR, and report still writes the 
   const runsDir = join(tempDir(t), "runs");
   const ran = lvrtc(runsDir, ["run", suiteFile("fake-faults"), "--root", FAULT_ROOT]);
   assert.equal(ran.code, EXIT_FAILURE);
+  // The summary counts every way a job came by its outcome: they add up to the jobs.
+  assert.match(ran.out, /^fake-faults: 8 jobs: 4 answered, 4 error \(6 asked now, 2 engine unusable\)$/m);
   const compared = lvrtc(runsDir, ["compare", "fake-faults", "--root", FAULT_ROOT]);
   assert.equal(compared.code, EXIT_FAILURE, compared.err);
-  assert.match(
-    compared.out,
-    /^fake-faults: 18 pairs: 0 PASS, 0 FLOOR, 4 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 14 ERROR$/m,
-  );
+  assert.match(compared.out, /^fake-faults: 18 pairs: 4 Fail, 14 Error$/m);
   assert.ok(existsSync(join(runsDir, "fake-faults", COMPARISONS_FILE)));
   const reported = lvrtc(runsDir, ["report", "fake-faults", "--root", FAULT_ROOT]);
   assert.equal(reported.code, EXIT_OK, reported.err);
@@ -165,10 +168,7 @@ test("FAIL alone exits 1, ERROR alone exits 1, and UNSUPPORTED alone exits 0", a
   const unsupported = await pairRun(t, "fake-a,fake-none");
   const ended = await inProcess(unsupported, ["compare", "fake-pair"]);
   assert.equal(ended.code, EXIT_OK);
-  assert.match(
-    ended.out,
-    /: 4 pairs: 0 PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 4 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/m,
-  );
+  assert.match(ended.out, /: 4 pairs: 4 Not computed$/m);
 
   // An answer that has gone from the store is an ERROR.
   const missing = await pairRun(t, "fake-a,fake-near");
@@ -176,7 +176,7 @@ test("FAIL alone exits 1, ERROR alone exits 1, and UNSUPPORTED alone exits 0", a
   rmSync(join(missing, STORE_DIRECTORY), { recursive: true });
   const gone = await inProcess(missing, ["compare", "fake-pair"]);
   assert.equal(gone.code, EXIT_FAILURE);
-  assert.match(gone.out, / ERROR {2}fake-a has no result \(its result is not in the store\); fake-near has no result /);
+  assert.match(gone.out, / Error {2}fake-a has no result \(its result is not in the store\); fake-near has no result /);
 });
 
 test("a run that was never made, and a suite that was never run, are usage errors and nothing is written", async (t) => {
@@ -187,7 +187,9 @@ test("a run that was never made, and a suite that was never run, are usage error
     assert.equal(ended.out, "");
     assert.match(
       ended.err,
-      new RegExp(`^lvrtc ${command}: no run of "fake-pair" was found: there is no manifest\\.json in `),
+      new RegExp(
+        `^lvrtc ${command}: no run of "fake-pair" was found: there is no run record \\(manifest\\.json\\) in `,
+      ),
     );
     assert.match(ended.err, /; run lvrtc run first\nUsage: lvrtc /);
   }
@@ -354,7 +356,7 @@ test("report refuses comparisons judged by another policy than the one it is giv
   assert.equal(await runCli(["compare", "fake-pair"], { ...io, stderr: () => {} }, [compare]), EXIT_OK);
   assert.equal(await runCli(["report", "fake-pair"], io, [command]), EXIT_OK);
   const written = readFileSync(join(runsDir, "fake-pair", REPORT_MARKDOWN_FILE), "utf8");
-  assert.ok(written.includes(`\n| Policy | rungs v${policy.version} |\n`), written);
+  assert.ok(written.includes(`\n| Limits file | v${policy.version} |\n`), written);
 });
 
 test("the report is the same bytes each time it is written, and report.json is canonical", async (t) => {

@@ -27,6 +27,8 @@ import {
   verifyReal,
 } from "../../src/cli/verifyReal.ts";
 import type { CheckStep, LvrtcEnded, VerifyRealRunner } from "../../src/cli/verifyReal.ts";
+import { CHECK_LV_PROGRAM, createCheckLvCommand } from "../../src/cli/commands/checkLv.ts";
+import { COMMANDS, runCli } from "../../src/cli/main.ts";
 import { CONTRACT_VERSION } from "../../src/contract/version.ts";
 import { CONFIG_FILE, REPO_ROOT } from "../../src/core/config.ts";
 import { UsageError } from "../../src/core/usageError.ts";
@@ -89,9 +91,9 @@ function checkSaid(
   return JSON.stringify({
     records: records.map((record, index) => ({
       run: `run-${index}`,
-      rung: "r2",
+      rung: "ray-trace",
       a: "lv",
-      b: "ref",
+      b: "reference-tracer",
       stale: [],
       moved: [],
       ...record,
@@ -110,7 +112,7 @@ const STEP: CheckStep = {
   suite: "benchmark",
   kind: "rays",
   baseline: "b.json",
-  rungs: ["r0"],
+  rungs: ["built-system"],
   jobs: 4,
   perJobGiB: 2.5,
 };
@@ -246,7 +248,7 @@ test("the plan of this repository: the benchmark, rays then MTF, MTF at two jobs
       ["benchmark", "mtf", 2],
     ],
   );
-  assert.ok(steps[1].rungs.includes("r6c"));
+  assert.ok(steps[1].rungs.includes("mtf-vs-optiland-wavefront"));
   assert.equal(steps[1].perJobGiB, 4);
   assert.deepEqual(checkArgs(steps[0], "/root"), [
     "baseline",
@@ -302,7 +304,10 @@ test("--all plans every routine committed baseline of this repository, in the fi
 });
 
 test("the plan follows the memory budget and the cores, never more than --jobs", (t) => {
-  const rootDir = plannedRoot(t, { a: ["r0", "r2"], "a.mtf": ["r4", "r6c"] });
+  const rootDir = plannedRoot(t, {
+    a: ["built-system", "ray-trace"],
+    "a.mtf": ["geometric-mtf", "mtf-vs-optiland-wavefront"],
+  });
   const plan = (jobs: string, machine: { budgetGiB: number; cpus: number }): number[] =>
     planChecks(parseVerifyRealArgs(["--suites", "a", "--jobs", jobs]), rootDir, machine).map((step) => step.jobs);
   assert.deepEqual(plan("4", OWNER_MACHINE), [4, 2]);
@@ -313,7 +318,12 @@ test("the plan follows the memory budget and the cores, never more than --jobs",
 });
 
 test("another suite is checked for the kinds of baseline it has; one with none, or no suite file, is refused", (t) => {
-  const rootDir = plannedRoot(t, { rays: ["r0"], both: ["r0"], "both.mtf": ["r4"], "solo.mtf": ["r4f"] });
+  const rootDir = plannedRoot(t, {
+    rays: ["built-system"],
+    both: ["built-system"],
+    "both.mtf": ["geometric-mtf"],
+    "solo.mtf": ["lv-mtf-replay"],
+  });
   const kinds = (names: string): string[] =>
     planChecks(parseVerifyRealArgs(["--suites", names]), rootDir, OWNER_MACHINE).map((s) => `${s.suite}:${s.kind}`);
   assert.deepEqual(kinds("solo,both,rays"), ["solo:mtf", "both:rays", "both:mtf", "rays:rays"]);
@@ -323,7 +333,7 @@ test("another suite is checked for the kinds of baseline it has; one with none, 
     () => planChecks(parseVerifyRealArgs([]), rootDir, OWNER_MACHINE),
     /suites\/benchmark\.json: no suite file is there/,
   );
-  const partial = plannedRoot(t, { benchmark: ["r0"] });
+  const partial = plannedRoot(t, { benchmark: ["built-system"] });
   assert.throws(
     () => planChecks(parseVerifyRealArgs([]), partial, OWNER_MACHINE),
     /benchmark\.mtf\.json: the suite benchmark has no MTF baseline to check; lvrtc baseline write benchmark --mtf writes one/,
@@ -445,7 +455,7 @@ test("a check is clean when every record is OK, REFRESHABLE or MOVED, and a list
 
   const moved = judgeCheck(STEP, ended(checkSaid([{ outcome: "MOVED", verdict: "ATTENTION" }])));
   assert.equal(moved.status, "clean");
-  assert.deepEqual(moved.notes, ["1 MOVED, of a recorded rung: fails nothing"]);
+  assert.deepEqual(moved.notes, ["1 record with a side-by-side figure that moved: this fails nothing"]);
 
   const listed = judgeCheck(STEP, ended(checkSaid([{ outcome: "OK", verdict: "FAIL", knownFailure: true }])));
   assert.equal(listed.status, "clean");
@@ -465,15 +475,18 @@ test("DRIFT, an unlisted FAIL or ERROR, NEW, GONE, an engine error and an empty 
         { outcome: "OK", verdict: "PASS" },
       ]),
     ),
-    ["1 DRIFT", "1 pair FAIL or ERROR today and not listed"],
+    [
+      "1 record changed beyond limits",
+      "1 pair fails or ends in an error today and is not listed in docs/known-failures.json",
+    ],
   );
   assert.deepEqual(problems(checkSaid([{ outcome: "OK", verdict: "ERROR" }])), [
-    "1 pair FAIL or ERROR today and not listed",
+    "1 pair fails or ends in an error today and is not listed in docs/known-failures.json",
   ]);
   // `baseline check` exits 0 on NEW and GONE; a real-engine check of another suite than the baseline's is not clean.
   assert.deepEqual(problems(checkSaid([{ outcome: "NEW", verdict: "PASS" }, { outcome: "GONE" }]), 0), [
-    "1 NEW: the suite is not the baseline's",
-    "1 GONE: the suite is not the baseline's",
+    "1 new: the suite is not the one the committed results are of",
+    "1 no longer run: the suite is not the one the committed results are of",
   ]);
   assert.deepEqual(
     problems(
@@ -481,13 +494,11 @@ test("DRIFT, an unlisted FAIL or ERROR, NEW, GONE, an engine error and an empty 
     ),
     ["engine optiland could not be used (spawn-failed)"],
   );
-  assert.deepEqual(problems(checkSaid([]), 0), ["no record was checked"]);
+  assert.deepEqual(problems(checkSaid([]), 0), ["no result was checked"]);
   assert.deepEqual(problems(checkSaid([{ outcome: "STALE", verdict: "PASS" }]), 0), [
-    "1 records neither OK, REFRESHABLE nor MOVED",
+    "1 record neither unchanged, out of date but within limits, nor a side-by-side figure that moved",
   ]);
-  assert.deepEqual(problems(checkSaid([{ outcome: "OK", verdict: "PASS" }], { failed: true })), [
-    "baseline check exited 1",
-  ]);
+  assert.deepEqual(problems(checkSaid([{ outcome: "OK", verdict: "PASS" }], { failed: true })), ["the check exited 1"]);
   assert.match(problems("", 2).join(), /baseline check exited 2 without a report: nothing was checked/);
   assert.match(problems("not json", 1).join(), /exited 1 without a report/);
   const unstarted = judgeCheck(STEP, { code: null, signal: null, stdout: "", error: "spawn ENOENT" });
@@ -502,6 +513,10 @@ test("a check ended by a signal is interrupted", () => {
 
 // ── The whole, on a scripted runner ──────────────────────────────────────────────────────────────────────────────
 
+/** The closing line of a clean verification of two sets of committed results. */
+const CLEAN_LINE =
+  "verify:real: clean: every result of 2 sets of committed results is unchanged, out of date but still within its limits, or a side-by-side figure that moved";
+
 const ALL_OK = (): LvrtcEnded => ended(checkSaid([{ outcome: "OK", verdict: "PASS" }]));
 
 test("verify:real asks the doctor first, then each check alone and in order, and exits 0 when all are clean", async () => {
@@ -514,17 +529,24 @@ test("verify:real asks the doctor first, then each check alone and in order, and
     ["baseline", "check", "benchmark", "--root", REPO_ROOT, "--mtf", "--jobs", "2", "--json"],
   ]);
   assert.equal(run.most(), 1);
+  assert.match(said.out, /^verify:real: LensVisualizer c{40} \(clean\) at \/checkouts\/lv, 175 engine files$/m);
+  assert.match(said.out, /^verify:real: optiland 0\.6\.2, checkout e{40} \(clean\)$/m);
+  assert.doesNotMatch(said.out, /a{64}|f{64}/, "no hash without --details");
   assert.match(
     said.out,
-    /^verify:real: LensVisualizer c{40} \(clean\) at \/checkouts\/lv, engine closure a{64} \(175 files\)$/m,
+    /^ {2}benchmark rays {2}checks built-system, first-order, ray-trace, optical-path, geometric-mtf, spot-rays, axial-rays, chief-rays, field-curve-rays, vignetting-rays {2}at most 4 jobs at once/m,
   );
-  assert.match(said.out, /^verify:real: optiland 0\.6\.2, fingerprint f{64}, checkout e{40} \(clean\)$/m);
+  assert.match(said.out, /^ {2}Checks: built-system Built system; first-order First-order data; /m);
+  assert.match(said.out, /^benchmark rays {2}clean {2}1 record: 1 Unchanged; 4 jobs at once; 60 s$/m);
+  assert.match(said.out, /^benchmark mtf {3}clean {2}.*; 2 jobs at once; 60 s$/m);
+  assert.match(said.out, new RegExp(`^${CLEAN_LINE}$`, "m"));
+  // With --details, the hashes of LensVisualizer's engine files and of optiland's code.
+  const detailed = await verified(["--details"], scripted(healthy(), ALL_OK).runner);
   assert.match(
-    said.out,
-    /^benchmark rays {2}CLEAN {2}1 records: 1 OK, 0 REFRESHABLE, 0 MOVED, 0 DRIFT, 0 NEW, 0 GONE; stale by case 0, engine 0, policy 0; --jobs 4; 60 s$/m,
+    detailed.out,
+    /^verify:real: LensVisualizer c{40} \(clean\) at \/checkouts\/lv, 175 engine files, LensVisualizer's engine files a{64}$/m,
   );
-  assert.match(said.out, /^benchmark mtf {3}CLEAN {2}.*; --jobs 2; 60 s$/m);
-  assert.match(said.out, /^verify:real: clean: every record of 2 checks is OK, REFRESHABLE or MOVED$/m);
+  assert.match(detailed.out, /^verify:real: optiland 0\.6\.2, checkout e{40} \(clean\), engine code f{64}$/m);
   assert.equal(said.err, "");
 });
 
@@ -536,7 +558,7 @@ test("--suite runs one named suite alone, rays then MTF", async () => {
     ["baseline", "check", "features", "--root", REPO_ROOT, "--jobs", "4", "--json"],
     ["baseline", "check", "features", "--root", REPO_ROOT, "--mtf", "--jobs", "4", "--json"],
   ]);
-  assert.match(said.out, /^verify:real: clean: every record of 2 checks is OK, REFRESHABLE or MOVED$/m);
+  assert.match(said.out, new RegExp(`^${CLEAN_LINE}$`, "m"));
 });
 
 test("--all runs the ten routine checks one at a time, in the plan's order", async () => {
@@ -591,22 +613,25 @@ test("a check that is not clean fails the whole, and the checks after it still r
   assert.equal(run.asked.length, 3);
   assert.match(
     said.out,
-    /^benchmark rays {2}NOT CLEAN {2}.*\n {4}1 DRIFT; 1 pair FAIL or ERROR today and not listed$/m,
+    /^benchmark rays {2}not clean {2}.*\n {4}1 record changed beyond limits; 1 pair fails or ends in an error today and is not listed in docs\/known-failures\.json$/m,
   );
   assert.match(said.out, /^verify:real: not clean: benchmark rays$/m);
 });
 
-test("an interrupted check stops the sequence; the rest are NOT RUN", async () => {
+test("an interrupted check stops the sequence; the rest are not run", async () => {
   const run = scripted(healthy(), () => ended("", null, "SIGTERM"));
   const said = await verified(["--suites", "features,states"], run.runner);
   assert.equal(said.code, EXIT_FAILURE);
   assert.equal(run.asked.length, 2);
-  assert.match(said.out, /^features rays {2}INTERRUPTED {2}--jobs 4; 60 s\n {4}baseline check was ended by SIGTERM$/m);
-  assert.match(said.out, /^features mtf {3}NOT RUN$/m);
-  assert.match(said.out, /^states mtf {3}NOT RUN$/m);
   assert.match(
     said.out,
-    /if the memory watchdog ended it, run again with fewer --jobs; the remaining checks were not run$/m,
+    /^features rays {2}interrupted {2}4 jobs at once; 60 s\n {4}baseline check was ended by SIGTERM$/m,
+  );
+  assert.match(said.out, /^features mtf {3}not run$/m);
+  assert.match(said.out, /^states mtf {3}not run$/m);
+  assert.match(
+    said.out,
+    /if the memory watchdog ended it, run again with fewer --jobs; the remaining sets were not checked$/m,
   );
 });
 
@@ -619,8 +644,8 @@ test("a stop asked of verify:real starts no further check", async () => {
   const said = await verified([], run.runner, { stopped: () => signal });
   assert.equal(said.code, EXIT_FAILURE);
   assert.equal(run.asked.length, 2);
-  assert.match(said.out, /^verify:real: stopped by SIGINT; the remaining checks were not run$/m);
-  assert.match(said.out, /^benchmark mtf {3}NOT RUN$/m);
+  assert.match(said.out, /^verify:real: stopped by SIGINT; the remaining sets were not checked$/m);
+  assert.match(said.out, /^benchmark mtf {3}not run$/m);
 });
 
 test("SIGINT, like SIGTERM, is handed on at once to the check that is running, which ends it; nothing runs after", async () => {
@@ -653,9 +678,9 @@ test("SIGINT, like SIGTERM, is handed on at once to the check that is running, w
     assert.equal(said.code, EXIT_FAILURE);
     assert.match(
       said.out,
-      new RegExp(`^benchmark rays {2}INTERRUPTED .*\\n {4}baseline check was ended by ${name}$`, "m"),
+      new RegExp(`^benchmark rays {2}interrupted .*\\n {4}baseline check was ended by ${name}$`, "m"),
     );
-    assert.match(said.out, /^benchmark mtf {3}NOT RUN$/m);
+    assert.match(said.out, /^benchmark mtf {3}not run$/m);
     assert.equal(signals.stopped(), name);
     assert.equal(source.listenerCount("SIGINT") + source.listenerCount("SIGTERM"), 0);
   }
@@ -709,7 +734,7 @@ test("on fake engines: a clean check exits 0, a drifted engine exits 1, and base
     contract: CONTRACT_VERSION,
     kind: "suite",
     name: "pair",
-    defaults: { rungs: ["selftest"] },
+    defaults: { rungs: ["pipeline-echo"] },
     runs: ["singlet", "double-gauss"].map((name) => ({ name, lens: { kind: "fixture", path: `cases/${name}.json` } })),
   };
   writeFileSync(join(rootDir, "suites", "pair.json"), JSON.stringify(suite));
@@ -734,7 +759,7 @@ test("on fake engines: a clean check exits 0, a drifted engine exits 1, and base
   // The plan is the owner's machine and the children run on this one: one job a check fits both.
   const clean = await verified(["--suites", "pair", "--root", rootDir, "--jobs", "1"], runner);
   assert.equal(clean.code, EXIT_OK, clean.out + clean.err + stderr.join(""));
-  assert.match(clean.out, /^pair rays {2}CLEAN {2}2 records: 2 OK, 0 REFRESHABLE, 0 MOVED, 0 DRIFT, 0 NEW, 0 GONE; /m);
+  assert.match(clean.out, /^pair rays {2}clean {2}2 records: 2 Unchanged; /m);
 
   // Another build of an engine, 5e-12 off: the pair fails where it passed, and the baseline says DRIFT.
   writeConfig(rootDir, { ...PAIR, "fake-near": { bias: 5e-12 } });
@@ -742,9 +767,12 @@ test("on fake engines: a clean check exits 0, a drifted engine exits 1, and base
   assert.equal(drifted.code, EXIT_FAILURE);
   assert.match(
     drifted.out,
-    /^pair rays {2}NOT CLEAN {2}2 records: 0 OK, 0 REFRESHABLE, 0 MOVED, 2 DRIFT, .*stale by case 0, engine 2, policy 0; /m,
+    /^pair rays {2}not clean {2}2 records: 2 Changed beyond limits; out of date: engine code changed in 2; /m,
   );
-  assert.match(drifted.out, /^ {4}2 DRIFT; 2 pairs FAIL or ERROR today and not listed$/m);
+  assert.match(
+    drifted.out,
+    /^ {4}2 records changed beyond limits; 2 pairs fail or end in an error today and are not listed in docs\/known-failures\.json$/m,
+  );
 
   assert.deepEqual(
     { baselines: snapshot(join(rootDir, "baselines")), reports: snapshot(join(rootDir, "reports")) },
@@ -762,9 +790,88 @@ test("bin/verify-real.mjs refuses, before any check, a machine where LensVisuali
   assert.equal(child.status, EXIT_USAGE, child.stderr + child.stdout);
   assert.match(
     child.stdout,
-    /^ {2}benchmark rays {2}rungs r0,r1,r2,r3,r4,r7a,r8a,r9a,r10a,r11a {2}--jobs \d+ \(2\.5 GiB a job\)$/m,
+    /^ {2}benchmark rays {2}checks built-system, first-order, ray-trace, optical-path, geometric-mtf, spot-rays, axial-rays, chief-rays, field-curve-rays, vignetting-rays {2}at most \d+ jobs? at once \(2\.5 GiB a job\)$/m,
   );
   assert.match(child.stderr, /^verify:real: refused: LensVisualizer is not at \/nonexistent\/lv: /m);
   assert.match(child.stderr, /^verify:real: refused: optiland's interpreter \/nonexistent\/python does not run$/m);
+  assert.doesNotMatch(child.stdout, /checking/);
+});
+
+// ── lvrtc check-lv: the same runner under another name ───────────────────────────────────────────────────────────
+
+/** `lvrtc check-lv` through the dispatcher, on a scripted runner. */
+async function checkedLv(args: readonly string[], runner: VerifyRealRunner): Promise<Said> {
+  const out: string[] = [];
+  const err: string[] = [];
+  const command = createCheckLvCommand({ rootDir: REPO_ROOT, cwd: REPO_ROOT, runner, machine: OWNER_MACHINE });
+  const code = await runCli(
+    ["check-lv", ...args],
+    { stdout: (text) => void out.push(text), stderr: (text) => void err.push(text) },
+    [command],
+  );
+  return { code, out: out.join(""), err: err.join("") };
+}
+
+test("lvrtc check-lv asks the runner exactly what npm run verify:real asks, and ends with the same code", async () => {
+  assert.ok(COMMANDS.some((command) => command.name === "check-lv"));
+  const answers: ((args: readonly string[]) => LvrtcEnded)[] = [
+    ALL_OK,
+    (args) => (args.includes("--mtf") ? ALL_OK() : ended(checkSaid([{ outcome: "DRIFT", verdict: "FAIL" }]), 1)),
+  ];
+  for (const args of [[], ["--all"], ["--suite", "features", "--jobs", "2"], ["--suites", "benchmark,states"]]) {
+    for (const answer of answers) {
+      const viaVerify = scripted(healthy(), answer);
+      const viaCheckLv = scripted(healthy(), answer);
+      const verify = await verified(args, viaVerify.runner);
+      const checkLv = await checkedLv(args, viaCheckLv.runner);
+      assert.deepEqual(viaCheckLv.asked, viaVerify.asked, args.join(" "));
+      assert.equal(checkLv.code, verify.code, args.join(" "));
+      assert.match(checkLv.out, /^lvrtc check-lv: \d+ sets? of committed results to check, one at a time, of /m);
+      assert.doesNotMatch(checkLv.out, /verify:real:/);
+    }
+  }
+});
+
+test("lvrtc check-lv refuses a machine that is not ready as verify:real does, and says its own usage", async () => {
+  const notReady = scripted(
+    healthy((report) => (report.lensVisualizer = { status: "not configured", path: null, git: null, binding: null })),
+    ALL_OK,
+  );
+  const refused = await checkedLv([], notReady.runner);
+  assert.equal(refused.code, EXIT_USAGE);
+  assert.deepEqual(
+    notReady.asked.map((args) => args[0]),
+    ["doctor"],
+  );
+  assert.match(refused.err, /^lvrtc check-lv: refused: LensVisualizer is not configured: .*lvrtc\.local\.json$/m);
+
+  const usage = scripted(healthy(), ALL_OK);
+  const wrong = await checkedLv(["--jobs", "x"], usage.runner);
+  assert.equal(wrong.code, EXIT_USAGE);
+  assert.match(wrong.err, /^lvrtc check-lv: --jobs must be a positive integer/m);
+  assert.ok(wrong.err.endsWith(CHECK_LV_PROGRAM.synopsis), wrong.err);
+  assert.deepEqual(usage.asked, []);
+
+  const help = await checkedLv(["--help"], usage.runner);
+  assert.equal(help.code, EXIT_OK);
+  assert.equal(help.out, CHECK_LV_PROGRAM.help);
+  assert.ok(help.out.startsWith("Usage: lvrtc check-lv [--all | --suite <name> | --suites <a,b,...>]"));
+  assert.match(help.out, /npm run verify:real runs the same check\.\n$/);
+  assert.match((await verified(["--help"], usage.runner)).out, /lvrtc check-lv runs the same check\.\n$/);
+  assert.deepEqual(usage.asked, []);
+});
+
+test("bin/lvrtc.mjs check-lv refuses, before any check, a machine where LensVisualizer and optiland point nowhere", () => {
+  const env = {
+    ...process.env,
+    LVRTC_LV_PATH: "/nonexistent/lv",
+    LVRTC_OPTILAND_PYTHON: "/nonexistent/python",
+  };
+  const child = spawnSync(process.execPath, [LVRTC_BIN, "check-lv"], { cwd: REPO_ROOT, env, encoding: "utf8" });
+  assert.equal(child.status, EXIT_USAGE, child.stderr + child.stdout);
+  assert.match(child.stdout, /^lvrtc check-lv: 2 sets of committed results to check, one at a time, of /m);
+  assert.match(child.stderr, /^lvrtc check-lv: refused: LensVisualizer is not at \/nonexistent\/lv: /m);
+  assert.match(child.stderr, /^lvrtc check-lv: refused: optiland's interpreter \/nonexistent\/python does not run$/m);
+  assert.match(child.stderr, /^lvrtc check-lv: nothing was checked; lvrtc doctor shows the machine as it is$/m);
   assert.doesNotMatch(child.stdout, /checking/);
 });

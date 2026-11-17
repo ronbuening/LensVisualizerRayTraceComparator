@@ -6,11 +6,12 @@
 //
 // R11a is gated: every pair of the three engines passes, no ray is valid in one engine and not in another, every
 // field's flux into the image is measured and so is the landing of each field's stop-centre ray. R11b is recorded, of
-// LensVisualizer and the engine `flux`. What is held is that LensVisualizer answers exactly the ask its tab answers and
-// says why not of the other, that `flux` answers every ask, that every field of the design runs is of two methods
-// within the limit of the sorting, that since LensVisualizer #931 the tab's geometric transmission and the flux's are
-// one measure on two stop lattices, the share of the stop's samples that reach the image, within R11b's band of each
-// other across the wide angle's field (docs/gotchas.md, "Vignetting"), and that the report claims nothing it may not.
+// LensVisualizer and the engine `flux-of-lv-rays`. What is held is that LensVisualizer answers exactly the ask its tab
+// answers and says why not of the other, that `flux-of-lv-rays` answers every ask, that every field of the design runs
+// is of two methods within the limit of the sorting, that since LensVisualizer #931 the tab's geometric transmission
+// and the flux's are one measure on two stop lattices, the share of the stop's samples that reach the image, within
+// R11b's band of each other across the wide angle's field (docs/gotchas.md, "Vignetting"), and that the report claims
+// nothing it may not.
 import assert from "node:assert/strict";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -29,8 +30,8 @@ import { OPTILAND_PYTHON, OPTILAND_UNAVAILABLE, lvrtc, pairsOf, runAndCompare, t
 import type { RungPair } from "./support.ts";
 
 const skip = OPTILAND_UNAVAILABLE || LV_UNAVAILABLE;
-const R11A = loadPolicy().rungs.r11a;
-const R11B = loadPolicy().rungs.r11b;
+const R11A = loadPolicy().rungs["vignetting-rays"];
+const R11B = loadPolicy().rungs["vignetting-vs-flux-estimate"];
 
 const DESIGN = "nikkor-z50f12-ref";
 const PHOTOPIC = "nikkor-z50f12-photopic";
@@ -63,14 +64,15 @@ test(
     const { manifest, comparisons, runsDir } = runAndCompare(t, {
       suite,
       name: "benchmark",
-      engines: "lv,ref,optiland",
-      rungs: "r11a,r11b",
+      engines: "lv,reference-tracer,optiland",
+      rungs: "vignetting-rays,vignetting-vs-flux-estimate",
     });
 
     // R11a: the tab's beam of each field at each line, traced by the three engines.
-    const traced = manifest.jobs.filter((job) => job.rung === "r11a");
+    const traced = manifest.jobs.filter((job) => job.rung === "vignetting-rays");
     for (const run of manifest.runs) {
-      const lines = run.name === PHOTOPIC ? 5 : 1;
+      // Nine photopic lines since LV #988 (five before f5b456fec).
+      const lines = run.name === PHOTOPIC ? 9 : 1;
       assert.deepEqual(run.vignettingRaySets?.problems, [], run.name);
       assert.equal(run.vignettingRaySets?.sets.length, lines * FIELDS[run.name], run.name);
     }
@@ -78,8 +80,8 @@ test(
     assert.equal(traced.length, 3 * total);
     for (const job of traced) assert.equal(job.status, "ok", `${job.run} ${job.engine} ${job.requestId}`);
     // The pairs are of spans: the beams of a line, one span a line.
-    const gated = pairsOf(comparisons, "r11a", RAYS_TRACE);
-    assert.equal(gated.length, 3 * (1 + 5 + 1 + 1));
+    const gated = pairsOf(comparisons, "vignetting-rays", RAYS_TRACE);
+    assert.equal(gated.length, 3 * (1 + 9 + 1 + 1));
     for (const pair of gated) {
       assert.equal(pair.verdict, "PASS", `${pair.run} ${pair.engines}: ${pair.reason ?? ""}`);
       assert.equal(pair.metrics["mask.mismatches"].value, 0, pair.run);
@@ -103,8 +105,8 @@ test(
 
     // R11b: LensVisualizer answers its tab's ask at the authored line; a photopic run has no line of the tab's and no
     // ask, and a case off the design plane is refused by lv and answered by flux.
-    const native = manifest.jobs.filter((job) => job.rung === "r11b");
-    assert.deepEqual([...new Set(native.map((job) => job.engine))].sort(), ["flux", "lv"]);
+    const native = manifest.jobs.filter((job) => job.rung === "vignetting-vs-flux-estimate");
+    assert.deepEqual([...new Set(native.map((job) => job.engine))].sort(), ["flux-of-lv-rays", "lv"]);
     assert.equal(native.length, 2 * 3);
     assert.ok(!native.some((job) => job.run === PHOTOPIC));
     const statuses = (run: string, engine: string): string[] =>
@@ -116,9 +118,9 @@ test(
     assert.deepEqual(statuses(DESIGN, "lv"), ["ok"]);
     assert.deepEqual(statuses(WIDE, "lv"), ["ok"]);
     assert.deepEqual(statuses(BEST, "lv"), ["focus.off-design"]);
-    for (const run of [DESIGN, BEST, WIDE]) assert.deepEqual(statuses(run, "flux"), ["ok"], run);
+    for (const run of [DESIGN, BEST, WIDE]) assert.deepEqual(statuses(run, "flux-of-lv-rays"), ["ok"], run);
 
-    const recorded = pairsOf(comparisons, "r11b", VIGNETTING_NATIVE);
+    const recorded = pairsOf(comparisons, "vignetting-vs-flux-estimate", VIGNETTING_NATIVE);
     assert.equal(recorded.length, 3);
     const of = (run: string): RungPair => recorded.find((pair) => pair.run === run)!;
     assert.equal(of(BEST).verdict, "UNSUPPORTED");
@@ -148,7 +150,7 @@ test(
       (candidate) => candidate.requestId === of(WIDE).requestId && candidate.mode === "pairwise",
     );
     const side = (engine: string) => set?.participants.find((participant) => participant.engine === engine)?.recorded;
-    const [lv, flux] = [side("lv"), side("flux")];
+    const [lv, flux] = [side("lv"), side("flux-of-lv-rays")];
     assert.ok(lv !== undefined && flux !== undefined);
     const curve = (values: readonly (number | null)[]): number[] => values.map((v) => v ?? Number.NaN);
     const [tab, lattice] = [curve(lv.geometricTransmission), curve(flux.geometricTransmission)];

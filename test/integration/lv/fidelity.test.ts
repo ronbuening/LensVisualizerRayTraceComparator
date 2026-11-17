@@ -51,9 +51,15 @@ const BIN = fileURLToPath(new URL("../../../bin/lvrtc.mjs", import.meta.url));
  * LV 55ddfb1e1 (closure ff0d938d, 184 files: LV #942), every case and grid was measured again: unchanged but the Sigma
  * 35 mm's two cases, which moved with its authored rims (LV #943), its reference run's grid at 25 % with them (worst
  * again 1.2989609388114332e-14); at LV ff57c4469 (closure 0b6c085a, 184 files: LV #954), 290c6dd85 (closure 0516a7c7:
- * LV #949) and 25f65d4b4 (closure 4669921b: LV #950), every case and grid was measured again and found unchanged.
+ * LV #949) and 25f65d4b4 (closure 4669921b: LV #950), every case and grid was measured again and found unchanged; at
+ * LV 420b47555 (closure c5c5ba6d, 187 files: LV #960's curved image surfaces), every case and grid was measured again
+ * and found unchanged (worst again 1.2989609388114332e-14); at LV f5b456fec (closure f0066505, 193 files: LV #988's
+ * nine photopic lines and line-weighted unresolved share), the 12 reference-line runs the same cases and grids and the
+ * 12 photopic runs new cases, measured and pinned anew: three grids moved (the Canon EF 135 mm's axis 64 to 32, the
+ * Z 50 mm's 75 % field 64 to 128, the Sony FE 400 mm's full field 64 to 128), and the worst is again
+ * 1.2989609388114332e-14, on a reference-line run.
  */
-const PINNED_CLOSURE = "4669921bae7179c7eddd220fa367e696eae7acec3a5a788d0ca90da632d3eb6b";
+const PINNED_CLOSURE = "f0066505c45b705ef5e22a44ee6303ae9f47de00e295faad6d72b6090cdd4a61";
 
 /**
  * For each run of a lens as it opens: the case the figures are of, and the grid LensVisualizer's refinement ended
@@ -65,15 +71,15 @@ const PINNED: Readonly<Record<string, readonly [caseId: string, grids: readonly 
     [32, 64, 32, 32, 128],
   ],
   "canon-ef-135-f2l-usm-photopic": [
-    "5a1e4774772748058756cfcb4d918aedab000c3e4857e484254fe6688c651513",
-    [64, 64, 32, 32, 64],
+    "b5db810e50204c2dc4f40c8720eec2acc118a3f5ba43ad7718e8e361f62c9a8c",
+    [32, 64, 32, 32, 64],
   ],
   "fujifilm-fujinon-gf-63mm-f28-r-wr-ref": [
     "650612fe98b240e91dec4edb5e47d115fdfce934fa09cbe9e89f8d388bd3440f",
     [64, 64, 128, 64, 128],
   ],
   "fujifilm-fujinon-gf-63mm-f28-r-wr-photopic": [
-    "b241011c9681597d858ca830bb42493ed5d2719b1aa8782269e0f54cde52c35f",
+    "45f1fc0b454f809de9f793d565d6aa7bd8ca0460ea03e89c675039251c296a60",
     [64, 64, 64, 64, 128],
   ],
   "sigma-35mm-f14-dg-hsm-a-ref": [
@@ -81,17 +87,20 @@ const PINNED: Readonly<Record<string, readonly [caseId: string, grids: readonly 
     [32, 128, 64, 128, 256],
   ],
   "sigma-35mm-f14-dg-hsm-a-photopic": [
-    "7ff423e8023923c0d2ce5797fab6e1acce05b4d12bfb3528765c4020ba4fd7c9",
+    "49eae83980d3a2b089251ac79188e8e6f11910bfd72f33cb245397531e11cf16",
     [64, 64, 64, 128, 256],
   ],
   "nikkor-z50f12-ref": ["861a915ddd7dd32d774e7b798745bc1395913d8f13482022482c7d083e7acd22", [64, 128, 64, 128, 256]],
-  "nikkor-z50f12-photopic": ["25e839a37b367ed1c9f7298f4e44f9fdb017645f73647e4f965832cb1d28ede2", [64, 64, 64, 64, 128]],
+  "nikkor-z50f12-photopic": [
+    "84400e63b4de00e35171d3bd0bf8df3aa8e940f3d5dade0ee298761249c637e2",
+    [64, 64, 64, 128, 128],
+  ],
   "sony-fe-20mm-f18-g-ref": [
     "b67aae200c54706fe97387ca9c5db8e03eb6da1fc64ec823bc694939ccbe78c5",
     [64, 64, 128, 128, 256],
   ],
   "sony-fe-20mm-f18-g-photopic": [
-    "9bf71fcc2c01fb1e7c25546d8b6a2758be33c6bba8fe4742ebcd3fbac72405d7",
+    "3ef2cff569dc2714ff638c58f6b0ca0c1a10f180c31a8cf76095e96b3648dbda",
     [64, 64, 64, 64, 128],
   ],
   "sony-fe-400mm-f28-gm-oss-ref": [
@@ -99,15 +108,15 @@ const PINNED: Readonly<Record<string, readonly [caseId: string, grids: readonly 
     [64, 64, 64, 64, 128],
   ],
   "sony-fe-400mm-f28-gm-oss-photopic": [
-    "25a3d0697df2ed6fe2fd355a06ce5f7a89664142dadd6e7d5e049d3bbc636df7",
-    [64, 64, 64, 32, 64],
+    "a58e00887093c8578107118a6f861e957b3ba012781c0061a213fc938268fd6d",
+    [64, 64, 64, 32, 128],
   ],
   "sigma-105mm-f28-dg-dn-macro-art-ref": [
     "e3849910ab68459a2090f3b12b9b794afebe02db8c5b10670925ebc2360061c9",
     [64, 64, 64, 64, 64],
   ],
   "sigma-105mm-f28-dg-dn-macro-art-photopic": [
-    "c5a507024e5ab43f94adcb83c67c948a9731a2af72fed96ac5515f6eb04f708e",
+    "a164cd6b31901aed41e804b10704df98977ca3559bc547c2f876eefea0af010f",
     [64, 64, 64, 64, 64],
   ],
   "nikon-z-24-70f4s-wide-ref": [
@@ -115,7 +124,7 @@ const PINNED: Readonly<Record<string, readonly [caseId: string, grids: readonly 
     [64, 64, 64, 64, 128],
   ],
   "nikon-z-24-70f4s-wide-photopic": [
-    "1bd5a8443c6b4b625eb1568bd6805873a1ccbc2caaedbba46e51ee5a5fb5d2dc",
+    "392526a2d4fb6800be21455fb7097f75e53156a130b490f79830e62460359a12",
     [64, 64, 64, 64, 64],
   ],
   "nikon-z-24-70f4s-tele-ref": [
@@ -123,12 +132,12 @@ const PINNED: Readonly<Record<string, readonly [caseId: string, grids: readonly 
     [64, 64, 64, 64, 128],
   ],
   "nikon-z-24-70f4s-tele-photopic": [
-    "7c55143a9f94c725e66c944a44bf00e5871532ed3d91bcde1e1cffa7caa0dc33",
+    "9e3b47006624814732c91d238b73f183b938f21c947092003915ea16b13a4827",
     [32, 64, 64, 64, 128],
   ],
   "nikon-z-mc-105f28-ref": ["70d5a589da4a75279b54dfadf45fbbcc39aa6339450f697551548258d7821bfb", [32, 64, 32, 64, 128]],
   "nikon-z-mc-105f28-photopic": [
-    "e492101b147bcf0f0e156d83376aba617d1c24f20cfdcf0d82b48a03f8b4a92e",
+    "ceaed4b7737a40f115bd46b8c7fff24f61a9b7586604a0c02db850a74702fc97",
     [32, 32, 32, 64, 128],
   ],
   "nikon-z-135f18-plena-ref": [
@@ -136,7 +145,7 @@ const PINNED: Readonly<Record<string, readonly [caseId: string, grids: readonly 
     [64, 64, 64, 64, 64],
   ],
   "nikon-z-135f18-plena-photopic": [
-    "9ac66541b918eea604fa81c70999f824029cc1d2d481851438f0d5d7e86d8224",
+    "47a027ecb521ce8e8589f9605124d6b966785de4024b1793e9961dbcfcc75afa",
     [64, 64, 64, 64, 64],
   ],
   "sigma-45mm-f28-dg-dn-contemporary-ref": [
@@ -144,7 +153,7 @@ const PINNED: Readonly<Record<string, readonly [caseId: string, grids: readonly 
     [64, 64, 64, 64, 128],
   ],
   "sigma-45mm-f28-dg-dn-contemporary-photopic": [
-    "6f62ee09c0c8b3a1cc345e3ed0e0e27aebea0ce5e96cdbee7664ffbab4914e73",
+    "e88166a19b0d185b63ed16ca4c493102684d84578284592096743da5fd9f8bdd",
     [64, 64, 64, 64, 64],
   ],
 };
@@ -168,22 +177,19 @@ function conditionOf(name: string): { readonly f8: boolean; readonly best: boole
 }
 
 test(
-  "lvrtc run --rungs r4f on the benchmark: the replay of LensVisualizer's sampling is its own geometric MTF, on all 480 fields",
+  "lvrtc run --checks lv-mtf-replay on the benchmark: the replay of LensVisualizer's sampling is its own geometric MTF, on all 480 fields",
   { skip, timeout: 900_000 },
   async (t) => {
     const runsDir = mkdtempSync(join(tmpdir(), "lvrtc-fidelity-"));
     t.after(() => rmSync(runsDir, { recursive: true, force: true }));
     // No --engines: the suite names lv and ref, and the rung is asked of lv and of the replay whatever a run names.
-    const ran = lvrtc(runsDir, "run", suitePath("benchmark"), "--rungs", "r4f");
+    const ran = lvrtc(runsDir, "run", suitePath("benchmark"), "--checks", "lv-mtf-replay");
     assert.equal(ran.code, 0, ran.err);
-    assert.match(
-      ran.out,
-      /^benchmark: 192 jobs: 192 ok, 0 unsupported, 0 error, 0 pending \(192 computed, 0 cached\)$/m,
-    );
+    assert.match(ran.out, /^benchmark: 192 jobs: 192 answered \(192 asked now\)$/m);
     const compared = lvrtc(runsDir, "compare", "benchmark");
-    const notPassing = compared.out.split("\n").filter((line) => / (FAIL|ERROR|UNSUPPORTED|BLOCKED)$/.test(line));
+    const notPassing = compared.out.split("\n").filter((line) => / (Fail|Error|Not computed|Not judged)$/.test(line));
     assert.equal(compared.code, 0, notPassing.join("\n"));
-    assert.match(compared.out, /^benchmark: 192 pairs: 192 PASS, 0 FLOOR, 0 FAIL, .* 0 ERROR$/m);
+    assert.match(compared.out, /^benchmark: 192 pairs: 192 Pass$/m);
 
     const manifest: RunManifest = JSON.parse(readFileSync(join(runsDir, "benchmark", MANIFEST_FILE), "utf8"));
     const comparisons: ComparisonFile = JSON.parse(readFileSync(join(runsDir, "benchmark", COMPARISONS_FILE), "utf8"));
@@ -191,7 +197,7 @@ test(
       manifest.engines.map((engine) => [engine.id, engine.status]),
       [
         ["lv", "available"],
-        ["replay", "available"],
+        ["replay-of-lv-mtf", "available"],
       ],
     );
     const [lv] = manifest.engines;
@@ -220,7 +226,8 @@ test(
         [...api.mtfDefaultFields],
         run.name,
       );
-      assert.equal(recipe.lines.length, condition.lines === "ref" ? 1 : 5, run.name);
+      // LV #988's nine photopic lines (five before f5b456fec).
+      assert.equal(recipe.lines.length, condition.lines === "ref" ? 1 : 9, run.name);
       for (const field of recipe.fields) assert.equal(field.problem, undefined, `${run.name} ${field.fraction}`);
 
       // The stop: the iris of the prepared state, or the tab's own f/8 comparison, to the bit; the tab offers it.
@@ -268,15 +275,19 @@ test(
     assert.equal(fields, 480);
 
     // ── The comparison ──
-    const gate = loadPolicy().rungs.r4f.metrics["mtf.maxAbs"].tolerance;
+    const gate = loadPolicy().rungs["lv-mtf-replay"].metrics["mtf.maxAbs"].tolerance;
     assert.equal(gate, 1e-9);
     const worst = { value: 0, at: "" };
     const table: string[] = [];
     for (const run of manifest.runs) {
       const set = comparisons.comparisons.find((each) => each.run === run.name && each.mode === "pairwise");
-      assert.ok(set !== undefined && set.rung === "r4f" && set.quantity === "mtf.native", run.name);
+      assert.ok(set !== undefined && set.rung === "lv-mtf-replay" && set.quantity === "mtf.native", run.name);
       const [pair] = set.pairs;
-      assert.deepEqual([set.pairs.length, pair.a, pair.b, pair.verdict], [1, "lv", "replay", "PASS"], run.name);
+      assert.deepEqual(
+        [set.pairs.length, pair.a, pair.b, pair.verdict],
+        [1, "lv", "replay-of-lv-mtf", "PASS"],
+        run.name,
+      );
       const metrics = Object.fromEntries(pair.metrics.map((metric) => [metric.name, metric]));
       assert.equal(metrics["sampling.mismatches"].value, 0, run.name);
       assert.equal(metrics["fields.mismatches"].value, 0, run.name);

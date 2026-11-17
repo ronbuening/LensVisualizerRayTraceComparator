@@ -37,8 +37,8 @@ test("a pending job survives a restart and is collected, using a fake human-oper
   // 1. The run hands fake-human's jobs over: pending, which fails nothing, and the outbox holds them.
   const first = run();
   assert.equal(first.code, 0, first.err);
-  assert.match(first.out, /^singlet {7}selftest {2}fake-human {7}pending {6}computed$/m);
-  assert.match(first.out, /^fake-pair: 4 jobs: 2 ok, 0 unsupported, 0 error, 2 pending \(4 computed, 0 cached\)$/m);
+  assert.match(first.out, /^singlet {7}pipeline-echo {16}fake-human {17}waiting for an operator {2}asked now$/m);
+  assert.match(first.out, /^fake-pair: 4 jobs: 2 answered, 2 waiting for an operator \(4 asked now\)$/m);
   const jobs = readdirSync(join(exchange, "outbox")).sort();
   assert.equal(jobs.length, 2);
   const pendingManifest: RunManifest = JSON.parse(readFileSync(join(runsDir, "fake-pair", MANIFEST_FILE), "utf8"));
@@ -69,11 +69,11 @@ test("a pending job survives a restart and is collected, using a fake human-oper
   // 4. The next run finds every answer in the store, and the pair compares.
   const second = run();
   assert.equal(second.code, 0, second.err);
-  assert.match(second.out, /^singlet {7}selftest {2}fake-human {7}ok {11}cached$/m);
-  assert.match(second.out, /^fake-pair: 4 jobs: 4 ok, 0 unsupported, 0 error, 0 pending \(0 computed, 4 cached\)$/m);
+  assert.match(second.out, /^singlet {7}pipeline-echo {16}fake-human {17}answered {17}from the cache$/m);
+  assert.match(second.out, /^fake-pair: 4 jobs: 4 answered \(4 from the result cache\)$/m);
   const compared = node(runsDir, [BIN, "compare", "fake-pair", "--root", FAKE_ROOT]);
   assert.equal(compared.code, 0, compared.out + compared.err);
-  assert.match(compared.out, /^fake-pair: 4 pairs: 4 PASS, /m);
+  assert.match(compared.out, /^fake-pair: 4 pairs: 4 Pass$/m);
   const manifest = readFileSync(join(runsDir, "fake-pair", MANIFEST_FILE), "utf8");
 
   // 5. The same suite where fake-human is the fake engine in this process, answering at once: the same manifest.
@@ -93,6 +93,6 @@ test("a pending job survives a restart and is collected, using a fake human-oper
   const elsewhere = join(tempDir(t), "runs");
   const atOnce = node(elsewhere, [BIN, "run", FAKE_PAIR_SUITE, "--root", rootDir, "--engines", "fake-a,fake-human"]);
   assert.equal(atOnce.code, 0, atOnce.err);
-  assert.match(atOnce.out, /\(4 computed, 0 cached\)$/m);
+  assert.match(atOnce.out, /\(4 asked now\)$/m);
   assert.equal(readFileSync(join(elsewhere, "fake-pair", MANIFEST_FILE), "utf8"), manifest);
 });

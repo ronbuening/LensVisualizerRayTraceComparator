@@ -3,7 +3,10 @@
 // (`wordingProblems`) rejects the claims no recorded row supports, whoever writes them.
 import type { NativeDifferenceClass, NativeFieldReason } from "../compare/mtfNative.ts";
 import type { GroupConsensus, NoConsensusReason } from "./consensus.ts";
+import { LEGACY_CHECK_IDS } from "../core/legacyIds.ts";
 import { formatFixed, formatSci, formatSignificant } from "../core/numeric/format.ts";
+import { MATRIX_CHECKS, STATEMENT_CHECKS } from "../vocabulary/checks.ts";
+import { engineName } from "../vocabulary/engines.ts";
 
 /** What a row of an MTF comparison came to. */
 export const MTF_ROW_STATUSES = ["RECORDED", "ATTENTION", "SET ASIDE", "UNSUPPORTED", "ERROR"] as const;
@@ -12,9 +15,9 @@ export type MtfRowStatus = (typeof MTF_ROW_STATUSES)[number];
 
 /** What each status of a row says, for the legend under a table. */
 export const MTF_ROW_STATUS_TEXT: { readonly [status in MtfRowStatus]: string } = {
-  RECORDED: "the difference is inside the attention band and was written down",
-  ATTENTION: "the difference is outside the attention band: worth a look, and not a failure",
-  "SET ASIDE": "the row is in no band, and its class and reason say why",
+  RECORDED: "the difference is inside the review band and was written down",
+  ATTENTION: "the difference is outside the review band: worth a look, and not a failure",
+  "SET ASIDE": "the row is in no review band, and its class and reason say why",
   UNSUPPORTED: "an engine has no curve of the field, so there is no difference",
   ERROR: "an engine gave no result, or the two results cannot be set against each other",
 };
@@ -31,37 +34,44 @@ export const DIFFERENCE_CLASS_TEXT: { readonly [kind in NativeDifferenceClass | 
 /** What each reason of a field says. */
 export const FIELD_REASON_TEXT: { readonly [reason in NativeFieldReason]: string } = {
   "no-curve": "an engine has no curve of the field",
-  "lines-differ": "the two answers are of different lines; no difference is shown",
+  "lines-differ": "the two answers are of different wavelengths; no difference is shown",
   "chief-landing-unknown": "an engine does not say where its chief ray lands; no difference is shown",
   "chief-landing-apart": "the chief rays land further apart than the limit: two image points; no difference is shown",
-  unconverged: "a sampling did not settle; the difference is shown apart, in no band",
+  unconverged: "a sampling did not settle; the difference is shown apart, in no review band",
   "rim-rays-lost":
-    "an engine calibrated a frequency axis with a rim ray that was lost; the difference is shown apart, in no band",
-  "two-methods": "both engines stand by their curves; the difference is held to the attention band",
+    "an engine calibrated a frequency axis with a rim ray that was lost; the difference is shown apart, in no review band",
+  "two-methods": "both engines stand by their curves; the difference is set beside the review band",
 };
 
-/** Which MTF a comparison of the engines' own is of: the diffraction MTF of rung R5, the geometric MTF of R5g. */
+/** A field's reason in words (`FIELD_REASON_TEXT`); a reason with no sentence is given as it is. */
+export function fieldReasonText(reason: string): string {
+  return Object.hasOwn(FIELD_REASON_TEXT, reason) ? FIELD_REASON_TEXT[reason as NativeFieldReason] : reason;
+}
+
+/** Which MTF a comparison of the engines' own is of: the diffraction MTF of check r5, the geometric MTF of r5g. */
 export type MtfComparisonKind = "diffraction" | "geometric" | "wavefront";
 export const WAVEFRONT_HEADING = "The three-way diffraction comparison, with FFT and raw wavefront columns.";
 
 /** The sentences above the tables of an MTF comparison, by the MTF it is of. */
 export const MTF_COMPARISON_INTROS: { readonly [kind in MtfComparisonKind]: readonly string[] } = {
   wavefront: [
-    "The three-way comparison shows LensVisualizer's sheared estimate (lv), the comparator's wave OTF on",
-    "LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and the comparator's OTF of optiland's raw",
-    "Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.",
+    "The three-way comparison shows LensVisualizer's sheared estimate (lv), this tool's wave OTF of",
+    "LensVisualizer's rays (wave-mtf-of-lv-rays), optiland's FFT MTF (optiland), and this tool's OTF of optiland's",
+    "raw Wavefront.get_data samples (otf-of-optiland-wavefront). Each uses its own sampling; no column is an arbiter",
+    "of another.",
     "The last column uses the radial optical cosines of optiland's chief-ray reference",
-    "sphere and intensity as cell flux. A quarter-wave step or a move on grid doubling outside the field's band",
-    "sets its differences aside as numerical. The reference-sphere model and the FFT axes remain method choices.",
+    "sphere and intensity as cell flux. A quarter-wave step, or a move on doubling the grid beyond the field's",
+    "convergence band, sets its differences aside as not converged. The reference-sphere model and the FFT axes remain",
+    "choices of each method.",
   ],
   diffraction: [
     "Each column is one engine's own estimate of the diffraction MTF, by its own method and its own sampling. No",
-    "column is a reference for another, and no difference in this table is held to a tolerance.",
+    "column is a reference for another, and no difference in this table is held to a limit.",
   ],
   geometric: [
     "Each column is one engine's own estimate of the geometric MTF, of its own rays through its own sampling of the",
     "pupil, without diffraction. No column is a reference for another, and no difference in this table is held to a",
-    "tolerance.",
+    "limit.",
   ],
 };
 
@@ -73,72 +83,87 @@ export const MTF_COMPARISON_INTRO: readonly string[] = MTF_COMPARISON_INTROS.dif
  * optiland's and the sum over them is the worker's.
  */
 export const GEOMETRIC_SEVERAL_LINES: readonly string[] = [
-  "On several lines the column of optiland is not a curve of optiland's own class, which is of one line: the rays",
-  "and their landings are optiland's, a line a call, and the sum over them, the lines added as complex numbers with",
-  "their weights before the modulus is taken, is the worker's.",
+  "On several wavelengths the column of optiland is not a curve of optiland's own class, which is of one wavelength:",
+  "the rays and their landings are optiland's, one wavelength a call, and the sum over them, the wavelengths added",
+  "as complex numbers with their weights before the modulus is taken, is this tool's.",
 ];
 
-/** How the several-line R6c column is formed; optiland's FFT remains one-line only. */
+/** How the several-wavelength column of check r6c is formed; optiland's FFT remains of one wavelength only. */
 export const WAVEFRONT_SEVERAL_LINES: readonly string[] = [
-  "On several lines optiland-wave is the comparator's sum of complex OTFs of optiland's raw wavefronts,",
-  "one wavefront.native call per line, evaluated at the requested frequencies. Each line is phase-shifted by",
-  "-2 pi nu times its chief landing's offset from line 0's chief landing, weighted by its case weight times",
-  "transmitted flux, and added before the modulus. The optiland FFT column remains unsupported on several lines.",
+  "On several wavelengths otf-of-optiland-wavefront is this tool's sum of complex OTFs of optiland's raw wavefronts,",
+  "one wavefront.native call per wavelength, evaluated at the requested frequencies. Each wavelength is",
+  "phase-shifted by -2 pi nu times its chief landing's offset from the chief landing of wavelength 0, weighted by",
+  "its weight in the lens state times the transmitted flux, and added before the modulus. The optiland FFT column",
+  "is not computed on several wavelengths.",
 ];
 
-/** Say which policy limit sorted a several-line R6c table, including fields later set aside as numerical. */
+/** Says which sorting limit of the limits file sorted a several-wavelength table of check r6c. */
 export function severalLinesChiefLanding(limitMm: string): string[] {
   return [
-    `Several-line fields use the chief-landing sorting limit ${limitMm} mm from the policy.`,
-    "The landings identify the field: LV's shared chief launch and optiland's line-0 chief are different rays;",
-    "a common reference point does not change the modulus.",
+    `Fields of several wavelengths use the chief-landing sorting limit ${limitMm} mm of the limits file.`,
+    "The landings identify the field: LensVisualizer's shared chief launch and optiland's chief ray of wavelength 0",
+    "are different rays; a common reference point does not change the modulus.",
   ];
 }
 
 /** The sentences under the fields of a geometric comparison: what the two samplings are. */
 export const GEOMETRIC_SAMPLING: readonly string[] = [
   "optiland's rays are an even grid on the stop surface, out to its clip radius; LensVisualizer's are a lattice",
-  "across the entrance beam, refined by LensVisualizer; neither is weighted by direction cosine. On one line",
-  "optiland counts its landings into bins, and gives a curve only where the bins move it by less than a band.",
+  "across the entrance beam, refined by LensVisualizer; neither is weighted by direction cosine. At one wavelength",
+  "optiland counts its landings into bins, and gives a curve only where the bins move it by less than its convergence",
+  "band (0.005 on the axis, 0.01 off it).",
   "Beside each engine's flag is its own sampling of the field: cells or rays across the pupil, and how far its",
   "curves moved between its last two samplings, which is that engine's own measure and judges no other.",
 ];
 
 /** The sentence under the table of rows. */
 export const MTF_COMPARISON_OUTRO: readonly string[] = [
-  "A band is a width for attention, taken from a tolerance the plan withdrew. A difference inside it was written",
-  "down and says nothing more; a difference outside it is worth a look and fails nothing.",
+  "A review band is a width for attention, not a limit. A difference inside it was written down and says nothing",
+  "more; a difference outside it is worth a look and fails nothing.",
 ];
 
 /**
- * What a comparison of this tool does not show, whatever its verdicts: the block every report ends its results
- * with. The sentences are fixed; a report adds none and leaves none out.
+ * What a comparison of this tool does not show, as the catalog snapshot's statistics state it: the sentences of
+ * `NOT_COVERED` with the check ids of before the rename, which the catalog keeps until the end-of-project catalog
+ * refresh, so that its report keeps its bytes. No other report renders these.
  */
-export const NOT_COVERED: readonly string[] = [
+export const CATALOG_NOT_COVERED: readonly string[] = [
   "optiland's FFT and Huygens MTF take no injected rays. An MTF of optiland's own is on optiland's own pupil grid, " +
-    "reference sphere and frequency axes, so rung R5 is recorded and never gated: it sets two methods side by side.",
-  "A polychromatic curve of optiland's FFT class. It gives a one-line modulus, so several lines have no FFT " +
-    "row in R5 or R6c. R6c's external counterpart is the comparator's complex sum of optiland's raw wavefronts; " +
-    "its synthetic sum proof checks the declared weighting and phase convention, not physical spectral fidelity.",
+    "reference sphere and frequency axes, so check r5 sets two methods side by side and holds them to no limit.",
+  "A polychromatic curve of optiland's FFT class. It gives the modulus at one wavelength, so a run of several " +
+    "wavelengths has no FFT row in checks r5 or r6c. The external counterpart in check r6c is this tool's complex " +
+    "sum of optiland's raw wavefronts; its proof on synthetic sums checks the declared weighting and phase " +
+    "convention, not physical spectral fidelity.",
   "optiland's geometric MTF takes no injected rays either. Its rays are an even grid on the stop surface, out to " +
     "the clip radius; LensVisualizer's are a lattice across the entrance beam; neither is weighted by direction " +
-    "cosine. Rung R5g is recorded and never gated: a difference of the two pupil samplings is written down, not " +
-    "explained.",
-  "The bins of optiland's geometric MTF. On one line optiland's curve is of landings counted into bins, and a " +
-    "field whose bins move a value by more than a band has no optiland curve. On several lines the sum over " +
-    "optiland's landings is the worker's, without bins, about the axis point of the image plane; LensVisualizer's " +
-    "is about a chief ray's landing.",
-  "Dispersion and white-light weighting. Every engine is handed the indices and the line weights LensVisualizer " +
-    "states; no glass catalog and no spectrum is checked against another.",
+    "cosine. Check r5g sets the two side by side and holds them to no limit: a difference of the two pupil " +
+    "samplings is written down, not explained.",
+  "The bins of optiland's geometric MTF. At one wavelength optiland's curve is of landings counted into bins, and " +
+    "a field whose bins move a value by more than its convergence band (0.005 on the axis, 0.01 off it) has no " +
+    "optiland curve. At several wavelengths the " +
+    "sum over optiland's landings is this tool's, without bins, about the axis point of the image plane; " +
+    "LensVisualizer's is about a chief ray's landing.",
+  "Dispersion and white-light weighting. Every engine is handed the refractive indices and the wavelength weights " +
+    "LensVisualizer states; no glass catalog and no spectrum is checked against another.",
   "The choice of focus. A best-focus plane is LensVisualizer's own, handed to every engine as a plane; no engine " +
     "searches for one of its own.",
   "The sizing of the stop. The stop radius, wide open and stopped down, is LensVisualizer's, by its own rule.",
   "Models of vignetting. Each engine clips rays at the apertures it is handed; how an engine's own MTF fills, " +
     "samples and calibrates a clipped pupil is its method, and a difference that comes of it is written down, not " +
     "explained.",
-  "Zoom and focus positions other than the states a run names, and the catalog beyond these suites.",
-  "Fields that an engine's own convergence test did not pass. Their figures are shown apart and enter no band.",
+  "Zoom and focus positions other than the lens states a run names, and the catalog beyond these suites.",
+  "Fields that an engine's own convergence test did not pass. Their figures are shown apart and enter no review " +
+    "band.",
 ];
+
+/**
+ * What a comparison of this tool does not show, whatever its verdicts: the block every report ends its results
+ * with. The sentences are fixed; a report adds none and leaves none out. They are `CATALOG_NOT_COVERED`'s, each check
+ * named by its id of today.
+ */
+export const NOT_COVERED: readonly string[] = CATALOG_NOT_COVERED.map((sentence) =>
+  sentence.replace(/\b(r(?:1[0-4]|[0-9])[a-g]?)\b/g, (id) => LEGACY_CHECK_IDS[id] ?? id),
+);
 
 /** Engines as a report names them in a sentence: each in backticks, by commas. */
 function engineList(engines: readonly string[]): string {
@@ -147,10 +172,10 @@ function engineList(engines: readonly string[]): string {
 
 /** Why a group has no consensus (`src/report/consensus.ts`), as the first clause of the sentence under its matrix. */
 export const NO_CONSENSUS_TEXT: { readonly [reason in NoConsensusReason]: string } = {
-  split: "No consensus: the engines within the gates of each other split into two or more largest sets",
-  "no-pair-within": "No consensus: no two engines are within the gates of each other",
+  split: "No consensus: the engines within the limits of each other split into two or more largest sets",
+  "no-pair-within": "No consensus: no two engines are within the limits of each other",
   minority:
-    "No consensus: the largest set of engines within the gates of each other holds no more than half of the engines placed",
+    "No consensus: the largest set of engines within the limits of each other holds no more than half of the engines placed",
 };
 
 /**
@@ -162,29 +187,29 @@ export function consensusSentence(group: GroupConsensus): string {
   const clauses =
     group.consensus === null
       ? [NO_CONSENSUS_TEXT[group.reason ?? "no-pair-within"]]
-      : [`Consensus: ${engineList(group.consensus)}, every two of them within the gates of each other`];
+      : [`Consensus: ${engineList(group.consensus)}, every two of them within the limits of each other`];
   if (group.outliers.length > 0) {
     const noun = group.outliers.length === 1 ? "outlier" : "outliers";
-    clauses.push(`${noun}: ${engineList(group.outliers)}, beyond the gates of every engine of the consensus`);
+    clauses.push(`${noun}: ${engineList(group.outliers)}, beyond the limits of every engine of the consensus`);
   }
   if (group.apart.length > 0) {
-    clauses.push(`apart: ${engineList(group.apart)}, outside the consensus and not beyond the gates of all of it`);
+    clauses.push(`apart: ${engineList(group.apart)}, outside the consensus and not beyond the limits of all of it`);
   }
   if (group.notPlaced.length > 0) {
-    clauses.push(`not placed: ${engineList(group.notPlaced)}, with no pair within or beyond the gates`);
+    clauses.push(`not placed: ${engineList(group.notPlaced)}, with no pair within or beyond the limits`);
   }
   return `${clauses.join("; ")}.`;
 }
 
 /** The prose of a report's "Consensus" section, above its tables. */
 export const CONSENSUS_SECTION: readonly string[] = [
-  "A consensus is looked for on each request of a gated rung that three or more engines were compared on pairwise.",
-  "An engine is placed where a pair of it is within or beyond the gates; a pair that is UNSUPPORTED, BLOCKED or ERROR",
-  "is not judged and places no engine. The consensus is the largest set of placed engines every two of which are",
-  "within the gates of each other, where it is the only largest such set and holds more than half of the engines",
-  "placed. An outlier is beyond the gates of every engine of the consensus; an engine apart is outside the",
-  "consensus and not beyond the gates of all of it. A consensus says which answers are within the gates of each",
-  "other, and no more.",
+  "A consensus is looked for on each request of a check held to a limit that three or more engines were compared",
+  "on, pair by pair. An engine is placed where a pair of it is within or beyond the limits; a pair whose verdict is",
+  "Not computed, Not judged or Error places no engine. The consensus is the largest set of placed engines every two",
+  "of which are within the limits of each other, where it is the only largest such set and holds more than half of",
+  "the engines placed. An outlier is beyond the limits of every engine of the consensus; an engine apart is outside",
+  "the consensus and not beyond the limits of all of it. A consensus says which answers are within the limits of",
+  "each other, and no more.",
 ];
 
 /** How many requests had a consensus to look for, and how many had one. */
@@ -198,7 +223,7 @@ export function consensusCounts(requests: number, withConsensus: number): string
 export const CONSENSUS_TABLES = {
   requests: ["Requests", "Count"],
   withConsensus: "with a consensus",
-  withoutConsensus: (reason: NoConsensusReason): string => `no consensus: ${reason}`,
+  withoutConsensus: (reason: NoConsensusReason): string => NO_CONSENSUS_TEXT[reason],
   engines: ["Engine", "In the consensus", "Outlier", "Apart", "Placed, no consensus", "Not placed"],
 } as const;
 
@@ -218,15 +243,32 @@ const mentions =
     patterns.every((pattern) => pattern.test(sentence));
 
 const AN_MTF = /\b(MTF|OTF|transfer function)s?\b/i;
-// The rungs of the engines' own MTF are recorded whatever they are called: a sentence that names it is one of a recorded row.
-const GATED_IDENTICAL = /\b(gated|R4f?|R6a)\b/i;
+/**
+ * The checks of `old` (their ids before the rename) under both spellings, as a group of alternatives of a pattern that
+ * follows a word boundary: the old id, ending at a word boundary as before the rename, and the id of today, which is
+ * never matched inside a longer one (`geometric-mtf` in `geometric-mtf-vs-optiland`): it is followed by neither a word
+ * character nor a hyphen.
+ */
+function checkIds(old: readonly string[]): string {
+  const now = old.map((id) => LEGACY_CHECK_IDS[id].replaceAll("-", "\\-"));
+  return `(?:(?:${old.join("|")})\\b|(?:${now.join("|")})(?![\\w-]))`;
+}
+// The checks of the engines' own MTF are recorded whatever they are called: a sentence that names it is one of a recorded row.
+const GATED_IDENTICAL = new RegExp(`\\b(?:gated\\b|${checkIds(["r4", "r4f", "r6a"])})`, "i");
 const IDENTICAL_RAYS = /\bidentical[- ]rays?\b/i;
 const GATED_SAME_RAYS =
   /\btrace the same rays within the gates, and the optical path, geometric MTF and wave MTF computed from those rays agree within theirs\b/i;
+const RECORDED_MTF = new RegExp(
+  `\\b(?:(?:recorded|FFT|optiland-wave|otf-of-optiland-wavefront)\\b|${checkIds(["r5", "r5g", "r6b", "r6c"])})`,
+  "i",
+);
 const recordedContext = (sentence: string): boolean =>
   !(GATED_SAME_RAYS.test(sentence) || (GATED_IDENTICAL.test(sentence) && IDENTICAL_RAYS.test(sentence))) ||
-  /\b(R5g?|R6[bc]|recorded|FFT|optiland-wave)\b/i.test(sentence);
-const RECORDED_ROW = /\b(RECORDED|ATTENTION|recorded (row|rung|pair|difference)s?|r5g?|r6[bc])\b/i;
+  RECORDED_MTF.test(sentence);
+const RECORDED_ROW = new RegExp(
+  `\\b(?:(?:RECORDED|ATTENTION|recorded (?:row|rung|pair|difference)s?)\\b|${checkIds(["r5", "r5g", "r6b", "r6c"])})`,
+  "i",
+);
 
 /** The claims that are rejected. */
 export const BANNED_CLAIMS: readonly BannedClaim[] = [
@@ -279,7 +321,7 @@ export const BANNED_CLAIMS: readonly BannedClaim[] = [
         .replace(/\bno column is an? arbiter\b/gi, "")
         .replace(/\bneither (?:column|counterpart) is (?:preferred|an? arbiter)\b/gi, "");
       return mentions(
-        /\b(FFT|wavefront|optiland-wave|counterpart)s?\b/i,
+        /\b(FFT|wavefront|optiland-wave|otf-of-optiland-wavefront|counterpart)s?\b/i,
         /\b(prefer\w*|better|best (?:counterpart|method|reference)|superior|inferior|arbiter|more accurate|reference standard)\b/i,
       )(affirmative);
     },
@@ -302,7 +344,7 @@ export const BANNED_CLAIMS: readonly BannedClaim[] = [
   },
   {
     name: "consensus-correct",
-    why: "a consensus says which answers are within the gates of each other, not which is right or in error",
+    why: "a consensus says which answers are within the limits of each other, not which is right or in error",
     // "an error" is read in lower case only: a pair that is ERROR is a verdict, which a sentence may name.
     matches: (sentence) =>
       mentions(
@@ -346,37 +388,94 @@ export function wordingProblems(markdown: string): string[] {
   );
 }
 
-/** Stage 4.5's labels and prose; numeric and named-state data are supplied by the reducer. */
-export const STATEMENT_RUNGS: Readonly<Record<string, { mode: "gated" | "recorded"; compares: string }>> = {
-  r0: { mode: "gated", compares: "Built layout, shape, aperture, index and sampled sag" },
-  r1: { mode: "gated", compares: "First-order quantities and pupils" },
-  r2: { mode: "gated", compares: "Hits, directions, image landings and masks of identical rays" },
-  r3: { mode: "gated", compares: "Optical path, path to image and chief-relative OPD of identical rays" },
-  r4: { mode: "gated", compares: "Comparator geometric MTF on identical rays" },
-  r4f: { mode: "gated", compares: "LV geometric MTF beside replay with LV's own sampling" },
-  r5: { mode: "recorded", compares: "LV diffraction MTF beside optiland FFT and the LV-ray wave estimate" },
-  r5g: { mode: "recorded", compares: "Geometric MTF on each method's own pupil sampling" },
-  r6a: { mode: "gated", compares: "Comparator wave MTF on identical rays, in fields whose sampling settled" },
-  r6b: { mode: "recorded", compares: "LV sheared diffraction MTF beside comparator wave OTF on LV rays" },
-  r6c: { mode: "recorded", compares: "LV, LV-ray wave OTF and FFT beside comparator OTF of optiland raw wavefronts" },
-};
+/**
+ * Stage 4.5's labels and prose; numeric and named-state data are supplied by the reducer. The words are the checks'
+ * (`src/vocabulary/checks.ts`).
+ */
+export const STATEMENT_RUNGS: Readonly<Record<string, { mode: "gated" | "recorded"; compares: string }>> =
+  STATEMENT_CHECKS;
 
 /** Included only when the baselines contain the named settled comparison. */
 export const STATEMENT_Z50_ATTRIBUTION =
-  "The Z 50/1.2 FFT attribution is class method on the settled best-focus half field; earlier numerical and unsupported outcomes remain, as described in docs/z50f12-investigation.md.";
+  "For the Nikkor Z 50 mm f/1.2 wide open at best focus, the tangential difference between optiland's FFT MTF and the other diffraction estimates at the half field, where every sampling settled, is classed as one of method. The outcomes of the other conditions remain as they were classed: wide open at the full field the FFT computes nothing (not computed), and on the design plane its sampling does not settle (not converged); docs/z50f12-investigation.md describes them.";
 
 export const STATEMENT_TEXT = {
-  intro: "This statement is rendered from the eight baselines alone, with no engine, clock or machine input.",
+  intro:
+    "This statement is rendered from the eight baselines of the benchmark, features, states and focus-stations suites alone, with no engine, clock or machine input. It says what those baselines support, check by check, and what they do not cover.",
   counts:
-    "A configuration is one suite and named run with a case; the same state in two suites counts twice, and R4 in rays and MTF counts once. A configuration pair is two engines on one configuration and rung; a request pair is two engines on one request. Verdict counts count request pairs, including unsupported answers; refused states have no pairs.",
+    "A configuration is one named run of one suite, with its lens state; the same lens state in two suites counts twice, and check geometric-mtf, which is in both the ray and the MTF baselines, counts once. A configuration pair is two engines on one configuration and one check; a request pair is two engines on one request. The verdict counts count request pairs, answers that were not computed included; a refused lens state has no pairs.",
   worst:
-    "The worst gated residual is the metric largest as a fraction of its own tolerance; zero tolerances rank zero at zero and a nonzero excess above every finite ratio. Each metric maximum is also listed in its own units. A recorded worst is the largest banded MTF difference across all pairs of that rung; set-aside differences of each external diffraction counterpart are listed separately. R6a measured request counts exclude fields set aside for phase step or convergence, even when the request verdict is PASS.",
+    "The worst residual of a check held to a limit is the figure largest as a fraction of its own limit; a limit of zero ranks a value of zero at zero and any value above it above every finite ratio. The largest value of each figure is also listed in its own units. The worst of a side-by-side check is the largest MTF difference among the rows that have a review band, over every pair of that check; the differences set aside are listed apart for each external diffraction counterpart. The measured request counts of check wave-mtf leave out fields set aside for their phase step or convergence, even where the verdict of the request is Pass.",
   population:
-    "The supportable sentence's figures are over the configurations it counts, while the table's figures are over every configuration of each rung.",
+    "The supportable sentence's figures are over the configurations it counts, while the table's figures are over every configuration of each check.",
   counterparts:
-    "Both external diffraction counterparts are recorded side by side, with no preference claimed. Row counts include every requested field, cut and frequency at the last recorded sampling, including unavailable and set-aside rows; their classes and statuses are counted separately. Coverage lists the requested LV lines and the lines each counterpart answered, by named state and request.",
+    "Both external diffraction counterparts are set side by side with LensVisualizer, with no preference claimed. Row counts include every requested field, cut and frequency at the last sampling written down, rows not computed and rows set aside included; their classes and statuses are counted apart. The coverage lists the wavelengths requested of LensVisualizer and the wavelengths each counterpart answered, by named state and request.",
   states:
-    "These are the states as the baselines name them, with their case hashes or coded source refusals. The baselines do not retain numeric slider positions, stop radii or image-plane shifts; those cannot be reconstructed here. The wavelength inventory is the union explicitly retained in the benchmark's recorded diffraction answers; other suites' per-line wavelengths are not retained in these baselines.",
+    "These are the lens states as the baselines name them, each with the code of its refusal where it was refused; the hash of each lens state that was run is under Identifiers. The baselines do not keep slider positions, stop radii or image-plane shifts as numbers, so those cannot be given here. The wavelengths listed are those the benchmark's diffraction answers keep; the other suites' baselines keep no wavelength.",
+} as const;
+
+/** The headings, labels and count sentences of the statement; its prose is `STATEMENT_TEXT`. */
+export const STATEMENT_LABELS = {
+  supportable: "Supportable sentence",
+  checks: "Checks",
+  checkColumns: [
+    "Check",
+    "Id",
+    "Compares",
+    "Kind",
+    "Configurations",
+    "Configuration pairs",
+    "Request pairs",
+    "Verdicts",
+    "Worst residual",
+  ],
+  limits: "Limits and largest values",
+  counterparts: "External diffraction counterparts",
+  counterpartColumns: [
+    "Check",
+    "Counterpart",
+    "Configurations",
+    "Rows",
+    "Rows by class",
+    "Worst of the rows with a review band",
+    "Worst set aside",
+  ],
+  requestedLines: "Wavelengths asked of LensVisualizer (nm)",
+  answeredLines: "Wavelengths the counterpart answered (nm)",
+  fields: "Fields requested",
+  bandedConfigurations: "Configurations with rows that have a review band",
+  sortingLimits: "Chief-landing sorting limits (mm)",
+  frequencies: "Frequencies (cycles/mm)",
+  rowStatuses: "Rows by status",
+  coverageColumns: [
+    "Suite",
+    "Named state / request",
+    "LensVisualizer wavelengths (nm)",
+    "Counterpart wavelengths (nm)",
+    "Fields / classes / reasons",
+    "Landing sorting limit (mm)",
+    "Verdict",
+  ],
+  states: "Lens states by suite",
+  declared: (declared: number, configurations: number, refused: number): string =>
+    `${declared} named states are declared, ${configurations} are run with a lens state, and ${refused} are refused.`,
+  stateColumns: [
+    "Named state",
+    "Refusal",
+    "Measured on ray-trace, optical-path, geometric-mtf and wave-mtf for both pairs of LensVisualizer and an external engine",
+  ],
+  notCovered: "Not covered",
+  identifiers: "Identifiers",
+  identifiersIntro:
+    "The SHA-256 hashes of the eight baseline files this statement is rendered from, and of each named lens state that was run.",
+  sourceColumns: ["Baseline file", "SHA-256"],
+  stateIdentifierColumns: ["Suite", "Named state", "Lens state (SHA-256)"],
+  kind: { gated: "held to a limit", recorded: "side by side, no limit" } as Readonly<Record<string, string>>,
+  limitKind: { tolerance: "limit", attention: "review band", sorting: "sorting limit" } as Readonly<
+    Record<string, string>
+  >,
+  notMeasured: "not measured",
+  notFinite: "not finite",
 } as const;
 
 interface SupportFigure {
@@ -400,6 +499,8 @@ interface StatementSupportData {
     readonly counterpartLinesNm: readonly number[];
     readonly worstBanded: (SupportFigure & { readonly class: string | null }) | null;
   }[];
+  /** The configurations at which a known failure of one engine is listed, and that engine's id; absent where none. */
+  readonly listedFailureClause?: { readonly configurations: number; readonly engine: string };
 }
 
 const COUNT_WORDS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
@@ -424,8 +525,9 @@ export function statementSupport(statement: StatementSupportData, holds: boolean
   const path = gated(statement.agreementFigures.opticalPath);
   const geometric = gated(statement.agreementFigures.geometricMtf);
   const wave = gated(statement.agreementFigures.waveMtf);
-  const fft = statement.counterparts.find((c) => c.rung === "r5");
-  const wavefront = statement.counterparts.find((c) => c.rung === "r6c");
+  const listed = statement.listedFailureClause;
+  const fft = statement.counterparts.find((c) => c.rung === "mtf-vs-optiland-fft");
+  const wavefront = statement.counterparts.find((c) => c.rung === "mtf-vs-optiland-wavefront");
   if (
     !landing ||
     !path ||
@@ -448,6 +550,11 @@ export function statementSupport(statement: StatementSupportData, holds: boolean
     `differs by up to ${supportNumber(fft.worstBanded.value)}, a difference classed as one of ${fft.worstBanded.class}; ` +
     "the comparator's OTF of optiland's own wavefront, per wavelength and photopic, " +
     `differs by up to ${supportNumber(wavefront.worstBanded.value)}. ` +
+    (listed === undefined
+      ? ""
+      : // Owner-signed wording (2026-11-16): printed only where a configuration has a listed failure.
+        `Configurations at which a known failure of one engine is listed (${listed.configurations}, ` +
+        `${engineName(listed.engine)}'s, where LensVisualizer and the reference tracer agree) are not counted. `) +
     "Dispersion, white-light weighting beyond the stated lines, focus choice, stop sizing, states not named and " +
     "the catalog beyond these suites are not covered."
   );
@@ -455,202 +562,377 @@ export function statementSupport(statement: StatementSupportData, holds: boolean
 
 /** Catalog statistics describe recorded pair aggregates, never a production-lens validation claim. */
 export const CATALOG_TEXT = {
-  complete: "Both catalog baselines are present; duplicate R4 pairs are counted once.",
+  intro:
+    "These are the statistics of the catalog sweep: every lens of LensVisualizer's catalog at the snapshot's commit, at each end of a zoom, wide open, at the reference wavelength and on the design image plane, rendered from the catalog's two baselines alone. The catalog's baselines are a dated snapshot, not refreshed with the others.",
+  complete: "Both catalog baselines are present; the pairs of check r4, which is in both, are counted once.",
   pending: "The catalog statistics are incomplete until both catalog baselines are written.",
   units:
-    "State statuses use the gravest pair verdict; pair counts use one aggregate per run, rung and engine pair, with feature groups overlapping.",
-  census: "Source codes count distinct states; engine codes count distinct run, rung and engine refusals.",
+    "A lens state's status is the worst verdict of its pairs; a pair count counts one record a run, check and pair of engines, and the groups of lens features overlap.",
+  census:
+    "A census code counts the distinct lens states that carry it (such a state may still be compared: see the status counts); an engine code counts the distinct runs, checks and engines that refused with it.",
   quantiles:
-    "Quantiles interpolate linearly at (n - 1)p over finite gated pair figures; nonfinite figures are counted separately and ranked first in each worst-ten list.",
+    "Quantiles interpolate linearly at (n - 1)p over the finite figures of the pairs of the checks held to a limit; figures that are not finite are counted apart and ranked first in each list of the worst ten.",
   failures:
-    "Listed failures remain FAIL; each failing metric retains its class, evidence hash, gotcha and one-run reproducer.",
+    "A listed failure keeps its verdict, Fail; each failing figure keeps its class, the hash of its evidence, the entry of docs/gotchas.md that explains it and a command that reproduces it in one run.",
 } as const;
 
-/** The rungs the validation matrix names: the statement's, and those of Phase 6, each with what it compares. */
-export const MATRIX_RUNGS: Readonly<Record<string, { mode: "gated" | "recorded"; compares: string }>> = {
-  ...STATEMENT_RUNGS,
-  r7a: { mode: "gated", compares: "Spot and fan figures of the coma and bokeh tabs' rays, on identical rays" },
-  r7b: { mode: "recorded", compares: "LV's coma and bokeh tabs beside optiland's SpotDiagram and RayFan" },
-  r8a: {
-    mode: "gated",
-    compares: "Axial intercepts of the spherical-aberration and axial-colour sections' rays, on identical rays",
-  },
-  r8b: {
-    mode: "recorded",
-    compares: "LV's spherical-aberration and axial-colour sections beside optiland's own rays and focus",
-  },
-  r9a: { mode: "gated", compares: "Chief rays of the distortion, pupils and lateral-colour tabs, on identical rays" },
-  r9b: {
-    mode: "recorded",
-    compares: "LV's distortion, pupils and lateral-colour tabs beside optiland's distortion, chief rays and pupils",
-  },
-  r10a: {
-    mode: "gated",
-    compares: "Tangential and sagittal foci of the field-curve sections' parabasal rays and fans, on identical rays",
-  },
-  r10b: { mode: "recorded", compares: "LV's field-curve sections beside optiland's FieldCurvature" },
-  r11a: {
-    mode: "gated",
-    compares:
-      "Which rays of the vignetting tab's beams get through, their flux and the chief landings, on identical rays",
-  },
-  r11b: { mode: "recorded", compares: "LV's vignetting tab beside flux, the comparator's estimate on LV's lattices" },
-  r12b: {
-    mode: "recorded",
-    compares: "LV's summary tab and aperture control beside optiland's paraxial accessors and working f-number",
-  },
-  r13b: { mode: "recorded", compares: "The comparator's Seidel sums (ref-seidel) beside optiland's" },
-  r14b: {
-    mode: "recorded",
-    compares: "optiland's Zernike fit beside the comparator's fit of the same raw wavefront samples (optiland-wave)",
-  },
-};
+/** The headings and column labels of the catalog statistics; its prose is `CATALOG_TEXT`. */
+export const CATALOG_LABELS = {
+  title: "Catalog statistics",
+  statusCounts: "Status counts",
+  statusColumns: ["Scope", "Lens states", "Lens states by status", "Pairs by status"],
+  feature: (name: string): string => `Lens feature: ${name}`,
+  censusReason: (name: string): string => `Reason of the census: ${name}`,
+  census: "Codes, by lens state and by engine",
+  censusColumns: ["Code", "Lens states with the code", "Checks an engine refused"],
+  figures: "Figures of the checks held to a limit",
+  figure: (check: string, name: string, unit: string): string =>
+    unit === "1" ? `${check}: ${name}, with no unit` : `${check}: ${name} (${unit})`,
+  quantileColumns: ["Pairs", "Not finite", "Min", "Median", "p90", "p99", "Max"],
+  worstColumns: ["Run", "Engines", "Value"],
+  failures: "Failures, classified",
+  failureColumns: ["Run", "Check", "Engines", "Figure", "Class", "Gotcha", "Reproducer"],
+  howToRead: "How to read this",
+  howToReadIntro: [
+    "A lens state is one run of the sweep; a pair is two engines on one check of one run. A status or a verdict is",
+    "shown by its label; the stored value is what the catalog's baselines hold:",
+  ],
+  verdictColumns: ["Label", "Stored value", "Meaning"],
+  checksIntro: "The checks of the sweep, by the id a heading names:",
+  checkColumns: ["Check", "Id", "Compares"],
+  failuresIntro:
+    "In the table of failures, Class says where a difference comes from, decided in the order unsupported, data, convention, numerical, method (method: the two engines' methods differ), and not that an engine is right; Gotcha is the entry of docs/gotchas.md that explains the difference, and Reproducer the command that reproduces it in one run:",
+  classColumns: ["Class", "Stored value"],
+  sources: "Sources",
+  notCovered: "Not covered",
+} as const;
 
-/** One row of the validation matrix: a LensVisualizer tab, or the analyses it has no tab of. */
-export interface MatrixRowText {
-  readonly tab: string;
-  readonly title: string;
-  /** What the row's rungs are of. */
-  readonly about: string;
-  readonly gated: readonly string[];
-  readonly recorded: readonly string[];
-  /** What the row does not cover, whatever its counts: fixed sentences, each ending its sentence. */
-  readonly notCovered: readonly string[];
-}
+/**
+ * The rungs the validation matrix names: the statement's, and those of Phase 6, each with what it compares. The words
+ * are the checks' (`src/vocabulary/checks.ts`).
+ */
+export const MATRIX_RUNGS: Readonly<Record<string, { mode: "gated" | "recorded"; compares: string }>> = MATRIX_CHECKS;
 
-/** The rows of the validation matrix, in their order. */
-export const MATRIX_ROWS: readonly MatrixRowText[] = [
-  {
-    tab: "foundation",
-    title: "Built system, first-order data, rays and optical path",
-    about:
-      "The foundation of every tab: the system each engine builds from the case, its first-order data, and the hits, landings and optical paths of LensVisualizer's own MTF launch rays.",
-    gated: ["r0", "r1", "r2", "r3"],
-    recorded: [],
-    notCovered: [
-      "Folded paths and diffractive surfaces: the suites folded and diffractive have rays baselines of their own, outside the benchmark.",
-      "The catalog beyond the benchmark: its baselines are a dated snapshot with a report of their own.",
-    ],
-  },
-  {
-    tab: "mtf",
-    title: "MTF",
-    about:
-      "LensVisualizer's MTF tab: the comparator's geometric and wave MTF of LensVisualizer's launch rays traced by each engine, LensVisualizer's own geometric MTF beside the replay of its sampling, and the engines' own MTF side by side.",
-    gated: ["r4", "r4f", "r6a"],
-    recorded: ["r5", "r5g", "r6b", "r6c"],
-    notCovered: ["Each item of the fixed block at the end of this matrix, which every MTF report ends with."],
-  },
-  {
-    tab: "coma-bokeh",
-    title: "Coma and bokeh",
-    about:
-      "LensVisualizer's coma and bokeh tabs: the rings and fans of the coma cloud and the bokeh tile's rings, each sample LensVisualizer's aimed launch ray.",
-    gated: ["r7a"],
-    recorded: ["r7b"],
-    notCovered: [
-      "The bokeh tile at the tab's own plane (infSensorZ): deferred.",
-      "A finite object and a folded path: coded problems of the run, never approximated; a coma fan on the axis is one of its field.",
-      "The spot figures of R7b have no attention band, since the two engines sample the pupil on different rings; only its fan figure has one.",
-    ],
-  },
-  {
-    tab: "axial",
-    title: "Spherical aberration and axial colour",
-    about:
-      "LensVisualizer's spherical-aberration section (aberrations tab) and axial-colour section (chromatic tab): the zones of the axial object, at the authored indices and at each colour channel's own.",
-    gated: ["r8a"],
-    recorded: ["r8b"],
-    notCovered: [
-      "The colour figures of R8b have no attention band.",
-      "Bit identity of LensVisualizer's channel indices at the C, F and g lines: no committed suite asks those lines, and it is not pursued.",
-      "A finite object and a folded path: coded problems of the run.",
-    ],
-  },
-  {
-    tab: "chief",
-    title: "Distortion, lateral colour, pupils and breathing",
-    about:
-      "LensVisualizer's distortion and pupils tabs and its lateral-colour section: their chief rays, each colour channel's own; breathing is the focal length of each prepared state, which R1 compares; the LensVisualizer-only test breathing.test.ts holds the chart to R1's focal length.",
-    gated: ["r9a", "r1"],
-    recorded: ["r9b"],
-    notCovered: [
-      "Breathing between the focus stations LensVisualizer declares: chart positions between stations are no case.",
-      "A fisheye's distortion (lv-fisheye-projection): a coded problem of the set.",
-      "optiland's pupil aberration: another quantity, never asked.",
-      "The figures of R9b have no attention band.",
-    ],
-  },
-  {
-    tab: "curvature",
-    title: "Field curves and astigmatism",
-    about:
-      "LensVisualizer's field-curve and astigmatism sections (aberrations tab): the parabasal pencil and the real-ray fans of each field.",
-    gated: ["r10a"],
-    recorded: ["r10b"],
-    notCovered: [
-      "LensVisualizer's parabasal pencil is 0.01 mm wide, a convention of its own: its foci are of a finite pencil, beside optiland's infinitesimal pair.",
-      "Fields other than the sections' own field fractions.",
-    ],
-  },
-  {
-    tab: "vignetting",
-    title: "Vignetting and relative illumination",
-    about:
-      "LensVisualizer's vignetting tab: an aimed lattice on the real stop at each of its fields, the share of it that reaches the image and its flux there.",
-    gated: ["r11a"],
-    recorded: ["r11b"],
-    notCovered: [
-      "optiland has no vignetting analysis: the counterpart in R11b is flux, the comparator's estimate on LensVisualizer's lattices, not an external engine.",
-      "The relative illumination and the falloff of R11b have no attention band.",
-      "States outside the tab's beam model, and fields launched from a bounding sphere: coded problems, with no vignetting set.",
-    ],
-  },
-  {
-    tab: "summary",
-    title: "Summary and cardinal elements",
-    about:
-      "LensVisualizer's summary tab and aperture control: its readouts are of the prepared state and LensVisualizer's paraxial kernel, which R1 compares; the LensVisualizer-only test summary.test.ts holds its readouts to R1's values; the tab traces no ray of its own.",
-    gated: ["r1"],
-    recorded: ["r12b"],
-    notCovered: [
-      "The half field, the focus distance, the controls and the Current Perspective Pose section of the tab.",
-      "The aperture control's paraxial working f-number beside the mark, shown only above a difference of 0.05.",
-      "The stop and the track of R12b are read back from the case: they hold the tab to the case, not two engines to each other.",
-    ],
-  },
-  {
-    tab: "no-tab",
-    title: "Seidel sums, wavefront and Zernike fits (no LensVisualizer tab)",
-    about:
-      "LensVisualizer presents no Seidel sums, wavefront or Zernike coefficients: these rungs set optiland beside the comparator's own estimates, by OpticStudio's conventions, and no LensVisualizer answer is asked.",
-    gated: [],
-    recorded: ["r13b", "r14b"],
-    notCovered: [
-      "optiland's chromatic Seidel sums: optiland states none of an optic of one line.",
-      "ref as a third Zernike answer: wavefront.native version 1 carries no launch rays.",
-      "OpticStudio's figures to the centroid.",
-      "LensVisualizer, which has no tab of these analyses.",
-    ],
-  },
-];
+/** The rows of the validation matrix, each a LensVisualizer tab or the analyses it has no tab of: the vocabulary's. */
+export { MATRIX_ROWS } from "../vocabulary/matrix.ts";
+export type { MatrixRowText } from "../vocabulary/matrix.ts";
+
+/** The headings and column labels of the validation matrix; its prose is `MATRIX_TEXT`. */
+export const MATRIX_LABELS = {
+  inputs: "Inputs",
+  inputColumns: ["Input", "Value"],
+  suite: "Suite",
+  suiteHash: "Suite hash",
+  limitsFile: "Limits file",
+  limitsFileHash: "Limits file hash",
+  lvCommit: "LensVisualizer commit",
+  lvDirty: "LensVisualizer checkout",
+  lvCode: "LensVisualizer engine code",
+  lvFiles: "LensVisualizer engine files",
+  declared: "Declared runs",
+  configurations: "Configurations",
+  engineColumns: ["Engine", "Name", "Version"],
+  identifiers: "Identifiers",
+  identifiersIntro:
+    "The hashes that tell one version from another: of the suite file, of the limits file, of LensVisualizer's commit and engine code, of the two baseline files this matrix is rendered from, and of each engine's code and of this tool's code behind it.",
+  identifierColumns: ["Identifier", "Hash"],
+  engineIdentifierColumns: ["Engine", "Engine code", "This tool's code behind it"],
+  rows: "Rows",
+  rowColumns: ["Row", "Checks held to a limit", "Side-by-side checks"],
+  gated: "Held to a limit",
+  recorded: "Side by side",
+  countedColumns: [
+    "Check",
+    "Compares",
+    "Quantity",
+    "Engines",
+    "Configurations",
+    "Configuration pairs",
+    "Request pairs",
+    "Request-pair counts",
+    "Configuration-pair counts",
+    "Engines not answering",
+    "Baselines",
+  ],
+  namedColumns: ["Check", "Compares", "Quantity", "Engines", "Baselines"],
+  everyEngine: "every engine answered",
+  notCovered: "Not covered",
+} as const;
 
 /** The validation matrix's prose; its counts and names are supplied by the reducer. */
 export const MATRIX_TEXT = {
   intro:
     "This matrix is rendered from the benchmark's two baselines alone, with no engine, clock or machine input. It has a row for each LensVisualizer analysis tab, a row of the foundation they stand on, and a row of the analyses LensVisualizer has no tab of.",
   counts:
-    "A configuration is one named run of the benchmark with a case. A configuration pair is two engines on one configuration and rung; a request pair is two engines on one request. Request-pair counts count every request pair, including unsupported answers; configuration-pair counts count the gravest verdict of each configuration pair. R4 is in both baselines and counts once.",
+    "A configuration is one named run of the benchmark, with its lens state. A configuration pair is two engines on one configuration and one check; a request pair is two engines on one request. Request-pair counts count every request pair, answers that were not computed included; configuration-pair counts count the worst verdict of each configuration pair. Check geometric-mtf is in both baselines and counts once.",
   gated:
-    "A gated rung holds two engines to the tolerances of the policy on the same input, and its verdicts are the ones the baseline holds.",
+    "A check held to a limit holds two engines to the limits of the limits file on the same input, and its verdicts are the ones the baseline holds.",
   recorded:
-    "A recorded rung sets two methods side by side with no tolerance and fails nothing: its counts say how many pairs were written down inside an attention band, outside one, or without an answer to set beside the other.",
+    "A side-by-side check sets two methods beside each other with no limit and fails nothing: its counts say how many pairs were written down inside a review band, outside one, or without an answer to set beside the other.",
   unbaselined:
-    "A rung marked in no baseline is run only where a run names it and is kept out of every baseline, so this matrix names its quantity and engines and gives no figure of it.",
+    "A check marked as in no baseline is run only where a run names it and is kept out of every baseline, so this matrix names its quantity and engines and gives no figure of it.",
   absent: "not in the benchmark's baselines",
   inNoBaseline: "in no baseline; run only where named",
   notCovered:
-    "Beyond each row's own items, the fixed block that every MTF report ends with says what no comparison of this tool shows:",
+    "Beyond each row's own items, the fixed list that every MTF report ends with says what no comparison of this tool shows:",
+} as const;
+
+/**
+ * The words of the committed reports of a baseline (`reports/<suite>/rays.md` and `mtf.md`) and of a run's report
+ * (`lvrtc report`): titles, introductions, column labels and the "How to read this" section. A report shows a check
+ * by its title with its id, an engine pair by the engines' ids, a verdict by its label; the legend gives the stored
+ * value beside each label.
+ */
+export const REPORT_TEXT = {
+  raysTitle: (suite: string): string => `Baseline of ${suite}: the ray checks`,
+  raysIntro: (suite: string): string[] => [
+    `This file is the committed record of the ray checks of the suite ${suite}, as its baseline holds them: for every`,
+    "run (one lens state; a zoom lens is run at each end of its range wherever no zoom position is named) and every",
+    "pair of engines, the verdict, and the largest value of each figure over the requests of the run (its fields and",
+    "wavelengths). A figure counted in rays or elements is added up. The file is rendered from the baseline alone, so",
+    "`lvrtc verify` can render it anew and compare it byte for byte: it holds results, counts, names and hashes, and no",
+    "ray an engine traced. `lvrtc baseline check` runs the engines again and says whether the lens states and the",
+    "engines are still those of the baseline. How to read this, near the end, says what each label and column means.",
+  ],
+  mtfTitle: (suite: string): string => `Baseline of ${suite}: the MTF checks`,
+  mtfIntro: (suite: string): string[] => [
+    `This file is the committed record of the MTF checks of the suite ${suite}, as its MTF baseline holds them, for`,
+    "every run (one lens state; a zoom lens is run at each end of its range wherever no zoom position is named). A",
+    "check held to a limit gives, for every pair of engines, the verdict and the largest value of each figure over",
+    "the requests of the run, with the number of requests the figure was measured in, since some checks measure a",
+    "figure only where their sampling settled. A side-by-side check has no limit: its figures are written down beside",
+    "a review band, and its tables set the engines' own estimates side by side.",
+    "",
+    "The file is rendered from the baseline alone, so `lvrtc verify` can render it anew and compare it byte for byte:",
+    "it holds results, counts, names and hashes, and no ray an engine traced. `lvrtc baseline check --mtf` runs the",
+    "engines again and says whether the lens states and the engines are still those of the baseline, and what moved.",
+    "How to read this, near the end, says what each label and column means.",
+  ],
+  /** Shown only where a pair of the report is FLOOR: what the limits file then granted. */
+  floor: [
+    "A pair here is Within a known numerical floor (stored as FLOOR): a figure is above its limit by the known",
+    "numerical floor of one engine, which the limits file granted. That engine is within the floor limit of the",
+    "check's arbiter while no other engine sides with it against the arbiter. It counts as a pass and is counted apart.",
+  ],
+  inputs: "Inputs",
+  inputColumns: ["Input", "Value"],
+  suite: "Suite",
+  contract: "Contract version",
+  limitsFile: "Limits file",
+  limitsFileVersion: (version: string): string => `v${version}`,
+  engineColumns: ["Engine", "Name", "Version", "What the engine states of itself"],
+  runProblems: "Runs with a problem",
+  runProblemColumns: ["Run", "Problem"],
+  summary: "Summary",
+  summaryColumns: ["Check", "Quantity", "Runs", "Requests", "Pair", "Runs by verdict", "Requests by verdict"],
+  support: "Support",
+  supportIntro: [
+    "In how many runs the jobs of an engine ended in each way. An engine that cannot compute what was asked says so",
+    "(not computed), with the code and the item it names; that is an answer and not a failure.",
+  ],
+  supportColumns: ["Check", "Engine", "Runs by status"],
+  checkLine: (compares: string, kind: string, quantity: string): string =>
+    `Compares: ${compares}. Kind: ${kind}. Quantity asked of the engines: ${quantity}.`,
+  worstIntro: "The worst of every figure over the suite:",
+  worstColumns: (measured: boolean): string[] => [
+    "Pair",
+    "Figure",
+    "Unit",
+    "Limit",
+    "Worst, or total",
+    ...(measured ? ["Requests measured"] : []),
+    "Run",
+    "Where",
+  ],
+  byRunIntro: (measured: boolean): string =>
+    `By run, each pair with its verdict and the judged figure that is largest against its limit${measured ? ", with the number of the run's requests it was measured in" : ""}:`,
+  byRunRun: "Run",
+  byRunRequests: "Requests",
+  rays: (engine: string): string => `Rays of ${engine}: ok / blocked / failed`,
+  noJudgedFigure: "no judged figure",
+  notFinite: "not finite",
+  noUnit: "none",
+  laterSteps: "Later steps",
+  laterStepsIntro: [
+    "An engine that was asked a request once more, with a finer sampling, because of what its first answer came to.",
+    "Its first answer is what the support counts; the step is what its row of a table is of.",
+  ],
+  laterStepColumns: ["Check", "Engine", "Step", "Runs", "Requests asked again", "Not ok"],
+  marked: "Worth a look",
+  markedIntro: [
+    "Every request of a side-by-side check whose two engines differ by more than a review band, or whose chief rays",
+    "land further apart than a sorting limit, with each such figure. A review band is a width for attention, and a",
+    "sorting limit tells two image points apart; nothing here is a failure.",
+  ],
+  markedColumns: ["Check", "Run", "Field", "Pair", "Figures above their review band or sorting limit"],
+  noneMarked: "No request is worth a look by its review bands.",
+  reviewBand: (band: string): string => `review band ${band}`,
+  sortingLimit: (limit: string): string => `sorting limit ${limit}`,
+  limitAtMost: (limit: string): string => `≤ ${limit}`,
+  notCovered: "Not covered",
+  notCoveredIntro: "What this comparison does not show, whatever its verdicts:",
+} as const;
+
+/** The review bands of an MTF table, and the chief-landing limit that sorts its fields. */
+function reviewBandLines(onAxis: string, offAxis: string, chiefMm: string): string[] {
+  return [
+    `Review bands: ${onAxis} on the axis, ${offAxis} off it. Two chief rays that land more than ${chiefMm} mm apart`,
+    "are of two fields.",
+  ];
+}
+
+/** The sentences around a table of an MTF comparison (`mtfComparisonLines`), beside `MTF_COMPARISON_INTROS`. */
+export const MTF_COMPARISON_TEXT = {
+  difference: (heading: string, difference: string): string => `${heading} The difference of a row is ${difference}.`,
+  bands: reviewBandLines,
+  notBothAsked: (a: string, b: string): string => `\`${a}\` and \`${b}\` were not both asked.`,
+  noResult: (a: string, b: string, verdict: string, reason: string): string =>
+    `\`${a}\` against \`${b}\` is ${verdict}: ${reason}.`,
+  noReason: "no reason was given",
+  overall: (a: string, b: string, verdict: string): string[] => [
+    `Over every frequency of the request \`${a}\` against \`${b}\` comes to ${verdict}; a row below has the`,
+    "status of its own frequency.",
+  ],
+  noFrequency: "No shown frequency is one of the request.",
+} as const;
+
+/** The words of a run's report (`lvrtc report`, `src/report/markdown.ts`) that are its own. */
+export const RUN_REPORT_TEXT = {
+  title: (suite: string): string => `Comparison report: ${suite}`,
+  engineColumns: ["Engine", "Status", "Version"],
+  runColumns: ["Run", "Status"],
+  verdictSummary: "Verdict summary",
+  verdictSummaryColumn: "Verdict",
+  noFailure: (pairs: string): string => `No pair is Fail or Error, of ${pairs} compared.`,
+  failures: (failing: string, pairs: string): string => `${failing} of ${pairs} pairs are Fail or Error.`,
+  supportMatrix: "Support matrix",
+  supportColumns: ["Run", "Check"],
+  sectionLine: (quantity: string, judged: string): string => `Quantity ${quantity}: ${judged}.`,
+  judged: (method: string, kind: string): string => `${method}; ${kind}`,
+  noPolicyEntry: "the limits file has no entry for this check",
+  howToRead: "How to read this",
+  howToReadIntro: [
+    "Each pair of engines that answered one request gets one verdict. The verdict summary shows its label; the other",
+    "tables of this report show its stored value. This is each label, its stored value and what it means:",
+  ],
+  verdictColumns: ["Label", "Stored value", "Meaning"],
+  failing: (floor: boolean): string[] => [
+    "Only Fail (`FAIL`) and Error (`ERROR`) fail a comparison.",
+    ...(floor ? ["Within a known numerical floor (`FLOOR`) is a pass that is counted apart from Pass (`PASS`)."] : []),
+    "Side by side (`RECORDED`) and Side by side, worth a look (`ATTENTION`) are not failures: a side-by-side check",
+    "compares methods that are expected to differ, and its numbers are kept to be read, not held to a limit. Not",
+    "judged (`BLOCKED`) is not a second failure: two engines that built different systems would differ in every check",
+    "after that one.",
+  ],
+  limits: (floor: boolean): string[] => [
+    "A limit is shown in the heading of its figure: `≤` is the limit of a check held to a limit, `band` the review",
+    `band of a side-by-side check${floor ? ", and `floor ≤` how far the engine with a floor may be from the arbiter for a FLOOR" : ""}. A figure`,
+    "without a limit is shown and not judged. Where its name begins as a judged one's does, it stands beside that",
+    "one: `pupilZ.maxAbs`, the plain difference, beside `pupilZ.maxScaled`, the one on the scale that is judged.",
+  ],
+  digits: (metricDigits: number, recordedDigits: number, nothing: string): string[] => [
+    `Numbers have ${metricDigits} significant digits, and a whole number, such as a count, is written in full.`,
+    `A value written down has ${recordedDigits} significant digits, or is a whole number in full, and is named with the index of its`,
+    `element. \`${nothing}\` marks a place with nothing to compare, and \`not finite\` a number that is a NaN or an infinity.`,
+    "The reference-vs-each table and the pairwise matrix judge a pair alike, so a pair that is in both has the same",
+    "verdict in both.",
+  ],
+  identifiers: "Identifiers",
+  identifiersIntro: [
+    "The hashes that tell one version from another: of the suite file and of the limits file; of each engine's code",
+    "and, for an engine of this tool's own, of this tool's code behind it; of each run's lens state; and of each",
+    "request a section of the results is of.",
+  ],
+  identifierColumns: ["Identifier", "Value"],
+  suiteFile: "Suite file",
+  limitsFile: "Limits file",
+  engineIdentifierColumns: (adapters: boolean): string[] => [
+    "Engine",
+    "Engine code",
+    ...(adapters ? ["This tool's code behind it"] : []),
+  ],
+  runIdentifierColumns: ["Run", "Lens state"],
+  requestIdentifierColumns: ["Run", "Check", "Request"],
+} as const;
+
+/** The words of a baseline's table of the engines' own MTF (`src/baseline/mtfReport.ts`). */
+export const MTF_TABLE_TEXT = {
+  bands: reviewBandLines,
+  without: "Requests without a table, by what the two engines came to:",
+  withoutColumns: ["Verdict", "Requests", "Runs", "Reason"],
+  rows: (frequencies: string, second: string, estimator: string): string[] => [
+    `A row is one field and cut of one run, at ${frequencies} cycles/mm. Under each engine is what it says of the`,
+    `field (\`${second}\` with the step its row is of, where it was asked again); the third estimate is this tool's`,
+    `(\`${estimator}\`). The status is the worst of the row's frequencies; "All" is what the two engines came to over`,
+    "every frequency of the request.",
+  ],
+  rowsByStatus: (statuses: string): string => `Rows by status: ${statuses}.`,
+  reasonColumns: ["Reason", "Meaning"],
+} as const;
+
+/** The "How to read this" section of a baseline's report: every sentence of it. */
+export const HOW_TO_READ_TEXT = {
+  heading: "How to read this",
+  verdicts: "Verdicts",
+  verdictsIntro: [
+    "A verdict is of one pair of engines: of one request, or, in a table by run, the worst over the requests of the",
+    "run. A table shows the label; the stored value is what the baseline file holds.",
+  ],
+  verdictColumns: ["Label", "Stored value", "Meaning"],
+  checks: "Checks",
+  checksIntro: [
+    "A check held to a limit judges two engines' answers to the same input against the limits of the limits file. A",
+    "side-by-side check sets two methods beside each other with no limit, and fails nothing. A section of this file",
+    "is headed by a check's title, with the id the baseline file stores it under.",
+  ],
+  checkColumns: ["Check", "Id", "Kind", "Compares"],
+  kind: { limit: "held to a limit", "side-by-side": "side by side, no limit" } as Readonly<Record<string, string>>,
+  engines: "Engines",
+  enginesIntro: "A pair is named by the ids of its two engines:",
+  engineColumns: ["Id", "Engine"],
+  figures: "Figures",
+  figuresIntro: [
+    "A figure is named by its label, then the key the baseline file stores it under. The Limit column gives, for a",
+    "check held to a limit, the largest value a pair may have (`≤`); for a side-by-side check, the review band a",
+    "difference is set beside. A figure without either is shown and not judged; a chief-ray landing of a side-by-side",
+    "check is held to the sorting limit its tables state. Numbers have three significant digits, and a whole number,",
+    "such as a count, is written in full. `not finite` marks a number that is NaN or infinite, and `—` a place with",
+    "nothing to show.",
+  ],
+  measured:
+    "Requests measured: in how many requests a pair has a value of the figure; a check measures some figures only where its sampling settled.",
+  places: "Where",
+  placesIntro: "The place of a figure's largest value, as the requests name it:",
+  placeColumns: ["Place", "Meaning"],
+  runNames: "Run names",
+  runNamesIntro:
+    "A run's name is the name the suite gives it, usually a lens key (in the features suite, the feature it exercises; in the catalog, `catalog-` then the lens key), then the parts below that apply. They are the naming of the committed suites; a lens key may hold the same letters as a part of its own.",
+  runNameColumns: ["Part", "Meaning"],
+  wavelengths: "Wavelengths",
+  wavelengthsIntro: "Each wavelength by its index, as LensVisualizer's answers in this baseline record them:",
+  wavelengthColumns: ["Wavelengths (nm), by index", "Runs", "For example"],
+  noWavelengths:
+    "This baseline does not keep the wavelengths themselves: a place names a wavelength by its index in the lens state alone.",
+  ownMtf: "The engines' own MTF",
+  ownMtfRows:
+    "Each frequency of a field and cut has a status of its own. A table with a row for each frequency shows that status; a table with a row for each field and cut shows the worst of its frequencies, and under All what the two engines came to over the whole request:",
+  ownMtfStatusColumns: ["Label", "Stored value", "Meaning"],
+  ownMtfClasses: "A field has the class of its difference, decided in this order, and the reason beside it:",
+  ownMtfClassColumns: ["Label", "Stored value", "Meaning"],
+  identifiers: "Identifiers",
+  identifiersIntro: [
+    "The hashes that tell one version from another: of the suite file, of this baseline file and of the limits file;",
+    "of each engine's code and of this tool's code behind it, with the commit and sources it states; and of each",
+    "run's lens state. `lvrtc baseline check` compares them with what the engines and LensVisualizer give today. The",
+    "contract version is that of the file format the baseline is written in.",
+  ],
+  identifierColumns: ["Identifier", "Value"],
+  contract: "Contract version of the baseline file",
+  suiteFile: "Suite file",
+  baselineFile: "Baseline file",
+  limitsFile: "Limits file",
+  engineIdentifierColumns: ["Engine", "Engine code", "This tool's code behind it", "Commit and sources"],
+  runIdentifierColumns: ["Run", "Lens state"],
 } as const;
 
 /**
@@ -661,56 +943,63 @@ export const MATRIX_TEXT = {
  */
 export const DASHBOARD_TEXT = {
   readOnly:
-    "The pages read the run directories, the baselines and the policy at hand, and write nothing; only the actions of the control page write, each by starting an lvrtc command.",
+    "The pages read the run directories, the baselines and the limits file at hand, and write nothing; only the actions of the control page write, each by starting an lvrtc command.",
   sources: "Hover over a number to see the file it was read from and its JSON pointer there.",
   derived: "A number marked as derived is computed by the dashboard from the figures it names, never read from a file.",
-  policyAtHand: (name: string, version: string, hash: string): string =>
-    `The policy at hand is ${name}, version ${version} (${hash}).`,
-  noRuns: "No run directory with a manifest is in the runs directory.",
+  policyAtHand: (version: string): string => `The limits file at hand is version ${version}.`,
+  noRuns: "No run directory with a run record is in the runs directory.",
   noBaselines: "No baseline file is in the baselines directory.",
   documentProblem: (document: string, problem: string): string => `${document} cannot be shown: ${problem}`,
-  notReadable: "The manifest of this run cannot be read, so nothing of the run is shown.",
+  notReadable: "The run record of this run cannot be read, so nothing of the run is shown.",
   notCompared: "This run has not been compared: lvrtc compare writes the comparisons that judge it.",
+  /** A run directory written before a rename of ids: the code's own sentence and remedy, then the old ids it names. */
+  writtenBeforeRename: (sentence: string, remedy: string): string =>
+    `${sentence} ${remedy} Until then this page may leave out what the old ids name. The old ids it names:`,
   comparisonsUnreadable: "The comparisons of this run cannot be read, so no verdict of it is shown.",
   inputProblems:
-    "The comparisons do not belong with this manifest or with the policy at hand, so their verdicts may be of other inputs:",
-  failing: (count: number): string => `Pairs that are FAIL or ERROR: ${formatFixed(count, 0)}.`,
-  verdicts: [
-    "PASS and FAIL are the verdicts of a gated rung, whose metrics are held to the tolerances of the policy.",
-    "FLOOR is a pass that is counted apart.",
-    "RECORDED and ATTENTION are the verdicts of a recorded rung, which has no tolerance and fails nothing.",
-    "UNSUPPORTED is an answer and not a failure; BLOCKED is a pair that an earlier rung kept from being judged; ERROR is a pair that could not be compared.",
-  ],
+    "The comparisons do not belong with this run record or with the limits file at hand, so their verdicts may be of other inputs:",
+  /** Why a run's comparisons do not belong with its run record or the limits file at hand, in the dashboard's words. */
+  inputProblem: (problem: string): string =>
+    problem === "the comparisons were made from another manifest"
+      ? "the comparisons were made from another run record"
+      : problem === "the comparisons were judged by another policy"
+        ? "the comparisons were judged by another limits file"
+        : problem,
+  failing: (count: number): string => `Pairs that fail or end in an error: ${formatFixed(count, 0)}.`,
+  verdictsIntro: "What each verdict means; the value stored in the files is shown on hover:",
   supportByRung:
-    "Each cell counts the requests of the rung by how the engine's job ended; not-run is a request the engine was not asked.",
+    "Each cell counts the requests of the check by how the engine's job ended; not asked is a request the engine was not asked.",
   supportByRun: "The same, request by request, for each run.",
   split:
     "This suite has too many requests for one page: each run of it has a page of its own, with its requests and its sections.",
-  sections: "One section for each compared request, with the gravest verdict of its pairs.",
+  sections: "One section for each compared request, with the worst verdict of its pairs.",
   noSections: "No request of this run was compared.",
-  pending: "These jobs wait for an answer: lvrtc collect admits what the operators of file-exchange engines left.",
+  pending:
+    "These jobs wait for an answer: lvrtc collect admits what the operators of file-exchange engines left. Their requests are under Identifiers.",
   noPending: "No job waits for an answer.",
-  columns: "A limit is the tolerance of the policy for a gated rung and its attention band for a recorded one.",
+  columns:
+    "A limit is the limits file's limit for a check held to a limit, and its review band for a side-by-side check. Hover over a figure's name to see the key the files store it under.",
   referenceVsEach: (reference: string): string => `Every engine against the reference ${reference}.`,
   pairwise:
-    "Every engine against every other: each cell has the verdict of the pair and the metric closest to its limit, or furthest past it.",
+    "Every engine against every other: each cell has the verdict of the pair and the figure closest to its limit, or furthest past it.",
   recorded: "Values the answers record beside what is compared: listed side by side and never judged.",
   mtf: "The engines' own MTF, field by field, cut by cut and frequency by frequency, as the report lays it out.",
   mtfPair: (a: string, b: string, verdict: string): string =>
     `The differences are of ${a} minus ${b}, a pair whose verdict is ${verdict}.`,
   mtfBands: (onAxis: string, offAxis: string, chiefLanding: string): string =>
-    `The attention bands are ${onAxis} on the axis and ${offAxis} off it; chief rays that land further apart than ${chiefLanding} mm are of two image points.`,
-  baselineHead: (kind: string, suite: string, hash: string, version: string, policyHash: string): string =>
-    `A ${kind} baseline of the suite ${suite} (${hash}), judged by policy v${version} (${policyHash}).`,
-  baselineRuns: "One row for each run of the baseline: the gravest verdict of each rung and its records by badge.",
+    `The review bands are ${onAxis} on the axis and ${offAxis} off it; chief rays that land further apart than ${chiefLanding} mm are of two image points.`,
+  baselineHead: (kind: string, suite: string, version: string): string =>
+    `A baseline of the ${kind} checks of the suite ${suite}, judged by the limits file, version ${version}.`,
+  baselineRuns: "One row for each run of the baseline: the worst verdict of each check and its records by badge.",
   staleness: {
-    intro: "A badge says which reasons of staleness hold for a record against the bases below.",
+    intro:
+      "A badge says whether a record is out of date: whether the lens data, the engine code or the limits it was written with have changed since. A baseline's own page says what each of those is judged against.",
     check:
-      "Whether the suite run again would still come to its baseline is for lvrtc baseline check to say, so no record here is called REFRESHABLE, DRIFT or MOVED.",
+      "Whether the suite run again would still come to its baseline is for lvrtc baseline check to say, so no record here is labelled 'Out of date, still within limits', 'Changed beyond limits' or 'Side-by-side figure moved'.",
     badges:
-      "STALE names the reasons that hold; CURRENT says that every reason is known and none holds; NOT KNOWN names the reasons that could not be judged.",
-    policy: "The policy reason is judged against the policy at hand.",
-    policyNone: "The policy reason is not known: the policy at hand cannot be read.",
+      "Out of date names the reasons that hold; up to date says that every reason is known and none holds; unknown names the reasons that could not be judged.",
+    policy: "The limits reason is judged against the limits file at hand.",
+    policyNone: "The limits reason is not known: the limits file at hand cannot be read.",
     engineAsked: "The engine reason is judged against the engines as they answered when asked.",
     engineAskingLastRun:
       "The engines are being asked; until they answer, the engine reason is judged against the engines as the last run of the suite recorded them.",
@@ -722,14 +1011,14 @@ export const DASHBOARD_TEXT = {
       "The engines could not be asked, so the engine reason is judged against the engines as the last run of the suite recorded them.",
     engineFailedNone:
       "The engines could not be asked and the suite has no last run to read, so the engine reason is not known.",
-    caseLastRun: "The case reason is judged against the cases of the last run of the suite.",
-    caseNone: "The case reason is not known: the suite has no last run whose cases can be read.",
-    caseSame: "the same case in the last run",
-    caseMoved: (caseId: string): string => `another case in the last run: ${caseId}`,
-    caseRefused: "a run without a case in the last run",
+    caseLastRun: "The lens-data reason is judged against the lens states of the last run of the suite.",
+    caseNone: "The lens-data reason is not known: the suite has no last run whose lens states can be read.",
+    caseSame: "the same lens state in the last run",
+    caseMoved: "another lens state in the last run",
+    caseRefused: "a run without a lens state in the last run",
     caseUnknown: "no run of this name in the last run",
     snapshot: (version: string): string =>
-      `This baseline is a dated snapshot of policy v${version}: it shows STALE(policy) against the policy at hand like any other, and lvrtc verify holds it to the policy it records.`,
+      `This baseline is a dated snapshot of the limits file, version ${version}: it shows as out of date by its limits against the limits file at hand like any other, and lvrtc verify holds it to the limits file it records.`,
     notAsked:
       "The engines were not asked (lvrtc serve --no-ask): each baseline is judged against the last run of its suite where it has one.",
     asking:
@@ -738,16 +1027,16 @@ export const DASHBOARD_TEXT = {
     askFailed: (problem: string): string => `The engines could not be asked (${problem}).`,
   },
   /**
-   * What the control page and the job pages say (Stage 8.3): of starting a suite, collecting, asking the engines again,
+   * What the control page and the job pages say: of starting a suite, collecting, asking the engines again,
    * the jobs, their steps and output, the pending jobs and the exchange directories, and why an action is refused.
    */
   control: {
     intro:
       "The actions of this page start lvrtc commands as children of the dashboard, one job at a time; what they write is what those commands write, and nothing else of the dashboard writes.",
     heavy:
-      "A run of real engines (lv, ref, optiland and the others built in) is a heavy command: start one only when no other session runs one.",
+      "A run of real engines (LensVisualizer, the reference tracer, optiland and the others built in) is a heavy command: start one only when no other session runs one.",
     noMaintenance:
-      "Baselines and anything that writes the repository have no action here: they are run by hand. Store maintenance is planned and confirmed below.",
+      "Baselines and anything that writes the repository have no action here: they are run by hand. Result cache maintenance is planned and confirmed below.",
     busyJob: (job: string): string =>
       `Job ${job} is running: a start, a collect, a run of a lens or store maintenance is refused until it ends.`,
     busyAsking:
@@ -755,28 +1044,28 @@ export const DASHBOARD_TEXT = {
     idle: "No job is running.",
     closing: "The dashboard is closing, so it starts nothing.",
     startHow:
-      "A job runs lvrtc run of the suite, then lvrtc compare, then lvrtc report, each when the one before it has ended. A run that exits with code 2 started nothing and ends the job, and so does a compare that exits with code 2; a compare that finds a FAIL or an ERROR (code 1) still goes on to the report. Jobs left pending for a file-exchange engine are no failure.",
+      "A job runs lvrtc run of the suite, then lvrtc compare, then lvrtc report, each when the one before it has ended. A run that exits with code 2 started nothing and ends the job, and so does a compare that exits with code 2; a compare that finds a pair that fails or ends in an error (code 1) still goes on to the report. Jobs left pending for a file-exchange engine are no failure.",
     startFields: (most: string): string =>
-      `Engines and rungs are optional, each a list of ids separated by commas (the suite's own when left empty); jobs is 1 to ${most}, the number of concurrent jobs of lvrtc run.`,
+      `Engines and checks are optional, each a list of ids separated by commas (the suite's own when left empty); jobs is 1 to ${most}, the number of concurrent jobs of lvrtc run.`,
     noSuites: "No suite file is listed: the dashboard lists the files suites/*.json of its root.",
     notConfigured:
       "This dashboard was started without the lists a start and a collect are held to, so it starts and collects nothing.",
     suitePlaceholder: (name: string): string => `<suite:${name}>`,
     ownerOnlySuite: (name: string): string =>
-      `The suite ${name} is a full catalog sweep: running it is the owner's alone, never an implementer's.`,
-    ownerOnlyOption: (name: string): string => `${name} (owner only)`,
+      `The suite ${name} is a full catalog sweep: running it is for the maintainer alone.`,
+    ownerOnlyOption: (name: string): string => `${name} (maintainer only)`,
     enginesKnown: (ids: string): string => `Engines that can be named: ${ids}.`,
-    rungsKnown: (ids: string): string => `Rungs that can be named: ${ids}.`,
+    rungsKnown: (ids: string): string => `Checks that can be named: ${ids}.`,
     collectHow:
-      "Collect runs lvrtc collect for every file-exchange engine of the configuration: each answer an operator left in an inbox is admitted into the store, or refused with its reason, and the next run of the suite finds the admitted answers there.",
+      "Collect runs lvrtc collect for every file-exchange engine of the configuration: each answer an operator left in an inbox is admitted into the result cache, or refused with its reason, and the next run of the suite finds the admitted answers there.",
     askHow:
-      "Asking the engines again runs lvrtc engine describe as when the dashboard started, so that the STALE badges follow an engine that changed since then.",
+      "Asking the engines again runs lvrtc engine describe as when the dashboard started, so that the out-of-date badges follow an engine that changed since then.",
     cannotAsk:
       "This dashboard was started without asking the engines (lvrtc serve --no-ask), so it has no way to ask them.",
     noJobs: "No job has been started since the dashboard started.",
     jobsKept: "Jobs are kept in memory while the dashboard runs, and nothing about them is written.",
     pending:
-      "Every job of every run directory that waits for an answer from a file-exchange engine, as the manifests list it.",
+      "Every job of every run directory that waits for an answer from a file-exchange engine, as the run records list it; their requests are under Identifiers.",
     noPending: "No job of any run directory waits for an answer.",
     exchange:
       "Each file-exchange engine's jobs by folder of its exchange directory: handed over (outbox), taken by its operator (pending), answered and not yet collected (inbox), collected, and refused.",
@@ -814,7 +1103,7 @@ export const DASHBOARD_TEXT = {
     noSuite: "The form names no suite.",
     unknownSuite: (name: string): string => `The suite ${name} is not one of the suites the dashboard lists.`,
     unknownEngine: (id: string): string => `The engine ${id} is neither defined by the configuration nor built in.`,
-    unknownRung: (id: string): string => `The rung ${id} is not a rung of the comparator.`,
+    unknownRung: (id: string): string => `The check ${id} is not one of this tool's checks.`,
     emptyId: "A list of ids has an empty entry: name the ids separated by single commas.",
     repeatedId: "A list of ids names an id more than once.",
     badJobs: (given: string, most: string): string =>
@@ -846,7 +1135,7 @@ export const DASHBOARD_TEXT = {
       `lvrtc store ended with exit code ${code}: its output above says why as the command states it (an abort of prune where the committed baselines are missing or invalid, a conflict of compress, a store that changed since the plan), and nothing of the dashboard resolves it.`,
   },
   /**
-   * What the store maintenance of run control says (Stage 8.4, the owner's): planning a prune or a compress as a dry
+   * What the result cache maintenance of run control says (the maintainer's): planning a prune or a compress as a dry
    * run, confirming it only from its plan's page, held to the store's state the plan was made of, and why a
    * confirmation is refused.
    */
@@ -854,18 +1143,18 @@ export const DASHBOARD_TEXT = {
     intro:
       "Plan prune and Plan compress run lvrtc store prune or lvrtc store compress as a dry run, which changes nothing, and show its report and the digest of the store's state it is of. The change itself is the confirmation on that plan's page alone, and both the dashboard and the command hold it to that state: where the store or the protected engines changed since, it is refused and nothing is changed.",
     writers:
-      "The dashboard sees only its own jobs: an lvrtc command in a terminal or another session that writes the same store is invisible to it. Run maintenance without concurrent suite or store writers; checking that is the owner's.",
+      "The dashboard sees only its own jobs: an lvrtc command in a terminal or another session that writes the same store is invisible to it. Run maintenance without concurrent suite or store writers; checking that is the maintainer's.",
     pruneRule:
       "Prune after the refreshed baselines are committed, never before a refresh that would need them: an engine version is protected only by a baseline committed to HEAD that names it.",
     compressRule:
       "Compress keeps every key and rewrites each plain entry as its gzip atomically, so it is safe at any time; even so, run it only when no writer is active.",
     temporary:
-      "A file of the store whose name ends in .tmp is left by a writer at work or by one that was killed: a confirmation is refused while there is one, and what wrote it is the owner's to check.",
+      "A file of the store whose name ends in .tmp is left by a writer at work or by one that was killed: a confirmation is refused while there is one, and what wrote it is the maintainer's to check.",
     pruneReport:
       "The report as the command printed it, read: the files and bytes kept and removable of each engine, and each removable engine version with its newest entry.",
     compressReport:
       "The report as the command printed it, read: the plain and gzip entries, and the bytes before and after.",
-    state: (digest: string): string => `This report is of the store's state ${digest}.`,
+    state: "This report is of the store's state that Identifiers names.",
     dryRun: "This was a dry run: nothing was changed.",
     protectedCount: (count: string): string =>
       `Engine versions that the baselines committed to HEAD protect: ${count}.`,
@@ -892,50 +1181,52 @@ export const DASHBOARD_TEXT = {
     changed: (plan: string): string =>
       `The store or the protected engines changed since plan ${plan} was made, so nothing is changed: plan again.`,
   },
-  /** What the charts of the dashboard say (Stage 8.2): their titles, axes, legends and captions. */
+  /** What the charts of the dashboard say: their titles, axes, legends and captions. */
   charts: {
     intro:
       "Each chart is drawn from the numbers of this page's files: hover over a mark to see its value and where it was read from, or how it was derived.",
     storeIntro:
-      "The curves and the rays are read from the store entries the manifest names for this request's jobs, and from no other entry.",
+      "The curves and the rays are read from the result cache entries the run record names for this request's jobs, and from no other entry.",
     overlayTitle: (subject: string, field: string, cut: string): string => `${subject}: MTF at field ${field}, ${cut}`,
     overlayIntro:
-      "One chart for each field and cut: each engine's own curve as its store entry holds it, its first answer and each later step a series of its own. A dashed line is a field its engine calls unconverged, a value that is not a finite number is a gap, and a field without curves is named in the legend with its status.",
+      "One chart for each field and cut: each engine's own curve as its result cache entry holds it, its first answer and each later step a series of its own. A dashed line is a field its engine calls unconverged, a value that is not a finite number is a gap, and a field without curves is named in the legend with its status.",
     differenceTitle: (subject: string, field: string, cut: string): string =>
       `${subject}: differences at field ${field}, ${cut}`,
     differenceIntro:
-      "For each pair of the request, the first engine's curve minus the second's at each frequency where both are finite numbers, each engine by the answer the comparison judges (its last step where that step has data, else its first answer); the shaded band is the attention band or the tolerance the policy gives the rung at that field.",
-    heatMapTitle: (subject: string): string => `${subject}: ladder heat map`,
+      "For each pair of the request, the first engine's curve minus the second's at each frequency where both are finite numbers, each engine by the answer the comparison judges (its last step where that step has data, else its first answer); the shaded band is the review band or the limit the limits file gives the check at that field.",
+    heatMapTitle: (subject: string): string => `${subject}: verdicts by run and check`,
     heatMapRun:
-      "One row for each run and one column for each rung: a cell holds the gravest verdict of the pairs of its comparisons, and its pairs by verdict on hover.",
+      "One row for each run and one column for each check: a cell holds the worst verdict of the pairs of its comparisons, as the files store it, and its pairs by verdict on hover.",
     heatMapBaseline:
-      "One row for each run of the baseline and one column for each rung: a cell holds the gravest verdict of its records, and its records by verdict on hover.",
+      "One row for each run of the baseline and one column for each check: a cell holds the worst verdict of its records, as the files store it, and its records by verdict on hover.",
     heatMapOmitted: (rows: string, most: string): string =>
       `The heat map is left out: it would have ${rows} rows, and a page draws one of at most ${most}.`,
     deviationTitle: (subject: string, place: string, a: string, b: string): string =>
       `${subject}: hit distance by ${place}, ${a} and ${b}`,
     deviationIntro:
-      "For each pair of the request, the largest distance between the two engines' hits on each surface (on each visit, for a trace of a folded path) over the rays ok in both answers, leaving out a visit either answer records no point for, as R2 measures hits.maxDistance. A distance of 0 is a ring on the axis, a surface where no ray is ok in both is a dash, and the line is the tolerance of the policy.",
+      "For each pair of the request, the largest distance between the two engines' hits on each surface (on each visit, for a trace of a folded path) over the rays ok in both answers, leaving out a visit either answer records no point for, as the ray-trace check measures its largest hit distance. A distance of 0 is a ring on the axis, a surface where no ray is ok in both is a dash, and the line is the limit of the limits file.",
     deviationLargest: (largest: string, recorded: string): string =>
-      `The largest bar is ${largest} mm, and the comparison records hits.maxDistance ${recorded} mm.`,
+      `The largest bar is ${largest} mm, and the comparison records a largest hit distance of ${recorded} mm.`,
     deviationDiffers: (largest: string, recorded: string): string =>
-      `The largest bar, ${largest} mm, is not the hits.maxDistance the comparison records, ${recorded} mm.`,
-    deviationUnmeasured: "The comparison records no hits.maxDistance for this pair.",
+      `The largest bar, ${largest} mm, is not the largest hit distance the comparison records, ${recorded} mm.`,
+    deviationUnmeasured: "The comparison records no largest hit distance for this pair.",
     deviationNoBars: (recorded: string): string =>
-      `No surface has a ray ok in both answers whose visit both record, and the comparison records hits.maxDistance ${recorded} mm.`,
+      `No surface has a ray ok in both answers whose visit both record, and the comparison records a largest hit distance of ${recorded} mm.`,
     deviationNotFinite: (largest: string): string =>
-      `The comparison records a hits.maxDistance that is not a finite number, and the largest bar is ${largest} mm.`,
+      `The comparison records a largest hit distance that is not a finite number, and the largest bar is ${largest} mm.`,
     deviationNoBarsDiffers: (recorded: string): string =>
-      `No surface has a bar, yet the comparison records hits.maxDistance ${recorded} mm.`,
+      `No surface has a bar, yet the comparison records a largest hit distance of ${recorded} mm.`,
     setAside: (a: string, b: string, kind: string, reason: string): string =>
-      `The comparison sets this field aside for ${a} and ${b} as ${kind} (${reason}), so their differences enter no band.`,
+      `The comparison sets this field aside for ${a} and ${b} (${kind}: ${reason}), so their differences enter no band.`,
     differenceLeftOut: (a: string, b: string, verdict: string): string =>
-      `The pair of ${a} and ${b} is ${verdict} in the comparison, so no difference of it is drawn.`,
+      `The comparison's verdict on ${a} and ${b} is "${verdict}", so no difference of the pair is drawn.`,
     storeMissing: (engine: string, key: string): string =>
-      `The store has no entry ${key} for ${engine}, so that answer is not drawn.`,
+      `The result cache has no entry ${key} for ${engine}, so that answer is not drawn.`,
     storeInvalid: (engine: string, problem: string): string =>
-      `The store entry for ${engine} cannot be read, so that answer is not drawn: ${problem}`,
+      `The result cache entry for ${engine} cannot be read, so that answer is not drawn: ${problem}`,
     noAnswer: (engine: string, status: string): string => `${engine} has no answer to draw: its job is ${status}.`,
+    notInRunRecord: "not in the run record",
+    noReasonStated: "no reason stated",
     notTraces: (problem: string): string => `The two answers cannot be set side by side: ${problem}.`,
     noCharts: "No chart applies to this request.",
     axisFrequency: "Frequency (cycles/mm)",
@@ -952,8 +1243,8 @@ export const DASHBOARD_TEXT = {
     legendBar: "largest hit distance",
     legendZero: "0 mm",
     legendNone: "no ray ok in both",
-    legendGate: (value: string): string => `tolerance ${value} mm`,
-    legendNoPair: "no cell of this run and rung",
+    legendGate: (value: string): string => `limit ${value} mm`,
+    legendNoPair: "no cell of this run and check",
     derivedDifference: (a: string, b: string, element: string): string =>
       `${a} minus ${b} at element ${element} of both curves`,
     derivedDeviation: (a: string, b: string, place: string, index: string): string =>
@@ -976,39 +1267,41 @@ export const DASHBOARD_TEXT = {
     anyField: "at every field",
     tipBar: (place: string, index: string, value: string, derivation: string, of: string): string =>
       `${place} ${index}: ${value}, derived: ${derivation} of ${of}`,
-    tipGate: (value: string, source: string): string => `tolerance ${value} mm: ${source}`,
-    tipRecorded: (source: string): string => `hits.maxDistance: ${source}`,
-    recordedLabel: (value: string): string => `hits.maxDistance ${value} mm`,
+    tipGate: (value: string, source: string): string => `limit ${value} mm: ${source}`,
+    tipRecorded: (source: string): string => `largest hit distance recorded: ${source}`,
+    recordedLabel: (value: string): string => `largest hit distance recorded ${value} mm`,
     millimetres: (value: string): string => `${value} mm`,
     tipCell: (run: string, rung: string, verdict: string, counts: string): string =>
-      `${run}, ${rung}: ${verdict}; ${counts}`,
-    tipEmptyCell: (run: string, rung: string): string => `${run}, ${rung}: no cell of this run and rung`,
+      `${run}, ${rung}: ${verdict}. By verdict: ${counts}`,
+    countOf: (label: string, count: string): string => `${label}: ${count}`,
+    legendVerdict: (label: string, stored: string): string => `${label} (${stored})`,
+    tipEmptyCell: (run: string, rung: string): string => `${run}, ${rung}: no cell of this run and check`,
     tipSeries: (series: string, reason: string): string => `${series}: ${reason}`,
   },
   /**
-   * What a lens page says (Stage 8.4): of the runs of a lens and their conditions, the picker, the curves chosen, the
+   * What a lens page says: of the runs of a lens and their conditions, the picker, the curves chosen, the
    * reference, the differences within the reference's request (as a section page draws them) and the others, which
    * no comparison judges, and running the lens from run control.
    */
   lens: {
     intro:
-      "This page gathers every run of the run directories whose case names this lens, with the condition of each: its zoom and focus positions, its stop, its object, its image plane and its lines.",
+      "This page gathers every run of the run directories whose lens state names this lens, with the condition of each: its zoom and focus positions, its stop, its object, its image plane and its wavelengths.",
     lensOfRun:
-      "A run is of the lens its case file names; two lenses whose cases are the same share one case file, and its runs are listed under the lens that file names.",
-    noRuns: "No run of the run directories has a case that names this lens.",
+      "A run is of the lens its lens state file names; two lenses whose lens states are the same share one file, and its runs are listed under the lens that file names.",
+    noRuns: "No run of the run directories has a lens state that names this lens.",
     noMtf: "no mtf.native answer",
     planeNotRecorded: "not recorded",
     objectInfinity: "at infinity",
-    indexIntro: "Every lens that a case of a run directory names, with how many runs of it there are and where.",
-    noLenses: "No case of a run directory names a lens.",
+    indexIntro: "Every lens that a lens state of a run directory names, with how many runs of it there are and where.",
+    noLenses: "No lens state of a run directory names a lens.",
     pickerIntro:
-      "Choose runs, rungs, engines and their steps, fields and cuts: each curve of those choices is read from the store entry the manifest names for its job, and from no other entry.",
+      "Choose runs, checks, engines and their steps, fields and cuts: each curve of those choices is read from the result cache entry the run record names for its job, and from no other entry.",
     pickerHow:
       "The form sends the choice in the address of this page, so that a choice can be kept as a link; a reference is one of the curves the choice draws.",
     quickIntro:
       "Each link beside a run draws one request of it at its first field, tangential, of every engine, against the first curve.",
-    nothingChosen: "No curve is chosen: choose at least one run, rung, engine, field and cut.",
-    noCurvesOfChoice: "The choice has no curve: no answer of those runs, rungs and engines states a field chosen.",
+    nothingChosen: "No curve is chosen: choose at least one run, check, engine, field and cut.",
+    noCurvesOfChoice: "The choice has no curve: no answer of those runs, checks and engines states a field chosen.",
     tooMany: (count: string, most: string): string =>
       `The choice has ${count} curves, and a page draws at most ${most}: choose fewer.`,
     unknownValues: (values: string): string => `Some of the choice is not of this lens and is left out: ${values}.`,
@@ -1018,7 +1311,7 @@ export const DASHBOARD_TEXT = {
     noAnswers: "Jobs of the choice that have no curves to draw:",
     overlayTitle: (key: string, count: string): string => `${key}: MTF of ${count} curves`,
     overlayIntro:
-      "Each curve as its store entry holds it, numbered as in the list of curves: a dashed line is a field its engine calls unconverged, a value that is not a finite number is a gap, and a curve without values is named in the legend with why.",
+      "Each curve as its result cache entry holds it, numbered as in the list of curves: a dashed line is a field its engine calls unconverged, a value that is not a finite number is a gap, and a curve without values is named in the legend with why.",
     referenceNone:
       "No reference is chosen: choose one of the curves in the form, or with the link beside it, to see the differences against it.",
     referenceNotChosen: "The reference is not among the curves of this choice, so no difference is drawn.",
@@ -1030,7 +1323,7 @@ export const DASHBOARD_TEXT = {
     withinSubject: (key: string, suite: string, run: string, rung: string): string =>
       `${key}, ${suite}, ${run}, ${rung}`,
     withinIntro:
-      "Curves that answer the reference's own request at its field and cut, of a pair its comparison judges: each curve minus the reference at each frequency where both are finite numbers, with the verdict the comparison gives the pair and the attention band or the tolerance the policy gives its rung at that field, as the section page of that request draws them.",
+      "Curves that answer the reference's own request at its field and cut, of a pair its comparison judges: each curve minus the reference at each frequency where both are finite numbers, with the verdict the comparison gives the pair and the review band or the limit the limits file gives its check at that field, as the section page of that request draws them.",
     withinSection: "The section page of the reference's request:",
     notJudged: (curve: string, judged: string): string =>
       `Curve ${curve} is not the answer the comparison judges for its engine, which is ${judged}; the band is the comparison's all the same.`,
@@ -1040,7 +1333,7 @@ export const DASHBOARD_TEXT = {
     otherWhy: (curve: string, reason: string): string => `Curve ${curve} is ${reason}.`,
     whyOtherDirectory: "of another run directory",
     whyOtherRun: "of another run",
-    whyOtherRequest: "of another rung or request of the same run",
+    whyOtherRequest: "of another check or request of the same run",
     whyOtherField: "at another field of the same request",
     whyOtherCut: "of the other cut",
     whySameEngine: "of the reference's own engine",
@@ -1056,26 +1349,28 @@ export const DASHBOARD_TEXT = {
       `${engine}, ${run}, ${rung}, field ${field}, ${cut}`,
     tipCurve: (curve: string, run: string): string => `curve ${curve}: ${run}`,
     runIntro:
-      "Run this lens starts lvrtc mtf as a job of run control, with the profile benchmark (the MTF tab), the profile tabs (LensVisualizer's other tabs) or both: the lens wide open and at the MTF tab's f/8 comparison, at the design plane and at LensVisualizer's best axial focus, on the reference line and on the photopic lines, a zoom at both ends. It writes the run directories of the lens, mtf-<lensKey> and tabs-<lensKey>, which this page then gathers.",
+      "Run this lens starts lvrtc mtf as a job of run control, with the profile benchmark (the MTF tab), the profile tabs (LensVisualizer's other tabs) or both: the lens wide open and at the MTF tab's f/8 comparison, at the design plane and at LensVisualizer's best axial focus, at the reference wavelength and at the photopic spectrum's wavelengths, a zoom at both ends. It writes the run directories of the lens, mtf-<lensKey> and tabs-<lensKey>, which this page then gathers.",
     runHeavy: "With real engines it is a heavy command: start it only when no other session runs one.",
     runNotConfigured: "This dashboard was started without run control's lists, so it cannot run a lens.",
     compareLink: "LensVisualizer beside optiland, a tab at a time:",
   },
   /**
-   * What the "LV vs optiland" pages say (Stage 8.5): a lens at a time, in one condition chosen by chips, a card for
+   * What the "LV vs optiland" pages say: a lens at a time, in one condition chosen by chips, a card for
    * each of LensVisualizer's tabs with its identical rays and its own analysis beside its counterpart's, and a page of
    * each card's charts.
    */
   compare: {
     title: (key: string): string => `LV vs optiland: ${key}`,
     tabTitle: (key: string, tab: string): string => `LV vs optiland: ${key}, ${tab}`,
-    lead: "Each card is a tab of LensVisualizer, its heading the verdict of its identical rays (gated) and of its own analysis beside optiland's (recorded). Choose the condition with the chips, and open a card's charts for the curves.",
-    howToRead: "How to read this page",
-    cardVerdicts: (gated: string, recorded: string): string => `identical rays ${gated}, beside optiland ${recorded}`,
-    columnRung: "Rung",
+    lead: "Each card is a tab of LensVisualizer, its heading the verdict of its identical rays (held to a limit) and of its own analysis beside its counterpart's (side by side). Choose the condition with the chips, and open a card's charts for the curves.",
+    cardVerdicts: (gated: string, counterparts: string, recorded: string): string =>
+      `identical rays ${gated}, beside ${counterparts} ${recorded}`,
+    cardVerdictsGated: (gated: string): string => `identical rays ${gated}`,
+    counterpartsJoin: " and ",
+    columnRung: "Check",
     columnPairs: "Pairs",
     columnLargest: "Largest",
-    columnGate: "Gate",
+    columnGate: "Limit",
     columnRequest: "Request",
     columnPair: "Pair",
     columnVerdict: "Verdict",
@@ -1091,17 +1386,17 @@ export const DASHBOARD_TEXT = {
     detailHeading: (rung: string, label: string, a: string, b: string): string =>
       `${rung}${label === "" ? "" : ` (${label})`}: ${a} beside ${b}`,
     intro:
-      "This page sets LensVisualizer's own analyses of this lens beside optiland's, a tab at a time, in one condition: a case of the lens, as the chips below choose it. Each card has two kinds of line. The identical rays: each engine traces the rays the tab launches, and the policy holds every pair of engines to a gate. The tab's own analysis beside its counterpart's (optiland's, or for vignetting the comparator's flux on LensVisualizer's lattices): two methods set side by side with no tolerance, whose figures stand beside the attention bands of the policy at hand.",
+      "This page sets LensVisualizer's own analyses of this lens beside optiland's, a tab at a time, in one condition: a lens state of the lens, as the chips below choose it. Each card has two kinds of line. The identical rays: each engine traces the rays the tab launches, and the limits file holds every pair of engines to a limit. The tab's own analysis beside its counterpart's (optiland's, or for vignetting this tool's flux of LensVisualizer's rays): two methods set side by side with no limit, whose figures stand beside the review bands of the limits file at hand.",
     recordedMeaning:
-      "A recorded pair fails nothing: it is RECORDED where each figure with an attention band is inside it, and ATTENTION where one is beyond it or the comparison set a field aside as data. The comparison sorts every field or line before any difference is taken: only one of two methods enters a figure, and the counts say how many it placed in each class (fields.compared of two methods; fields.data, fields.flagged or fields.unconverged, and fields.unavailable set aside as data, numerical and unsupported).",
+      "A side-by-side pair fails nothing: it is side by side where each figure with a review band is inside it, and worth a look where one is beyond it or the comparison set a field aside because the inputs differ. The comparison sorts every field or wavelength before any difference is taken: only one of two methods enters a figure, and the counts say how many it placed in each class (fields compared, of two methods; fields whose inputs differ, fields not converged, and fields an engine has no answer for, each set aside).",
     chipsIntro:
-      "A condition is a case of the lens: its zoom and focus positions, its stop semi-diameter, its image plane (the MTF recipe's kind of plane where a run has one, else the plane's position) and its lines, as the case files state them. A chip keeps the facets before it, and a facet after it gives way to its first value where the case chosen so far has another.",
+      "A condition is a lens state of the lens: its zoom and focus positions, its stop semi-diameter, its image plane (the MTF setup's kind of plane where a run has one, else the plane's position) and its wavelengths, as the lens state files state them. A chip keeps the facets before it, and a facet after it gives way to its first value where the lens state chosen so far has another.",
     chipsMuted:
-      "A chip in grey is of cases with no comparison of LensVisualizer beside a counterpart (a run directory of an older run, say): it is listed, and chosen only where it is asked.",
+      "A chip in grey is of lens states with no comparison of LensVisualizer beside a counterpart (a run directory of an older run, say): it is listed, and chosen only where it is asked.",
     facetPosition: "Position",
     facetStop: "Stop",
     facetPlane: "Image plane",
-    facetLines: "Lines",
+    facetLines: "Wavelengths",
     chipPosition: (zoom: string, focus: string): string => `zoom ${zoom}, focus ${focus}`,
     chipNoPosition: "no zoom or focus position",
     chipStop: (value: string): string => `stop semi-diameter ${value} mm`,
@@ -1110,31 +1405,32 @@ export const DASHBOARD_TEXT = {
     chipPlaneKind: (kind: string): string => `plane ${kind}`,
     chipPlaneAt: (z: string): string => `image plane at z ${z} mm`,
     chipOneLine: (wavelength: string): string => `${wavelength} nm`,
-    chipLines: (count: string, first: string, last: string): string => `${count} lines, ${first} to ${last} nm`,
-    runsIntro: "The runs of this condition, each of the case shown:",
+    chipLines: (count: string, first: string, last: string): string => `${count} wavelengths, ${first} to ${last} nm`,
+    runsIntro: "The runs of this condition, each of the lens state shown:",
     severalCases: (count: string): string =>
-      `The chips leave ${count} cases of the lens: every card gathers the comparisons of all of them.`,
-    noCases: "No run of the run directories has a case of this lens that can be read.",
+      `The chips leave ${count} lens states of the lens: every card gathers the comparisons of all of them.`,
+    noCases: "No run of the run directories has a lens state of this lens that can be read.",
     unknownParameters: (names: string): string =>
       `The address has parameters that a compare page does not take, and they are left out: ${names}.`,
     conditionGaveWay: (facet: string, asked: string): string =>
-      `The ${facet} asked, ${asked}, is of no case in the condition chosen so far, so the first one is shown.`,
+      `The ${facet} asked, ${asked}, is of no lens state in the condition chosen so far, so the first one is shown.`,
     gatedHeading: "Identical rays",
     recordedHeading: "Beside its counterpart",
     gatedLine: (rung: string, pairs: string): string => `${rung}: ${pairs}.`,
     gatedHeadline: (metric: string, value: string, a: string, b: string, gate: string): string =>
-      `The largest ${metric} is ${value} (${a} and ${b}), against a gate of ${gate}.`,
+      `The largest ${metric} is ${value} (${a} and ${b}), against a limit of ${gate}.`,
     gatedHeadlineNoGate: (metric: string, value: string, a: string, b: string): string =>
-      `The largest ${metric} is ${value} (${a} and ${b}); the policy at hand gives it no gate.`,
+      `The largest ${metric} is ${value} (${a} and ${b}); the limits file at hand gives it no limit.`,
     gatedPair: (a: string, b: string, verdict: string): string => `${a} and ${b} ${verdict}`,
     gatedFromRuns: (suites: string): string => `Read from the comparisons of the run directories ${suites}.`,
     gatedFromBaselines: (stems: string): string =>
-      `Read from the committed records of this case in the baselines ${stems}: their engines may have moved since, as the badges of the baseline pages say.`,
-    gatedNone: (rung: string): string => `${rung}: no comparison of this case in the run directories or the baselines.`,
+      `Read from the committed records of this lens state in the baselines ${stems}: their engines may have moved since, as the badges of the baseline pages say.`,
+    gatedNone: (rung: string): string =>
+      `${rung}: no comparison of this lens state in the run directories or the baselines.`,
     recordedHead: (rung: string, label: string, a: string, b: string, verdict: string): string =>
       `${rung}${label === "" ? "" : ` (${label})`}: ${a} beside ${b}, ${verdict}.`,
-    metricBand: (name: string, value: string, band: string): string => `${name} ${value}, attention band ±${band}`,
-    metricNoBand: (name: string, value: string): string => `${name} ${value}, no attention band`,
+    metricBand: (name: string, value: string, band: string): string => `${name} ${value}, review band ±${band}`,
+    metricNoBand: (name: string, value: string): string => `${name} ${value}, no review band`,
     metricLimit: (name: string, value: string, limit: string): string =>
       `${name} ${value}, the sorting's limit ${limit}`,
     countText: (name: string, value: string): string => `${name} ${value}`,
@@ -1142,65 +1438,362 @@ export const DASHBOARD_TEXT = {
     fromBaseline: (stem: string, run: string): string =>
       `Read from the committed record of the run ${run} in the baseline ${stem}: a record keeps no values to draw, so run the lens to see its charts.`,
     alsoIn: (suites: string): string =>
-      `The same request of this case is compared in ${suites} too; the lens's own run directory, else the first by name, is shown.`,
+      `The same request of this lens state is compared in ${suites} too; the lens's own run directory, else the first by name, is shown.`,
     notCompared: (rung: string): string =>
       `${rung}: no comparison of LensVisualizer beside its counterpart in this condition, in the run directories or the baselines.`,
     runTabsHint:
-      "The tabs answer at the reference line and the design plane; Run this lens with the profile tabs, or both, writes their comparisons.",
-    flux: "The counterpart of the vignetting tab is flux, the comparator's estimate on LensVisualizer's lattices: optiland has no vignetting analysis.",
+      "The tabs answer at the reference wavelength and the design plane; Run this lens with the profile tabs, or both, writes their comparisons.",
+    flux: (name: string): string =>
+      `The counterpart of the vignetting tab is ${name}, this tool's estimate from the ray lattices LensVisualizer launches and traces: optiland has no vignetting analysis.`,
     detailsLink: "Charts of this card",
     cardsLink: "Every card of this condition",
     sectionLink: "The section page of this request:",
     detailsIntro:
-      "Each recorded comparison of this card in this condition: each value both answers recorded, set on shared axes, and below it the first engine's value minus the second's. A difference is drawn only for a field or line the comparison sorts as of two methods (repeated by the comparator's own functions from the values it recorded); one it sets aside is named with its class and reason. The shaded band is the attention band the policy at hand gives the value's metric, and a chart says where it gives none.",
+      "Each side-by-side comparison of this card in this condition: each value both answers recorded, set on shared axes, and below it the first engine's value minus the second's. A difference is drawn only for a field or wavelength the comparison sorts as of two methods (repeated by this tool's own functions from the values it recorded); one it sets aside is named with its class and reason. The shaded band is the review band the limits file at hand gives the value's figure, and a chart says where it gives none.",
     mtfIntro:
-      "An MTF comparison is drawn as its section page draws it (Stage 8.2), with the series and the pair of LensVisualizer and its counterpart only.",
+      "An MTF comparison is drawn as its section page draws it, with the series and the pair of LensVisualizer and its counterpart only.",
     noDetails: "This comparison has no values to draw.",
     noSectionCharts:
       "The charts of this request cannot be drawn: its run directory has no section of it that can be read.",
     pairTitle: (subject: string, values: string, axis: string): string => `${subject}: ${values} against ${axis}`,
     fanTitle: (subject: string, axis: string, field: string): string => `${subject}: ${axis} fan at field ${field}`,
     fanIntro:
-      "One chart for each field: each engine's transverse error at each sample of its fan, as its store entry holds it, and below it the first engine's error minus the second's at each sample both landed.",
+      "One chart for each field: each engine's transverse error at each sample of its fan, as its result cache entry holds it, and below it the first engine's error minus the second's at each sample both landed.",
     valuesIntro:
-      "One row for each line and value: each engine's value as the comparison recorded it, and the first minus the second for a line of two methods.",
+      "One row for each wavelength and value: each engine's value as the comparison recorded it, and the first minus the second for a wavelength of two methods.",
     strip: "Difference",
     legendMinus: (a: string, b: string): string => `${a} minus ${b}`,
     legendGroup: (engine: string, group: string): string => `${engine}, ${group}`,
-    legendNoBand: "no attention band",
-    noBandSaid: (metric: string): string => `The policy at hand gives ${metric} no attention band.`,
-    noMetricSaid: "No metric of the policy is of these values: no attention band applies.",
+    legendNoBand: "no review band",
+    noBandSaid: (metric: string): string => `The limits file at hand gives ${metric} no review band.`,
+    noMetricSaid: "No figure of the limits file is of these values: no review band applies.",
     setAside: (at: string, kind: string, reason: string): string =>
-      `${at}: set aside as ${kind} (${reason}), so no difference is drawn.`,
+      `${at}: set aside (${kind}: ${reason}), so no difference is drawn.`,
     setAsideAt: (element: string): string => `element ${element}`,
     fanSorting: (kind: string, reason: string): string =>
-      `The comparison sets this field aside as ${kind} (${reason}), so no difference is drawn.`,
+      `The comparison sets this field aside (${kind}: ${reason}), so no difference is drawn.`,
     fanMissing: (said: string): string => `${said}`,
     tipValue: (series: string, x: string, xSource: string, y: string, source: string): string =>
       `${series} at ${x} (${xSource}): ${y} (${source})`,
     tipDifference: (x: string, xSource: string, value: string, derivation: string, of: string): string =>
       `at ${x} (${xSource}): ${value}, derived: ${derivation} of ${of}`,
-    tipBand: (value: string, source: string): string => `attention ±${value}: ${source}`,
+    tipBand: (value: string, source: string): string => `review band ±${value}: ${source}`,
     derivedPair: (a: string, b: string, key: string): string => `${a}'s ${key} minus ${b}'s`,
     groupLine: (wavelength: string): string => `${wavelength} nm`,
-    groupNoLine: "no line",
+    groupNoLine: "no wavelength",
     labelFan: (axis: string): string => `fan ${axis}`,
     labelRings: "rings",
     labelMtf: (method: string, fields: string): string => `${method}, fields ${fields}`,
     gatedUnmeasured: (metric: string): string => `No pair of these requests measured ${metric}.`,
-    noJob: (engine: string): string => `${engine} has no job of this request in the manifest.`,
+    noJob: (engine: string): string => `${engine} has no job of this request in the run record.`,
     noFan: (engine: string): string => `The answer of ${engine} has no fan at this field.`,
-    columnLine: "Line",
+    columnLine: "Wavelength",
     columnValue: "Value",
     columnDifference: "Difference",
-    columnBand: "Attention band",
+    columnBand: "Review band",
     indexHeading: "LV vs optiland",
     indexIntro:
-      "Each lens with a recorded comparison of LensVisualizer beside optiland (or flux) in a run directory of its runs: for each tab, the gravest verdict of its identical rays and of its comparisons beside the counterpart, in the lens's first condition (the first position, the largest stop, the design plane, the fewest lines). Open a lens to choose another condition and see the charts.",
+      "Each lens with a side-by-side comparison of LensVisualizer beside optiland (or this tool's flux of LensVisualizer's rays) in a run directory of its runs: for each tab, the worst verdict of its identical rays and of its comparisons beside the counterpart, in the lens's first condition (the first position, the largest stop, the design plane, the fewest wavelengths). Open a lens to choose another condition and see the charts.",
     indexNone:
       "No run directory compares LensVisualizer beside optiland for a lens: Run this lens on the control page writes such comparisons.",
     indexCell: (gated: string, recorded: string): string => `${gated} / ${recorded}`,
+    noGated: "no identical-ray comparison",
+    noneCompared: "not compared",
+    noRecorded: "no side-by-side comparison",
     none: "none",
+  },
+  /**
+   * The short labels of the pages: the bar of links, headings, column headers, form labels and buttons, and the
+   * phrases a cell or a link is made of. Headings stay short labels.
+   */
+  labels: {
+    home: "lvrtc dashboard",
+    runControl: "Run control",
+    help: "Help",
+    checks: "Checks",
+    json: "JSON",
+    howToRead: "How to read this page",
+    identifiers: "Identifiers",
+    none: "none",
+    yes: "yes",
+    no: "no",
+    notKnown: "not known",
+    notFinite: "not finite",
+    labelStored: (label: string, stored: string): string => `${label} (${stored})`,
+    at: (where: string): string => `at ${where}`,
+    measured: (count: string): string => `[${count} measured]`,
+    derivedTitle: (derivation: string, of: string): string => `derived: ${derivation}${of === "" ? "" : ` of ${of}`}`,
+    available: "available",
+    unavailable: "unavailable",
+    unavailableCode: "unavailable:",
+    notFound: "Not found",
+    index: "Index",
+    indexHeading: "Runs and baselines",
+    runs: "Runs",
+    baselines: "Baselines",
+    lenses: "Lenses",
+    engines: "Engines",
+    verdicts: "Verdicts",
+    support: "What each engine answered",
+    sections: "Sections",
+    pendingJobs: "Pending jobs",
+    notCovered: "Not covered",
+    figures: "Figures and their limits",
+    referenceVsEach: "Each engine against the reference",
+    pairwise: "Every pair",
+    consensus: "Consensus",
+    recorded: "Values each engine recorded",
+    mtf: "MTF",
+    charts: "Charts",
+    heatMap: "Verdicts by run and check",
+    overlays: "MTF of each answer",
+    differences: "Differences of each pair",
+    deviations: "Hit distance by surface or visit",
+    upToDate: "Up to date?",
+    mtfTable: "Table",
+    peer: (name: string, place: string): string => `${name}: peer ${place}`,
+    runOf: (name: string): string => `Run of ${name}`,
+    runPart: (run: string, name: string): string => `${run}, a run of ${name}`,
+    lensOf: (key: string): string => `Lens ${key}`,
+    lensNamed: (key: string, name: string): string => `Lens ${key}: ${name}`,
+    baselineOf: (stem: string): string => `Baseline ${stem}`,
+    baselineRun: (run: string, stem: string): string => `${run}, a run of the baseline ${stem}`,
+    sectionOf: (name: string, section: string): string => `${name}: section ${section}`,
+    sectionLink: (suite: string, section: string): string => `${suite}, section ${section}`,
+    quantity: "quantity",
+    noPolicyEntry: "no entry in the limits file",
+    columns: {
+      suite: "Suite",
+      jobs: "Jobs",
+      compared: "Compared",
+      pairsByVerdict: "Pairs by verdict",
+      failing: "Fail or error",
+      problems: "Problems",
+      baseline: "Baseline",
+      kind: "Kind",
+      limitsFile: "Limits file",
+      records: "Records",
+      recordsByVerdict: "Records by verdict",
+      recordsByBadge: "Records by whether up to date",
+      lens: "Lens",
+      name: "Name",
+      runCount: "Runs",
+      runDirectories: "Run directories",
+      runDirectory: "Run directory",
+      engine: "Engine",
+      engines: "Engines",
+      status: "Status",
+      version: "Version",
+      run: "Run",
+      lensState: "Lens state",
+      requests: "Requests",
+      sections: "Sections",
+      worstVerdict: "Worst verdict",
+      pairing: "How the engines are paired",
+      check: "Check",
+      request: "Request",
+      section: "Section",
+      quantity: "Quantity",
+      verdict: "Verdict",
+      step: "Step",
+      figure: "Figure",
+      unit: "Unit",
+      limit: "Limit",
+      floorLimit: "Floor limit",
+      reason: "Reason",
+      value: "Value",
+      element: "Element",
+      field: "Field",
+      angle: "Angle (deg)",
+      sampling: (column: string): string => `${column}: sampling note, samples across, last change on refining`,
+      chiefLanding: "Chief landing (mm)",
+      rimRaysLost: "Rim rays lost",
+      rimSpread: "Rim spread (mm)",
+      class: "Class",
+      cut: "Cut",
+      frequency: "Frequency (cycles/mm)",
+      difference: "Difference",
+      band: "Review band",
+      meaning: "Meaning",
+      badge: "Badge",
+      staleBy: "Records out of date by it",
+      notKnownBy: "Records where it is not known",
+      inBaseline: "In the baseline",
+      now: "Now",
+      pair: "Pair",
+      requestsByVerdict: "Requests by verdict",
+      figures: "Figures",
+      classified: "Classified",
+      job: "Job",
+      steps: "Steps",
+      keptFiles: "Kept files",
+      keptBytes: "Kept bytes",
+      removableFiles: "Removable files",
+      removableBytes: "Removable bytes",
+      removableEngine: "Removable engine",
+      engineVersion: "Engine version",
+      files: "Files",
+      bytes: "Bytes",
+      newestEntry: "Newest entry",
+      plainEntries: "Plain entries",
+      gzipEntries: "Gzip entries",
+      bytesBefore: "Bytes before",
+      bytesAfter: "Bytes after",
+      collected: "Collected",
+      rejected: "Rejected",
+      stillPending: "Still pending",
+      rejectedJob: "Rejected job",
+      zoom: "Zoom",
+      focus: "Focus",
+      stop: "Stop semi-diameter (mm)",
+      object: "Object",
+      imagePlane: "Image plane",
+      wavelengths: "Wavelengths",
+      mtfRequests: "MTF requests",
+      curve: "Curve",
+      state: "State",
+      reference: "Reference",
+      label: "Label",
+      stored: "Stored as",
+      term: "Term",
+      id: "Id",
+      oldId: "Old id",
+      whatItIs: "What it is",
+      compares: "Compares",
+      shows: "Shows",
+      doesNotShow: "Does not show",
+      runsWhen: "Runs",
+      engineCode: "Engine code",
+      toolCode: "This tool's code behind it",
+      engineCodeNow: "Engine code now",
+      toolCodeNow: "This tool's code now",
+    },
+    identifierRows: {
+      suiteFile: "suite file",
+      limitsFile: "limits file",
+      limitsFileName: "limits file's name",
+      lensState: "lens state",
+      request: "request",
+      storeState: "result cache state",
+    },
+    control: {
+      startSuite: "Start a suite",
+      runOneLens: "Run one lens",
+      collect: "Collect",
+      maintenance: "Result cache maintenance",
+      engines: "Engines",
+      jobs: "Jobs",
+      pendingJobs: "Pending jobs",
+      exchange: "Exchange directories",
+      suite: "Suite",
+      enginesField: "Engines",
+      checksField: "Checks",
+      jobsField: "Jobs",
+      lensKey: "Lens key",
+      profile: "Profile",
+      aperture: "Aperture",
+      both: "both",
+      start: "Start",
+      collectButton: "Collect",
+      planPrune: "Plan prune",
+      planCompress: "Plan compress",
+      ask: "Ask the engines again",
+      runLens: "Run this lens",
+      prune: "Prune",
+      compress: "Compress",
+      planOf: (action: string): string => `Plan of result-cache ${action}`,
+      storeAction: (action: string): string => `Result-cache ${action}`,
+      kindPlan: (action: string): string => `plan of result-cache ${action}`,
+      kindConfirmed: (action: string): string => `confirmed result-cache ${action}`,
+      kindStart: "start",
+      kindLens: "run of a lens",
+      kindCollect: "collect",
+      job: (job: string, what: string): string => `Job ${job}: ${what}`,
+      jobTitle: (job: string): string => `Job ${job}`,
+      startOf: (suite: string): string => `start of ${suite}`,
+      aSuite: "a suite",
+      runOfLens: (key: string): string => `run of the lens ${key}`,
+      collected: "Collected",
+      bytes: (bytes: string, gib: string): string => `${bytes} B (${gib} GiB)`,
+      steps: {
+        run: "Run the suite",
+        compare: "Compare",
+        report: "Report",
+        collect: "Collect",
+        catalog: "Read LensVisualizer's catalog",
+        mtf: "Run the MTF profile",
+        tabs: "Run the tabs profile",
+        store: "Result cache maintenance",
+      },
+    },
+    lens: {
+      choose: "Choose curves",
+      curves: "Curves",
+      differences: "Differences",
+      within: "Within the reference's request",
+      other: "Differences that no comparison judges",
+      runLens: "Run this lens",
+      runs: "Runs",
+      checks: "Checks",
+      engines: "Engines",
+      fields: "Fields",
+      cuts: "Cuts",
+      reference: "Reference",
+      draw: "Draw",
+      noReference: "none",
+      objectAt: (z: string): string => `z ${z}`,
+      shifted: (shift: string): string => `, shifted ${shift} mm`,
+    },
+  },
+  /** What "How to read this page" says on each page: a few sentences, a page's own first. */
+  howTo: {
+    index:
+      "Each run directory is the last run of a suite: its jobs, and its pairs of engines by verdict once it is compared. Each baseline is a committed record of a suite, with its records by verdict and whether each is up to date. Each lens has a page of its own. Open a run, a baseline or a lens for more.",
+    run: "A run asks each engine one request at a time; a check compares the answers of two engines to the same request. Each request that was compared is a section: open it for its figures, verdicts and charts.",
+    runPart:
+      "One run of a suite whose run page is split: what each engine answered for its requests, and its sections.",
+    section:
+      "One compared request: each figure of the check with its limit or review band, the verdict of each pair of engines, and the charts of their answers.",
+    baseline:
+      "A baseline is the committed record of a suite: for each run, check and pair of engines, the verdict and its figures. A record is out of date when the lens data, the engine code or the limits file it was written with have changed since.",
+    baselineRun:
+      "The records of one run of the baseline: each check's pairs, verdicts and figures, and whether each is up to date.",
+    control:
+      "Run control starts lvrtc commands as children of the dashboard, one job at a time, and shows what they print. A run of real engines is heavy.",
+    job: "One job of run control: each step's command line, what became of it and what it printed.",
+    lens: "Every run of this lens in the run directories, and the MTF curves of the runs, checks, engines, fields and cuts you choose, against a reference curve.",
+    help: "The words of the dashboard: what each term, verdict, outcome and badge means, and the engines.",
+    checks:
+      "Every check this tool makes of LensVisualizer: what it compares, what it shows and does not show, which engines it is asked of, and its limits from the limits file at hand.",
+    identifiers:
+      "Identifiers tell one version of a file, an engine, a lens state or a request from another; they are hashes, and they are kept under Identifiers.",
+  },
+  /** What the help page says beyond the glossary's own words (`GLOSSARY_TEXT`). */
+  help: {
+    intro:
+      "This dashboard shows how LensVisualizer's optics compares with independent engines. The same words are in docs/GLOSSARY.md and lvrtc glossary, which also list the older words of this tool that each term replaces.",
+    outcomes: "Baseline outcomes",
+    outcomesIntro:
+      "What lvrtc baseline check says of each record of a baseline when the suite is run again. The dashboard runs nothing again, so it never says these.",
+    reasons: "Why a record is out of date",
+    badges: "Badges",
+    badgesIntro: "What the dashboard says of each record of a baseline, from the files alone.",
+    statuses: "Rows of an MTF comparison",
+    checksLink: "Every check, with what it compares and its limits:",
+  },
+  /** What the checks page says beyond the words of lvrtc checks (`CHECKS_COMMAND_TEXT`). */
+  checksPage: {
+    limitsFile: (version: string): string => `The limits are those of the limits file at hand, version ${version}.`,
+    noLimitsFile: "The limits file at hand cannot be read, so no limit is shown.",
+    noLimits: "No figure of this check has a limit or a review band in the limits file.",
+  },
+  /** How a number the dashboard computes was derived: each a `Derived`'s derivation, read back by the tests. */
+  derivations: {
+    largestChiefLandingLimit: "the largest chief-landing limit the two judged columns record at the first field",
+    larger: (name: string): string => `the larger ${name} of the two judged columns`,
+    chiefLandingDistance: "the distance between the chief-ray landings of the two judged columns",
+    judgedDifference: "the first judged column minus the second",
+    curve: (curve: string): string => `curve ${curve}`,
   },
 } as const;
 

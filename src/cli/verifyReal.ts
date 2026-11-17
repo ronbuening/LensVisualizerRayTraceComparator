@@ -8,6 +8,7 @@ import { availableParallelism } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { KNOWN_FAILURES, knownFailuresFile, listsKnownFailures } from "../baseline/catalog.ts";
 import { baselineFile, mtfBaselineFile } from "../baseline/files.ts";
 import { REPO_ROOT } from "../core/config.ts";
 import { defaultMemoryBudgetGiB, jobEstimateGiB } from "../core/memoryBudget.ts";
@@ -16,6 +17,10 @@ import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "./command.ts";
 import type { CliIo } from "./command.ts";
 import type { DoctorReport } from "./commands/doctor.ts";
 import { maxJobs } from "./jobs.ts";
+import { currentCheckId } from "../core/legacyIds.ts";
+import { helpText, options, paragraph } from "./help.ts";
+import { CHECK_LV_OUTPUT_TEXT, IDENTIFIERS_TEXT, STALE_REASON_TEXT, outcomeLabel } from "../vocabulary/index.ts";
+import { countsText, legendLines } from "./output.ts";
 
 /** The two kinds of baseline a suite can have: `<suite>.json` (rays) and `<suite>.mtf.json` (`--mtf`). */
 export type BaselineKind = "rays" | "mtf";
@@ -57,30 +62,58 @@ export const DEFAULT_VERIFY_JOBS = 4;
 export const CLEAN_OUTCOMES: readonly string[] = ["OK", "REFRESHABLE", "MOVED"];
 
 const SYNOPSIS =
-  "Usage: npm run verify:real -- [--all | --suite <name> | --suites <a,b,...>] [--jobs <n>] [--root <dir>]\n";
-const HELP = [
-  SYNOPSIS,
-  "Holds the committed baselines to the live LensVisualizer and optiland, one check at a time. First",
-  "lvrtc doctor: it refuses (exit 2) when LensVisualizer or optiland is not usable, or when LensVisualizer's",
-  "checkout is dirty or not a git checkout. Then lvrtc baseline check <suite> and lvrtc baseline check <suite>",
-  "--mtf, each in a process of its own, never two at once: the benchmark, or with --all every committed suite",
-  `in this order: ${VERIFY_REAL_SUITES.map(({ suite }) => suite).join(", ")}. The catalog's baselines are`,
-  "a dated snapshot, not refreshed until the project's end: --all leaves them out, --suite catalog checks them.",
-  "Each check computes what the configured store does not hold, so a cold store takes long.",
-  "",
-  "  --all             every committed suite of the routine check, in that order (not the catalog)",
-  "  --suite <name>    this suite alone, with the kinds of baseline it has (rays, then MTF)",
-  "  --suites <names>  these suites, in this order: each with the kinds of baseline it has",
-  `  --jobs <n>        the most jobs a check is given (default ${DEFAULT_VERIFY_JOBS}); a check is given fewer when the`,
-  "                    default memory budget holds fewer of its rungs' jobs (two with R6c on a 48 GB machine)",
-  "  --root <dir>      the directory that holds lvrtc.config.json, suites/ and baselines/ (default: this repository)",
-  "",
-  "Exit code: 0 when every record of every check is OK, REFRESHABLE or MOVED (MOVED, of a recorded rung, is",
-  "reported and fails nothing), with no unlisted FAIL or ERROR and no engine that could not be used; 1 otherwise,",
-  "or when a check was interrupted (the remaining checks are not run); 2 when nothing was checked.",
-  "Nothing is written into baselines/ or reports/.",
-  "",
-].join("\n");
+  "Usage: npm run verify:real -- [--all | --suite <name> | --suites <a,b,...>] [--jobs <n>] [--root <dir>] [--details]\n";
+
+const CLEAN_LABELS = CLEAN_OUTCOMES.map((outcome) => `"${outcomeLabel(outcome)}" (${outcome})`);
+
+/**
+ * The help of the real-engine check after its synopsis: the same words for `npm run verify:real` and for
+ * `lvrtc check-lv`, which run the one implementation below.
+ */
+export function verifyRealHelpBody(): string[] {
+  return [
+    ...paragraph(
+      `Checks LensVisualizer the way its committed results were made. First it checks that this machine is ready, as lvrtc doctor does, and refuses (exit 2), running nothing, unless Node is in range, LensVisualizer is a clean git checkout that loads, and optiland answers. Then it runs the checks of each committed baseline again against the live LensVisualizer and optiland, one suite at a time, each in a process of its own, and sets every result beside the committed one. For each suite and kind of baseline it prints "${CHECK_LV_OUTPUT_TEXT.status.clean}" or "${CHECK_LV_OUTPUT_TEXT.status["not clean"]}" and how many results came out as each outcome: ${["OK", "REFRESHABLE", "MOVED", "DRIFT"].map((outcome) => `"${outcomeLabel(outcome)}"`).join(", ")} and the rest; then a summary of every one.`,
+    ),
+    ...paragraph(
+      `Without options it checks the benchmark suite: its ray checks, then its MTF checks. --all checks every committed suite in this order: ${VERIFY_REAL_SUITES.map(({ suite }) => suite).join(", ")}. The catalog's results are a dated snapshot, not refreshed until the project's end: --all leaves them out, and --suite catalog checks them.`,
+    ),
+    ...paragraph(
+      "How long it takes: an answer already in the result cache (the store directory under the runs directory) is reused, and everything else is computed. With a warm cache the benchmark takes minutes; from an empty cache its MTF checks take many hours, so try --suite features first. Set LVRTC_RUNS_DIR to a temporary directory to keep a trial out of this repository's runs/. Nothing is written into baselines/ or reports/.",
+    ),
+    ...options([
+      ["--all", "every committed suite of the routine check, in that order (not the catalog)"],
+      ["--suite <name>", "this suite alone, with the kinds of baseline it has (rays, then MTF)"],
+      ["--suites <names>", "these suites, in this order, each with the kinds of baseline it has"],
+      [
+        "--jobs <n>",
+        `the most jobs a check runs at once (default ${DEFAULT_VERIFY_JOBS}); a check is given fewer when the default memory budget holds fewer of its jobs (two for the benchmark's MTF checks on a 48 GB machine)`,
+      ],
+      ["--root <dir>", "the directory that holds lvrtc.config.json, suites/ and baselines/ (default: this repository)"],
+      [
+        "--details",
+        "also show the identifiers of LensVisualizer and optiland: the hash of LensVisualizer's engine files and of optiland's code",
+      ],
+    ]),
+    ...paragraph(
+      `Exit code: 0 when every result of every suite is ${CLEAN_LABELS.join(", ")}, with no failure that its suite's list of known failures (docs/known-failures.json for the catalog, docs/known-failures.focus-stations.json for focus-stations) does not list and no engine that could not be used (a side-by-side figure that moved is reported and fails nothing); 1 otherwise, or when a check was interrupted (the checks after it are not run); 2 when nothing was checked: a command line, suite or baseline that is not there, or a machine that is not ready.`,
+    ),
+  ];
+}
+
+/** How the real-engine check names itself: the prefix of its lines, its synopsis and its help. */
+export interface VerifyRealProgram {
+  readonly prefix: string;
+  readonly synopsis: string;
+  readonly help: string;
+}
+
+/** `npm run verify:real`. */
+export const VERIFY_REAL_PROGRAM: VerifyRealProgram = {
+  prefix: "verify:real",
+  synopsis: SYNOPSIS,
+  help: helpText([SYNOPSIS, ...verifyRealHelpBody(), "lvrtc check-lv runs the same check."]),
+};
 
 /** What the command line asks for. `suites` null is the default, the benchmark. */
 export interface VerifyRealOptions {
@@ -89,6 +122,8 @@ export interface VerifyRealOptions {
   readonly all: boolean;
   readonly jobs: number;
   readonly root: string | undefined;
+  /** Show the hashes of LensVisualizer's engine files and of optiland's code. */
+  readonly details?: boolean;
 }
 
 const SUITE_NAME = /^[a-z0-9][a-z0-9._-]*$/;
@@ -96,6 +131,7 @@ const SUITE_NAME = /^[a-z0-9][a-z0-9._-]*$/;
 /** Reads the command line; a `UsageError` for anything that is not the synopsis. */
 export function parseVerifyRealArgs(args: readonly string[]): VerifyRealOptions {
   let all = false;
+  let details = false;
   let suites: string[] | null = null;
   let jobs: number | undefined;
   let root: string | undefined;
@@ -107,6 +143,10 @@ export function parseVerifyRealArgs(args: readonly string[]): VerifyRealOptions 
     seen.add(arg);
     if (arg === "--all") {
       all = true;
+      continue;
+    }
+    if (arg === "--details") {
+      details = true;
       continue;
     }
     if (arg !== "--suite" && arg !== "--suites" && arg !== "--jobs" && arg !== "--root") {
@@ -131,7 +171,7 @@ export function parseVerifyRealArgs(args: readonly string[]): VerifyRealOptions 
     }
   }
   if (all && suites !== null) throw new UsageError("--all cannot be given with --suite or --suites");
-  return { help: false, suites, all, jobs: jobs ?? DEFAULT_VERIFY_JOBS, root };
+  return { help: false, suites, all, jobs: jobs ?? DEFAULT_VERIFY_JOBS, root, ...(details ? { details } : {}) };
 }
 
 /** One `lvrtc baseline check`: its suite, kind, baseline file, the rungs that baseline has and the jobs it is given. */
@@ -157,7 +197,10 @@ function baselineOf(rootDir: string, suite: string, kind: BaselineKind): string 
   return kind === "mtf" ? mtfBaselineFile(rootDir, suite) : baselineFile(rootDir, suite);
 }
 
-/** The rungs a baseline file has, in the order it first names them. */
+/**
+ * The rungs a baseline file has, in the order it first names them, each by its id of today: a baseline committed
+ * before a check was renamed names it by its old id (`currentCheckId`).
+ */
 function rungsOf(file: string): string[] {
   let runs: unknown;
   try {
@@ -168,7 +211,11 @@ function rungsOf(file: string): string[] {
   if (!Array.isArray(runs)) throw new UsageError(`${file}: not a baseline: it has no runs`);
   const rungs: string[] = [];
   for (const run of runs as { rungs?: { rung?: unknown }[] }[]) {
-    for (const { rung } of run.rungs ?? []) if (typeof rung === "string" && !rungs.includes(rung)) rungs.push(rung);
+    for (const { rung } of run.rungs ?? []) {
+      if (typeof rung !== "string") continue;
+      const now = currentCheckId(rung);
+      if (!rungs.includes(now)) rungs.push(now);
+    }
   }
   return rungs;
 }
@@ -242,7 +289,7 @@ export function doctorRefusals(report: DoctorReport): string[] {
     refusals.push(`Node ${report.node.version} is outside the supported range ${report.node.required}`);
   const lv = report.lensVisualizer;
   if (lv.status === "not configured") {
-    refusals.push("LensVisualizer is not configured: set LVRTC_LV_PATH, or lvPath in lvrtc.config.json");
+    refusals.push("LensVisualizer is not configured: set LVRTC_LV_PATH, or lvPath in lvrtc.local.json");
   } else if (lv.status === "missing") {
     refusals.push(`LensVisualizer is not at ${lv.path}: no LensVisualizer checkout is there`);
   } else {
@@ -262,7 +309,7 @@ export function doctorRefusals(report: DoctorReport): string[] {
   const optiland = report.optiland;
   if (optiland.interpreter === "not configured") {
     refusals.push(
-      "optiland is not configured: set LVRTC_OPTILAND_PYTHON, or engines.optiland.python in lvrtc.config.json",
+      "optiland is not configured: set LVRTC_OPTILAND_PYTHON, or engines.optiland.python in lvrtc.local.json",
     );
   } else if (optiland.interpreter === "missing") {
     refusals.push(`optiland's interpreter ${optiland.python} does not run`);
@@ -273,25 +320,26 @@ export function doctorRefusals(report: DoctorReport): string[] {
   return refusals;
 }
 
-/** Who the engines are, from the doctor's report of a machine with no refusal: two lines. */
-export function identityLines(report: DoctorReport): string[] {
+/**
+ * Who the engines are, from the doctor's report of a machine with no refusal: two lines, each with its hash under
+ * `details` (LensVisualizer's engine files, optiland's code).
+ */
+export function identityLines(report: DoctorReport, details = false): string[] {
+  const t = CHECK_LV_OUTPUT_TEXT;
+  const i = IDENTIFIERS_TEXT;
   const lines: string[] = [];
   const { git, binding, path } = report.lensVisualizer;
   if (git !== null && binding?.status === "loaded") {
-    lines.push(
-      `LensVisualizer ${git.commit} (clean) at ${path}, engine closure ${binding.engineClosureHash} (${binding.engineFileCount} files)`,
-    );
+    const hash = details ? `, ${i.lvFiles} ${binding.engineClosureHash}` : "";
+    lines.push(`LensVisualizer ${git.commit} (${t.clean}) at ${path}, ${binding.engineFileCount} ${t.files}${hash}`);
   }
   const engine = report.optiland.engine;
   if (engine?.status === "available") {
     const { commit, dirty } = engine.details;
     const checkout =
-      commit === null || commit === undefined
-        ? "not a git checkout"
-        : `${commit} (${dirty === true ? "dirty" : "clean"})`;
-    lines.push(
-      `optiland ${report.optiland.version ?? "(no version)"}, fingerprint ${engine.fingerprint}, checkout ${checkout}`,
-    );
+      commit === null || commit === undefined ? t.notGit : `${commit} (${dirty === true ? t.dirty : t.clean})`;
+    const hash = details ? `, ${i.engineCode} ${engine.fingerprint}` : "";
+    lines.push(`optiland ${report.optiland.version ?? t.noVersion}, ${t.checkout} ${checkout}${hash}`);
   }
   return lines;
 }
@@ -318,7 +366,7 @@ export interface CheckOutcome {
   readonly records: number;
   readonly counts: Readonly<Record<string, number>> | null;
   readonly stale: Readonly<Record<string, number>> | null;
-  /** Pairs that are FAIL today and are listed in docs/known-failures.json: admitted, as the check admits them. */
+  /** Pairs that are FAIL today and are listed in their suite's list of known failures: admitted, as the check admits them. */
   readonly listedFails: number;
   /** Why the check is not clean; empty when it is. */
   readonly problems: readonly string[];
@@ -350,6 +398,11 @@ function checkJson(stdout: string): CheckJson | null {
   }
 }
 
+/** The list of known failures a suite's failures are read against: its own, or the catalog's, which lists none of it. */
+function listOf(suite: string): string {
+  return listsKnownFailures(suite) ? knownFailuresFile(suite) : KNOWN_FAILURES;
+}
+
 /**
  * The rule of a clean check: `baseline check` exited 0, said it did not fail, and every record is OK, REFRESHABLE
  * or MOVED. A DRIFT, an unlisted FAIL or ERROR, an engine that could not be used, a NEW or a GONE record (the suite
@@ -374,18 +427,20 @@ export function judgeCheck(step: CheckStep, ended: LvrtcEnded): CheckOutcome {
   ).length;
   const listedFails = said.records.filter((record) => record.verdict === "FAIL" && record.knownFailure === true).length;
   const count = (outcome: string): number => said.counts[outcome] ?? 0;
-  if (count("DRIFT") > 0) problems.push(`${count("DRIFT")} DRIFT`);
-  if (failing > 0) problems.push(`${failing} pair${failing === 1 ? "" : "s"} FAIL or ERROR today and not listed`);
-  for (const outcome of ["NEW", "GONE"]) {
-    if (count(outcome) > 0) problems.push(`${count(outcome)} ${outcome}: the suite is not the baseline's`);
-  }
+  const t = CHECK_LV_OUTPUT_TEXT;
+  const records = (n: number): string => `${n} ${n === 1 ? t.record : t.records}`;
+  if (count("DRIFT") > 0) problems.push(`${records(count("DRIFT"))} ${t.drift}`);
+  const list = listOf(step.suite);
+  if (failing > 0) problems.push(`${failing} ${failing === 1 ? t.failingOne(list) : t.failing(list)}`);
+  if (count("NEW") > 0) problems.push(`${count("NEW")} ${t.newProblem}`);
+  if (count("GONE") > 0) problems.push(`${count("GONE")} ${t.goneProblem}`);
   const unclean = said.records.filter((record) => !CLEAN_OUTCOMES.includes(record.outcome)).length;
-  if (unclean > 0 && problems.length === 0) problems.push(`${unclean} records neither OK, REFRESHABLE nor MOVED`);
-  if (said.records.length === 0) problems.push("no record was checked");
-  if ((said.failed || ended.code !== 0) && problems.length === 0) problems.push(`baseline check exited ${ended.code}`);
+  if (unclean > 0 && problems.length === 0) problems.push(`${records(unclean)} ${t.otherProblem}`);
+  if (said.records.length === 0) problems.push(t.noRecords);
+  if ((said.failed || ended.code !== 0) && problems.length === 0) problems.push(`${t.exited} ${ended.code}`);
   const notes: string[] = [];
-  if (count("MOVED") > 0) notes.push(`${count("MOVED")} MOVED, of a recorded rung: fails nothing`);
-  if (said.suiteChanged === true) notes.push("the suite file is not the one the baseline names");
+  if (count("MOVED") > 0) notes.push(`${records(count("MOVED"))} ${t.moved}`);
+  if (said.suiteChanged === true) notes.push(t.suiteNote);
   return {
     step,
     status: problems.length === 0 ? "clean" : "not clean",
@@ -404,23 +459,39 @@ function stepName(step: CheckStep): string {
   return `${step.suite} ${step.kind.padEnd(KIND_WIDTH)}`;
 }
 
-/** The line of one check in the summary: what it came to, its counts, its jobs and how long it took. */
+/** "4 jobs at once". */
+function jobsText(jobs: number): string {
+  return `${jobs} ${jobs === 1 ? CHECK_LV_OUTPUT_TEXT.jobAtOnce : CHECK_LV_OUTPUT_TEXT.jobsAtOnce}`;
+}
+
+/**
+ * The line of one set of committed results in the summary: what it came to, how many results came out as each
+ * outcome (by label, those above zero), what made them out of date, the failures its suite's list of known failures lists, its
+ * jobs and how long it took; then, on a line of their own, why it is not clean and what is noted.
+ */
 export function summaryLine(outcome: CheckOutcome, seconds: number | null): string {
+  const t = CHECK_LV_OUTPUT_TEXT;
   const { step, counts, stale } = outcome;
   const parts: string[] = [];
   if (counts !== null) {
-    parts.push(
-      `${outcome.records} records: ${["OK", "REFRESHABLE", "MOVED", "DRIFT", "NEW", "GONE"].map((key) => `${counts[key] ?? 0} ${key}`).join(", ")}`,
+    const byOutcome = ["OK", "REFRESHABLE", "MOVED", "DRIFT", "NEW", "GONE"].map(
+      (key) => [outcomeLabel(key), counts[key] ?? 0] as const,
     );
+    parts.push(`${outcome.records} ${outcome.records === 1 ? t.record : t.records}: ${countsText(byOutcome)}`);
   }
   if (stale !== null) {
-    parts.push(`stale by case ${stale.case ?? 0}, engine ${stale.engine ?? 0}, policy ${stale.policy ?? 0}`);
+    const by = Object.keys(STALE_REASON_TEXT).filter((reason) => (stale[reason] ?? 0) > 0);
+    if (by.length > 0) {
+      parts.push(
+        `${t.outOfDate}: ${by.map((reason) => `${STALE_REASON_TEXT[reason].label} ${t.changedIn} ${stale[reason]}`).join(", ")}`,
+      );
+    }
   }
-  if (outcome.listedFails > 0) parts.push(`${outcome.listedFails} listed FAIL (docs/known-failures.json)`);
-  parts.push(`--jobs ${step.jobs}`);
+  if (outcome.listedFails > 0) parts.push(`${outcome.listedFails} ${t.listedFails(listOf(step.suite))}`);
+  parts.push(jobsText(step.jobs));
   if (seconds !== null) parts.push(`${seconds.toFixed(0)} s`);
   const said = [...outcome.problems, ...outcome.notes];
-  return `${stepName(step)}  ${outcome.status.toUpperCase()}  ${parts.join("; ")}${said.length > 0 ? `\n    ${said.join("; ")}` : ""}`;
+  return `${stepName(step)}  ${t.status[outcome.status]}  ${parts.join("; ")}${said.length > 0 ? `\n    ${said.join("; ")}` : ""}`;
 }
 
 /** What `verifyReal` is wired to. */
@@ -434,6 +505,8 @@ export interface VerifyRealInputs {
   readonly now?: () => number;
   /** The signal the verification was asked to stop by, or null: no check is started after one. */
   readonly stopped?: () => string | null;
+  /** How it names itself: `npm run verify:real` unless given (`lvrtc check-lv`). */
+  readonly program?: VerifyRealProgram;
 }
 
 function doctorReportOf(stdout: string): DoctorReport | null {
@@ -456,16 +529,20 @@ function doctorReportOf(stdout: string): DoctorReport | null {
  */
 export async function verifyReal(args: readonly string[], inputs: VerifyRealInputs): Promise<number> {
   const { io } = inputs;
+  const program = inputs.program ?? VERIFY_REAL_PROGRAM;
+  const p = program.prefix;
   const now = inputs.now ?? (() => performance.now() / 1000);
   const stopped = inputs.stopped ?? (() => null);
   let steps: CheckStep[];
   let rootDir: string;
+  let details = false;
   try {
     const options = parseVerifyRealArgs(args);
     if (options.help) {
-      io.stdout(HELP);
+      io.stdout(program.help);
       return EXIT_OK;
     }
+    details = options.details === true;
     rootDir = options.root === undefined ? inputs.rootDir : resolve(inputs.cwd, options.root);
     if (!statSync(rootDir, { throwIfNoEntry: false })?.isDirectory()) {
       throw new UsageError(`--root ${options.root}: not a directory`);
@@ -474,17 +551,19 @@ export async function verifyReal(args: readonly string[], inputs: VerifyRealInpu
     steps = planChecks(options, rootDir, machine);
   } catch (error) {
     if (!(error instanceof UsageError)) throw error;
-    io.stderr(`verify:real: ${error.message}\n${SYNOPSIS}`);
+    io.stderr(`${p}: ${error.message}\n${program.synopsis}`);
     return EXIT_USAGE;
   }
 
-  io.stdout(`verify:real: ${steps.length} check${steps.length === 1 ? "" : "s"}, one at a time, of ${rootDir}:\n`);
+  const t = CHECK_LV_OUTPUT_TEXT;
+  io.stdout(`${p}: ${steps.length} ${steps.length === 1 ? t.set : t.sets} ${t.plan} ${rootDir}:\n`);
   for (const step of steps) {
     io.stdout(
-      `  ${stepName(step)}  rungs ${step.rungs.join(",")}  --jobs ${step.jobs} (${step.perJobGiB} GiB a job)\n`,
+      `  ${stepName(step)}  ${t.checks} ${step.rungs.join(", ")}  ${t.atMost} ${jobsText(step.jobs)} (${step.perJobGiB} ${t.perJob})\n`,
     );
     if (step.snapshot === true) io.stdout(`    ${step.suite}: ${SNAPSHOT_NOTE}\n`);
   }
+  for (const line of legendLines({ checks: steps.flatMap((step) => step.rungs) }, 2)) io.stdout(`${line}\n`);
 
   const doctor = await inputs.runner.lvrtc(["doctor", "--root", rootDir, "--json"]);
   const report = doctor.signal === null ? doctorReportOf(doctor.stdout) : null;
@@ -495,21 +574,21 @@ export async function verifyReal(args: readonly string[], inputs: VerifyRealInpu
         ]
       : doctorRefusals(report);
   if (refusals.length > 0) {
-    for (const refusal of refusals) io.stderr(`verify:real: refused: ${refusal}\n`);
-    io.stderr("verify:real: nothing was checked; lvrtc doctor shows the machine as it is\n");
+    for (const refusal of refusals) io.stderr(`${p}: refused: ${refusal}\n`);
+    io.stderr(`${p}: nothing was checked; lvrtc doctor shows the machine as it is\n`);
     return EXIT_USAGE;
   }
-  for (const line of identityLines(report as DoctorReport)) io.stdout(`verify:real: ${line}\n`);
+  for (const line of identityLines(report as DoctorReport, details)) io.stdout(`${p}: ${line}\n`);
 
   const outcomes: { outcome: CheckOutcome; seconds: number }[] = [];
   let halted: string | null = null;
   for (const step of steps) {
     const signal = stopped();
     if (signal !== null) {
-      halted = `stopped by ${signal}`;
+      halted = `${t.stoppedBy} ${signal}`;
       break;
     }
-    io.stdout(`verify:real: checking ${stepName(step).trimEnd()} with --jobs ${step.jobs}\n`);
+    io.stdout(`${p}: ${t.checking} ${stepName(step).trimEnd()} ${t.with} ${jobsText(step.jobs)}\n`);
     const started = now();
     const ended = await inputs.runner.lvrtc(checkArgs(step, rootDir));
     const outcome = judgeCheck(step, ended);
@@ -517,22 +596,23 @@ export async function verifyReal(args: readonly string[], inputs: VerifyRealInpu
     outcomes.push({ outcome, seconds });
     io.stdout(`${summaryLine(outcome, seconds)}\n`);
     if (outcome.status === "interrupted") {
-      halted = `${stepName(step).trimEnd()} was interrupted; if the memory watchdog ended it, run again with fewer --jobs`;
+      halted = `${stepName(step).trimEnd()} ${t.interruptedHint}`;
       break;
     }
   }
 
-  io.stdout("\nverify:real: summary\n");
+  io.stdout(`\n${p}: ${t.summary}\n`);
   for (const { outcome, seconds } of outcomes) io.stdout(`${summaryLine(outcome, seconds)}\n`);
-  for (const step of steps.slice(outcomes.length)) io.stdout(`${stepName(step)}  NOT RUN\n`);
+  for (const step of steps.slice(outcomes.length)) io.stdout(`${stepName(step)}  ${t.notRun}\n`);
   const unclean = outcomes.filter(({ outcome }) => outcome.status !== "clean");
-  if (halted !== null) io.stdout(`verify:real: ${halted}; the remaining checks were not run\n`);
+  if (halted !== null) io.stdout(`${p}: ${halted}; ${t.remaining}\n`);
   if (unclean.length === 0 && halted === null) {
-    io.stdout(`verify:real: clean: every record of ${steps.length} checks is OK, REFRESHABLE or MOVED\n`);
+    const sets = `${steps.length} ${steps.length === 1 ? t.set : t.sets}`;
+    io.stdout(`${p}: ${t.status.clean}: ${t.cleanAll} ${sets} ${t.cleanMeans}\n`);
     return EXIT_OK;
   }
   const named = unclean.map(({ outcome }) => stepName(outcome.step).trimEnd());
-  io.stdout(`verify:real: not clean${named.length > 0 ? `: ${named.join(", ")}` : ""}\n`);
+  io.stdout(`${p}: ${t.notClean}${named.length > 0 ? `: ${named.join(", ")}` : ""}\n`);
   return EXIT_FAILURE;
 }
 
@@ -614,21 +694,41 @@ export function forwardStopSignals(
 }
 
 /**
- * `npm run verify:real` on this repository and this machine. SIGINT and SIGTERM are handed on to the check that is
- * running (`forwardStopSignals`); no check is started after either.
+ * The real-engine check on this machine, with a child `bin/lvrtc.mjs` for the doctor and for each check. SIGINT and
+ * SIGTERM are handed on to the check that is running (`forwardStopSignals`); no check is started after either. The
+ * one path of `npm run verify:real` and `lvrtc check-lv`, which differ only in how they name themselves.
  */
-export async function mainVerifyReal(args: readonly string[], source: SignalSource = process): Promise<number> {
-  const runner = spawnLvrtcRunner({ cwd: process.cwd() });
-  const signals = forwardStopSignals((signal) => runner.stop(signal), source);
+export async function verifyRealHere(
+  args: readonly string[],
+  options: {
+    readonly io: CliIo;
+    readonly program?: VerifyRealProgram;
+    readonly rootDir?: string;
+    readonly cwd?: string;
+    readonly source?: SignalSource;
+  },
+): Promise<number> {
+  const cwd = options.cwd ?? process.cwd();
+  const runner = spawnLvrtcRunner({ cwd, stderr: options.io.stderr });
+  const signals = forwardStopSignals((signal) => runner.stop(signal), options.source ?? process);
   try {
     return await verifyReal(args, {
-      rootDir: REPO_ROOT,
-      cwd: process.cwd(),
-      io: { stdout: (text) => void process.stdout.write(text), stderr: (text) => void process.stderr.write(text) },
+      rootDir: options.rootDir ?? REPO_ROOT,
+      cwd,
+      io: options.io,
       runner,
       stopped: signals.stopped,
+      ...(options.program === undefined ? {} : { program: options.program }),
     });
   } finally {
     signals.dispose();
   }
+}
+
+/** `npm run verify:real` on this repository and this machine. */
+export async function mainVerifyReal(args: readonly string[], source: SignalSource = process): Promise<number> {
+  return verifyRealHere(args, {
+    io: { stdout: (text) => void process.stdout.write(text), stderr: (text) => void process.stderr.write(text) },
+    source,
+  });
 }

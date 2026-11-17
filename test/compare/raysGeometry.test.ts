@@ -31,7 +31,7 @@ import {
   tracer,
 } from "./raysSupport.ts";
 
-const R2 = loadPolicy().rungs.r2;
+const R2 = loadPolicy().rungs["ray-trace"];
 const CONTEXT: ComparisonContext = { spec: SPEC, opticalCase: LENS };
 /** Where every metric of `SPEC` occurs: the first line, on the axis. */
 const PLACE = { line: 0, field: 0 };
@@ -49,13 +49,13 @@ function compared(a: RaysTraceData, b: RaysTraceData, context: ComparisonContext
 }
 
 function judged(a: RaysTraceData, b: RaysTraceData) {
-  return comparePair(tracer("ref", a), tracer("other", b), R2, raysGeometryComparator, undefined, CONTEXT);
+  return comparePair(tracer("reference-tracer", a), tracer("other", b), R2, raysGeometryComparator, undefined, CONTEXT);
 }
 
 test("the comparator is of rays.trace for rung r2, and reports six metrics", () => {
   assert.equal(raysGeometryComparator.quantity, "rays.trace");
-  assert.equal(raysGeometryComparator.rung, "r2");
-  assert.equal(COMPARATORS.get("rays.trace", "r2"), raysGeometryComparator);
+  assert.equal(raysGeometryComparator.rung, "ray-trace");
+  assert.equal(COMPARATORS.get("rays.trace", "ray-trace"), raysGeometryComparator);
   assert.deepEqual(raysGeometryComparator.metrics, [
     { name: "hits.maxDistance", unit: "mm" },
     { name: "direction.maxAbs", unit: "1" },

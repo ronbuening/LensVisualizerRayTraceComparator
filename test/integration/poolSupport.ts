@@ -19,7 +19,7 @@ import { tempDir } from "../core/support.ts";
 export async function benchmarkPool(
   t: TestContext,
   engines: readonly string[],
-  rungs = ["r0", "r1", "r2", "r3", "r4"],
+  rungs = ["built-system", "first-order", "ray-trace", "optical-path", "geometric-mtf"],
 ): Promise<void> {
   const root = tempDir(t);
   const written = JSON.parse(readFileSync(join(REPO_ROOT, "suites/benchmark.json"), "utf8"));

@@ -2,7 +2,7 @@
 // "lv-best-axial" of a run is, and what the engine `lv` holds a case with a moved image plane to. It is asked of
 // LensVisualizer, never computed here: the first step of its `computeMtfSteps` states the focus the request
 // applies to every field, found by its own search on the axial beam.
-import { lvMtfInputs } from "./tabRequest.ts";
+import { lvMtfInputs, lvMtfRequestResult } from "./tabRequest.ts";
 import type { SpectralLine } from "../../contract/case.ts";
 import type { ExportProblem } from "./exportProblems.ts";
 import { lvPupilSeed } from "./tabRequest.ts";
@@ -13,8 +13,10 @@ import type { LvApi, LvMtfFocus, LvMtfOptions, LvPreparedState, LvRuntimeLens } 
 export type LvFocusApi = LvHookApi & Pick<LvApi, "createAnalysisRequest" | "assessMtfSupport" | "computeMtfSteps">;
 
 /**
- * The spectra LensVisualizer's MTF has, by its own names: the reference line, three lines C, d and F, and five
- * photopic lines. A request names one of them; it has no other, and none by wavelength.
+ * The spectra of LensVisualizer's MTF the comparator asks, by its own names: the reference line, three lines C, d and
+ * F, and the photopic lines (nine since LV #988, a Gauss-Legendre quadrature of V(λ) from 560 nm). LV #988 adds a
+ * fourth, "single", one line at a wavelength the request states, which the comparator does not ask: a case's lines
+ * are held to these three, and a case of other lines is none of them.
  */
 export const LV_MTF_SPECTRA = ["reference", "cdf", "photopic"] as const;
 
@@ -77,15 +79,15 @@ export function lvSpectrumOf(
 }
 
 /**
- * The focus LensVisualizer applies to every field of a request: the first step of `computeMtfSteps`, before any
- * field is traced. Null for a request its gate refuses and for a state without a field axis, which have none.
+ * The focus LensVisualizer applies to every field of a request: `computeMtfSteps` before any field is traced
+ * (`lvMtfRequestResult`). Null for a request its gate refuses and for a state without a field axis, which have none.
  */
 export function lvAxialFocus(
   api: Pick<LvApi, "createAnalysisRequest" | "computeMtfSteps">,
   state: LvPreparedState,
   options: LvMtfOptions,
 ): LvMtfFocus | null {
-  return api.computeMtfSteps(...lvMtfInputs(api, state, options)).next().value.focus;
+  return lvMtfRequestResult(api.computeMtfSteps(...lvMtfInputs(api, state, options))).focus;
 }
 
 /** What a best axial focus is asked for: the stop radius and the lines of a case, and a grid cap when one is stated. */

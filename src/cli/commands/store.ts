@@ -8,25 +8,41 @@ import { UsageError } from "../../core/usageError.ts";
 import { parseArguments } from "../arguments.ts";
 import { EXIT_OK, EXIT_USAGE } from "../command.ts";
 import type { CliCommand } from "../command.ts";
+import { ROOT_OPTION, helpText, options, paragraph } from "../help.ts";
 import type { RunTargetInputs } from "../runTarget.ts";
 
-const HELP = `Usage: lvrtc store compress|prune [--root <dir>] [--yes [--expect <state>]] [--json]
-
-Owner-only maintenance of <runsDir>/store. Dry run by default; --yes performs the changes. Every run prints the
-digest of the store's state it is of (state: the entry files and, for prune, the protected engines); with
---expect <state>, --yes first holds the store to that state and changes nothing (exit 1) where it is another.
-compress  Count plain/gzip files and bytes before/after; atomically gzip each plain entry's exact bytes.
-prune     List counts/bytes kept and removable per engine, and protected engine identities from HEAD's
-          committed baselines/*.json, and each removable engine version with its newest entry. --yes deletes
-          only entries no committed baseline engine can hit. The engines as this checkout runs them are
-          protected only once baselines written with them are committed: prune after a refresh, not before.
-Untrusted entries are kept by prune. Run maintenance with no suite or other store writer running.
-`;
+const SYNOPSIS = "Usage: lvrtc store compress|prune [--root <dir>] [--yes [--expect <state>]] [--json]\n";
+const HELP = helpText([
+  SYNOPSIS,
+  ...paragraph(
+    "For maintainers only: upkeep of the result cache, <runsDir>/store, where every engine's answers are kept so that a run asks an engine only once. Each action is a dry run that changes nothing unless --yes is given. Every run prints a digest of the state of the cache it is of; with --expect <state>, --yes first holds the cache to that state and changes nothing (exit 1) where it is another. Run either with no suite or other writer of the cache running.",
+  ),
+  ...options([
+    [
+      "compress",
+      "count the plain and compressed entries and their bytes before and after; with --yes, gzip each plain entry's exact bytes, atomically",
+    ],
+    [
+      "prune",
+      "list the entries kept and removable, per engine, and the engine versions the committed baselines (baselines/*.json of the git HEAD) protect, with each removable engine version and its newest entry; with --yes, delete only entries that no engine version of a committed baseline can use. Entries that cannot be read are kept. The engine versions this checkout runs are protected only once baselines written with them are committed: prune after such baselines are committed, never before",
+    ],
+    ROOT_OPTION,
+    ["--yes", "make the changes the dry run lists"],
+    [
+      "--expect <state>",
+      "with --yes: the state digest a dry run printed; nothing changes unless the cache is still in it",
+    ],
+    ["--json", "accepted; the report is always JSON"],
+  ]),
+  ...paragraph(
+    "Exit code: 0 when done; 1 when the cache is not in the expected state or cannot be changed as asked; 2 when the command line cannot be used as given.",
+  ),
+]);
 
 export function createStoreCommand(inputs: RunTargetInputs): CliCommand {
   return {
     name: "store",
-    summary: "Inspect or maintain store compression and unused engine versions (owner only)",
+    summary: "Compress the result cache, or remove answers no committed result needs (maintainers only)",
     run: async (args, io) => {
       if (args.includes("--help") || args.includes("-h")) {
         io.stdout(HELP);

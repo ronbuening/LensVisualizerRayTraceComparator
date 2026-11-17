@@ -1,5 +1,6 @@
-// The dashboard's HTTP server (`lvrtc serve`): the pages and their JSON twins over runs, baselines and lenses (Stage
-// 8.4: `/lens/<lensKey>`, whose choice of curves is in the query of its address), on 127.0.0.1 only. A request whose
+// The dashboard's HTTP server (`lvrtc serve`): the pages and their JSON twins over runs, baselines and lenses
+// (`/lens/<lensKey>`, whose choice of curves is in the query of its address), and the help and checks pages (`/help`,
+// `/checks`: the vocabulary's words and the limits file at hand), on 127.0.0.1 only. A request whose
 // Host is not this server's own is refused (403), which also defeats DNS rebinding; pages answer GET and HEAD only,
 // and the actions of run control (`/control/<action>`, Stage 8.3) POST only (405 otherwise); a path segment is looked
 // up among the names the server listed itself (404 otherwise), never joined into a path. No page writes anything; an
@@ -21,7 +22,9 @@ import {
   renderActionRefusal,
   renderBaseline,
   renderBaselineRun,
+  renderChecks,
   renderControl,
+  renderHelp,
   renderIndex,
   renderJob,
   renderCompare,
@@ -34,6 +37,8 @@ import {
 import { chartsReadStore, requestStoreKeys } from "./chartViews.ts";
 import { CONTROL_ACTIONS, FORM_BODY_BYTES, createController, headerRefusal } from "./control.ts";
 import type { ControlAction, ControlOptions, Controller, Refusal } from "./control.ts";
+import { buildChecksView, buildHelpView } from "./helpViews.ts";
+import type { ChecksView, HelpView } from "./helpViews.ts";
 import { askEngines } from "./identity.ts";
 import type { AskedEngines, EngineDescribeRunner } from "./identity.ts";
 import { LENS_KEY_PATTERN, buildLensView, indexLenses, lensSelection, lensSummaries, selectionLabel } from "./lens.ts";
@@ -63,6 +68,7 @@ import {
   runReport,
   runSummary,
 } from "./views.ts";
+import { currentEngineId } from "../core/legacyIds.ts";
 
 /** The port `lvrtc serve` listens on unless `--port` names another. */
 export const DEFAULT_PORT = 8077;
@@ -154,7 +160,8 @@ export function baselineEngineIds(sources: DashboardSources): string[] {
   const ids = new Set<string>();
   for (const stem of sources.baselineStems()) {
     const loaded = sources.baseline(stem);
-    if (loaded.state === "ok") for (const engine of loaded.value.engines) ids.add(engine.id);
+    // Asked by the id of today: a baseline committed before a rename names an engine by its old id.
+    if (loaded.state === "ok") for (const engine of loaded.value.engines) ids.add(currentEngineId(engine.id));
   }
   return [...ids].sort();
 }
@@ -166,6 +173,10 @@ export interface DashboardViews {
   /** A label of what the engines said, for the views that depend on it. */
   askedLabel(): string;
   index(): IndexView;
+  /** The help page: the vocabulary's terms, verdicts, outcomes, badges, classes and engines. */
+  help(): HelpView;
+  /** The checks page: every check, its engines and its limits from the limits file at hand. */
+  checks(): ChecksView;
   run(name: string): RunView;
   /** Null for a place the run's manifest does not have. */
   runPart(name: string, place: number): RunPartView | null;
@@ -346,6 +357,8 @@ export function createViews(
       });
       return buildIndexView(policy, asked(), runs, baselines, lenses, compared);
     },
+    help: () => buildHelpView(),
+    checks: () => buildChecksView(sources.policy()),
     run: (name) => {
       const manifest = sources.manifest(name);
       const report = manifest.state === "ok" ? reportOf(name, manifest.value) : null;
@@ -509,6 +522,10 @@ export function createRouter(
       // The listing itself is in the label: a run directory or a baseline that comes or goes is another index.
       const label = `index:${askedLabel}:${JSON.stringify([sources.runNames(), sources.baselineStems()])}`;
       return answer(api, label, documents, views.index, renderIndex);
+    }
+    if (route.length === 1 && route[0] === "help") return answer(api, "help", [], views.help, renderHelp);
+    if (route.length === 1 && route[0] === "checks") {
+      return answer(api, "checks", policyDocuments(), views.checks, renderChecks);
     }
     const [kind, name, sub, number] = route;
     if (kind === "run" && name !== undefined && sources.runNames().includes(name)) {

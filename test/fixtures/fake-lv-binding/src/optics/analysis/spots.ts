@@ -8,7 +8,7 @@ import { directionFromSkewSlope } from "../math/vector.js";
 import { prepareRuntimeState } from "../state/runtime.js";
 import { prepareAimedPupilLaunch, prepareAimedPupilTrace } from "./pupils/aimedPupil.js";
 import { transmission } from "./mtf/mtfTracing.js";
-import type { FakeRuntimeLens, FakeState, Vec3 } from "../types.js";
+import type { FakeImageSurfaceShape, FakeRuntimeLens, FakeState, Vec3 } from "../types.js";
 import type { FakeAnalysisRequest } from "./request.js";
 
 export const COMA_PREVIEW_CIRCULAR_PUPIL_RING_SAMPLES = [1, 4, 8] as const;
@@ -133,7 +133,13 @@ export function skewImagePlaneIntercept(
   uy: number,
   lastSurfZ: number,
   imagePlaneZ: number,
-): { x: number; y: number } | null {
+  imageSurface: FakeImageSurfaceShape | null,
+): { x: number; y: number; z?: number } | null {
+  // As LV #960: anything but null is a curved surface to land on, which the fake does not do (an undefined fails as
+  // it fails in LV, reading its cylinder angle).
+  if (imageSurface !== null) {
+    throw new Error(`the fake lands no ray on a curved image surface (cylinder angle ${imageSurface.cylinderAngle})`);
+  }
   const dz = imagePlaneZ - lastSurfZ;
   const imagePoint = { x: x + ux * dz, y: y + uy * dz };
   return isFinite(imagePoint.x) && isFinite(imagePoint.y) ? imagePoint : null;
@@ -158,7 +164,7 @@ function bundleOf(
   const tracer = prepareAimedPupilTrace(state, launch);
   const plane = planeZ ?? geometry.imagePlaneZ;
   const land = (trace: SkewTrace) =>
-    skewImagePlaneIntercept(trace.x, trace.y, trace.ux, trace.uy, geometry.lastSurfZ, plane);
+    skewImagePlaneIntercept(trace.x, trace.y, trace.ux, trace.uy, geometry.lastSurfZ, plane, state.lens.imageSurface);
   const chiefTrace = tracer.skew(launch.chief as never);
   const chief = chiefTrace.clipped ? null : land(chiefTrace);
   if (chief === null) return null;

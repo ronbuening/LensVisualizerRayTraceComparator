@@ -1,46 +1,46 @@
 {
   "byState": {
     "prime": {
-      "exported": 695,
-      "notExportable": 8,
-      "states": 703,
+      "exported": 756,
+      "notExportable": 11,
+      "states": 767,
       "threw": 0
     },
     "tele": {
-      "exported": 365,
+      "exported": 372,
       "notExportable": 0,
-      "states": 365,
+      "states": 372,
       "threw": 0
     },
     "wide": {
-      "exported": 365,
+      "exported": 372,
       "notExportable": 0,
-      "states": 365,
+      "states": 372,
       "threw": 0
     }
   },
   "contract": "1.0",
-  "exported": 1425,
+  "exported": 1500,
   "features": {
     "aperture.annular": 7,
-    "aperture.unclipped": 284,
+    "aperture.unclipped": 297,
     "lines.multiple": 0,
     "object.finite": 0,
     "path.folded": 9,
-    "surface.asphere.even": 694,
+    "surface.asphere.even": 717,
     "surface.asphere.flat-base": 2,
     "surface.asphere.odd": 87,
-    "surface.conic": 321,
+    "surface.conic": 330,
     "surface.diffractive": 8
   },
   "kind": "lv-export-census",
   "lensVisualizer": {
-    "commit": "25f65d4b4213a21392cbae92680134906049b2ad",
+    "commit": "f5b456fec7b69184844078f6ec6b1ac132f8ec58",
     "dirty": false,
-    "engineClosureHash": "4669921bae7179c7eddd220fa367e696eae7acec3a5a788d0ca90da632d3eb6b",
-    "engineFileCount": 184
+    "engineClosureHash": "f0066505c45b705ef5e22a44ee6303ae9f47de00e295faad6d72b6090cdd4a61",
+    "engineFileCount": 193
   },
-  "lenses": 1068,
+  "lenses": 1139,
   "limits": {
     "asphere.maxPower": {
       "lens": "fujifilm-fujinon-gf-30mm-f35-r-wr",
@@ -56,13 +56,23 @@
       "max": 63
     }
   },
-  "notExportable": 8,
+  "notExportable": 11,
   "notes": {
     "bulk-absorption": 2,
     "projection:fisheye-equidistant": 4,
     "projection:fisheye-equisolid": 17
   },
   "reasons": {
+    "curved-image-surface": {
+      "lenses": [
+        "reference-concentric-mirror-curved-focus",
+        "reference-curved-sensor-achromat",
+        "reference-cylindrical-film-gate"
+      ],
+      "states": 3,
+      "teleOnly": [],
+      "wideOnly": []
+    },
     "folded-auto-path": {
       "lenses": [
         "carl-zeiss-mirotar-500f45",
@@ -127,8 +137,8 @@
     "lines": "reference",
     "zoom": "both-ends"
   },
-  "states": 1433,
+  "states": 1511,
   "threw": [],
   "unindexedFiles": 0,
-  "zooms": 365
+  "zooms": 372
 }

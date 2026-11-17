@@ -12,6 +12,7 @@ import { baselineGateProblems, loadPolicy, loadPolicySnapshot } from "../../src/
 import type { Baseline } from "../../src/contract/baseline.ts";
 import type { Policy } from "../../src/contract/policy.ts";
 import { REPO_ROOT } from "../../src/core/config.ts";
+import { snapshotPolicyIds } from "../../src/core/legacyIds.ts";
 import { renderCatalog, quantiles } from "../../src/report/catalog.ts";
 import { hashCanonical } from "../../src/core/numeric/hash.ts";
 import { tempDir } from "../core/support.ts";
@@ -36,9 +37,12 @@ test("catalog quantiles, distinct R4 pairs, refusal codes, classes and goldens",
   Object.assign(mismatched[1].baseline.runs[0].rungs[0].pairs[0].metrics[0], { value: 0 });
   assert.throws(() => renderCatalog(mismatched), /duplicate catalog figures/);
 });
-/** A frozen stand-in policy, older than the policy at hand, that judges the stand-in catalog's r4 metric. */
+/**
+ * A frozen stand-in policy, older than the policy at hand, that judges the stand-in catalog's r4 metric: written, as
+ * the catalog's frozen policy was, under the check ids of before the rename.
+ */
 function snapshotPolicy(version = 3): Policy {
-  const policy = structuredClone(loadPolicy()) as { -readonly [K in keyof Policy]: Policy[K] };
+  const policy = structuredClone(snapshotPolicyIds(loadPolicy())) as { -readonly [K in keyof Policy]: Policy[K] };
   policy.version = version;
   const r4 = policy.rungs.r4 as { metrics: Record<string, unknown> };
   r4.metrics = { ...r4.metrics, "mtf.maxAbs": { tolerance: 1 / 8, unit: "1" } };
@@ -126,12 +130,12 @@ test("a catalog snapshot under an older policy passes verify, held to its frozen
   assert.equal(said.code, 0, said.err);
   assert.match(
     said.out,
-    /^baselines\/catalog\.json: a baseline of 3 runs and 2 records, policy v3; .*; the catalog is a dated snapshot of policy v3, held to policy\/snapshots\/rungs\.v3\.json$/m,
+    /^baselines\/catalog\.json: committed results of 3 runs, 2 records, limits file v3; .*; the catalog is a dated snapshot of the limits file v3, held to policy\/snapshots\/rungs\.v3\.json$/m,
   );
   assert.match(
     said.out,
     new RegExp(
-      `^verify: the catalog is a dated snapshot of policy v3: it is held to the policy it records, not to the policy at hand \\(v${later.version}\\)`,
+      `^verify: the catalog is a dated snapshot of the limits file v3: it is held to the limits file it was written with, not to the one at hand \\(v${later.version}\\)`,
       "m",
     ),
   );

@@ -13,12 +13,15 @@ npm run format         # prettier --write
 npm test               # node --test on test/**/*.test.ts, except test/integration
 npm run test:python    # unittest for the Python worker kit and the optiland worker on a fake optiland; part of check
 npm run test:lv        # tests against the real LensVisualizer (test/integration/lv); NOT part of check
-npm run test:optiland  # tests against the real optiland (test/integration/optiland); NOT part of check; the suites, focus stations and catalog sweep need LV too; r2 needs a POSIX shell
+npm run test:optiland  # tests against the real optiland (test/integration/optiland); NOT part of check; the suites, focus stations and catalog sweep need LV too; r2.test.ts needs a POSIX shell
 npm run verify:real    # Stage 5.4: lvrtc doctor, then baseline check benchmark and benchmark --mtf on live LV and optiland, one at a time; NOT part of check
 npm run verify:real -- --all   # the same for every routine committed suite in a fixed order (not the catalog, a dated snapshot: --suite catalog); --suites a,b and --jobs <n> (default 4, a ceiling)
-node bin/lvrtc.mjs     # the CLI
-node bin/lvrtc.mjs doctor   # Node, config layers, LV, Python and optiland as this machine sees them
-node bin/lvrtc.mjs run suites/features.json --rungs r0,r1,r2,r3,r4 --jobs 2   # process pool; default --jobs 1 is serial
+node bin/lvrtc.mjs     # the CLI: commands grouped for reviewers; lvrtc help <command> prints one command's help
+node bin/lvrtc.mjs doctor   # Node, config layers, LV, Python and optiland as this machine sees them, a fix line under each problem, and Ready (--json: ready.{lensVisualizer,optiland,checkLv})
+node bin/lvrtc.mjs check-lv --suite features   # Stage 9.2: the reviewers' front door; exactly npm run verify:real (same runner, same doctor refusal, same options)
+node bin/lvrtc.mjs checks [<id>]     # every check (title, kind, what it compares, old id), or one in full with its engines and the limits file's figures; an old id (r2) is read as today's
+node bin/lvrtc.mjs glossary [<term>] # the glossary's terms, or one by its word, a word it replaces or a stored value (lvrtc glossary rung)
+node bin/lvrtc.mjs run suites/features.json --checks built-system,first-order,ray-trace,optical-path,geometric-mtf --jobs 2   # process pool; default --jobs 1 is serial
 node bin/lvrtc.mjs compare features --jobs 2   # parallel comparisons, collected in manifest order
 node bin/lvrtc.mjs baseline check features --jobs 2   # the same pool for baseline suites
 node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --jobs 2   # the same pool for MTF benchmark suites
@@ -42,48 +45,131 @@ node bin/lvrtc.mjs lenses list                 # every LensVisualizer lens: key,
 node bin/lvrtc.mjs lenses show nikkor-z50f12   # one lens as LV prepares it for tracing: a row per surface, with whether its rim clips (console only)
 node bin/lvrtc.mjs export nikkor-z50f12        # one lens as an engine-neutral case (stdout; never committed)
 node bin/lvrtc.mjs export --all --census reports/census   # every lens, a zoom at both ends; rewrites the census
-node bin/lvrtc.mjs run suites/states.json --rungs r0,r1,r2,r3,r4   # the stop-down and zoom-station matrix on its own engines (lv, ref, optiland); then compare states, baseline write states
-node bin/lvrtc.mjs run suites/states.json --rungs r4,r4f,r6a        # its gated MTF rungs; then compare states, baseline write states --mtf (the same for focus-stations)
-node bin/lvrtc.mjs run suites/catalog.json --rungs r0,r1,r2,r3,r4 --jobs 4   # OWNER ONLY: every catalog state (1,341); MTF with --rungs r4,r4f,r6a; recipe in docs/REFERENCE.md, Stage 5.3
+node bin/lvrtc.mjs run suites/states.json --checks built-system,first-order,ray-trace,optical-path,geometric-mtf   # the stop-down and zoom-station matrix on its own engines (lv, reference-tracer, optiland); then compare states, baseline write states
+node bin/lvrtc.mjs run suites/states.json --checks geometric-mtf,lv-mtf-replay,wave-mtf        # its gated MTF checks; then compare states, baseline write states --mtf (the same for focus-stations)
+node bin/lvrtc.mjs run suites/catalog.json --checks built-system,first-order,ray-trace,optical-path,geometric-mtf --jobs 4   # OWNER ONLY: every catalog state (1,341); MTF with --checks geometric-mtf,lv-mtf-replay,wave-mtf; recipe in docs/REFERENCE.md, Stage 5.3 (old ids there)
 node bin/lvrtc.mjs report catalog --catalog    # reports/catalog.{md,json} from the two catalog baselines alone
 node bin/catalog-case.mjs <run> suites/catalog-repro/<run>.json   # a one-run reproducer of one catalog state (suite catalog-repro)
-node bin/catalog-attribution.mjs <temporary LVRTC_RUNS_DIR>       # after a reproducer: 60-digit LV/ref check, native optiland rows
-node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref --rungs r0,r1   # real lenses on the built-in engines
-node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref --rungs r0,r1,r2,r3,r4   # with LV's own launch rays traced, and the geometric MTF of them
-node bin/lvrtc.mjs run suites/benchmark.json   # the suite's own engines (lv, ref) on every rung; selftest is unsupported by both; r4f adds lv and replay; r6a traces a lattice twice as fine and r6b adds lv and wave: a long run, so name --rungs r0,r1,r2,r3,r4 for the baselined rays rungs
-node bin/lvrtc.mjs run suites/benchmark.json --rungs r4f   # R4f: lv against the replay of its own MTF sampling, 96 runs (about 3 min); asked of lv and replay whatever --engines names
-node bin/lvrtc.mjs engine conformance replay   # the conformance kit on the replay engine (needs LV)
-node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r6a   # R6a: the wave MTF of the same rays, on the run's lattice and one twice as fine (about 8 min and 15 GB of the store from empty)
-node bin/lvrtc.mjs run suites/benchmark.json --rungs r6b   # R6b: lv's diffraction MTF beside the wave estimator on its rays; asked of lv and wave whatever --engines names (about 13 min)
-node bin/lvrtc.mjs engine conformance wave   # the conformance kit on the wave engine (needs LV)
-node bin/lvrtc.mjs run suites/benchmark.json --rungs r5   # R5: lv, optiland and wave side by side, recorded; run only where named; about 8 min; asks optiland again at 512 rays for a run outside its band
-node bin/lvrtc.mjs run suites/benchmark.json --rungs r5g   # R5g: LV's geometric MTF beside optiland's own and the replay, recorded; only where named; about 37 min
-node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r4,r4f,r5,r5g,r6a,r6b   # the MTF rungs: about 54 min and 15 GB from an empty store
+node bin/catalog-case.mjs --suite focus-stations <run> suites/focus-stations-repro/<run>.json   # the same of a focus station (suite focus-stations-repro)
+node bin/catalog-attribution.mjs <temporary LVRTC_RUNS_DIR>       # after a reproducer: 60-digit LV/reference-tracer check, native optiland rows
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,reference-tracer --checks built-system,first-order   # real lenses on the built-in engines
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,reference-tracer --checks built-system,first-order,ray-trace,optical-path,geometric-mtf   # with LV's own launch rays traced, and the geometric MTF of them
+node bin/lvrtc.mjs run suites/benchmark.json   # the suite's own engines (lv, reference-tracer) on every check; pipeline-echo is unsupported by both; lv-mtf-replay adds lv and replay-of-lv-mtf; wave-mtf traces a lattice twice as fine and mtf-vs-wave-estimate adds lv and wave-mtf-of-lv-rays: a long run, so name --checks built-system,first-order,ray-trace,optical-path,geometric-mtf for the baselined rays checks
+node bin/lvrtc.mjs run suites/benchmark.json --checks lv-mtf-replay   # R4f: lv against the replay of its own MTF sampling, 96 runs (about 3 min); asked of lv and replay-of-lv-mtf whatever --engines names
+node bin/lvrtc.mjs engine conformance replay-of-lv-mtf   # the conformance kit on the replay of LV's MTF (needs LV)
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,reference-tracer,optiland --checks wave-mtf   # R6a: the wave MTF of the same rays, on the run's lattice and one twice as fine (about 8 min and 15 GB of the store from empty)
+node bin/lvrtc.mjs run suites/benchmark.json --checks mtf-vs-wave-estimate   # R6b: lv's diffraction MTF beside the wave estimator on its rays; asked of lv and wave-mtf-of-lv-rays whatever --engines names (about 13 min)
+node bin/lvrtc.mjs engine conformance wave-mtf-of-lv-rays   # the conformance kit on the wave MTF of LV's rays (needs LV)
+node bin/lvrtc.mjs run suites/benchmark.json --checks mtf-vs-optiland-fft   # R5: lv, optiland and wave-mtf-of-lv-rays side by side, recorded; run only where named; about 8 min; asks optiland again at 512 rays for a run outside its band
+node bin/lvrtc.mjs run suites/benchmark.json --checks geometric-mtf-vs-optiland   # R5g: LV's geometric MTF beside optiland's own and the replay, recorded; only where named; about 37 min
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,reference-tracer,optiland --checks geometric-mtf,lv-mtf-replay,mtf-vs-optiland-fft,geometric-mtf-vs-optiland,wave-mtf,mtf-vs-wave-estimate   # the MTF checks: about 54 min and 15 GB from an empty store
 node bin/lvrtc.mjs baseline write benchmark --mtf   # after that run and compare: baselines/benchmark.mtf.json, reports/benchmark/mtf.*
 node bin/lvrtc.mjs baseline check benchmark --mtf   # needs the engines; minutes on a warm store; MOVED (a recorded rung) fails nothing
 node bin/lvrtc.mjs compare benchmark           # judge that run: exit 1 on FAIL or ERROR; FLOOR is a pass
-node bin/lvrtc.mjs engine conformance ref      # the conformance kit on a built-in engine
+node bin/lvrtc.mjs engine conformance reference-tracer   # the conformance kit on a built-in engine (an old id, ref, is still read)
 node bin/lvrtc.mjs baseline write benchmark    # after run and compare: writes baselines/benchmark.json and reports/benchmark/rays.*
 node bin/lvrtc.mjs baseline check benchmark    # needs the engines: OK, STALE, REFRESHABLE or DRIFT per record
 node bin/lvrtc.mjs statement                   # write reports/validation-statement.{json,md} from the eight baselines alone
 node bin/lvrtc.mjs matrix                      # write reports/benchmark/validation-matrix.{json,md} from the benchmark's two baselines alone; verify holds both
 node bin/lvrtc.mjs verify                      # hermetic: baselines valid, committed reports byte-identical; the catalog held to its frozen policy; part of check
 node bin/lvrtc.mjs engine conformance optiland # the same on optiland: starts the Python worker (about 3 s; 17 s on an empty cache)
-node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r0,r1,r2,r3,r4   # three ways: built system, first-order data, LV's launch rays, optical path, geometric MTF; what the baselines are of
-node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r0,r1,r2,r3,r4,r7a --jobs 4   # with R7a, the spot of the coma and bokeh tabs' rays: the rays baselines from the Phase 6 end refresh (about 2 min)
-node bin/lvrtc.mjs run suites/benchmark.json --rungs r7b --jobs 4   # R7b: LV's coma and bokeh tabs beside optiland's SpotDiagram and RayFan, recorded; asked of lv and optiland; only where named; in no baseline
-node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r8a,r8b --jobs 4   # R8a, the axial intercepts of the spherical-aberration and axial-colour sections' rays (gated, about 15 s), and R8b, the sections beside optiland's own rays and focus (recorded, only where named, in no baseline)
-node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r9a,r9b --jobs 4   # R9a, the chief rays of the distortion, pupils and lateral-colour tabs (gated), and R9b, the tabs beside optiland's own distortion, chief rays and pupils (recorded, only where named, in no baseline); about 3 min from an empty store
-node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r10a,r10b --jobs 4   # R10a, the tangential and sagittal foci of the field-curve sections' parabasal rays and real-ray fans (gated), and R10b, the sections beside optiland's own FieldCurvature (recorded, only where named, in no baseline)
-node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r11a,r11b --jobs 4   # R11a, which rays of the vignetting tab's beams get through, their flux into the image and the landings of its mapping's chief rays (gated), and R11b, the tab beside the flux of LV's lattices, engine flux (recorded, only where named, in no baseline); several minutes and about 10 GB of the store from empty
-node bin/lvrtc.mjs run suites/benchmark.json --rungs r12b --jobs 4   # R12b, LV's summary tab and aperture control beside optiland's paraxial accessors and working f-number (recorded, only where named, in no baseline; asked of lv and optiland); seconds
-node bin/lvrtc.mjs run suites/benchmark.json --rungs r13b,r14b --jobs 4   # R13b, the comparator's Seidel sums (ref-seidel) beside optiland's, and R14b, optiland's Zernike fit beside the comparator's of the same samples (optiland-wave); recorded, only where named, in no baseline; about 8 min
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,reference-tracer,optiland --checks built-system,first-order,ray-trace,optical-path,geometric-mtf   # three ways: built system, first-order data, LV's launch rays, optical path, geometric MTF; what the baselines are of
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,reference-tracer,optiland --checks built-system,first-order,ray-trace,optical-path,geometric-mtf,spot-rays --jobs 4   # with R7a (spot-rays), the spot of the coma and bokeh tabs' rays: the rays baselines from the Phase 6 end refresh (about 2 min)
+node bin/lvrtc.mjs run suites/benchmark.json --checks spot-vs-optiland --jobs 4   # R7b: LV's coma and bokeh tabs beside optiland's SpotDiagram and RayFan, recorded; asked of lv and optiland; only where named; in no baseline
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,reference-tracer,optiland --checks axial-rays,axial-vs-optiland --jobs 4   # R8a, the axial intercepts of the spherical-aberration and axial-colour sections' rays (gated, about 15 s), and R8b, the sections beside optiland's own rays and focus (recorded, only where named, in no baseline)
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,reference-tracer,optiland --checks chief-rays,chief-vs-optiland --jobs 4   # R9a, the chief rays of the distortion, pupils and lateral-colour tabs (gated), and R9b, the tabs beside optiland's own distortion, chief rays and pupils (recorded, only where named, in no baseline); about 3 min from an empty store
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,reference-tracer,optiland --checks field-curve-rays,field-curve-vs-optiland --jobs 4   # R10a, the tangential and sagittal foci of the field-curve sections' parabasal rays and real-ray fans (gated), and R10b, the sections beside optiland's own FieldCurvature (recorded, only where named, in no baseline)
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,reference-tracer,optiland --checks vignetting-rays,vignetting-vs-flux-estimate --jobs 4   # R11a, which rays of the vignetting tab's beams get through, their flux into the image and the landings of its mapping's chief rays (gated), and R11b, the tab beside the flux of LV's lattices, engine flux-of-lv-rays (recorded, only where named, in no baseline); several minutes and about 10 GB of the store from empty
+node bin/lvrtc.mjs run suites/benchmark.json --checks summary-vs-optiland --jobs 4   # R12b, LV's summary tab and aperture control beside optiland's paraxial accessors and working f-number (recorded, only where named, in no baseline; asked of lv and optiland); seconds
+node bin/lvrtc.mjs run suites/benchmark.json --checks seidel-vs-optiland,zernike-vs-optiland --jobs 4   # R13b, the comparator's Seidel sums (reference-seidel) beside optiland's, and R14b, optiland's Zernike fit beside the comparator's of the same samples (otf-of-optiland-wavefront); recorded, only where named, in no baseline; about 8 min
 node bin/lvrtc.mjs mtf nikkor-z50f12           # the MTF LV's own tab presents; --aperture f/8 for its comparison
 node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; --zoom 1 for the tele end alone
-node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optiland   # the MTF benchmark of one lens: 8 runs (a zoom 16), r4 r4f r6a judged, r6b r5 r5g r6c recorded; prints the MTF report, writes runs/mtf-<lensKey>/
-node bin/lvrtc.mjs mtf nikkor-z50f12 --profile tabs --engines lv,ref,optiland --jobs 4   # the other tabs of one lens: the same 8 runs, r0 r1 r7a-r11a judged, r7b-r12b recorded; writes runs/tabs-<lensKey>/ (Stage 8.5)
+node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,reference-tracer,optiland   # the MTF benchmark of one lens: 8 runs (a zoom 16), geometric-mtf lv-mtf-replay wave-mtf judged, mtf-vs-wave-estimate mtf-vs-optiland-fft geometric-mtf-vs-optiland mtf-vs-optiland-wavefront recorded; prints the MTF report, writes runs/mtf-<lensKey>/
+node bin/lvrtc.mjs mtf nikkor-z50f12 --profile tabs --engines lv,reference-tracer,optiland --jobs 4   # the other tabs of one lens: the same 8 runs, built-system first-order and spot-rays to vignetting-rays judged, spot-vs-optiland to summary-vs-optiland recorded; writes runs/tabs-<lensKey>/ (Stage 8.5)
 node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tmpdir>   # Stage 4.2's evidence: docs/z50f12-investigation.md
 ```
+
+## Identifiers
+
+Stage 9.7 renamed the check ids (`src/core/legacyIds.ts`, `LEGACY_CHECK_IDS`; the vocabulary's `oldId` beside each
+check's `id`, held to the map by a test). A check held to a limit is named after what it compares, a side-by-side
+comparison `<analysis>-vs-<counterpart>`:
+
+| Old      | New                | Old  | New                           |
+| -------- | ------------------ | ---- | ----------------------------- |
+| selftest | `pipeline-echo`    | r5   | `mtf-vs-optiland-fft`         |
+| r0       | `built-system`     | r5g  | `geometric-mtf-vs-optiland`   |
+| r1       | `first-order`      | r6b  | `mtf-vs-wave-estimate`        |
+| r2       | `ray-trace`        | r6c  | `mtf-vs-optiland-wavefront`   |
+| r3       | `optical-path`     | r7b  | `spot-vs-optiland`            |
+| r4       | `geometric-mtf`    | r8b  | `axial-vs-optiland`           |
+| r4f      | `lv-mtf-replay`    | r9b  | `chief-vs-optiland`           |
+| r6a      | `wave-mtf`         | r10b | `field-curve-vs-optiland`     |
+| r7a      | `spot-rays`        | r11b | `vignetting-vs-flux-estimate` |
+| r8a      | `axial-rays`       | r12b | `summary-vs-optiland`         |
+| r9a      | `chief-rays`       | r13b | `seidel-vs-optiland`          |
+| r10a     | `field-curve-rays` | r14b | `zernike-vs-optiland`         |
+| r11a     | `vignetting-rays`  |      |                               |
+
+Stage 9.8 renamed the opaque engine ids (`LEGACY_ENGINE_IDS`; the vocabulary's `oldId` beside each engine's `id`,
+`engineOf` finding either, held to the map by a test). An engine this tool builds is named
+`<what it computes>-of-<whose data>`; `lv` and `optiland` keep their ids, so their stored answers stay valid:
+
+| Old           | New                         |
+| ------------- | --------------------------- |
+| ref           | `reference-tracer`          |
+| ref-seidel    | `reference-seidel`          |
+| replay        | `replay-of-lv-mtf`          |
+| wave          | `wave-mtf-of-lv-rays`       |
+| flux          | `flux-of-lv-rays`           |
+| optiland-wave | `otf-of-optiland-wavefront` |
+
+- **The rules below keep the historical ids** (R0 to R14b, `r2`, `selftest`; `ref`, `ref-seidel`, `replay`, `wave`,
+  `flux`, `optiland-wave`) as names of the same checks and engines; code, suites, the limits file
+  (`policy/rungs.v1.json`, version 25, keyed by the new check ids; it names no engine) and new run directories use
+  the new ones. Stored files written before a rename keep the ids they were written with, and a baseline is read
+  through `currentIds`, so a renamed engine's record is STALE(engine) REFRESHABLE (its adapter revision moved), never
+  GONE or NEW (`test/core/legacyIds.test.ts` holds it on the committed benchmark baselines mapped back to the old
+  ids). The maintainer's refresh (Stage 9.9, below) wrote every baseline but the catalog's at today's ids.
+- **Files written before the rename keep their ids**: the catalog snapshot (`baselines/catalog*.json`,
+  `policy/snapshots/rungs.v15.json`, `reports/catalog*`), `docs/known-failures.json` and its `--rungs` reproducers,
+  `suites/catalog.json`, `suites/catalog-repro/*` (`bin/catalog-case.mjs` writes new reproducers with today's
+  ids), `contract/fixtures` (the corpus: tests key its policies by today's ids with `atCurrentIds`) and old run
+  directories. Until the end-of-project catalog refresh, old ids are read on input as the new ones (`--checks` or
+  `--rungs`, `--engines` of `run` and `mtf`, `compare --reference`, suite files, `lvrtc checks r2`, `lvrtc glossary r2`,
+  `lvrtc glossary ref`, `lvrtc engine describe|conformance ref`), with one stderr note per command; `--rungs` itself
+  prints a note that it is the older spelling of `--checks`; the dashboard's lens query (`?rung=r5`, `?engine=wave`,
+  and both in `ref=`) is aliased quietly. The engine column of `lvrtc run`'s job lines is as wide as the longest
+  engine id it knows (`otf-of-optiland-wavefront`, 25), built in or configured. `compare`, `report` and `baseline
+  write` refuse a run directory written before the rename (`written-before-id-rename`), and the dashboard's run page
+  says so (`RunView.oldIds`). The catalog's readers,
+  gates, known failures and reports read raw ids, and a check title is found for either id (`checkOf`). Its reports
+  render `CATALOG_NOT_COVERED` (the old ids' words) while the catalog names an old check id (`namesOldCheckIds`), so
+  they keep their bytes; a catalog written since the rename gets today's `NOT_COVERED`. `baseline check catalog` reads
+  today's run and the limits at hand back to the snapshot's ids (`snapshotIds`, `snapshotPolicyIds`) only while the
+  snapshot names an old id. A test reading a committed baseline against a fresh run holds them with `checkInIdSpace`,
+  as the command does. The jargon ratchet's `old check id` term allows bare old ids only where the catalog's raw ids
+  or a check's `oldId` are shown; its `old engine id` term finds an old engine id only where it can be nothing else
+  (`ref-seidel`, `optiland-wave` as tokens; `ref`, `replay`, `wave`, `flux` in code or as one engine of a pair,
+  `lv – ref`, `lv / ref`, never the run-name suffix `-ref` or the words), allowed in the catalog's reports and on the
+  dashboard's help page (each engine's old id). `catalog-case.mjs` writes reproducers with today's check and engine
+  ids; `workers/python/diagnostics/catalog.py` reads a reproducer's reference tracer under either id. The suites'
+  `--engines` and fixture engines in synthetic tests (`ref` as a label, `ref-bent`, `ref-twin`) are labels, not
+  built-in ids, and stay; the corpus's floor arbiter `ref` is read as `reference-tracer` where a test runs the
+  built-in engine (`floorPolicy` in `test/cli/lvEngine.test.ts`).
+- **Known failures at the end-of-project refresh**: `classifyCatalog` and `unusedKnownFailures` match an entry by
+  `k.rung === rung.rung`, raw, so `docs/known-failures.json` keeps `"rung": "r2"` and its `--rungs` reproducers as
+  long as the catalog baselines do. The refresh that rewrites the catalog at today's ids re-keys each entry's `rung`
+  and its `engines` (`ref` to `reference-tracer`) and its reproducer. `failureEvidence` hashes the request count and
+  the pair (its two engine ids, verdicts and metrics, `failures` and `measured` left out) and no check id, so a rung
+  re-key keeps every `evidenceHash`; the engine rename does not: **recompute the `evidenceHash` of every entry whose
+  pair names a renamed engine** (12 of the 24 entries name `ref`) at that refresh. Until then `baseline check
+  catalog` reads today's run back to `ref` (`snapshotIds`) before classifying, so a listed FAIL of a pair with the
+  reference tracer stays OK (held with the real maps in `test/core/legacyIds.test.ts`).
+- **The limits-file transition is gone** (`src/compare/policyTransition.ts`, removed with its tests after the Stage
+  9.9 refresh): `verify` again holds every baseline but the catalog's to the exact version and hash of the limits file
+  at hand (`baselinePolicyMatches`). `policyFile.ts` never names the legacy maps (the catalog's gates there read raw
+  ids).
 
 ## Rules
 
@@ -356,11 +442,19 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   forms and an exact `fractions.Fraction` trace), never taken from an engine's output. Synthetic cases come from
   `tests/optiland/support.py`; tier-3 helpers are in `test/integration/optiland/support.ts`.
 - **`rays.trace` of `optiland` is optiland's own rows** (`lvrtc_optiland/trace.py`): the rays of a spec go into
-  one `RealRays` bit for bit and through one `optic.surfaces.trace` of the spec's line's optic, the only one
-  built. `hits`, exit and path are the rows of the case's surfaces; the landing and the path to it are optiland's
-  image row. A request above `MAX_BATCH_RAYS` is traced in batches, in order. The rays of a request are one batch
-  as given: optiland's tolerance on an asphere is the batch's (`docs/gotchas.md`); whether to shield a batch from
-  its ended rays is the owner's open decision.
+  a `RealRays` bit for bit and through `optic.surfaces.trace` of the spec's line's optic, the only one built.
+  `hits`, exit and path are the rows of the case's surfaces; the landing and the path to it are optiland's image
+  row. A request above `MAX_BATCH_RAYS` is traced in batches, in order. optiland's tolerance on an asphere is the
+  batch's, and a ray optiland ended spoils it (`docs/gotchas.md`), so **a batch is shielded from the rays optiland
+  ended** (the owner's decision of 2026-11-10, `trace_batch`): traced once, and where optiland ends no ray that is
+  the answer, the same bits; otherwise the rays ended at the least end surface of a pass are answered from it (a ray
+  that came to it sideways, `|N|` not above optiland's 1e-14, first and alone: it spoils the surface it ends at;
+  `end_keys`) and the rest traced again without them, in order, until a pass ends no ray. Every ray is answered from a
+  batch that held no ray optiland had ended before that ray's own end; an ended ray keeps its end and reason
+  (`settle` unchanged). At most 2 S + 2 passes (`shield_pass_limit`), more is `ShieldPassesExceeded`, an error.
+  `rays.trace` and `axial.native`'s trace of its aimed rays (`trace.shielded`, the stop read-back on the pass each
+  ray is answered from) are shielded; optiland's own analyses (aimer, MTF, spot, wavefront grids) are optiland's, and
+  a ray optiland keeps alive still raises its batch's tolerance (the far ray).
 - **A ray optiland keeps is answered as optiland has it; why a ray ended needs evidence** (`trace.settle`). ok is
   optiland's own measure: intensity above 0 and a number for point, direction and path on every surface. An ended
   ray is `blocked` only where optiland's numbers show why (a point on its own sag with intensity 0; no direction
@@ -453,7 +547,8 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   An f-number outside the slider (below the widest, above `maxFstop`) is a coded problem
   (`aperture-faster-than-wide-open`, `aperture-beyond-slider-range`), never clamped.
 - **`lv-best-axial` is asked of LensVisualizer, never computed** (`lvBestAxialFocus`, `src/engines/lv/focus.ts`):
-  the first step of `computeMtfSteps` for the stop, the lines and the grid cap of the run. The case is exported at
+  the first progress of `computeMtfSteps` that carries a result (`lvMtfRequestResult`; since LV #988 the steps are
+  progress) for the stop, the lines and the grid cap of the run. The case is exported at
   `state.imgZ` plus that shift and is then a case like any other. The plane is of one stop, one spectrum and one
   cap. `lv` answers `mtf.native` about a case off its design plane only when its own search, asked again for the
   request, gives that plane to the bit; it then asks LV for `best-axial` and states
@@ -463,13 +558,14 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   engine or a lens; the manifest records it under `runs[].recipe`. A case file states its fields as angles or has
   none (`recipe-needs-field-angles`). It is no contract kind: a request states what it needs of it in its own spec.
 - **`replay` is LensVisualizer's rays and the comparator's sums** (`src/engines/lv/replay.ts`, `replayEngine.ts`).
-  It calls what LV exports (the first step of `computeMtfSteps`, `prepareMtfFieldLaunch`, `findMtfFieldFootprint`,
+  It calls what LV exports (the first result of `computeMtfSteps`, `prepareMtfFieldLaunch`, `findMtfFieldFootprint`,
   `traceMtfStopBundle`, `traceMtfLaunchPlaneBundle`, `expandMtfFootprint`, `refineMtfField`, `emptyMtfField`,
-  `assessUnresolvedFlux`, the constants) and restates only `traceField`'s loop, `fieldAtGrid`'s bookkeeping (since LV
-  #936: the stop lattice of each line kept for the next grid, unaimed and unresolved-in-beam rays, dark lines, the
-  share of the beam's unresolved flux, a refinement past a failed share; since LV #940 a line whose lattice the aim
-  found no ray of ends the field `aim-failed` at once, with LV's message, `aimedNothing` and `aimFailedMessage`) and
-  the ladder, each line with a canary. Never call or port LV's `geometricOtf` or `combineOtfs` there: the sum is `polychromaticOtf`. The sums
+  `mtfUnresolvedFluxFraction` (LV #988), `assessUnresolvedFlux`, the constants) and restates only `traceField`'s
+  loop, `fieldAtGrid`'s bookkeeping (since LV #936: the stop lattice of each line kept for the next grid, unaimed and
+  unresolved-in-beam rays, dark lines, the share of the beam's unresolved flux, each line at its incident weight since
+  LV #988, a refinement past a failed share; since LV #940 a line whose lattice the aim found no ray of ends the
+  field `aim-failed` at once, with LV's message, `aimedNothing` and `aimFailedMessage`) and the ladder, each line
+  with a canary. Never call or port LV's `geometricOtf` or `combineOtfs` there: the sum is `polychromaticOtf`. The sums
   that decide which grids are traced (flux, unresolved share) stay LV's plain ones. Its request is `lvMtfRequest`,
   the one function `lv` builds its own with: never build a second. The stand-in of
   `test/engines/lv/replay.test.ts` holds each line of the bookkeeping to a closed form: removing one must turn a
@@ -601,9 +697,10 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   Since LV #936 each line of LV's MTF has its own aimed stop lattice, whose stop-centre ray (`lattice.chief`, aimed at
   that line's indices by `mtfAimSpectrum`) is traced unclipped, and every line's reference is line 0's landing
   (`commonReference`, LV `mtf.ts`); optiland-wave states optiland's line-0 chief aimed through the stop centre at
-  555 nm, each engine in its own model of the line's indices. The gaps measured before #936, when LV traced one
-  launch solved at the d line at every line (1.1e-6 to 5.7e-6 mm in the two Stage 4.3 configurations, up to
-  3.0e-4 mm on the R5g benchmark), are history, measured again at the Phase 6 end refresh; the 1e-3 mm limit stays.
+  the photopic line 0 (560 nm since LV #988, 555 nm before), each engine in its own model of the line's indices. The
+  gaps measured before #936, when LV traced one launch solved at the d line at every line (1.1e-6 to 5.7e-6 mm in the
+  two Stage 4.3 configurations, up to 3.0e-4 mm on the R5g benchmark), are history, measured again at the Phase 6 end
+  refresh; the 1e-3 mm limit stays.
   A common reference point does not change the modulus, so the several-line landing only checks that the
   answers are of the same field. Never read `imageHeightMm` of two engines on several lines as the landing of
   one ray. The several-line report names its selected sorting limit through a linted wording template.
@@ -624,6 +721,17 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   time. Its hermetic synthetic goldens are written only by `node test/report/writeGolden.ts`. The owner signed
   off the supportable sentence word for word (2026-10-23): change its words only with the owner. The plan records
   the amended unnamed-state/catalog exclusion. Every committed `reports/**/*.md` passes `wordingProblems`.
+  **The owner signed off one clause word for word (2026-11-16)**, placed before "Dispersion, white-light
+  weighting…" and printed only where a configuration of the statement's gated checks has a listed failure
+  (`listedFailureClause`): "Configurations at which a known failure of one engine is listed (2, optiland's, where
+  LensVisualizer and the reference tracer agree) are not counted." The count is of configurations; the engine must
+  be optiland, whose name the signed words carry (another engine's listed failure refuses the sentence). An exactly
+  listed FAIL no longer blocks the sentence (an unlisted FAIL or ERROR does);
+  its configurations leave the count and the quoted figures, and the statement lists the failures (`listedFailures`,
+  "Failures, classified"). The clause, and so the sentence, cannot be said where the listed pairs name more than one
+  engine besides LensVisualizer and the reference tracer, or where a LensVisualizer–reference-tracer pair of those
+  configurations on a gated check is not Pass (or has no ray-trace pair): the statement refuses as before. Without
+  a listed failure the statement is byte for byte as before (`test/report/statement.test.ts` holds all three).
 - **MTF baselines are files of their own** (`baselines/<suite>.mtf.json`, `reports/<suite>/mtf.{md,json}`;
   `--mtf` on `baseline write` and `check`; `verify` holds both kinds). `buildBaseline` with `MTF_BASELINE`: the
   rungs r4, r4f, r5, r5g, r6a, r6b of the run, each metric with `measured`, a rung's `steps`, `bands` and, for r5
@@ -845,7 +953,9 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   run (name and case hash), rung and pair of engines, the verdict, metrics, counts, policy, fingerprints and
   adapter revisions; no ray arrays, no prescriptions. `reports/<suite>/rays.{md,json}` are rendered from the
   baseline alone. `lvrtc baseline write <suite>` writes both from a compared run and refuses a run with a FAIL or
-  ERROR pair (the catalog alone admits a FAIL listed exactly in `docs/known-failures.json`). Source refusals are recorded as coded run problems with no ERROR pair.
+  ERROR pair (the catalog and focus-stations alone admit a FAIL listed exactly in their lists of known failures,
+  `docs/known-failures.json` and `docs/known-failures.focus-stations.json`). Source refusals are recorded as coded run
+  problems with no ERROR pair.
   `lvrtc baseline check <suite>` needs the engines: per record OK, STALE(case|engine|policy) with
   REFRESHABLE or DRIFT, NEW or GONE; it exits 1 only on DRIFT, FAIL or ERROR. `lvrtc verify` is hermetic and the
   last step of `npm run check`: schema, invariants, policy hash, and reports byte for byte; it cannot see STALE.
@@ -1011,7 +1121,8 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   then ordinary zoom ends; wide open, reference line, design plane, lv/ref/optiland, gated R0–R4/R4f/R6a only.
   Source refusals remain coded runs. At clean LV `879c06102` this expands 1,341 states. Never run a full sweep
   as an implementer; the bounded sample is at most 25 lenses, using temporary storage and at most four jobs.
-- Catalog-only baseline annotations state contract **1.6**: `runs[].features`, `censusReasons` and pair `failures`.
+- Catalog-only baseline annotations state contract **1.6**: `runs[].features`, `censusReasons` and pair `failures`
+  (since 2026-11-16 `failures` also of focus-stations, below).
   The baseline writer copies flags from validated cases, and codes from source/field/recipe problems. No engine
   wire document or global `CONTRACT_VERSION` changes. All other suite baseline formats/FAIL refusals stay as before.
 - `docs/known-failures.json` admits exact catalog FAIL evidence only. Each exceeding metric needs run/rung/ordered
@@ -1021,8 +1132,35 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   is DRIFT. ERROR is never admitted; comparison always fails on FAIL. Empty after the zero-FAIL sample; the subsequent owner rays sweep has 83 FAIL rows on 12 lenses, attributed
   as method with 24 exact three-request aggregate entries and one-run reproducers. See docs/REFERENCE.md's Stage 5.3
   attribution table and docs/catalog-attribution.json.
-  `lvrtc verify` reports a FAIL or ERROR in any baseline other than the catalog's, and a list entry that no
-  classification of the catalog baselines uses (`unusedKnownFailures`): remove an entry once its FAIL is gone.
+  `lvrtc verify` reports a FAIL or ERROR in any baseline other than the catalog's and focus-stations' (each held to
+  its list), and a list entry that no classification of the catalog baselines uses (`unusedKnownFailures`): remove
+  an entry once its FAIL is gone.
+- **focus-stations lists known failures too** (owner decision 2026-11-16; `KNOWN_FAILURE_SUITES` in
+  `src/baseline/catalog.ts`, `FAILURE_LIST_SUITES` in `src/contract/baseline.ts`): `docs/known-failures.focus-stations.json`,
+  the catalog's schema at today's ids, read by `readKnownFailures(root, suite)` (no file: none listed); the catalog's
+  list and its raw-id paths are unchanged, byte for byte. `baseline write`, `check`, `verify`, `verify:real`, the
+  reports, the statement and the dashboard treat an exactly listed focus-stations FAIL as the catalog's (its class and
+  gotcha shown; contract 1.6 only where a pair is classified). Unlike the catalog's, an entry whose run no committed
+  focus-stations baseline holds is **pending** (`pendingKnownFailures`: a note of `verify`, no problem); once a
+  baseline holds the run, the entry must classify a FAIL exactly or it is unused (a problem). An entry that can never
+  be met is refused (code `known-failure-of-no-run`, `knownFailuresOfNoRun`): `baseline write` (rays) of a baseline
+  that holds no run of it, `baseline check` of a run in neither the committed baseline nor today's run (an error of
+  the check). `baseline check` calls a listed FAIL of a run the baseline lacks NEW (an unlisted one DRIFT, as the
+  catalog's). Outside the catalog contract 1.6 is stated only with a classification (`verify` reports one without),
+  and `lvrtc statement` holds the classifications to the list before writing, as `verify` does. **`lvrtc compare
+  focus-stations` exits 1 by design** while a listed FAIL stands (comparison always fails on FAIL, as for `lvrtc run`
+  on diffractive and folded): a refresh script uses `baseline check focus-stations && baseline write focus-stations`,
+  which exit 0 on exactly listed FAILs, and must not stop at `compare`. Reproducers:
+  `node bin/catalog-case.mjs --suite focus-stations <run> suites/focus-stations-repro/<run>.json` (suite
+  `focus-stations-repro`; never `focus-stations`). Listed: the `-zoom0-focus1` stations of the Fujinon XF 8-16 mm
+  and XF 23 mm f/2, `ray-trace` `mask.mismatches` of `lv`–optiland and optiland–`reference-tracer`, class method
+  ("Another crossing" of the gotcha on optiland's asphere iteration), written by the Stage 9.9 refresh.
+  `test/integration/optiland/stations.test.ts` accepts exactly these (classified as `baseline write` would) and fails
+  on any other. On the two requests of the listed FAILs alone (`listedRequests`, keyed by check, run and request) the
+  pairs of optiland and the reference tracer are held to the gates, not the exact tracers' bounds (the batch keeps
+  optiland's far crossings), and optiland's failed rays may be blocked by the others on the next surface; every other
+  request keeps the bounds. The stations without rays are pinned: only the Pentax A 200 mm macro's second station at
+  `f5b456fec` (`chief-ray-failed` at every field). Evidence: docs/REFERENCE.md, "Known failures of focus-stations".
 - `node bin/catalog-case.mjs <expanded-name> suites/catalog-repro/<name>.json` makes an ordinary one-run suite
   from the source expansion, without prescriptions. Its suite is named `catalog-repro`, so a reproduction never
   replaces `runs/catalog`; never name a reproducer suite `catalog`.
@@ -1171,8 +1309,8 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   change together.
 - **`lv` answers `axial.native` from the sections as they present them** (`src/engines/lv/axial.ts`): spherical
   aberration only at a line of the authored indices; colour at each line whose wavelength is one of its channels'
-  (`lvChannelLines`: C, d, F, g; C', e, F', g when every element is e-referenced; a mixed lens is
-  `lines.mixed-reference`), a line that is none `lv-no-channel-at-line`, with `sampling.indexMaxDelta`, the largest
+  (`lvChannelLines`: C, d, F, g; C', e, F', g when every element is e-referenced; C, D, F, g when every element is
+  of sodium D indices, LV #965; a mixed lens is `lines.mixed-reference`), a line that is none `lv-no-channel-at-line`, with `sampling.indexMaxDelta`, the largest
   difference of the channel's indices from the case's; both on the design plane only (`focus.off-design`). Which
   line a channel is, LV says: `lvChannelLines` asks LV's own `lensChromaticReference` (bound from the chromatic barrel)
   of `model.runtime.elements`, exactly the tab's `lensChromaticReference(L.elements)` (rear plates left out), and of
@@ -1701,14 +1839,17 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   the Petzval sum, a plane-parallel plate, a Cartesian ellipsoid, a fourth-order plate, a paraboloid of a term of power 2,
   the stop-shift identities, the colour of a thin achromat. Never port optiland's sums into it.
 - **optiland answers `seidel.native` with its own `aberrations`** (`lvrtc_optiland/seidel.py`) of a verified optic whose
-  one field is `maxFieldDeg` (`field_optic`): totals the negated `seidels()`, a surface's the negated `third_order()` term
-  times optiland's own factor `2 n' u'`, held to the total (`SURFACE_SUM_TOLERANCE`), the invariant the negated
+  one field is `maxFieldDeg` (`field_optic`): totals the negated `seidels()`, a surface's the negated
+  `seidels_per_surface()` (since optiland `a9e544a2`; before it the worker formed the product itself), held to the
+  `third_order()` term times optiland's own factor `2 n' u'` to the bit and to the total (`SURFACE_SUM_TOLERANCE`), the
+  invariant the negated
   `paraxial.invariant()`: optiland's sign is OpticStudio's opposite on all five (its own cross-tool test says so). Its
   sums read a surface's radius and conic alone: a term of power 3 or 4 is refused (`surface.asphere.cubic-term`,
   `surface.asphere.quartic-term`, `seidel.term_refusals`), as are a phase profile and a term of power 1 or 2. It states
   no chromatic sum (its optic of a line has one wavelength of a constant index; the owner may decide on a dispersive
   optic). Every setting read back (aperture, wavelength, image index, largest field, surface count, marginal start,
-  chief slope within 4 ulp of `tan`, chief height at the stop, `third_order()`'s total), each with a deliberate fault in
+  chief slope within 4 ulp of `tan`, chief height at the stop, `third_order()`'s total, `seidels_per_surface()`'s shape
+  and values), each with a deliberate fault in
   `test_seidel.py`, which holds the worker's sums to a single surface's closed forms and pins optiland's raw sign and its
   blindness to a term of power 4.
 - **`zernike.native` v1 (contract 1.0)**: spec `line`, `fieldAnglesDeg`, `grid` (even: `wavefront.native`'s midpoints),
@@ -1846,11 +1987,11 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
 
 - **The validation matrix is baseline-only** (`src/report/matrix.ts`, `lvrtc matrix [--root <dir>]`): rendered from
   `baselines/benchmark.json` and `benchmark.mtf.json` alone into `reports/benchmark/validation-matrix.{json,md}`, a row
-  per LensVisualizer tab, a foundation row (R0–R3) and a row of what LV has no tab of (`MATRIX_ROWS` in `wording.ts`,
-  every sentence a linted template). A baselined rung gets counts in the statement's units (configurations,
+  per LensVisualizer tab, a foundation row (R0–R3) and a row of what LV has no tab of (`MATRIX_ROWS`, in
+  `src/vocabulary/matrix.ts` and re-exported by `wording.ts`, every sentence a linted template). A baselined rung gets counts in the statement's units (configurations,
   configuration pairs, request pairs), R4 counted once (its duplicates must agree but for MTF's `measured`). A recorded
   rung in no baseline (R7b–R14b, `UNBASELINED_RUNGS`, held to `RUNGS` by a test) gets its quantity and engines and no
-  figure; a baseline that holds one is refused. A row's "no attention band" sentence is held to the policy by a test.
+  figure; a baseline that holds one is refused. A row's "no review band" sentence is held to the policy by a test.
   `lvrtc verify` holds both files byte for byte when both benchmark baselines exist or either matrix file does;
   `verify --write` regenerates them. Its synthetic golden is written only by `node test/report/writeGolden.ts`. It
   claims no agreement on a recorded rung and leaves the statement and its signed sentence unchanged.
@@ -1996,7 +2137,7 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   a section `consensus: null` (as for fewer than three), so `buildReport` never fails for size. `ReportModel.groups`
   counts, per engine of the run, the sections that place it in the consensus, as an outlier, apart, placed without one
   or not placed; null when no section has a consensus to look for. No command or file of its own: `lvrtc report` carries it.
-- **A consensus says which answers are within the gates of each other, never which is right**: every sentence of it
+- **A consensus says which answers are within the limits of each other, never which is right**: every sentence of it
   is a template of `src/report/wording.ts` (`consensusSentence` under a pairwise matrix; "## Consensus" after the
   verdict summary), and the banned claim `consensus-correct` rejects a consensus, outlier or majority named beside
   correct, right, wrong, true value, in error, accurate and the like. Its golden is `fake-group` (`fake-a`,
@@ -2210,3 +2351,304 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   of `DASHBOARD_TEXT.store`. `test/dashboard/storeControl.test.ts` (temporary stores whose root reads this
   repository's HEAD through a `.git` file, never `runs/store`): the dry runs change nothing, a confirmation changes
   exactly the planned entries, and each refusal above changes nothing.
+
+## Phase 9 plain language
+
+- **`src/vocabulary` is the single source of every displayed label, definition and remedy** (checks with their
+  old ids, `oldId`, which `lvrtc checks` and the checks page show as "old id"; engines with theirs, which the glossary
+  and the help page show as "Old id", the same id for `lv` and `optiland`; verdicts, outcomes, classes, metrics,
+  codes, terms, suites). No surface hand-writes a label.
+  It is pure data and small helpers, imports only types from outside itself, and is in no engine's import closure
+  (`test/vocabulary/closure.test.ts`). `src/report/wording.ts` takes `STATEMENT_RUNGS` and `MATRIX_RUNGS` from
+  `checks.ts` (never the other way), so a report's bytes do not move.
+- Every vocabulary string passes `wordingProblems` and uses no word of `JARGON` (`test/vocabulary/vocabulary.test.ts`).
+- `docs/GLOSSARY.md` is generated (`renderGlossary`, `lvrtc verify --write`) and held byte for byte by `lvrtc verify`
+  on this repository (by real path) or any root that has one; never edit it or run prettier on it.
+- The jargon ratchet (`test/vocabulary/jargon.test.ts`) holds CLI help, `reports/**/*.md` and the golden reports to
+  per-text allowlists that only shrink: remove a word from a list once a surface stops using it, never add one.
+- **What a command prints** (Stage 9.3; the ratchet's `CLI_OUTPUT`, on a temporary fake root): per-item lines keep
+  check and engine ids (what a user types), and the command prints one legend of the ids it used (`legendLines`,
+  `src/cli/output.ts`); statuses, verdicts and outcomes are vocabulary labels (`src/vocabulary/output.ts`), and a
+  code is followed by its sentence and remedy (`codeLines`, also under `main.ts`'s catch-all), less any remedy
+  sentence the message above it already says: optiland's not-configured and spawn-failed messages end with
+  `OPTILAND_SETTING_HINT`, the vocabulary's remedy word for word (a test holds the two together). Hashes (engine code,
+  this tool's code behind it, lens state, request, suite file, LensVisualizer's engine files) are shown only under
+  `--details`. Every `--json` keeps its keys and values exactly: verify:real, check-lv and the dashboard parse them.
+- **What the dashboard shows** (Stage 9.4): every label is the vocabulary's, rendered by `html.ts`'s helpers (`check`:
+  title with the id in `<code>`; `engine`: name with the id on hover; `verdict`, `badge`, `differenceClass`,
+  `metricName`, `quantity`: label with the stored value or key on hover); CSS classes and every `/api` value stay the
+  stored ones. Value labels (methods, support statuses, limit kinds, baseline kinds, places, quantities) live in
+  `src/vocabulary` (`output.ts`, `quantities.ts`), never in `DASHBOARD_TEXT`; one class has one wording (`classLabel`).
+  Charts speak labels too: engine names in legends and captions, a heat map's checks by title and id, its cells the
+  short verdict where it fits (else the stored value, which its legend pairs with the label).
+  Headings, column headers, form labels, step names and derivations are `DASHBOARD_TEXT.labels` /
+  `DASHBOARD_TEXT.derivations` (a derivation's words are read back by `figures.test.ts`: move, never reword). Every
+  page but a refusal has a "How to read this page" `<details>` (`DASHBOARD_TEXT.howTo`); hashes (suite file, limits
+  file, lens states, requests, engine code, store state) go under `identifiers()`, a `<details>` whose summary is
+  exactly "Identifiers" with nothing nested. A compare card's badge names its own counterparts
+  (`CompareTab.counterparts`). `/help` and `/checks` (twins `/api/help`, `/api/checks`; `helpViews.ts`) show the
+  vocabulary and each check as `lvrtc checks <id>` does (`checkJson`), every limit a Figure of the limits file at
+  hand: `figures.test.ts` holds each limit to its own check's metric and member and each check's metrics to its entry
+  (`holdChecks`), and holds every compare gate, band and sorting limit to the limits file the same way (`holdLimit`).
+- The ratchet's `DASHBOARD` surface reads every page `server.test.ts` lints (`everyPage` in
+  `test/dashboard/support.ts`, plus `/control`), a lens page with its golden's curves and a run-control job page (its
+  `<pre>` output, the command's own words, left out), by kind of page, visible and `<title>` text with Identifiers
+  removed. What remains is the limits file's JSON pointers in chart tooltips (`/rungs/...`). `SORTING_METRICS`
+  (`src/dashboard/compare.ts`) is the vocabulary's `SORTING_LIMITS` (R13b's `invariant.maxAbs` and R14b's
+  `fitCondition.max` reach no card today, but are limits of a sorting too).
+- **What a report says** (Stage 9.5): every committed report is re-rendered from its unchanged baselines (no byte
+  under `baselines/` moves; `rays.json` is unchanged; a JSON twin changes only in its prose: `notCovered`, the
+  statement's `z50Attribution`, the matrix's `compares`, `about` and `notCovered`). Names come from
+  `src/report/names.ts`: a check is its title, a dash, then its id in code (`checkName`; never a parenthesis after a
+  title that may end in one), a figure its label, a dash, then its key (`figureName`), a unit `unitName` (`(no unit)`
+  for "1", `wavelengths` for "lines"), a place `placeText` (a field of `rays.trace` with `deg`, a field of
+  `mtf.native`, an image-height fraction as the rungs request it, with "of the image height"). Verdicts, row statuses
+  and classes show their labels (`verdictShort`, `rowStatusLabel`, `classLabel`), the stored value in the legend;
+  reason codes, comparator reasons, problem codes and `known-failures.json` commands (`--rungs`) stay as stored. The
+  Limit column shows `≤` a limit, or the review band a side-by-side figure has (`mtfReportBands`); a chief-landing
+  limit (`SORTING_LIMITS`) is a sorting limit, never a band: the statement and the "Worth a look" rows call it one,
+  and the Limit column leaves it to the table, which may hold another for several wavelengths. optiland's binning band
+  and the grid-doubling band are convergence bands (0.005 on the axis, 0.01 off it), never review bands. Every
+  heading, column label and sentence is a template of `src/report/wording.ts` (`REPORT_TEXT`, `HOW_TO_READ_TEXT`,
+  `RUN_REPORT_TEXT`, `MTF_TABLE_TEXT`, `MTF_COMPARISON_TEXT`, `STATEMENT_LABELS`, `MATRIX_LABELS`, `CATALOG_LABELS`)
+  or of the vocabulary (`src/vocabulary/reports.ts`: run-name parts, places, field meanings, engine details;
+  `matrix.ts`: `MATRIX_ROWS`, which `wording.ts` re-exports). A baseline's report, the statement and the matrix end
+  with "Identifiers": every hash (suite, baseline and limits files, engine code and this tool's code behind it, the
+  commit and source hash an engine states, each lens state) and the contract version; Inputs keep what an engine
+  states of itself in words (`ENGINE_DETAIL_TEXT`). A baseline's report has "How to read this" before Identifiers,
+  with legends chosen from the baseline alone: the verdicts, checks, engines and places it names, the run-name parts
+  its runs have (`runNameParts`), and wavelengths by index only where the baseline keeps them (the MTF baselines' `lv`
+  `lineWavelengthNm`, `mtfReportSpectra`; never in `mtf.json`); a rays baseline says it keeps none. The FLOOR
+  paragraph, legend row and `floor ≤` sentence are printed only where a floor exists: a baseline with a FLOOR pair,
+  or a run whose limits file gives a metric a floor limit (`renderMarkdown`'s `floor`, which also hides a summary row
+  of zero FLOORs). The owner-signed sentence is shown as it is. The catalog's census counts the lens states that carry
+  a code, compared or not. `lvrtc baseline check` shows what moved by labels (`movedText`, held form by form in
+  `test/baseline/check.test.ts`) while `--json` keeps `checkBaseline`'s words. A test that a heading is absent matches
+  it by its id (`/^## .*`r6c`$/m`), never by a title. After a change that moves a report:
+  `node test/report/writeGolden.ts`, `lvrtc verify --write`, `statement`, `matrix`, `report catalog --catalog`; then
+  every changed report holds the same hashes, and the same numbers but for those the change states (a legend, a
+  band now shown, a unit "1" now in words).
+- **Legacy ids** (Stage 9.6, `src/core/legacyIds.ts`; imports nothing, in no engine closure): `LEGACY_CHECK_IDS` and
+  `LEGACY_ENGINE_IDS` (old to new, frozen; the check map filled at 9.7, the engine map at 9.8, see "Identifiers"),
+  `currentCheckId`, `currentEngineId`, `policyAtIds`, `snapshotPolicyIds`,
+  `currentIds(baseline)` (every check and engine id of a baseline renamed, every list the writer sorts by engine
+  sorted again, pairs `a` before `b`; the same object where nothing is old), `legacyIdsOfRun`; every function takes
+  the maps as a parameter, so tests hand synthetic ones. Applied: input
+  (`selectRungs`, `selectEngines`, `specAtCurrentIds` in `planJobs` for a run's rungs, engines, `referenceEngine` and
+  `sampling.engines` keys, `compare --reference`; an id is read as an old one only where the handed ladder, registry
+  or run does not know it, so a stand-in rung literally named `r5` keeps working; a suite's hash stays that of the
+  file as written; one stderr note per command from `runCli`, `aliasNoteLines` of `OLD_ID_TEXT`), `baseline check`
+  (`checkInIdSpace`: the committed baseline through `currentIds`, so `runEngines` and the rung selection see the new
+  ids; but a dated snapshot, the catalog, stays as written and today's run is read back to its ids by `snapshotIds`,
+  the inverse maps, asserted bijective by `inverseMaps`, before `classifyCatalog` and `checkBaseline`, so a listed
+  FAIL stays OK) and the `--replace` guard, `jobEstimateGiB`, `verifyReal`'s `rungsOf`, the
+  baseline and MTF report renderers (`baselineAtCurrentIds`; the report still names the hash of the file as written),
+  `buildStatement`/`renderStatement` and `buildMatrix`/`renderMatrix` (hashes of the raw files), and the dashboard's
+  policy pointers, `COUNTERPARTS` pairs, `GATED_HEADLINES`, `RUNGS.find`, baseline record lookups and the staleness
+  ask. `compare`, `report` and `baseline write` refuse a run directory whose run record or comparisons name an old
+  id (`refuseOldIds`, code `written-before-id-rename`, words and remedy in `src/vocabulary/codes.ts`);
+  `createEngineRegistry` refuses a configuration that defines an engine under an old id (`OldEngineIdError`,
+  `engine-defined-under-old-id`; not in `src/core/config.ts`, whose edit moves optiland-wave's revision). **Never**
+  map ids in `parseBaseline`, `readCatalogInputs`, `readKnownFailures`, `classifyCatalog`, `unusedKnownFailures`,
+  `baselineGateProblems`, `renderCatalog`, or a catalog baseline's reports (`baselineAtCurrentIds` keeps
+  `SNAPSHOT_BASELINE_SUITES` raw): the catalog keeps its ids until the end-of-project refresh. Guards in `npm test`:
+  `test/core/migrationGuard.test.ts` pins every built-in engine's adapter revision in full (and the worker's, restated
+  in TypeScript and held to `identity.py` where Python is), and the fingerprints of `reference-tracer` and
+  `reference-seidel`, each beside its pin before 9.8: 9.8 moved exactly the six renamed engines, each by its id
+  constant (and the engine's own header comment), and the two fingerprints (which hash the source directories), never
+  `lv` (`afad9cb8`) or optiland's worker (`98f36151`). That evidence is kept as measured, in columns of its own (the
+  revision at the rename and before it), apart from today's pins, which the first tests hold and a later change moves
+  alone (the LensVisualizer 420b47555 adoption moved `lv`, `replay`, `wave` and `flux`). The pins of 9.8:
+  `reference-tracer` `49ce9a07` (fingerprint `1285061c`), `reference-seidel` `c847050f` (fingerprint `0b0d1027`),
+  `replay-of-lv-mtf` `6f0c41d6`, `wave-mtf-of-lv-rays` `8a272b3a`, `flux-of-lv-rays` `6ecb3bb3`,
+  `otf-of-optiland-wavefront` TypeScript `501c2a99`, whole `9cdfad1a` (the optiland hint in
+  `src/engines/optiland/definition.ts`, in its TypeScript closure and in no worker file, moved with it);
+  `test/core/requestSnapshot.test.ts` holds every
+  check's request ids and engine options on the fake LensVisualizer tree to `test/fixtures/request-snapshot.json`,
+  the file's check and engine names read under today's ids and each check's jobs in an order of their own
+  (`heldPart`), so the file stays unchanged through 9.7 and 9.8 (byte for byte only while the maps are empty);
+  rewrite it (`node test/core/writeRequestSnapshot.ts`, read the diff) only at the end-of-project refresh or for a
+  change meant to move a request id or option. No check or engine id is in a request
+  id, a spec or an option (the test asserts it); the store key names the engine id and its adapter revision, never a
+  check id, so 9.7 moves no request id or store key and 9.8 moves store keys only through the six engines' ids and
+  revisions.
+
+## LensVisualizer 420b47555 adopted
+
+- **LV `420b47555` adopted** (engine closure `c5c5ba6d`, 187 files: those of `4669921b` and three new,
+  `src/optics/geometry/imageSurface.ts`, `prescription/imageSurfaceSection.ts` and `validate/imageSurface.ts`).
+  Ten PRs since `25f65d4b4`: #960 (`500ef5992`, curved image surfaces) is the one engine change the comparator reads;
+  #955, #956, #958, #959 and #961 add six lenses each and glass entries (Hoya CF5 and NBFD1, Sumita LASKN3, Schott
+  N-BK10, partial dispersions the engine does not read); #962 (lens stories, aperture metadata), #966 (doublet badges:
+  two lenses lose a `cemented` flag), #967 and #968 (the diagram) change no case of a committed suite. No binding name
+  was added or lost. The evidence is `docs/REFERENCE.md`, "LensVisualizer 420b47555 adopted".
+- **A curved image surface is a coded problem of its run** (`curved-image-surface`, structural: LensVisualizer's gate is
+  not asked). LV #960 compiles a lens's `imageSurface` (a sphere, an asphere, or a cylinder curved along one side of
+  the frame) to `state.lens.imageSurface`, null for a flat image, and lands every analysis on it: image heights along it
+  (a cylinder's along the unrolled film), the MTF's and Rimmer's cosines in its tangent frame, the field curves from it,
+  a cylinder's frame edge for the half field. A case has the flat plane `conditions.imageZ` only, so such a state is
+  never exported as flat. Read the member through `lvImageSurface` (`binding.ts`; null where a LensVisualizer before
+  #960 states none), never directly. At 420b47555 only three hidden reference fixtures have one
+  (`reference-curved-sensor-achromat`, `reference-cylindrical-film-gate`, `reference-concentric-mirror-curved-focus`):
+  no catalog lens and no committed suite. A contract minor that states a curved image is the owner's.
+- **Every call of `skewImagePlaneIntercept` hands it the state's `lvImageSurface`** (its seventh argument since #960),
+  as LensVisualizer's tabs hand `L.imageSurface`: an `undefined` is taken for a shape and fails reading its
+  `cylinderAngle`, in LensVisualizer and in the fake tree, whose intercept throws for any surface but null. The canaries
+  hold each analysis's flat branch, the line it replaced (the MTF's `mtfFlatImagePoint` and `mtfImageAxisCosine`, the
+  intercept's straight transfer, `imageHeightAfterTransfer`, `transverseCoordinateAtPlane`, the chromatic heights, the
+  field-curve shifts from `chiefRay.imagePoint.z ?? geometry.imagePlaneZ`, `imageMirrorSymmetricAboutMeridian`, the half
+  field's `fieldExtentMm ??`), and the dispatch on the surface; a new canary holds a flat image to null and the hook's
+  `withImageSurfaceSection` to the authored lens for any lens but a cylinder.
+- **The fake tree mirrors #960**: `state.lens.imageSurface` is null, or a shape where a lens states `imageSurface`
+  (`imageSurfaceOf`), and `skewImagePlaneIntercept` takes the seventh argument. The refusal is held through the binding
+  by a fake lens edited in place (`caseSource.test.ts`) and on hand-built states (`exportCase.test.ts`, `StateSpec`'s
+  `imageSurface`); no fake file was added.
+- **Measured and pinned anew** at `c5c5ba6d` (the `test:lv` tier at 420b47555): the MTF tab's 12 answers and R4f's 24
+  opening grids the same case and figures (worst R4f again 1.2989609388114332e-14), the summary's margins 15, 0, 19 and
+  3 on 138 cases (`MEASURED_CASES`: the 124 of `25f65d4b4` and 14 new focus stations). Every run of benchmark (96),
+  states (128), features (18) and diffractive (9) is the case its baseline records; focus-stations is 88 runs, the 74
+  of its baseline the same cases and 14 new certified stations of the six packages (NEW to `baseline check`). Every
+  catalog lens at both ends, on the reference line, the photopic lines and C, d, F, against a `25f65d4b4` extract: of
+  4,299 exports only the Canon EF 100-300 mm's four several-line cases moved (#956 names its glass Hoya CF5, new in the
+  catalogue). The census rewritten: 1,101 lenses, 366 zooms, 1,467 states, 1,456 exported, 11 refused (the same 8 and
+  the three curved fixtures), none thrown. LensVisualizer's checkout moved to `e4c7cf11a` (#973, changelog files, no
+  engine or lens file; closure `c5c5ba6d` at both) during `test:lv`; the census is of it. The 14 new stations on
+  `lv`, `reference-tracer` and optiland: 755 rays pairs and 438 MTF pairs PASS (R0–R4, R4f, R6a; worst R2 hit
+  1.34e-12 mm, R3 3.05e-9 waves, R4f 1.6e-14, R6a judged 3.71e-10).
+- The fingerprint of `lv`, `replay`, `wave` and `flux` moved with LensVisualizer's closure (`4669921b` to `c5c5ba6d`),
+  and their adapter revisions with `spot.ts`, `exportCase.ts`, `exportProblems.ts`, `binding.ts` and
+  `vignettingFields.ts` (`lv` `afad9cb8` to `2a10ac61`, `replay` `6f0c41d6` to `971fd882`, `wave` `8a272b3a` to
+  `461b0dae`, `flux` `6ecb3bb3` to `58918afc`); `reference-tracer`'s, `reference-seidel`'s and the TypeScript closure of
+  `otf-of-optiland-wavefront` did not move. `test/core/migrationGuard.test.ts` holds today's revisions apart from the
+  rename's evidence (above, "Legacy ids"). No baseline was written or checked at the adoption: every record of the four
+  was STALE(engine) until the Stage 9.9 refresh (below).
+
+## optiland a9e544a2 adopted
+
+- **optiland `a9e544a2` adopted** (117 commits after `4e893f53`; the checkout clean, source hash `1d35bfa2`, 611
+  files). What the worker calls is the code of `4e893f53` but: #935 (an asphere's iteration seeds a ray that misses
+  the base conic on the vertex plane, and stops once only NaN rays are unsettled; the robust aimer solves its four
+  edge probes as one batch), #923 (`FNO()` is `|f2()| / EPD()`), #1107 (`seidels_per_surface()`; `seidels()` adds it
+  up), #990 (the chief-ray wavefront's relative path), #916 and #937 (the paraxial aimer: a finite object's pupil
+  behind it, vignetting applied once), and the trace kernel moved into the medium's `propagation_model` and
+  evaluation epochs, with the same arithmetic. Nothing the worker calls was deprecated. The evidence is
+  `docs/REFERENCE.md`, "optiland a9e544a2 adopted"; each changed behaviour is under its entry of `docs/gotchas.md`,
+  the earlier text kept as history and every heading kept (`docs/known-failures.json` links them).
+- **#935's seed lets a ray optiland ended spoil a batch on a curved base too** (before, on a flat base only): a ray
+  stopped by an aperture, carried on at intensity 0 and totally reflected just in front of an asphere raises the
+  batch's tolerance to tenths of a millimetre, and every live ray is left on the base conic. 45 of 348 `rays.trace`
+  requests of the benchmark's Z 50 mm, the features' Touit and three focus stations failed so (hits up to 1.66 mm
+  off). **The owner decided on 2026-11-10 to shield a batch** (the `rays.trace` rule above): with it all 348 are within
+  1.15e-12 mm of `reference-tracer`, every end surface its, and the 100 requests in which optiland ends no ray are the
+  bytes of one pass; 2 to 16 passes, 4.7 times the trace time. `axial.native` traces its aimed rays through the same
+  shield. The upstream report stays held.
+- **R13b reads a surface's sum from `seidels_per_surface()`**, held to `third_order()`'s term times `2 n' u'` to the
+  bit (the product the worker formed before; a deliberate fault for each read-back in `test_seidel.py`); the totals
+  move by optiland's new order of summing, a rounding.
+- **The environment's editable install still states `0.6.2.post117+g4e893f53`**: the descriptor's `version` names the
+  commit of the install, and `test_real.py`'s identity test fails until the owner refreshes the install. The
+  fingerprint reads the checkout.
+- The worker's adapter revision moved (`trace.py`, `axial.py`, `seidel.py`, docstrings of `first_order.py`,
+  `summary.py`, `folded.py`): `98f36151` to `59039a7b`, and with it `otf-of-optiland-wavefront`'s whole revision,
+  `9cdfad1a` to `3dc91d1a` (its TypeScript part `501c2a99` did not move). optiland's fingerprint moved with the checkout. Every
+  record of `optiland` and `otf-of-optiland-wavefront` was STALE(engine) until the Stage 9.9 refresh (below); no
+  baseline was written or checked at the adoption.
+
+## LensVisualizer f5b456fec adopted
+
+- **LV `f5b456fec` adopted** (engine closure `f0066505`, 193 files: the 187 of `c5c5ba6d` and six new,
+  `analysis/mtf/mtfConjugateConsistency.ts`, `analysis/mtf/mtfIncidentFlux.ts`, `chromatic/glassCatalogEntries/lzos.ts`,
+  `prescription/sourceMagnification.ts`, `types/sourceProvenanceSchema.ts` and `types/mtf.ts`, now loaded for its
+  wavelength limits). 15 PRs since `e4c7cf11a`: #988 (`5953e6ed5`, the November MTF audit) and #965 (`499565095`,
+  sodium-D references) are the engine changes the comparator reads; #990 (`f8481c8ab`) certifies close-focus conjugates
+  from patents and adds a conjugate audit (its `sourceMagnification` is read by the audit alone); #963, #964, #969 to
+  #972 add 38 lenses and glass entries (Hoya, Ohara, CDGM; #984 LZOS); #976 to #978, #981 and #983 are tooling and
+  catalogue metadata. The evidence is `docs/REFERENCE.md`, "LensVisualizer f5b456fec adopted".
+- **`computeMtfSteps` yields progress** (LV #988, `{ phase, result? }`): the request before any field is traced is the
+  first progress that carries a result (`yield { phase: { kind: "aperture" }, result }`, once the focus has moved the
+  plane and the axial readout is written), or the value a refused or axis-less request returns without one. Read it
+  through `lvMtfRequestResult` (`tabRequest.ts`; focus, recipe and replay do), never `.next().value`, and never step
+  past it: the yielded result is LV's own object, which later steps fill.
+- **The tab resolves its preferences** (`resolveMtfPreferences`, bound): with the advanced options off (the default)
+  the regular spectrum, the default wavelength, the comparison f/8 and the regular view stand in. `lvTabRequest` asks it
+  with `runtime.isZoom`, and `resolveMtfSpectrum` with the resolved wavelength; a resolved "single" spectrum would be
+  requested at that wavelength (`lvTabSpec`'s profile then says the spectrum is unknown). The comparison is of the
+  resolved `comparisonFNumber` (`lvTabComparisonFNumber`; 8 with LensVisualizer's defaults, 11 with the fake tree's, so
+  a hermetic test tells the preference from a constant), offered where it is one of `mtfComparisonFNumbers(fNumber,
+  maxFstop)` (`lvTabComparisonFNumbers`, restated with LV's bound `MTF_COMPARISON_F_NUMBERS` and
+  `isMtfComparisonFNumber`), at `mtfRequestAtAperture`'s stop and pupil, refocused by the default `comparisonFocus`
+  "refocus"; `heldFocusShiftMm` and the mode "held" are never asked. `LV_TAB_COMPARISON_F_NUMBER` (8) only names the
+  run aperture `lv-f8-comparison` and `lvrtc mtf --aperture f/8`, which select the comparison whatever its f-number.
+- **The photopic spectrum is nine lines** (LV #988, `MTF_PHOTOPIC_LINES`: a nine-point Gauss-Legendre quadrature of V(λ)
+  from 470 to 650 nm, 560 nm first, weights 29.573 to 0.75613): every photopic case moved with its lines (1,330 of 1,330
+  catalog exports; every photopic run of benchmark, states and features), and every photopic record was STALE(case)
+  until the Stage 9.9 refresh (below). A photopic run has 9/5 the ray sets, spot, chief and curvature sets of before,
+  and R6c, `wave-mtf-of-lv-rays` and `flux-of-lv-rays` trace 9/5 the lines. LV #988's fourth spectrum, "single" (one
+  line at a wavelength the request states), is not asked: `LV_MTF_SPECTRA` stays reference, cdf, photopic.
+- **The unresolved share counts each line at its incident weight** (`mtfUnresolvedFluxFraction`, bound), and
+  `assessUnresolvedFlux(unresolvedRays, share, method, inBeam)` words its note by the method (a geometric error bound,
+  or none for diffraction); `replay.ts` restates `fieldAtGrid`'s `fluxWeights` and calls both.
+- **Sodium D** (LV #965): `lensChromaticReference` names the reference every element shares, "d" where none is stated
+  or for a mix; a lens of D indices has its channels at C, D (589.2938 nm), F and g (`D_LINE_CHANNEL_WAVELENGTH_NM`,
+  bound as `sodiumChannelWavelengthsNm`), its reference line is the D line (LV's gate says so), and a D element's
+  catalogue glass is anchored at D. `lvChannelLines` returns the D channels for such a lens and null for any mix. One
+  catalog lens (`minor-us1360667-figure-2`) states D indices; no committed suite has it.
+- **The gate names a rejected path's causes** (`pathReasons`, one sentence each; the reason stays "unsupported-path");
+  its third argument, the internal axial-conjugate audit, is never handed by the comparator. `waveLatticeOtf` was
+  rewritten (a triangle mesh in cosine space, a Jacobian, the exact shear from a lit anchor): docs/gotchas.md,
+  "LensVisualizer has two wave estimates", says how it now differs; `shearedOtf`, the product path, did not change.
+- **Measured and pinned anew** at `f0066505`: the MTF tab's 12 answers all moved with the photopic lines (cases and
+  figures re-pinned: shifts by up to 0.0045 mm, figures by up to 0.030); R4f's 12 reference-line opening runs the same
+  cases and grids, the 12 photopic ones new cases with three grids moved, worst again 1.2989609388114332e-14; the
+  summary's margins 15, 0, 19 and 3 on 563 cases (`MEASURED_CASES`: the 138 of `c5c5ba6d` and 425 new focus stations).
+  Count-based `test:lv` and `test:optiland` expectations moved with the nine lines (smoke 1154 jobs, features 8438
+  jobs, benchmark R0–R3 6144 pairs; optiland's R2 and R3 benchmark 12 × 3 × (1 + 9) ray sets). The focus-station test
+  holds a pupil as R1 judges it, on the scale of its distance (the Pentax A 200 mm macro's entrance pupil, 5.8 m away,
+  is 1.56e-10 mm apart plainly and 2.7e-11 on that scale), and every value that is no pupil's within 1e-10 mm, as
+  before. A lens that mixes index references is "mixes index references (d, D or e)" in every refusal. The census
+  rewritten: 1,139 lenses, 372 zooms, 1,511 states, 1,500 exported, the same 11 refused, none thrown.
+- **Every catalog lens at both commits** (both ends, reference, photopic, C, d, F; against an `e4c7cf11a` extract with
+  the committed comparator): no reference-line or C, d, F case of an existing lens moved, every photopic one did, no
+  refusal changed; 38 new lenses, 44 states (the Pentax Super-Takumar 300 mm refused `spectral-data-unavailable` on
+  several lines). Each committed suite expanded at both commits: only photopic cases moved; focus-stations is 518 runs
+  (88 before), 430 new certified stations of which 5 more fisheye stations are refused `finite-conjugate-unavailable`.
+- **The 425 new stations three ways** (`lv`, `reference-tracer`, optiland; R0–R4, then R4, R4f, R6a; temporary runs
+  directory, `--jobs 4`): 13,454 of 13,458 rays pairs PASS and 12,970 MTF pairs PASS. The four FAILs are optiland's on
+  R2's mask at two close stations, `lv` and `reference-tracer` agreeing on every ray: the Fujinon XF 8-16 mm's (26 rays
+  stopped on the odd asphere 2, where the others stop them on 3) and the XF 23 mm f/2's (2 rays carried past the
+  asphere 7): docs/gotchas.md, "On an asphere optiland's iteration starts at the base conic, and goes where that leads".
+  Worst passing figures: R2 hit 1.45e-10 mm (`lv` – `reference-tracer`, the XF 8-16 mm at 64°), R3 2.3e-7 waves, R4
+  1.6e-9, R4f 2.3e-14, R6a judged 1.10e-9 (optiland – `reference-tracer` 1.05e-9). The owner decided (2026-11-16)
+  to list the four as known failures of focus-stations (above, Stage 5.3).
+- The fingerprint of `lv`, `replay`, `wave` and `flux` moved with LensVisualizer's closure (`c5c5ba6d` to `f0066505`),
+  and their adapter revisions (`lv` `2a10ac61` to `674d26ff`, `replay` `971fd882` to `0f8e411d`, `wave` `461b0dae` to
+  `5541b54d`, `flux` `58918afc` to `30c7115b`); `reference-tracer`'s, `reference-seidel`'s and the TypeScript closure of
+  `otf-of-optiland-wavefront` did not move. No baseline was written or checked. `diffractive.test.ts`'s comparison with
+  a `git archive HEAD` fails until this adoption is committed: the archived comparator reads `computeMtfSteps` as
+  before.
+
+## The Stage 9.9 refresh
+
+- **Done, 2026-11-16**, at LensVisualizer `f5b456fec` (closure `f0066505`, through a pinned clone), optiland
+  `a9e544a2` (the editable install refreshed: it states `0.6.2.post234+ga9e544a2`), limits file v25, on the real store,
+  by the plan's Stage 9.9 recipe: all ten baselines other than the catalog's at today's check and engine ids, then
+  `statement`, `matrix` and `verify` (12 baselines, 0 problems). No gate, band or floor moved; no `--replace`. Then the
+  limits-file transition was removed (above, "Identifiers"), and README's pinned commits moved to these.
+- Every record was stale by limits file and by engine (`lv`, `replay-of-lv-mtf`, `wave-mtf-of-lv-rays`,
+  `flux-of-lv-rays`, `optiland`, `otf-of-optiland-wavefront` from the adoptions and the rename; `reference-tracer` and
+  `reference-seidel` from the rename), every photopic run also by case (nine lines: 48 of benchmark's 96 runs, 9 of
+  features' 18, 64 of states' 128); no other case moved. focus-stations is 518 runs (511 exported): 444 NEW (the 14
+  stations of 420b47555 and the 430 of f5b456fec), none GONE; its four listed FAILs (two Fujinon stations, `ray-trace`
+  `mask.mismatches` of optiland's pairs) are written and classified, no longer pending. No unlisted FAIL, no ERROR.
+- **The benchmark's MTF baseline was written over three DRIFT records, by the owner's decision (2026-11-16)**:
+  `wave-mtf` of `canon-ef-135-f2l-usm-best-photopic`, all three pairs, Pass before and after. Under the nine photopic
+  lines two of its three fields settle (phase step 0.244 waves, doubling 0.0011 and 0.0032; before, every field was
+  set aside at 0.414 and 0.0114), so `waveMtf.maxAbs` went from not measured to 1.8e-12 to 5.3e-12 (gate 2e-8); its
+  edge field is still set aside. Seven MOVED records, which fail nothing: four side-by-side figures of the same run,
+  measured for the same reason; the Plena photopic `lv`–`otf-of-optiland-wavefront` pair now ATTENTION; one field of
+  the Z 24-70 mm tele best-focus photopic `geometric-mtf-vs-optiland` ATTENTION in two pairs.
+- The statement counts 508 configurations (276 before): 753 export, and the sentence counts those where `lv` passes
+  against both optiland and the reference tracer with a measured figure on all four of its checks, less the two of
+  the listed failures, whose clause it now prints. focus-stations gives 277 of its 511 (46 of 72 before); the rest
+  have no judged wave-MTF field. The benchmark covers ten wavelengths.
+- `store prune` is the owner's, and only after the refresh commit is committed.

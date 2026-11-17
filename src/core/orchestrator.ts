@@ -37,7 +37,10 @@ import type { ChiefSetResolution } from "../rays/chiefSets.ts";
 import type { CurvatureSetResolution } from "../rays/curvatureSets.ts";
 import type { VignettingSetResolution } from "../rays/vignettingSets.ts";
 import { NO_RUNG_INPUTS, RUNGS, selectRungs } from "./rungs.ts";
+import { LEGACY_ENGINE_IDS, LEGACY_IDS, aliasEngineId } from "./legacyIds.ts";
+import type { LegacyMaps } from "./legacyIds.ts";
 import type { RungDefinition, RungInputs } from "./rungs.ts";
+import { specAtCurrentIds } from "./suite.ts";
 import type { CaseSources, LoadedRun, LoadedSuite, RunRaySets } from "./suite.ts";
 import { orderedMap } from "./orderedMap.ts";
 import type { PoolJobTicket, ProcessRegistry, StoredAdapter } from "./processRegistry.ts";
@@ -122,6 +125,8 @@ export interface RunSuiteInput {
   readonly rungs?: readonly string[];
   /** The rungs there are; `RUNGS` unless given. */
   readonly rungDefinitions?: readonly RungDefinition[];
+  /** The ids renamed since a suite or a command line may have been written; `LEGACY_IDS` unless a test gives others. */
+  readonly legacy?: LegacyMaps;
   /**
    * The follow-ups of the rungs (`FollowUp`); none unless given. Each is decided when the jobs of its rung for a
    * run have ended, from the answers in the store, and its job is recorded after them.
@@ -213,17 +218,25 @@ function forRun<T>(run: string, select: () => T): T {
 }
 
 /** The engines a registry has: the ones its configuration defines, and the built-in ones. */
-interface KnownEngines {
+export interface KnownEngines {
   readonly configured: readonly string[];
   readonly builtin: readonly string[];
 }
 
 /**
- * The engine ids that `ids` name, sorted and each once. Throws a `UsageError` naming every id that is neither a
- * configured nor a built-in engine, and for an empty list, which asks for nothing.
+ * The engine ids that `ids` name, sorted and each once. An id the registry does not know that an engine had before it
+ * was renamed (`LEGACY_ENGINE_IDS`) names the engine under its new id, and the command says so once (`aliasEngineId`). Throws a
+ * `UsageError` naming every id that is neither a configured nor a built-in engine, and for an empty list, which asks
+ * for nothing.
  */
-function selectEngines(ids: readonly string[], known: KnownEngines): string[] {
+export function selectEngines(
+  asked: readonly string[],
+  known: KnownEngines,
+  legacy: Readonly<Record<string, string>> = LEGACY_ENGINE_IDS,
+): string[] {
   const { configured, builtin } = known;
+  // Only an id the registry does not know is read as an old one: an engine of that very id keeps it.
+  const ids = asked.map((id) => (configured.includes(id) || builtin.includes(id) ? id : aliasEngineId(id, legacy)));
   const unknown = [...new Set(ids)].filter((id) => !configured.includes(id) && !builtin.includes(id));
   if (unknown.length > 0) {
     const named = unknown.map((id) => JSON.stringify(id)).join(", ");
@@ -408,28 +421,39 @@ export interface Plan {
  * for exactly those, in id order, whatever engines the run names.
  */
 export async function planJobs(input: RunSuiteInput): Promise<Plan> {
-  const { suite, registry, rungDefinitions = RUNGS } = input;
-  if (suite.name.toLowerCase() === STORE_DIRECTORY) {
-    throw new UsageError(`a suite cannot be named "${suite.name}": the runs directory keeps the result store there`);
+  const { suite: written, registry, rungDefinitions = RUNGS, legacy = LEGACY_IDS } = input;
+  if (written.name.toLowerCase() === STORE_DIRECTORY) {
+    throw new UsageError(`a suite cannot be named "${written.name}": the runs directory keeps the result store there`);
   }
-  if (suite.name.toLowerCase() === EXCHANGE_DIRECTORY) {
+  if (written.name.toLowerCase() === EXCHANGE_DIRECTORY) {
     const keeps = "the runs directory keeps the jobs of file-exchange engines there";
-    throw new UsageError(`a suite cannot be named "${suite.name}": ${keeps}`);
+    throw new UsageError(`a suite cannot be named "${written.name}": ${keeps}`);
   }
   const known: KnownEngines = { configured: registry.ids(), builtin: registry.builtinIds() };
   if (known.configured.length + known.builtin.length === 0) {
     throw new UsageError("no engine to run: the configuration defines no engine");
   }
-  const rungsAsked = input.rungs === undefined ? undefined : selectRungs(input.rungs, rungDefinitions);
-  const enginesAsked = input.engines === undefined ? undefined : selectEngines(input.engines, known);
+  // Each run under the ids of today: a check or an engine the ladder or the registry does not know by the id it is
+  // named by, and that has been renamed, is read under its new id (`specAtCurrentIds`); the suite's hash stays that of
+  // the file as written.
+  const knownIds = { checks: rungDefinitions.map((rung) => rung.id), engines: [...known.configured, ...known.builtin] };
+  const suite: LoadedSuite = {
+    ...written,
+    runs: written.runs.map((run) => {
+      const spec = forRun(run.spec.name, () => specAtCurrentIds(run.spec, knownIds, legacy));
+      return spec === run.spec ? run : { ...run, spec };
+    }),
+  };
+  const rungsAsked = input.rungs === undefined ? undefined : selectRungs(input.rungs, rungDefinitions, legacy.checks);
+  const enginesAsked = input.engines === undefined ? undefined : selectEngines(input.engines, known, legacy.engines);
 
   // What was asked for is checked for every run before anything is generated for one.
   const selected = suite.runs.map(({ spec }) => ({
-    rungs: rungsAsked ?? forRun(spec.name, () => selectRungs(spec.rungs, rungDefinitions)),
+    rungs: rungsAsked ?? forRun(spec.name, () => selectRungs(spec.rungs, rungDefinitions, legacy.checks)),
     engineIds:
       enginesAsked ??
       forRun(spec.name, () =>
-        spec.engines === undefined ? defaultEngines(known) : selectEngines(spec.engines, known),
+        spec.engines === undefined ? defaultEngines(known) : selectEngines(spec.engines, known, legacy.engines),
       ),
   }));
 

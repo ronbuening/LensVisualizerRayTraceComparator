@@ -2,10 +2,10 @@
 // Double-Gauss case relabelled (a label is in no case id, so the R5 stand-ins answer them as they answer those
 // cases), run into two run directories of the MTF part of the fixture. Every number is the stand-ins' own.
 //
-// - `lens-a`: R5 at both ends (`zoom-wide`, `zoom-tele`), on `lv`, `optiland` and `wave`; at the tele end optiland is
-//   asked again at 512 rays (a step of its own), as the stand-ins of R5 are.
+// - `lens-a`: R5 at both ends (`zoom-wide`, `zoom-tele`), on `lv`, `optiland` and `wave-mtf-of-lv-rays`; at the
+//   tele end optiland is asked again at 512 rays (a step of its own), as the stand-ins of R5 are.
 // - `lens-b`: the wide end again, R5 at frequencies of its own (the same number of them, the last another) on `lv`
-//   and `optiland`, and R5g on `lv`, `optiland` and `replay` at the frequencies of R5.
+//   and `optiland`, and R5g on `lv`, `optiland` and `replay-of-lv-mtf` at the frequencies of R5.
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -42,7 +42,7 @@ function lensCase(base: OpticalCase, zoomT: number): OpticalCase {
 export const OTHER_FREQUENCIES_SPEC: MtfNativeSpec = { ...SPEC, frequenciesPerMm: [10, 30, 50, 90] };
 
 const OTHER_FREQUENCIES_RUNG: RungDefinition = {
-  id: "r5",
+  id: "mtf-vs-optiland-fft",
   quantity: MTF_NATIVE,
   engines: ["lv", "optiland"],
   buildRequests: (opticalCase) => [
@@ -111,7 +111,7 @@ export async function lensCycles(runsDir: string, policy: Policy): Promise<void>
     LENS_B,
     [{ name: "zoom-wide", opticalCase: wide }],
     [OTHER_FREQUENCIES_RUNG, R5G_FIXTURE_RUNG],
-    { lv: r5.lv, optiland: byMethod(r5.optiland, r5g.optiland), replay: r5g.replay },
+    { lv: r5.lv, optiland: byMethod(r5.optiland, r5g.optiland), "replay-of-lv-mtf": r5g["replay-of-lv-mtf"] },
     policy,
   );
 }

@@ -19,7 +19,7 @@ import type { JsonObject } from "../../src/contract/json.ts";
 import type { RungPolicy } from "../../src/contract/policy.ts";
 import type { VignettingNativeData, VignettingNativeField } from "../../src/contract/quantities/vignettingNative.ts";
 
-const POLICY: RungPolicy = loadPolicy().rungs.r11b;
+const POLICY: RungPolicy = loadPolicy().rungs["vignetting-vs-flux-estimate"];
 
 function field(fieldAngleDeg: number, more: Partial<VignettingNativeField> = {}): VignettingNativeField {
   return {
@@ -63,7 +63,7 @@ test("policy 24: the landing's limit of 1e-5 mm and a band of 0.01 on the transm
   const pairOf = (b: VignettingNativeData) =>
     comparePair(
       { engine: "lv", fingerprint: "a", status: "ok", data: answer([field(0), field(8)]) as unknown as JsonObject },
-      { engine: "flux", fingerprint: "b", status: "ok", data: b as unknown as JsonObject },
+      { engine: "flux-of-lv-rays", fingerprint: "b", status: "ok", data: b as unknown as JsonObject },
       POLICY,
       vignettingNativeComparator,
     );

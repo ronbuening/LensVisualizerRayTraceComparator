@@ -26,7 +26,7 @@ import type {
 import { numberText } from "./metricText.ts";
 
 /** The rung of the engines' own field curves. */
-export const CURVATURE_NATIVE_RUNG = "r10b";
+export const CURVATURE_NATIVE_RUNG = "field-curve-vs-optiland";
 
 /** How far apart two answers' chief rays of a field land on the image plane, mm: the limit of the sorting. */
 export const CHIEF_LANDING_METRIC = "chiefLanding.maxAbs";

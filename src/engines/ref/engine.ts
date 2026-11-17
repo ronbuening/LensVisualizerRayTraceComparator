@@ -1,7 +1,7 @@
-// The reference engine `ref`: the comparator's own small engine. It is written from the optics alone, shares no
-// code with LensVisualizer or optiland, and uses closed forms throughout, so that it can arbitrate between the two
-// and answer for a case in tests that have neither. It is built in: `--engines ref` names it under any
-// configuration root.
+// The reference engine `reference-tracer` (`ref` before Stage 9.8): the comparator's own small engine. It is written
+// from the optics alone, shares no code with LensVisualizer or optiland, and uses closed forms throughout, so that it
+// can arbitrate between the two and answer for a case in tests that have neither. It is built in:
+// `--engines reference-tracer` names it under any configuration root.
 import type { OpticalCase } from "../../contract/case.ts";
 import { engineStamp } from "../../contract/engine.ts";
 import type { EngineDescriptor } from "../../contract/engine.ts";
@@ -31,7 +31,7 @@ import type { RefSystem } from "./model.ts";
 import { answerRays } from "./rays.ts";
 
 /** The id of the reference engine. */
-export const REF_ENGINE_ID = "ref";
+export const REF_ENGINE_ID = "reference-tracer";
 
 /** The version of the reference engine, for people. Results are keyed by its fingerprint, never by this. */
 export const REF_ENGINE_VERSION = "1";

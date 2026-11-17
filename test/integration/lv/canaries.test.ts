@@ -7,7 +7,12 @@
 // zone of four channels, the vignetting tab's stop lattice) were reread at Stage 6.8b, at LV 607ff23ae (closure
 // f016b35b, 184 files). Those LensVisualizer #940 moved (a finite object's chief seed, the end of a lattice that aims
 // nothing) were reread at LV 6287f4393 (closure fc5ae923, 184 files). Those LensVisualizer #942 moved (the rim
-// lands of cuts and vertical extensions) were reread at LV 55ddfb1e1 (closure ff0d938d, 184 files).
+// lands of cuts and vertical extensions) were reread at LV 55ddfb1e1 (closure ff0d938d, 184 files). Those
+// LensVisualizer #960 moved (curved image surfaces: every analysis branches on the lens's image surface, whose flat
+// branch is the old line) were reread at LV 420b47555 (closure c5c5ba6d, 187 files). Those LensVisualizer #965 and
+// #988 moved (sodium-D references; the MTF audit: progress steps, the tab's resolved preferences and its comparison,
+// the gate's named path causes, the line-weighted unresolved share, the lattice wave estimate) were reread at LV
+// f5b456fec (closure f0066505, 193 files).
 // LensVisualizer exports none of these rules as a function, so the comparator restates them; when LV rewrites
 // one, the canary fails and names what to read again. Whitespace is not compared.
 import assert from "node:assert/strict";
@@ -134,17 +139,26 @@ test("the support gate still rejects a path for the causes the exporter names, a
      }`,
     mirror,
   );
+  // Since f5b456fec (LV #988) a rejected path names its causes (`pathReasons`), each in a sentence of its own; the
+  // reason is "unsupported-path" as before, and the internal audit's `checks` (which lets a fisheye's axial conjugate
+  // through) is never handed by the comparator.
   assertSource(
     gate,
-    'if (!mtfSequentialRefractivePath(state)) return reject("unsupported-path", "MTF currently supports centered, sequential refractive prescriptions.");',
+    `if (!mtfSequentialRefractivePath(state)) {
+       const path = rejectPath();
+       // Axial conjugacy needs no field projection, but every other prerequisite still applies.
+       if (!checks.axialConjugateAudit || path.pathReasons!.some((reason) => reason !== "fisheye-projection")) return path;
+     }`,
     mirror,
   );
+  assertSource(gate, "if (!mtfAxialImagePlane(state)) return rejectPath();", mirror);
   assertSource(
     gate,
-    'if (!mtfAxialImagePlane(state)) return reject("unsupported-path", "MTF requires an image plane perpendicular to the optical axis.");',
-    mirror,
+    "export function assessMtfSupport( request: AnalysisRequest, settings: MtfRequestOptions, checks: { axialConjugateAudit?: boolean } = {}, ): MtfSupport {",
+    "exportLight in src/engines/lv/exportLines.ts and lv's MTF ask the gate with a request and its settings alone",
   );
-  assert.equal(occurrences(gate, 'reject("unsupported-path"'), 2, `${gate} rejects a path in another number of places`);
+  assert.equal(occurrences(gate, 'reject("unsupported-path"'), 1, `${gate} rejects a path in another number of places`);
+  assert.equal(occurrences(gate, "rejectPath()"), 2, `${gate} rejects a path in another number of places`);
   assertSource(
     gate,
     "if (state.focusT !== 0) { const conjugate = mtfFiniteConjugate(state);",
@@ -418,6 +432,20 @@ test(
     const projection =
       "projectToImagePlane in src/estimators/imageProjection.ts lands a ray by the same arithmetic and takes an exit " +
       "point up to 1e-9 mm behind the plane for a point of it";
+    // Since LV #960 the rule is the flat image's branch: a curved image surface lands rays on its shape, which no case
+    // can state, and the exporter refuses such a state (curved-image-surface).
+    assertSource(
+      tracing,
+      `return state.lens.imageSurface === null
+         ? mtfFlatImagePoint(state, trace, imagePlaneZ)
+         : mtfCurvedImagePoint(state, trace, imagePlaneZ);`,
+      "exportCase in src/engines/lv/exportCase.ts refuses a state with a curved image surface",
+    );
+    assertSource(
+      tracing,
+      "function mtfFlatImagePoint(state: PreparedGeometry, trace: EngineTraceResult, imagePlaneZ: number): MtfSpot | null {",
+      projection,
+    );
     assertSource(
       tracing,
       'if (trace.status !== "ok" || Math.abs(trace.terminalDirection[2]) < 1e-12) return null;',
@@ -676,10 +704,40 @@ test(
   () => {
     const tab = "src/components/display/analysis/MtfTab.tsx";
     const mirror = "lvTabRequest in src/engines/lv/tabRequest.ts restates it, member for member";
+    // Read at f5b456fec (LV #988): the stored preferences (a share link's for a visit, else the stored ones, which a
+    // new reader's are the defaults) are resolved first: with the advanced options off, the regular spectrum, the
+    // default wavelength, f/8 and the regular view stand in for the advanced ones.
+    assertSource(
+      tab,
+      `const [storedPreferences, updatePreferences, sharedSettings, useStoredSettings] = useSharedMtfPreferences();
+       const preferences = resolveMtfPreferences(storedPreferences, L.isZoom);`,
+      mirror,
+    );
+    assertSource(
+      "src/utils/state/useSharedMtfPreferences.ts",
+      "return [shared ?? stored, update, shared !== null, () => replaceSettings(null)];",
+      "lvTabRequest resolves LensVisualizer's default preferences, the stored preferences of a reader without a link",
+    );
+    assertSource(
+      "src/utils/state/mtfPreferences.ts",
+      `export function resolveMtfPreferences(preferences: MtfPreferences, isZoom = true): MtfPreferences {
+         return {
+           ...preferences,
+           ...(!preferences.advanced
+             ? {
+                 spectrum: preferences.regularSpectrum,
+                 wavelengthNm: DEFAULT_MTF_PREFERENCES.wavelengthNm,
+                 comparisonFNumber: 8,
+                 view: preferences.regularView,
+               }
+             : {}),`,
+      "lvTabRequest and lvTabComparisonFNumber call it through the binding; LV_TAB_COMPARISON_F_NUMBER, which the " +
+        "CLI and the run aperture lv-f8-comparison are named after, is the 8 it sets",
+    );
     assertSource(
       tab,
       `const spectrum = useMemo(
-       () => resolveMtfSpectrum(preparedState, preferences.spectrum),`,
+       () => resolveMtfSpectrum(preparedState, preferences.spectrum, preferences.wavelengthNm),`,
       mirror,
     );
     // The whole of the options: a member added here, a frequency list for one, is a member lv does not send.
@@ -688,11 +746,13 @@ test(
       `const options: MtfRequestOptions = useMemo(
        () => ({
          method: preferences.method,
-         spectrum: spectrum.spectrum,
+         ...(spectrum.spectrum === "single"
+           ? { spectrum: "single" as const, wavelengthNm: preferences.wavelengthNm }
+           : { spectrum: spectrum.spectrum }),
          focus: preferences.focus,
          maxGridSize: preferences.maxGridSize,
          fieldFractions: mtfFieldFractions(preferences.fieldStepPercent),
-         movementActive,
+         movementActive: request.pose?.active ?? movementActive,
        }),`,
       mirror,
     );
@@ -712,10 +772,17 @@ test(
       `createAnalysisRequest({ preparedState, dynamicEFL: focalLengthMm ?? 0, currentEPSD, currentPhysStopSD, }),`,
       mirror,
     );
-    assertSource(tab, "const job = support.available ? request : null;", mirror);
-    assertSource(tab, "const { result, stale, running, error } = useMtfComputation(L, job, options);", mirror);
-    assert.equal(occurrences(tab, "frequenciesPerMm"), 0, `${tab} now names the frequencies of its request`);
-    assert.equal(occurrences(tab, "frequencies={preferences.frequencies}"), 2, `${tab} draws other frequencies`);
+    assertSource(tab, 'const job = support.available && view !== "zoom" ? request : null;', mirror);
+    assertSource(tab, "const { result, stale, running, error, phase } = useMtfComputation(L, job, options);", mirror);
+    // The one frequency list the tab names is the empty result it shows where a sweep has nothing yet, never a
+    // request's; the charts draw the preferences' frequencies of what the request computed.
+    assert.equal(occurrences(tab, "frequenciesPerMm"), 1, `${tab} now names the frequencies of its request`);
+    assertSource(
+      tab,
+      "frequenciesPerMm: [...preferences.frequencies], fields: [], geometry: null, focus: null,",
+      `${tab} names the frequencies of the empty result alone`,
+    );
+    assert.equal(occurrences(tab, "frequencies={preferences.frequencies}"), 4, `${tab} draws other frequencies`);
   },
 );
 
@@ -723,32 +790,92 @@ test(
   "the tab's f/8 comparison still takes the stop rule's f/8 stop and scales the pupil by the stops, for a lens that is faster and reaches f/8",
   { skip },
   () => {
-    // Read at 607ff23ae (LV #933). The run aperture lv-f8-comparison is this stop, and its pupil this one.
+    // Read at 607ff23ae (LV #933), again at f5b456fec (LV #988: the comparison is of the f-number the preferences
+    // resolve, f/8 with the advanced options off, offered where it is one of mtfComparisonFNumbers, and refocused on
+    // its own by the default comparisonFocus). The run aperture lv-f8-comparison is this stop, and its pupil this one.
     const tab = "src/components/display/analysis/MtfTab.tsx";
+    const sweep = "src/components/display/analysis/mtf/mtfApertureSweep.ts";
     const mirror =
       'lvTabComparison and lvTabRequest in src/engines/lv/tabRequest.ts restate it for the view "f8-comparison"';
-    assertSource(tab, "const COMPARISON_F_NUMBER = 8;", "LV_TAB_COMPARISON_F_NUMBER in tabRequest.ts is this number");
     assertSource(
       tab,
-      "const compareF8Available = !!fNumber && fNumber < COMPARISON_F_NUMBER - 0.05 && L.maxFstop >= COMPARISON_F_NUMBER;",
-      mirror,
+      `const comparisonFNumbers = mtfComparisonFNumbers(fNumber, L.maxFstop);
+       const comparisonFNumber = preferences.comparisonFNumber;
+       const comparisonAvailable = comparisonFNumbers.includes(comparisonFNumber);`,
+      "lvTabComparisonFNumber in tabRequest.ts reads the comparison f-number from the resolved preferences, and " +
+        "lvTabComparison asks lvTabComparisonFNumbers whether the tab offers it",
+    );
+    assertSource(tab, "const comparisonEnabled = !isSweep && comparisonAvailable && preferences.compareF8;", mirror);
+    assertSource(
+      sweep,
+      `export function mtfComparisonFNumbers(fNumber: number | undefined, maxFstop: number): number[] {
+         if (!fNumber || !Number.isFinite(fNumber) || fNumber <= 0) return [];
+         const stops: number[] = MTF_COMPARISON_F_NUMBERS.filter(
+           (stop) => fNumber < stop - APERTURE_LABEL_TOLERANCE && stop <= maxFstop,
+         );
+         if (
+           isMtfComparisonFNumber(maxFstop) &&
+           fNumber < maxFstop - APERTURE_LABEL_TOLERANCE &&
+           stops.every((stop) => Math.abs(stop - maxFstop) > APERTURE_LABEL_TOLERANCE)
+         ) {
+           stops.push(maxFstop);
+         }
+         return stops;
+       }`,
+      "lvTabComparisonFNumbers in src/engines/lv/tabRequest.ts restates it, line for line",
+    );
+    assertSource(
+      sweep,
+      "const APERTURE_LABEL_TOLERANCE = 0.05;",
+      "LV_APERTURE_LABEL_TOLERANCE in src/engines/lv/tabRequest.ts is this number",
+    );
+    // The full stops and the test of a marked f-number are LensVisualizer's own, which the binding imports.
+    assertSource(
+      "src/utils/state/mtfPreferences.ts",
+      "export const MTF_COMPARISON_F_NUMBERS = [1, 1.4, 2, 2.8, 4, 5.6, 8, 11, 16, 22, 32, 45, 64, 90, 128] as const;",
+      mirror + ": 8 is a full stop of the list, so a minimum aperture the list adds is never it",
+    );
+    assertSource(
+      "src/utils/state/mtfPreferences.ts",
+      `export function isMtfComparisonFNumber(value: unknown): value is MtfComparisonFNumber {
+         return typeof value === "number" && Number.isFinite(value) && value >= 1 && value <= 128;
+       }`,
+      "LvApi's isMtfComparisonFNumber in src/engines/lv/types.ts is this test, bound",
     );
     assertSource(
       tab,
-      "if (!job || !compareF8Available || !preferences.compareF8 || !(job.aperture.stopSemiDiameterMm > 0)) return null;",
+      `const holdComparison = preferences.comparisonFocus === "hold";
+       const mainShift = !stale ? mainShown?.focus?.appliedShiftMm : undefined;
+       const comparisonOptions = useMemo(
+         () => (holdComparison && mainShift !== undefined ? { ...options, heldFocusShiftMm: mainShift } : options),`,
+      mirror + ": the default comparisonFocus refocuses the comparison on its own, with the options of the request",
+    );
+    assertSource(
+      "src/utils/state/mtfPreferences.ts",
+      'comparisonFocus: "refocus",',
+      mirror + ": the default comparisonFocus refocuses the comparison on its own",
+    );
+    assertSource(
+      tab,
+      `if (
+         !job ||
+         !comparisonEnabled ||
+         (holdComparison && mainShift === undefined) ||
+         !(job.aperture.stopSemiDiameterMm > 0)
+       )
+         return null;
+       return mtfRequestAtAperture(L, job, comparisonFNumber);`,
       mirror + ": the hook's wide-open stop is above 0 on every lens LensVisualizer builds",
     );
     assertSource(
-      tab,
-      `const stop = stopSemiDiameterForFNumber(COMPARISON_F_NUMBER, job.preparedGeometry.zoomT, L);
-       // At one state the paraxial entrance pupil is proportional to the stop.
-       const pupil = (job.aperture.entrancePupilSemiDiameterMm * stop) / job.aperture.stopSemiDiameterMm;
+      sweep,
+      `const stop = stopSemiDiameterForFNumber(fNumber, request.preparedGeometry.zoomT, lens);
        return createAnalysisRequest({
-         preparedState: job.preparedGeometry,
-         dynamicEFL: job.dynamicEFL,
-         currentEPSD: pupil,
+         preparedState: request.preparedGeometry,
+         dynamicEFL: request.dynamicEFL,
+         currentEPSD: (request.aperture.entrancePupilSemiDiameterMm * stop) / request.aperture.stopSemiDiameterMm,
          currentPhysStopSD: stop,
-         perspectiveTraceContext: job.perspectiveTraceContext,
+         perspectiveTraceContext: request.perspectiveTraceContext,
        });`,
       mirror + "; stopRadius in exportAperture.ts makes the stop of lv-f8-comparison, and lvPupilSeed its pupil",
     );
@@ -764,18 +891,28 @@ test(
 test("the tab's defaults are still the ones the profile lv-tab-default is documented and pinned with", { skip }, () => {
   // The profile reads LensVisualizer's defaults when it runs, so a change here changes no code of the comparator:
   // it changes what the profile is. README.md, contract/CONTRACT.md and the figures pinned in
-  // test/integration/lv/mtf.test.ts describe these. Read at 607ff23ae: since #936 256 cells across the stop.
+  // test/integration/lv/mtf.test.ts describe these. Read at 607ff23ae: since #936 256 cells across the stop. Read at
+  // f5b456fec (LV #988): the advanced options are off, so the regular spectrum is the one asked.
   assertSource(
     "src/utils/state/mtfPreferences.ts",
     `export const DEFAULT_MTF_PREFERENCES: MtfPreferences = Object.freeze({
        method: "diffraction",
        spectrum: "photopic",
+       regularSpectrum: "photopic",
+       wavelengthNm: 546.074,
        focus: "best-axial",
        view: "field",
+       regularView: "field",
        fieldStepPercent: 10,
        frequencies: Object.freeze([10, 30] as const),
        maxGridSize: 256,
        compareF8: false,
+       comparisonFNumber: 8,
+       comparisonFocus: "refocus",
+       diffractionLimit: false,
+       frequencyField: "overview",
+       pixelPitchUm: null,
+       advanced: false,
      });`,
     "the profile lv-tab-default follows it at run time; its documented defaults and pinned figures are of these",
   );
@@ -806,10 +943,13 @@ test("the grid caps, the names and the limits of a request are still as lv state
     'export type MtfMethod = "geometric" | "diffraction";',
     "the methods of an mtf.native spec are LensVisualizer's by the same names (answerLvMtf, lvTabSpec)",
   );
+  // Since f5b456fec (LV #988) a fourth spectrum, "single", is one line at a wavelength the request states; the
+  // comparator asks the other three alone, and a case of other lines is none of them.
   assertSource(
     types,
-    'export type MtfSpectrum = "reference" | "cdf" | "photopic";',
-    "LV_MTF_SPECTRA in src/engines/lv/mtf.ts is this list: the lines of a case are held to each (lvSpectrumOf)",
+    'export type MtfSpectrum = "reference" | "cdf" | "photopic" | "single";',
+    'LV_MTF_SPECTRA in src/engines/lv/focus.ts is this list but "single": the lines of a case are held to each ' +
+      "(lvSpectrumOf)",
   );
   assertSource(
     types,
@@ -852,12 +992,25 @@ test(
     const mirror = "answerLvMtf in src/engines/lv/mtf.ts calls computeMtf on the state it prepared for the case";
     assertSource(worker, "const { focusT, zoomT, aberrationT, options } = message.job;", mirror);
     assertSource(worker, "const state = prepareRuntimeState(lens, focusT, zoomT, aberrationT);", mirror);
+    // Read at f5b456fec (LV #988): a job without a sweep is computeMtfSteps of the request, with a cache of the
+    // fields of an earlier request that differs only in its fields (a field's result does not depend on the others).
     assertSource(
       worker,
-      `steps: computeMtfSteps( createAnalysisRequest({ preparedState: state, dynamicEFL: 0,
-      currentEPSD: options.pupilSemiDiameterMm, currentPhysStopSD: options.stopSemiDiameterMm,
-    }), options, jobCache(message.job), ),`,
+      `const request = createAnalysisRequest({
+         preparedState: state,
+         dynamicEFL: 0,
+         currentEPSD: options.pupilSemiDiameterMm,
+         currentPhysStopSD: options.stopSemiDiameterMm,
+       });
+       const cache = jobCache(message.job);`,
       mirror,
+    );
+    assertSource(worker, "steps: stationSteps(request, message.job, cache),", mirror);
+    assertSource(worker, "if (!job.sweep) return yield* computeMtfSteps(request, job.options, cache);", mirror);
+    assertSource(
+      worker,
+      "const key = JSON.stringify({ ...job, options: { ...job.options, fieldFractions: undefined } });",
+      mirror + ": the cache is of a request but its fields",
     );
     // The worker rebuilds the canonical prescription held by the runtime, without duplicating generated surfaces.
     assertSource(
@@ -889,7 +1042,7 @@ test(
     // The request crosses to the worker as JSON, which keeps every double.
     assertSource(
       "src/components/hooks/useMtfComputation.ts",
-      ".compute(JSON.parse(key) as MtfJob,",
+      ".compute( JSON.parse(key) as MtfJob,",
       "the options lv hands computeMtf are the tab's as numbers, which JSON carries exactly",
     );
   },
@@ -1008,10 +1161,40 @@ test(
       "with it: the pupil coordinate, the shear, the path to the foot of the perpendicular and the sign of the phase";
     const differs =
       "docs/gotchas.md, 'LensVisualizer has two wave estimates', says how each differs from src/estimators/waveOtf.ts";
-    // What the comparator's estimator shares: optical cosines, a shear of lambda nu, the path, the sign.
-    assertSource(wave, "lattice.cosineX[cell] = ray.trace.finalMedium * ray.trace.terminalDirection[0];", shared);
-    assertSource(wave, "lattice.cosineY[cell] = ray.trace.finalMedium * ray.trace.terminalDirection[1];", shared);
-    assertSource(wave, "const halfShear = (frequency * wavelengthMm) / 2;", shared);
+    // What the comparator's estimator shares: optical cosines, a shear of lambda nu, the path, the sign. Since LV #960
+    // (500ef5992) a cell's cosines are taken along the image surface's tangents, which on a flat image (null, every
+    // state the exporter admits: it refuses a curved one) are the exit direction's x and y times the index, as before.
+    assertSource(wave, "lattice.cosineX[cell] = mtfImageAxisCosine(ray, 0, tangents);", shared);
+    assertSource(wave, "lattice.cosineY[cell] = mtfImageAxisCosine(ray, 1, tangents);", shared);
+    assertSource(
+      wave,
+      `const shape = bundle.imageSurface ?? null;
+       const tangents = shape === null ? null : shape.imageTangentsAt(reference.x, reference.y);`,
+      shared,
+    );
+    assertSource(
+      wave,
+      `const image: Vec3 =
+         lateral === null
+           ? [reference.x, reference.y, imagePlaneZ]
+           : [lateral[0], lateral[1], imagePlaneZ + shape!.sagAt(lateral[0], lateral[1])];`,
+      shared,
+    );
+    assertSource(
+      sheared,
+      `return tangents === null
+         ? ray.trace.finalMedium * ray.trace.terminalDirection[component]
+         : ray.trace.finalMedium * dot(ray.trace.terminalDirection, tangents[component]);`,
+      shared,
+    );
+    assertSource(
+      "src/optics/analysis/mtf/mtfTracing.ts",
+      "if (state.lens.imageSurface !== null) bundle.imageSurface = state.lens.imageSurface;",
+      "a bundle of a flat image carries no image surface, so both estimates take the flat branch",
+    );
+    // Since f5b456fec (LV #988) the lattice estimate anchors each pair at a lit cell and finds its other end at the
+    // whole shear lambda nu, in both coordinates; the sheared estimate still centres a pair on a cell.
+    assertSource(wave, "const shear = frequency * wavelengthMm;", shared);
     assertSource(sheared, "const halfShear = (frequency * wavelengthMm) / 2;", shared);
     assertSource(
       wave,
@@ -1028,24 +1211,43 @@ test(
     );
     assertSource(
       wave,
-      `const phase = (2 * Math.PI * (plus.pathMm - minus.pathMm)) / wavelengthMm;
+      `const phase = (sign * 2 * Math.PI * (other.pathMm - mesh.pathMm[cell])) / wavelengthMm;
        re += pair * Math.cos(phase);
        im += pair * Math.sin(phase);`,
       shared,
     );
-    assertSource(wave, "is trustworthy while this stays under a quarter wave.", shared);
+    assertSource(wave, "is trustworthy below a quarter wave only when the direction map is invertible", shared);
     // What it does otherwise: the square root of flux without the area, pairs centred on a cell, lines of the
     // lattice for lines of constant cosine, and in the product path landing errors for the path.
     assertSource(wave, "lattice.amplitude[cell] = Math.sqrt(ray.weight);", differs);
     assertSource(sheared, "amplitude[line * stride + cell] = Math.sqrt(ray.weight);", differs);
+    // The lattice estimate since #988: amplitude over the root of a cell's Jacobian from central differences, a pair
+    // anchored at a lit cell, its other end located in a triangle of the lattice and read linearly there, forward and
+    // backward averaged, and the cosines of dark cells extrapolated along their lines.
     assertSource(
       wave,
-      `const plus = waveAt(line, line.cosine[slot] + halfShear);
-       const minus = waveAt(line, line.cosine[slot] - halfShear);
-       const pair = plus.amplitude * minus.amplitude;`,
+      `const det =
+         ((x[right] - x[left]) * (y[top] - y[bottom]) - (y[right] - y[left]) * (x[top] - x[bottom])) /
+         ((right - left) * ((top - bottom) / columns));`,
       differs,
     );
-    assertSource(wave, 'axis === "x" ? [rows, columns, columns, 1] : [columns, rows, 1, columns];', differs);
+    assertSource(wave, "mesh.amplitude[cell] /= Math.sqrt(mesh.jacobian[cell]);", differs);
+    assertSource(
+      wave,
+      `const other = at(x + (axis === "x" ? sign * shear : 0), y + (axis === "y" ? sign * shear : 0));
+       const pair = (mesh.jacobian[cell] * mesh.amplitude[cell] * other.amplitude) / 2;`,
+      differs,
+    );
+    assertSource(
+      wave,
+      "return { amplitude: value, pathMm: value > 0 ? (wa * pathMm[a] + wb * pathMm[b] + wc * pathMm[c]) / value : 0 };",
+      differs,
+    );
+    assertSource(
+      wave,
+      "coordinate[start + low * stride] * (1 - fraction) + coordinate[start + high * stride] * fraction;",
+      differs,
+    );
     assertSource(sheared, "const scale = -frequency * TURN;", differs);
     assertSource(sheared, "const TURN = 4096;", differs);
     assertSource(sheared, ": (errorMinus + 4 * errorCentre + errorPlus) / 6;", differs);
@@ -1062,11 +1264,23 @@ test(
   "the MTF still sets a request up, walks a field and widens its footprint as the replay restates them",
   { skip },
   () => {
-    // Read at 33ebdb30 (engine closure 78215d72); traceField and refineMtfField again at 607ff23ae (LV #936).
+    // Read at 33ebdb30 (engine closure 78215d72); traceField and refineMtfField again at 607ff23ae (LV #936); all of it
+    // again at f5b456fec (LV #988: the steps yield progress, a phase that carries the result from the moment the
+    // request is known; a field's walk yields the phase of each line it traces).
     const mtf = "src/optics/analysis/mtf/mtf.ts";
     const job =
-      "replayLvMtf in src/engines/lv/replay.ts takes the request from the first step of computeMtfSteps and " +
-      "restates what follows it: the ladder, the image plane, and which fields are traced";
+      "replayLvMtf in src/engines/lv/replay.ts takes the request from the first progress of computeMtfSteps that " +
+      "carries a result (lvMtfRequestResult) and restates what follows it: the ladder, the image plane, and which " +
+      "fields are traced";
+    assertSource(
+      mtf,
+      `export function* computeMtfSteps(
+         request: AnalysisRequest,
+         settings: MtfRequestOptions,
+         cache?: MtfJobCache,
+       ): Generator<MtfProgress, MtfResult> {`,
+      "LvApi's computeMtfSteps in src/engines/lv/types.ts and lvMtfRequestResult in tabRequest.ts read it so",
+    );
     // A request the gate refuses, and one without a field axis, is returned before anything is yielded.
     assertSource(mtf, "if (!support.available) return result;", job);
     assertSource(
@@ -1091,19 +1305,31 @@ test(
        );`,
       job,
     );
+    // The first progress that carries the result comes once the focus has moved the plane and the axial readout is
+    // written, before any field; no earlier one carries it.
     assertSource(
       mtf,
       `context.imagePlaneZ = state.imgZ + result.focus.appliedShiftMm;
-       yield result;
+       yield { phase: { kind: "aperture" } };
+       const readout = cache?.axial ?? resolveMtfAxialReadout(request, context, axial);
+       Object.assign(result, readout);
+       if (cache) cache.axial = readout;
+       yield { phase: { kind: "aperture" }, result };
        for (const index of mtfFieldProcessingOrder(fractions)) {
          if (targets[index].outsideModel) continue;`,
       job +
         "; exportCase in src/engines/lv/exportCase.ts adds the best axial shift to the design plane in the same way",
     );
-    // The focus the first step states: applied for the mode best-axial, and null where there is no axial beam.
+    assert.equal(occurrences(mtf, "result };"), 2, `${mtf} yields its result at another moment`);
+    assertSource(mtf, "yield { phase: currentPhase, result };", job);
+    // The focus the first step states: applied for the mode best-axial, and null where there is no axial beam. A held
+    // shift (the tab's comparison held at the main result's plane) is never asked by the comparator.
     assertSource(
       mtf,
-      `if (requestedMode === "best-axial" || (requestedMode === "auto" && focus.imagePlaneInconsistent)) {
+      `if (
+         options.heldFocusShiftMm === undefined &&
+         (requestedMode === "best-axial" || (requestedMode === "auto" && focus.imagePlaneInconsistent))
+       ) {
          focus.mode = "best-axial";
          focus.appliedShiftMm = best.shiftMm;
        }`,
@@ -1130,9 +1356,9 @@ test(
        }
        if (launch.aim) {
          const sampling: MtfFieldSampling = { kind: "stop", lattices: new Map() };
-         yield* refineMtfField(
+         yield* refineMtfFieldSteps(
            context.ladder,
-           (size) => fieldAtGrid(context, target, launch, sampling, size),
+           (size) => fieldAtGrid(context, target, launch, sampling, size, phase),
            context.frequencies,
          );
          return;
@@ -1145,9 +1371,16 @@ test(
          return;
        }
        let expansions = 0;
-       const evaluate = (size: number): MtfGridOutcome => {
+       const evaluate = function* (size: number): Generator<MtfPhase, MtfGridOutcome> {
          for (;;) {
-           const outcome = fieldAtGrid(context, target, launch, { kind: "launch-plane", footprint: footprint! }, size);
+           const outcome = yield* fieldAtGrid(
+             context,
+             target,
+             launch,
+             { kind: "launch-plane", footprint: footprint! },
+             size,
+             phase,
+           );
            const open = outcome.kind === "curves" ? outcome.openBorders : undefined;
            if (!open || !(open.x || open.y0 || open.y1)) return outcome;
            if (expansions >= MTF_MAX_FOOTPRINT_EXPANSIONS) {
@@ -1164,16 +1397,27 @@ test(
            expansions++;
          }
        };
-       yield* refineMtfField(context.ladder, evaluate, context.frequencies);`,
+       yield* refineMtfFieldSteps(context.ladder, evaluate, context.frequencies);`,
       field,
     );
     // The walk through the ladder is LensVisualizer's own function, which the replay calls: it still yields the
     // best field after every size, ends at a converged one, goes on after a failure a finer grid may mend (a share of
-    // unresolved samples included, since #936), and says why a coarser curve was kept.
+    // unresolved samples included, since #936), and says why a coarser curve was kept. Since #988 traceField walks
+    // the steps beneath it, which also hand on the phases of an evaluation that pauses between lines; the exported
+    // walk hands on the fields alone, and an evaluation that is no generator (the replay's) has no phases.
+    assertSource(
+      mtf,
+      `): Generator<MtfFieldResult, void> {
+         const steps = refineMtfFieldSteps(ladder, evaluate, frequencies);
+         for (const step of steps) if ("status" in step) yield step;
+       }`,
+      "replayField calls refineMtfField with an evaluation of its own, which returns an outcome",
+    );
     assertSource(
       mtf,
       `for (const size of ladder) {
-         const outcome = evaluate(size);
+         const evaluation = evaluate(size);
+         const outcome = "kind" in evaluation ? evaluation : yield* evaluation;
          if (outcome.kind === "unavailable") {
            failed = { size, message: outcome.field.message };
            if (!outcome.refine) {
@@ -1198,17 +1442,26 @@ test(
     );
     assertSource(
       mtf,
-      `for (const field of traceField(context, targets[index])) {
-         finished = field;
-         result.fields[index] = field;`,
+      `for (const step of traceField(context, targets[index], phase)) {
+         if ("kind" in step) {
+           currentPhase = step;
+           yield { phase: step };
+         } else {
+           finished = step;
+           result.fields[index] = step;
+           yield { phase: currentPhase, result };
+         }
+       }`,
       "replayField takes the last field refineMtfField yields for the field's result",
     );
   },
 );
 
 test("the MTF still accounts for one field at one grid as the replay restates it", { skip }, () => {
-  // Read at 607ff23ae (LV #936: the stop lattice, dark lines, the unresolved samples beside the beam), and at
-  // 6287f4393 (LV #940: a lattice that aims nothing ends the field as "aim-failed").
+  // Read at 607ff23ae (LV #936: the stop lattice, dark lines, the unresolved samples beside the beam), at 6287f4393
+  // (LV #940: a lattice that aims nothing ends the field as "aim-failed"), and at f5b456fec (LV #988: each line
+  // yields its phase before it is traced; the unresolved share counts each line at its incident weight, and the rule
+  // of unresolved flux words its note by the method).
   const mtf = "src/optics/analysis/mtf/mtf.ts";
   const mirror = "fieldAtGrid in src/engines/lv/replay.ts restates the bookkeeping, line by line and in this order";
   assertSource(
@@ -1233,11 +1486,11 @@ test("the MTF still accounts for one field at one grid as the replay restates it
   );
   assertSource(
     mtf,
-    `let sampledWeight = 0;
-     let unresolvedWeight = 0;
+    `const fluxWeights = [];
      /** Wavelengths no ray reaches at this grid. */
      let darkLines = 0;
      for (const [index, line] of support.spectralLines.entries()) {
+       yield { kind: "field", ...phase, gridSize: size, lineIndex: index + 1, lineCount: support.spectralLines.length };
        let bundle: MtfBundle | null;
        if (sampling.kind === "stop") {
          bundle = traceMtfStopBundle(state, options, support, launch, size, line, context.imagePlaneZ, {
@@ -1274,8 +1527,11 @@ test("the MTF still accounts for one field at one grid as the replay restates it
        if (bundle.lattice && aimedNothing(bundle.lattice))
          return unavailable("aim-failed", aimFailedMessage(bundle.lattice, line.wavelengthNm));
        const transmitted = bundle.rays.reduce((sum, ray) => sum + ray.weight, 0);
-       sampledWeight += transmitted + bundle.unresolvedInBeamWeight;
-       unresolvedWeight += bundle.unresolvedInBeamWeight;
+       fluxWeights.push({
+         weight: line.weight,
+         transmittedWeight: transmitted,
+         unresolvedInBeamWeight: bundle.unresolvedInBeamWeight,
+       });
        // A wavelength no ray reaches, with every sample resolved: the grid is vignetted if every wavelength is.
        if (bundle.rays.length === 0 && bundle.unaimed + bundle.failed === 0) {
          darkLines++;
@@ -1322,9 +1578,14 @@ test("the MTF still accounts for one field at one grid as the replay restates it
     `if (darkLines === support.spectralLines.length)
        return unavailable("vignetted", "No rays reach this image height through the model's clear apertures.", true);
      if (darkLines > 0) return unavailable("empty-pupil", "Too little pupil remains to estimate MTF.", true);
-     field.unknownFluxFraction = sampledWeight > 0 ? unresolvedWeight / sampledWeight : 0;
+     field.unknownFluxFraction = mtfUnresolvedFluxFraction(fluxWeights);
      const unresolvedRays = field.failedRays + field.unaimedRays;
-     const unresolved = assessUnresolvedFlux(unresolvedRays, field.unknownFluxFraction, field.unresolvedInBeamRays);
+     const unresolved = assessUnresolvedFlux(
+       unresolvedRays,
+       field.unknownFluxFraction,
+       options.method,
+       field.unresolvedInBeamRays,
+     );
      // A finer grid can resolve a beam edge this one cannot, so the ladder goes on.
      if (!unresolved.acceptable) {
        const away = unresolvedRays - field.unresolvedInBeamRays;
@@ -1338,17 +1599,38 @@ test("the MTF still accounts for one field at one grid as the replay restates it
     mirror,
   );
   assertSource(mtf, 'return { kind: "curves", field, openBorders };', mirror);
+  // The share and the rule are LensVisualizer's own, which the replay calls with what it restates.
+  assertSource(
+    mtf,
+    `export function mtfUnresolvedFluxFraction(
+       lines: readonly { weight: number; transmittedWeight: number; unresolvedInBeamWeight: number }[],
+     ): number {`,
+    "LvApi's mtfUnresolvedFluxFraction in src/engines/lv/types.ts, which replay.ts calls, takes the lines so",
+  );
+  assertSource(
+    mtf,
+    `export function assessUnresolvedFlux(
+       unresolvedRays: number,
+       unknownFluxFraction: number,
+       method: MtfMethod,
+       inBeam: number | null = null,
+     ): MtfUnresolvedFlux {`,
+    "LvApi's assessUnresolvedFlux in src/engines/lv/types.ts, which replay.ts calls, takes the method third",
+  );
   // The reference a later line is handed stands in only where that line's own chief ray has no image point; the
   // bundle states the point it used as its chief, the counts it adds, and on the launch plane which sides of the
   // footprint carried flux.
   const tracing = "src/optics/analysis/mtf/mtfTracing.ts";
   const bundle =
     "the replay reads the reference, the counts, the unresolved weights and the open borders off LensVisualizer's bundles";
+  // Since LV #960 a bundle lands its rays by the flat plane's rule or on the curved image surface, chosen once by the
+  // state; every state the exporter admits is flat (it refuses a curved one), so the replay's bundles land flat.
   assertSource(
     tracing,
-    "const chiefPoint = mtfImagePoint(state, chiefTrace, imagePlaneZ) ?? extras.reference;",
+    "const imagePoint = state.lens.imageSurface === null ? mtfFlatImagePoint : mtfCurvedImagePoint;",
     bundle,
   );
+  assertSource(tracing, "const chiefPoint = imagePoint(state, chiefTrace, imagePlaneZ) ?? extras.reference;", bundle);
   assertSource(
     tracing,
     "extras: { reference?: MtfSpot; opticalPath?: boolean; coarse?: AimedStopLattice | null } = {},",
@@ -1444,16 +1726,27 @@ test("the request snapshots both aperture radii, and MTF resolves them with the 
     stopSemiDiameterMm: request.aperture.stopSemiDiameterMm, movementActive: request.pose?.active ?? options.movementActive, }; }`,
     mirror,
   );
+  // Since f5b456fec (LV #988) the job is built by mtfJobForRequest (mtfWorkerClient.ts), which the hook calls.
   assertSource(
     "src/components/hooks/useMtfComputation.ts",
-    `request ? {
-    focusT: request.preparedGeometry.focusT,
-    zoomT: request.preparedGeometry.zoomT,
-    aberrationT: request.preparedGeometry.aberrationT,
-    options: { ...options,
-    pupilSemiDiameterMm: request.aperture.entrancePupilSemiDiameterMm,
-    stopSemiDiameterMm: request.aperture.stopSemiDiameterMm, movementActive: request.pose?.active ?? options.movementActive, },
-    } : null,`,
+    "const job: MtfJob | null = useMemo(() => (request ? mtfJobForRequest(request, options) : null), [request, options]);",
+    mirror,
+  );
+  assertSource(
+    "src/components/hooks/mtfWorkerClient.ts",
+    `export function mtfJobForRequest(request: AnalysisRequest, options: MtfRequestOptions): MtfJob {
+       return {
+         focusT: request.preparedGeometry.focusT,
+         zoomT: request.preparedGeometry.zoomT,
+         aberrationT: request.preparedGeometry.aberrationT,
+         options: {
+           ...options,
+           pupilSemiDiameterMm: request.aperture.entrancePupilSemiDiameterMm,
+           stopSemiDiameterMm: request.aperture.stopSemiDiameterMm,
+           movementActive: request.pose?.active ?? options.movementActive,
+         },
+       };
+     }`,
     mirror,
   );
   assertSource(
@@ -1465,7 +1758,7 @@ test("the request snapshots both aperture radii, and MTF resolves them with the 
     "src/optics/analysis/mtf/mtf.ts",
     `export function* computeMtfSteps(
     request: AnalysisRequest, settings: MtfRequestOptions, cache?: MtfJobCache,
-  ): Generator<MtfResult, MtfResult> {`,
+  ): Generator<MtfProgress, MtfResult> {`,
     mirror,
   );
 });
@@ -1683,14 +1976,33 @@ test("a sample of the tabs' pupil is still the aimed launch's ray, traced as the
     "checkSemiDiameter: true, stopSemiDiameter: launch.clipSemiDiameterMm, stopOnClip: true, directionNormalized: true, launchBoundT: launch.launchBoundT, ...spectralTraceOptions(state, spectrum),",
     "test/integration/lv/spotRays.test.ts and its siblings trace a set with prepareAimedPupilTrace",
   );
-  // The bokeh tile's chief ray, intercepted at the tile's plane: bokehChiefLanding in src/engines/lv/spot.ts.
+  // The bokeh tile's chief ray, intercepted at the tile's plane: bokehChiefLanding in src/engines/lv/spot.ts. Since LV
+  // #960 every intercept is handed the lens's image surface, which lands a ray on a curved one and is null (the
+  // straight transfer to the plane, as before) on every state the exporter admits.
   assertSource(
     "src/optics/analysis/bokeh/bokeh.ts",
-    "const chiefDefocused: SkewImagePlaneIntercept | null = skewImagePlaneIntercept( bundle.chiefRay.trace.x, bundle.chiefRay.trace.y, bundle.chiefRay.trace.ux, bundle.chiefRay.trace.uy, geometry.lastSurfZ, sensorZ, );",
-    "bokehChiefLanding in src/engines/lv/spot.ts lands the tile's chief ray so",
+    "const chiefDefocused: SkewImagePlaneIntercept | null = skewImagePlaneIntercept( bundle.chiefRay.trace.x, bundle.chiefRay.trace.y, bundle.chiefRay.trace.ux, bundle.chiefRay.trace.uy, geometry.lastSurfZ, sensorZ, L.imageSurface, );",
+    "bokehChiefLanding in src/engines/lv/spot.ts lands the tile's chief ray so, with lvImageSurface of the state",
+  );
+  const adapters = "src/optics/trace/rayAdapters.ts";
+  assertSource(
+    adapters,
+    `imageSurface: ImageSurfaceShape | null,
+     ): SkewImagePlaneIntercept | null {
+       if (imageSurface !== null) {`,
+    "every caller of skewImagePlaneIntercept hands it lvImageSurface of the state: an undefined is taken for a shape",
+  );
+  assertSource(
+    adapters,
+    `const dz = imagePlaneZ - lastSurfZ;
+     const imagePoint = {
+       x: x + ux * dz,
+       y: y + uy * dz,
+     };
+     return isFinite(imagePoint.x) && isFinite(imagePoint.y) ? imagePoint : null;`,
+    "the flat image's intercept, which the spot, chief and curvature tests restate, is the straight transfer, with no z",
   );
   // The skew launch of the chief sets and of the curvature sets' parabasal rays (lvSkewLaunch).
-  const adapters = "src/optics/trace/rayAdapters.ts";
   const skew = "lvSkewLaunch in src/engines/lv/spotRaySets.ts restates the skew launch";
   assertSource(adapters, "const lead = state.lens.constants.rayLead ?? 0;", skew);
   assertSource(adapters, "const skewFirstZ = scalarSkewState.z[0] ?? 0;", skew);
@@ -1837,7 +2149,13 @@ test("the sections' reading of a ray is still the one the axial sets' figures re
     definition,
   );
   assertSource("src/optics/chromatic/chromaticTrace.ts", "axialIntercepts[ch] = rayZ - ray.y / ray.u;", definition);
-  assertSource("src/optics/chromatic/chromaticTrace.ts", "imagePlaneHeights[ch] = ray.y + dz * ray.u;", definition);
+  // Since LV #960 a height on a plane is the flat image's branch; a curved one lands the ray on its shape (refused by
+  // the exporter, curved-image-surface).
+  assertSource(
+    "src/optics/chromatic/chromaticTrace.ts",
+    "if (imageSurface === null) { imagePlaneHeights[ch] = ray.y + dz * ray.u; } else {",
+    definition,
+  );
   // The least-squares focus of the profile's pairs: sum u^2 z / sum u^2 (leastSquaresFocus), and the RMS about the axis.
   const focus = "leastSquaresFocus in src/estimators/axialIntercept.ts is this focus and RMS";
   assertSource(
@@ -1850,15 +2168,24 @@ test("the sections' reading of a ray is still the one the axial sets' figures re
     "return sum + hit.slope * hit.slope * referenceZ - hit.coordinate * hit.slope;",
     focus,
   );
+  // Since LV #960 the section's heights at a plane are handed the lens's image surface: null, a plane at the focus as
+  // before, on every state the exporter admits.
   assertSource(
     "src/optics/analysis/aberration/spherical.ts",
-    "const bestFocusRmsMm = rmsAtPlane(hits, lastSurfZ, bestFocusZ);",
+    "const bestFocusRmsMm = rmsAtPlane(hits, lastSurfZ, bestFocusZ, L.imageSurface);",
     focus,
   );
   assertSource(
     "src/optics/analysis/aberration/spherical.ts",
-    "transverseSaMm: transverseCoordinateAtPlane(plusHit, lastSurfZ, bestFocusZ) - nearAxisHeightAtBestFocus,",
+    "transverseSaMm: transverseCoordinateAtPlane(plusHit, lastSurfZ, bestFocusZ, L.imageSurface) - nearAxisHeightAtBestFocus,",
     "sphericalFigures' profile is each zone's plus ray at the focus less the near-axis plus ray's",
+  );
+  assertSource(
+    "src/optics/analysis/aberration/shared.ts",
+    `return landing ? meridionalImageHeight(imageSurface, landing.y) : NaN;
+     }
+     return hit.coordinate + hit.slope * (planeZ - (hit.referenceZ ?? lastSurfZ));`,
+    "axialIntercept's heights at a plane are the flat image's branch of transverseCoordinateAtPlane",
   );
 });
 
@@ -1909,10 +2236,28 @@ test(
     );
     assertSource(channels, 'export const CHROMATIC_CHANNEL_WAVELENGTH_NM = channelWavelengths("d");', lines);
     assertSource(channels, 'export const E_LINE_CHANNEL_WAVELENGTH_NM = channelWavelengths("e");', lines);
+    // Since f5b456fec (LV #965) a lens of sodium D indices has its channels at C, D, F and g (its G channel the D
+    // line), and the reference of a lens is the one every element shares, "d" where none is stated or for a mix.
+    assertSource(channels, 'export const D_LINE_CHANNEL_WAVELENGTH_NM = channelWavelengths("D");', lines);
     assertSource(
       channels,
-      'return elements.length > 0 && elements.every((element) => element.indexReference === "e") ? "e" : "d";',
+      `if (reference === "D" && channel === "G") {
+         return {
+           spectralLine: "D",
+           wavelengthNm: LINE_NM.D,`,
       lines,
+    );
+    assertSource(channels, 'return reference === "e" ? metadata.eLine : metadata;', lines);
+    assertSource(
+      channels,
+      `const reference = elements[0]?.indexReference ?? "d";
+       return elements.every((element) => (element.indexReference ?? "d") === reference) ? reference : "d";`,
+      lines,
+    );
+    assertSource(
+      "src/optics/chromatic/spectralLines.ts",
+      "D: 589.2938,",
+      "a sodium-D lens's G channel and reference line are this wavelength, the case's line 0",
     );
     // The elements the chromatic tab asks it of, the path lvChannelLines reads: the runtime lens's elements, which are
     // the compiled elements' sources without the synthetic rear plates.
@@ -1934,18 +2279,38 @@ test(
     );
     // Since 5ba17c20c a glass LensVisualizer matched to a catalog is anchored to its authored index on both reference
     // lines: its G channel is the authored index, C, F and g the catalog's dispersion added to it, g reconstructed from
-    // an element's own partial dispersion where it states one (docs/gotchas.md, "Axial rays").
+    // an element's own partial dispersion where it states one (docs/gotchas.md, "Axial rays"). Since f5b456fec
+    // (LV #965) a sodium-D element is anchored at the D line and its channels are of C, D, F and g, and its partial
+    // dispersion is read in its own reference's coordinate (referencePgF: the d line's normal line for a d element, as
+    // before).
     const resolver = "src/optics/chromatic/materialResolver.ts";
     const anchoring = "sampling.indexMaxDelta of answerLvAxial and docs/gotchas.md rest on this";
     assertSource(
       resolver,
-      "const nd = surface.nd; const anchor = nd - evaluateSellmeier(entry, CHANNEL_NM.G);",
+      `const nd = surface.nd;
+       const wavelengths = element.indexReference === "D" ? D_LINE_CHANNEL_NM : CHANNEL_NM;
+       const anchor = nd - evaluateSellmeier(entry, wavelengths.G);`,
       anchoring,
     );
-    assertSource(resolver, "const nR = evaluateSellmeier(entry, CHANNEL_NM.R) + anchor;", anchoring);
-    assertSource(resolver, "const nB = evaluateSellmeier(entry, CHANNEL_NM.B) + anchor;", anchoring);
-    assertSource(resolver, ": evaluateSellmeier(entry, CHANNEL_NM.V) + anchor;", anchoring);
-    assertSource(resolver, "? nB + normalLinePgF(element.vd, element.dPgF) * (nB - nR)", anchoring);
+    assertSource(resolver, "const nR = evaluateSellmeier(entry, wavelengths.R) + anchor;", anchoring);
+    assertSource(resolver, "const nB = evaluateSellmeier(entry, wavelengths.B) + anchor;", anchoring);
+    assertSource(resolver, ": evaluateSellmeier(entry, wavelengths.V) + anchor;", anchoring);
+    assertSource(
+      resolver,
+      '? nB + referencePgF(element.indexReference ?? "d", element.vd, element.dPgF) * (nB - nR)',
+      anchoring,
+    );
+    assertSource(
+      resolver,
+      `export function referencePgF(reference: RefractiveIndexReferenceLine, v: number, dPgF = 0): number {
+         return reference === "e"
+           ? normalLinePgFPrime(v, dPgF)
+           : reference === "D"
+             ? sodiumPgF(v, dPgF)
+             : normalLinePgF(v, dPgF);
+       }`,
+      anchoring,
+    );
     assertSource(
       resolver,
       'const fn: SurfaceIndexFn = (ch) => (ch === "R" ? nR : ch === "B" ? nB : ch === "V" ? nV : nd);',
@@ -1957,6 +2322,11 @@ test(
       "src/optics/chromatic/indexResolver.ts",
       "surface.nd + evaluateSellmeier(dispersion.glassEntry, wavelengthNm) - evaluateSellmeier(dispersion.glassEntry, referenceNm)",
       "docs/gotchas.md: at C and F a channel's index is within a rounding of the case's, never exactly by construction",
+    );
+    assertSource(
+      "src/optics/chromatic/indexResolver.ts",
+      "const referenceNm = LINE_NM[elementReferenceLine(state.lens, surface.elemId)];",
+      "docs/gotchas.md: the case's anchored index is anchored at the element's own reference line, the D line's too",
     );
     assertSource(
       "src/optics/trace/rayAdapters.ts",
@@ -2036,7 +2406,15 @@ test("the distortion tab still traces the probe, the edge and its samples the ch
     ": prepareRayTraceForState(stateWithZ(state, zPos), { ghost: true }).ray(solve.yLaunch, launch.uField);",
     curve,
   );
-  assertSource(image, "return trace.y + trace.u * imagePlaneTransfer;", plotted);
+  // Since LV #960 the height is carried to the image by imageHeightAfterTransfer: the straight transfer to a flat image
+  // (every state the exporter admits), a landing on a curved one.
+  assertSource(image, "return imageHeightAfterTransfer(state, trace.y, trace.u, imagePlaneTransfer);", plotted);
+  assertSource(
+    image,
+    `const shape = state.lens.imageSurface;
+     if (shape === null) return y + u * transfer;`,
+    plotted,
+  );
   // Since 5ba17c20c every chief ray but the axis's is solved through the stop's centre, below one degree too, to a
   // tolerance that shrinks with the field there; the axis is 0, unsolved. The probe above stays a paraxial launch.
   const solve = "src/optics/field/chiefRaySolve.ts";
@@ -2393,15 +2771,34 @@ test("the aberrations tab still presents the field curves the engine answers cur
   assertSource(hook, "analysisContext?.request ??", answer);
   assertSource(hook, "const bundle = context.computeFieldCurvatureBundle();", answer);
   assertSource(hook, "chromaticFieldCurvatureResult: bundle.chromaticFieldCurvature,", answer);
-  // The shifts are from the design plane, + aft; the Petzval shift is paraxial, of the chief ray's landing.
+  // The shifts are from the design plane, + aft; the Petzval shift is paraxial, of the chief ray's landing. Since LV
+  // #960 both are from the image surface where the chief ray lands: the flat intercept states no z, so on every state
+  // the exporter admits (it refuses a curved image) they are from the design plane, and the Petzval shift has no sag.
   const curvature = "src/optics/analysis/aberration/fieldCurvature.ts";
-  assertSource(curvature, "const tangentialShiftMm = tangentialBestFocusZ - geometry.imagePlaneZ;", answer);
-  assertSource(curvature, "const sagittalShiftMm = sagittalBestFocusZ - geometry.imagePlaneZ;", answer);
-  assertSource(curvature, "chiefImageHeight: chiefRay.imagePoint.y,", answer);
   assertSource(
     curvature,
-    "const petzvalShiftMm = petzvalShiftAtImageHeight(chiefImageHeight, L.petzvalSum) ?? 0;",
-    "the Petzval shift lv states in sampling is paraxial: no rung compares it",
+    `const imageZ = chiefRay.imagePoint.z ?? geometry.imagePlaneZ;
+     const tangentialShiftMm = tangentialBestFocusZ - imageZ;
+     const sagittalShiftMm = sagittalBestFocusZ - imageZ;`,
+    answer,
+  );
+  assertSource(curvature, "chiefImageHeight: chiefRay.imagePoint.y,", answer);
+  const petzval = "the Petzval shift lv states in sampling is paraxial: no rung compares it";
+  assertSource(
+    curvature,
+    `const petzvalSagMm =
+       petzvalShiftAtImageHeight(standardizedFieldFocus.chiefLateralHeightMm ?? chiefImageHeight, L.petzvalSum) ?? 0;
+     const imageSurfaceSagMm = standardizedFieldFocus.imageSurfaceSagMm;
+     const petzvalShiftMm = imageSurfaceSagMm === undefined ? petzvalSagMm : petzvalSagMm - imageSurfaceSagMm;`,
+    petzval,
+  );
+  assertSource(
+    curvature,
+    `...(chiefRay.imagePoint.z === undefined
+       ? {}
+       : {
+           imageSurfaceSagMm: chiefRay.imagePoint.z - geometry.imagePlaneZ,`,
+    petzval,
   );
 });
 
@@ -2468,11 +2865,18 @@ test(
       "the sets' cells: BEAM_GRID_CELLS with no count of the drawer's",
     );
     assertSource(vignetting, "return Math.max(Math.round(cellsAcross), MIN_BEAM_GRID_CELLS);", setup);
-    assertSource(vignetting, "const mirrored = mirrorSymmetricAboutMeridian(state);", setup);
+    // Since LV #960 the half is mirrored where the image surface is mirror-symmetric too: only an obliquely turned
+    // cylinder is not, and a flat image (every state the exporter admits) is, so the rule is the surfaces' as before.
+    assertSource(vignetting, "const mirrored = imageMirrorSymmetricAboutMeridian(state);", setup);
     assertSource(
       "src/optics/analysis/mtf/mtfTracing.ts",
-      "export function mtfMirrorSymmetric(state: PreparedGeometry): boolean { return mirrorSymmetricAboutMeridian(state); }",
-      "lvVignettingSetup asks mtfMirrorSymmetric, which hands mirrorSymmetricAboutMeridian on",
+      "export function mtfMirrorSymmetric(state: PreparedGeometry): boolean { return imageMirrorSymmetricAboutMeridian(state); }",
+      "lvVignettingSetup asks mtfMirrorSymmetric, which hands imageMirrorSymmetricAboutMeridian on",
+    );
+    assertSource(
+      "src/optics/trace/symmetry.ts",
+      "return mirrorSymmetricAboutMeridian(state) && state.lens.imageSurface?.xSymmetric !== false;",
+      "lvVignettingSetup asks mtfMirrorSymmetric, which hands imageMirrorSymmetricAboutMeridian on",
     );
     // A field: its geometry, its aimed stop lattice (the MTF's, at the authored indices), none of a bounding sphere.
     assertSource(vignetting, "const geometry = computeOffAxisFieldGeometry(state, fieldFraction, fields);", lattices);
@@ -2541,7 +2945,13 @@ test("the vignetting tab still presents the curve the engine answers vignetting.
     ": prepareRayTraceForState(stateWithZ(state, zPos), { ghost: true }).ray(solve.yLaunch, launch.uField);",
     landing,
   );
-  assertSource(height, "return trace.y + trace.u * imagePlaneTransfer;", landing);
+  assertSource(height, "return imageHeightAfterTransfer(state, trace.y, trace.u, imagePlaneTransfer);", landing);
+  assertSource(
+    height,
+    `const shape = state.lens.imageSurface;
+     if (shape === null) return y + u * transfer;`,
+    landing,
+  );
 });
 
 // Stage 6.7, at LV 098c91ef6 (closure fef2e248, with the stage's names): the summary tab's request and readouts and the
@@ -2664,11 +3074,20 @@ test(
       "workingFNumbers takes LensVisualizer's object for the case's only at infinity focus, where both are infinite",
     );
     const working = "src/optics/analysis/summary/fNumbers.ts";
+    // Since f5b456fec (LV #988) the summary's working f-number is the ray of traceWorkingFNumber, which the MTF's axial
+    // readout shares, asked with no spectrum: the authored indices, as before.
     assertSource(
       working,
-      "const launch = prepareAimedPupilLaunch(request, [{ xFraction: 0, yFraction: 1 }], field);",
+      `const result = traceWorkingFNumber(request, field);
+       return result.status === "traced" ? { ...result, indexLine: authoredIndexLine(state) } : result;`,
       definitions,
     );
+    assertSource(
+      working,
+      "const launch = prepareAimedPupilLaunch(request, [{ xFraction: 0, yFraction: 1 }], field, spectrum);",
+      definitions,
+    );
+    assertSource(working, "const trace = prepareAimedPupilTrace(state, launch, spectrum).engine({", definitions);
     assertSource(
       working,
       `const sine = sineToNormal(trace.terminalDirection, state.imagePlane.normal);
@@ -2710,9 +3129,12 @@ test(
       field,
     );
     const imageHeight = "src/optics/field/imageHeight.ts";
+    // Since LV #960 a cylindrical image surface's frame edge stands first; a flat image has none (the exporter refuses
+    // every curved one), so the corner is half the image circle or the format's diagonal, as before.
     assertSource(
       imageHeight,
-      "const maxImageHeight = (state.lens.source?.catalog.imageCircleMm ?? format.diagonalMm) / 2;",
+      `const maxImageHeight =
+         state.lens.imageSurface?.fieldExtentMm ?? (state.lens.source?.catalog.imageCircleMm ?? format.diagonalMm) / 2;`,
       field,
     );
     assertSource(imageHeight, "if (limit?.settled) return { ...geometry, halfFieldDeg: limit.fieldDeg };", field);
@@ -2965,3 +3387,42 @@ test(
     );
   },
 );
+
+// LV #960 (500ef5992), read at 420b47555 (closure c5c5ba6d, 187 files): curved image surfaces. A case has the flat
+// plane z = imageZ only, so exportCase refuses a state whose lens has a curved image surface (curved-image-surface,
+// read through lvImageSurface in src/engines/lv/binding.ts) and every restated line above is the flat image's branch.
+test("a flat image is still a null image surface, which every analysis and the hook leave as it was", { skip }, () => {
+  const refused = "exportCase refuses a state whose lens.imageSurface is not null; null is the flat image";
+  assertSource(
+    "src/optics/types.ts",
+    "Every shape is mirror-symmetric in x and in y. A flat image is `null`, never a shape.",
+    refused,
+  );
+  assertSource(
+    "src/optics/prescription/compileCanonical.ts",
+    "imageSurface: data.imageSurface ? createImageSurfaceShape(data.imageSurface, frameSize(data.imageFormat)) : null,",
+    refused,
+  );
+  assertSource("src/optics/prescription/runtimeView.ts", "imageSurface: lens.imageSurface,", refused);
+  assertSource("src/optics/state/preparedGeometry.ts", "imageSurface: lens.imageSurface,", refused);
+  // The trace's landing on the image: the plane, unless the trace geometry carries a surface.
+  assertSource(
+    "src/optics/trace/pathPlanner.ts",
+    `return geometry.imageSurface === null
+       ? intersectRayPlane({ origin, direction }, geometry.imagePlane)
+       : intersectImageSurface(geometry.imageSurface, geometry.imagePlane, { origin, direction });`,
+    "lv's rays.trace lands every ray on the case's plane (imageProjection.ts), the flat image's landing",
+  );
+  // The hook builds the lens viewed along a section of a cylinder, and leaves every other lens as authored, which the
+  // exporter builds (buildLens of the lens file's default export).
+  assertSource(
+    "src/components/hooks/useLensComputation.ts",
+    "return { L: buildLens(withImageSurfaceSection(system, imageSection)) };",
+    "createLensBuilder in src/engines/lv/lensBuilder.ts builds the authored lens, which the hook builds for a flat image",
+  );
+  assertSource(
+    "src/optics/prescription/imageSurfaceSection.ts",
+    'if (section === "long" || !lens.imageSurface?.cylindrical) return lens;',
+    "createLensBuilder in src/engines/lv/lensBuilder.ts builds the authored lens, which the hook builds for a flat image",
+  );
+});

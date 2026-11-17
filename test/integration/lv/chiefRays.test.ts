@@ -25,7 +25,7 @@ import { test } from "node:test";
 import type { RaysTraceSpec } from "../../../src/contract/quantities/raysTrace.ts";
 import type { RunOptions } from "../../../src/contract/runSpec.ts";
 import { decodeNdArray } from "../../../src/core/numeric/ndarray.ts";
-import { loadLvBinding } from "../../../src/engines/lv/binding.ts";
+import { loadLvBinding, lvImageSurface } from "../../../src/engines/lv/binding.ts";
 import type { LvBinding } from "../../../src/engines/lv/binding.ts";
 import { rebuildCase } from "../../../src/engines/lv/caseModel.ts";
 import type { LvCaseModel } from "../../../src/engines/lv/caseModel.ts";
@@ -192,6 +192,7 @@ test(
             traced.uy,
             lastSurfZ,
             lastSurfZ + transfer,
+            lvImageSurface(model.state),
           );
           const tracedX = traced.clipped ? null : (imagePoint?.x ?? null);
           const tracedY = traced.clipped ? null : imagePoint ? -imagePoint.y : null;
@@ -234,7 +235,15 @@ test(
           assert.ok(off !== null && off.kind !== "vector", where);
           const image = traced.clipped
             ? null
-            : api.skewImagePlaneIntercept(traced.x, traced.y, traced.ux, traced.uy, off.lastSurfZ, off.imagePlaneZ);
+            : api.skewImagePlaneIntercept(
+                traced.x,
+                traced.y,
+                traced.ux,
+                traced.uy,
+                off.lastSurfZ,
+                off.imagePlaneZ,
+                lvImageSurface(model.state),
+              );
           assert.ok(Object.is(sample.imageHeightMm, image?.y ?? null), `${where}: field ${ray} ${sample.channel}`);
           if (image !== null) heights.push(image.y);
         }

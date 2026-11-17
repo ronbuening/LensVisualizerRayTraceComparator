@@ -6,6 +6,7 @@ import { test } from "node:test";
 import { baselineText, parseBaseline } from "../../src/baseline/build.ts";
 import { checkBaseline, checkFails, stateText } from "../../src/baseline/check.ts";
 import { buildBaselineReport, renderBaselineReport } from "../../src/baseline/report.ts";
+import { movedText } from "../../src/cli/commands/baseline.ts";
 import { baselineProblems, gravestVerdict } from "../../src/contract/baseline.ts";
 import type { Baseline, BaselinePair } from "../../src/contract/baseline.ts";
 import { VERDICTS } from "../../src/contract/comparison.ts";
@@ -104,16 +105,43 @@ test("the report of a baseline: verdicts by run and by request, the worst figure
 
   const { markdown, json } = renderBaselineReport(BASELINE_RAYS);
   assert.deepEqual(renderBaselineReport(JSON.parse(baselineText(BASELINE_RAYS))), { markdown, json });
-  assert.match(markdown, /^\| r2 \| rays\.trace \| 1 \| 2 \| lv – ref \| 1 FLOOR \| 1 PASS, 1 FLOOR \|$/m);
-  assert.match(markdown, /^\| r1 \| other \| 1 unsupported \(quantity paraxial\.first-order\) \|$/m);
   assert.match(
     markdown,
-    /^\| lv – ref \| landing\.maxDistance \(≤ 1\.00e-8 mm\) \| 1\.25e-8 \| zoom-wide \| field 54, line 0, ray 4 \|$/m,
+    /^\| Ray trace — `ray-trace` \| `rays\.trace` \| 1 \| 2 \| lv – reference-tracer \| 1 Within a numerical floor \| 1 Pass; 1 Within a numerical floor \|$/m,
   );
   assert.match(
     markdown,
-    /^\| zoom-wide \| 2 \| FLOOR: landing\.maxDistance 1\.25e-8 mm \| FLOOR: landing\.maxDistance 1\.25e-8 mm \| PASS: landing\.maxDistance not finite \| 10 \/ 6 \/ 0 \| 10 \/ 6 \/ 0 \| 10 \/ 6 \/ 0 \|$/m,
+    /^\| First-order data — `first-order` \| other \| 1 not computed \(quantity paraxial\.first-order\) \|$/m,
   );
+  assert.match(
+    markdown,
+    /^\| lv – reference-tracer \| Largest distance between the two engines' ray landings on the image plane — `landing\.maxDistance` \| mm \| ≤ 1\.00e-8 \| 1\.25e-8 \| zoom-wide \| field 54 deg, line 0, ray 4 \|$/m,
+  );
+  assert.match(
+    markdown,
+    /^\| zoom-wide \| 2 \| Within a numerical floor: landing\.maxDistance 1\.25e-8 mm \| Within a numerical floor: landing\.maxDistance 1\.25e-8 mm \| Pass: landing\.maxDistance not finite \| 10 \/ 6 \/ 0 \| 10 \/ 6 \/ 0 \| 10 \/ 6 \/ 0 \|$/m,
+  );
+  // A pair is FLOOR, so the report says what the limits file granted, and the legend names the verdict.
+  assert.match(markdown, /^A pair here is Within a known numerical floor \(stored as FLOOR\)/m);
+  assert.match(markdown, /^\| Within a known numerical floor \| `FLOOR` \| /m);
+  // The hashes are under Identifiers, at the end: the run's lens state is there.
+  assert.match(markdown, /## Identifiers\n[^#]*\n\| zoom-wide \| [0-9a-f]{64} \|\n$/);
+  // A report with no pair at FLOOR does not name a floor.
+  const plain = renderBaselineReport({
+    ...BASELINE_RAYS,
+    runs: BASELINE_RAYS.runs.map((run) => ({
+      ...run,
+      rungs: run.rungs.map((rung) => ({
+        ...rung,
+        pairs: rung.pairs.map((pair) => ({
+          ...pair,
+          verdict: pair.verdict === "FLOOR" ? "PASS" : pair.verdict,
+          verdicts: pair.verdicts.map((each) => (each.verdict === "FLOOR" ? { ...each, verdict: "PASS" } : each)),
+        })),
+      })),
+    })),
+  } as Baseline).markdown;
+  assert.doesNotMatch(plain, /FLOOR|floor/);
   assert.ok(markdown.endsWith("|\n") && !markdown.includes("\r"));
 });
 
@@ -195,6 +223,40 @@ test("check: DRIFT is a verdict that changed or a judged metric that moved past 
   // With other requests than the baseline's, the kinds of verdict are held, not their counts.
   const fewer = changed(`${R2}/requests`, 1, changed(`${pairAt}/verdicts`, [{ verdict: "FLOOR", count: 1 }]));
   assert.equal(checkBaseline(BASELINE_RAYS, fewer, POLICY_LADDER)[4].outcome, "DRIFT");
+});
+
+test("movedText shows each form of what moved by labels, with separators no label holds; --json keeps the words", () => {
+  const pairAt = `${R2}/pairs/1`;
+  const pair: BaselinePair = BASELINE_RAYS.runs[0].rungs[1].pairs[1];
+  // Each form as checkBaseline states it, then as a line shows it.
+  const [past] = checkBaseline(BASELINE_RAYS, changed(`${pairAt}/metrics/0/value`, 3e-8), POLICY_LADDER)[4].moved;
+  assert.equal(movedText(past), "landing.maxDistance was 1.25e-8 — now 3.00e-8 (limit 1.00e-8)");
+  const [lost] = checkBaseline(BASELINE_RAYS, changed(`${pairAt}/metrics/0/value`, null), POLICY_LADDER)[4].moved;
+  assert.equal(movedText(lost), "landing.maxDistance was 1.25e-8 — now not finite (limit 1.00e-8)");
+  const passed = { ...pair, verdict: "PASS", verdicts: [{ verdict: "PASS", count: 2 }] };
+  const [verdicts] = checkBaseline(BASELINE_RAYS, changed(pairAt, passed), POLICY_LADDER)[4].moved;
+  assert.equal(verdicts, "verdicts were 1 PASS, 1 FLOOR, are 2 PASS");
+  assert.equal(movedText(verdicts), "verdicts were 1 Pass; 1 Within a numerical floor — now 2 Pass");
+  // A label with a comma in it stays one item of its list.
+  assert.equal(
+    movedText("verdicts were 30 RECORDED, 18 ATTENTION, are 29 RECORDED, 19 ATTENTION"),
+    "verdicts were 30 Side by side; 18 Side by side, worth a look — now 29 Side by side; 19 Side by side, worth a look",
+  );
+  // A band of a side-by-side figure is a review band; of a figure that sorts a field, a sorting limit.
+  assert.equal(
+    movedText("mtfOnAxis.maxAbs was 4.00e-3, is 6.00e-3 (band 5.00e-3)"),
+    "mtfOnAxis.maxAbs was 4.00e-3 — now 6.00e-3 (review band 5.00e-3)",
+  );
+  assert.equal(
+    movedText("chiefLanding.maxAbs was 1.00e-9, is not measured (band 1.00e-7)"),
+    "chiefLanding.maxAbs was 1.00e-9 — now not measured (sorting limit 1.00e-7)",
+  );
+  assert.equal(
+    movedText("new, changed or unclassified catalog FAIL"),
+    "a catalog Fail that docs/known-failures.json does not list as it is (new, changed or unclassified)",
+  );
+  // Any other text is shown as it is.
+  assert.equal(movedText("something else"), "something else");
 });
 
 test("check: a record only one of the two has is GONE or NEW", () => {

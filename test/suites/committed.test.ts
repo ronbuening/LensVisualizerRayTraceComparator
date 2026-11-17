@@ -14,6 +14,7 @@ import type { RunSpec, Suite } from "../../src/contract/runSpec.ts";
 import { formatIssues, validateKind } from "../../src/contract/schemas.ts";
 import { CONTRACT_VERSION, CONTRACT_VERSION_1_3 } from "../../src/contract/version.ts";
 import { REPO_ROOT } from "../../src/core/config.ts";
+import { LEGACY_ENGINE_IDS } from "../../src/core/legacyIds.ts";
 import { hashCanonical } from "../../src/core/numeric/hash.ts";
 import { loadSuite } from "../../src/core/suite.ts";
 import { BUILTIN_ENGINES } from "../../src/engines/builtin.ts";
@@ -51,18 +52,18 @@ for (const name of SUITE_NAMES) {
     // root of this repository, whose configuration defines no engine.
     // optiland is built in too, and joins a suite's own engines with the rungs it answers.
     assert.deepEqual(Object.keys(BUILTIN_ENGINES).sort(), [
-      "flux",
+      "flux-of-lv-rays",
       "lv",
       "optiland",
-      "optiland-wave",
-      "ref",
-      "ref-seidel",
-      "replay",
-      "wave",
+      "otf-of-optiland-wavefront",
+      "reference-seidel",
+      "reference-tracer",
+      "replay-of-lv-mtf",
+      "wave-mtf-of-lv-rays",
     ]);
     if (name === "folded" || name === "diffractive") {
-      assert.deepEqual(suite.defaults?.rungs, ["r0", "r1", "r2", "r3"]);
-      assert.deepEqual(suite.defaults?.engines, ["lv", "ref", "optiland"]);
+      assert.deepEqual(suite.defaults?.rungs, ["built-system", "first-order", "ray-trace", "optical-path"]);
+      assert.deepEqual(suite.defaults?.engines, ["lv", "reference-tracer", "optiland"]);
       assert.deepEqual(suite.defaults?.fields, { kind: "angles-deg", values: [0, 0.25] });
       assert.equal(suite.runs.length, name === "folded" ? 16 : 8);
       assert.equal(new Set(suite.runs.map((run) => run.name)).size, name === "folded" ? 16 : 8);
@@ -71,6 +72,7 @@ for (const name of SUITE_NAMES) {
     }
     if (name === "catalog") {
       assert.deepEqual(suite.defaults, {
+        // The catalog's suite keeps the check and engine ids it was swept with, read as today's on input.
         engines: ["lv", "ref", "optiland"],
         rungs: ["r0", "r1", "r2", "r3", "r4", "r4f", "r6a"],
         aperture: { kind: "wide-open" },
@@ -80,10 +82,18 @@ for (const name of SUITE_NAMES) {
       assert.deepEqual(suite.runs, [{ name: "catalog", lens: { kind: "lv", key: "*" } }]);
       return;
     }
-    const builtin = ["lv", "ref"];
+    const builtin = ["lv", "reference-tracer"];
     if (stationSuite) {
-      assert.deepEqual(suite.defaults?.rungs, ["r0", "r1", "r2", "r3", "r4", "r4f", "r6a"]);
-      assert.deepEqual(suite.defaults?.engines, ["lv", "ref", "optiland"]);
+      assert.deepEqual(suite.defaults?.rungs, [
+        "built-system",
+        "first-order",
+        "ray-trace",
+        "optical-path",
+        "geometric-mtf",
+        "lv-mtf-replay",
+        "wave-mtf",
+      ]);
+      assert.deepEqual(suite.defaults?.engines, ["lv", "reference-tracer", "optiland"]);
       for (const run of expandSuite(suite)) {
         assert.deepEqual(validateKind("run-spec", run), []);
         assert.deepEqual(runContractProblems(run), []);
@@ -136,6 +146,8 @@ test("the benchmark suite is the 12 configurations in four conditions, each on t
   // its hash, which baselines/benchmark.json names, is that of the file as written, and the baseline's runs are
   // these runs by name.
   const baseline = JSON.parse(readFileSync(join(REPO_ROOT, "baselines", "benchmark.json"), "utf8"));
+  // The maintainer's refresh (Stage 9.9) wrote it of the file as it is, its engines under today's ids.
+  assert.ok((baseline.engines as { id: string }[]).every((engine) => !Object.hasOwn(LEGACY_ENGINE_IDS, engine.id)));
   assert.equal(hashCanonical({ name: "benchmark", runs }), baseline.suite.hash);
   assert.deepEqual(
     baseline.runs.map((run: { name: string }) => run.name),
@@ -235,8 +247,14 @@ test("a committed suite runs at the root of the repository without naming an eng
   const io = { stdout: (text: string) => void out.push(text), stderr: (text: string) => void err.push(text) };
   const code = await runCli(["run", "suites/smoke.json"], io, [command]);
   assert.equal(code, EXIT_FAILURE, err.join(""));
-  assert.match(out.join(""), /^smoke: 0 jobs: 0 ok, 0 unsupported, 0 error, 0 pending/m);
-  const lines = err.join("").trimEnd().split("\n");
+  assert.match(out.join(""), /^smoke: 0 jobs: 0 answered/m);
+  // Under each problem, what its code means and what to do: indented, and left out here.
+  const lines = err
+    .join("")
+    .trimEnd()
+    .split("\n")
+    .filter((line) => !line.startsWith("    "));
+  assert.match(err.join(""), /lv-path-missing: .*\n {4}The LensVisualizer path that is set is not a directory\./);
   // One line per run as written: without LensVisualizer nothing says which lens is a zoom.
   assert.equal(lines.length, 4);
   for (const line of lines) {

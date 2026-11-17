@@ -541,6 +541,22 @@ class FirstOrderTest(unittest.TestCase):
         self.assertAlmostEqual(f8(data["exitPupilZ"])[0], float(z), delta=TOLERANCE_MM)
         self.assertAlmostEqual(f8(data["exitPupilSemiDiameter"])[0], float(2 * abs(size)), delta=TOLERANCE_MM)
 
+    def test_optilands_f_number_is_the_magnitude_of_its_focal_length_over_the_pupil_since_a9e544a2(self) -> None:
+        # Pinned (docs/gotchas.md, "A pupil diameter of optiland has a sign"): since optiland a9e544a2 (#923) FNO() is
+        # |f2()| / EPD(), so a negative lens has a positive f-number where up to 4e893f53 it had a negative one, and
+        # only an inverted entrance pupil gives a sign (the test above). A plano-concave lens of radius -50 mm in
+        # glass of 1.5, its stop of radius 2 mm on the first surface: f = -100 mm, the entrance pupil 4 mm across.
+        case = make_case([surface(0.0, sphere(-50.0)), surface(4.0, PLANE)], indices=[[1.5, 1.0]], stop=0)
+        expected = exact(case)
+        optic = build_case(case).optics[0]
+        self.assertLess(float(optic.paraxial.f2()), 0)
+        self.assertGreater(float(optic.paraxial.EPD()[0]), 0)
+        data = self.answer(case)
+        self.hold(data, expected)
+        self.assertEqual(expected["efl"], -100)
+        self.assertEqual(expected["entrancePupilSemiDiameter"], 2)
+        self.assertAlmostEqual(f8(data["recorded"]["optilandFNumber"])[0], 100.0 / 4.0, delta=1e-12)
+
     # ── The object, the image plane and the rear plate ───────────────────────────────────────────────────────────
 
     def test_a_finite_object_changes_nothing_but_the_magnification_that_is_recorded(self) -> None:

@@ -1,8 +1,9 @@
-// `vignetting.native` of the engines `lv` and `flux`, with no LensVisualizer: on the fake LV tree, whose vignetting tab,
-// launch lattice and tracer have LensVisualizer's names and numbers of their own. What is held here is what each engine
-// asks and how it writes the numbers down: `lv`, the tab's curve as the tab presents it, refusing before it asks
-// anything what the case decides; `flux`, the estimator's figures of LensVisualizer's lattices as LensVisualizer traces
-// them. What the estimator computes is test/estimators/illumination.test.ts; LensVisualizer's own tab is tier 2.
+// `vignetting.native` of the engines `lv` and `flux-of-lv-rays`, with no LensVisualizer: on the fake LV tree, whose
+// vignetting tab, launch lattice and tracer have LensVisualizer's names and numbers of their own. What is held here is
+// what each engine asks and how it writes the numbers down: `lv`, the tab's curve as the tab presents it, refusing
+// before it asks anything what the case decides; `flux-of-lv-rays`, the estimator's figures of LensVisualizer's
+// lattices as LensVisualizer traces them. What the estimator computes is test/estimators/illumination.test.ts;
+// LensVisualizer's own tab is tier 2.
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
@@ -255,7 +256,7 @@ test("the engine is flux: LensVisualizer's fingerprint, an adapter revision of i
   });
   t.after(() => adapter.close());
   const descriptor = await adapter.describe();
-  assert.equal(descriptor.identity.id, "flux");
+  assert.equal(descriptor.identity.id, "flux-of-lv-rays");
   assert.equal(descriptor.identity.fingerprint, binding.fingerprint().engineClosureHash);
   assert.equal(descriptor.identity.adapterRevision, adapterRevision(LV_FLUX_ENGINE_MODULE).revision);
   assert.deepEqual(descriptor.capabilities.quantities, { [VIGNETTING_NATIVE]: { version: 1 } });
@@ -317,8 +318,8 @@ test("flux's answer is the estimator's on LensVisualizer's lattice of each field
   });
   assert.equal(data.fields[0].geometricTransmission, 1);
   assert.equal(data.fields[0].relativeIllumination, 1);
-  // On the fake's coarse lattices the figures move on doubling: no arbiter there. A stop lattice has no rim a beam could
-  // reach past (LV #936): the stop's disc bounds it, and no field is flagged for its rim.
+  // On the fake's coarse lattices the figures move on doubling: no arbiter there. A stop lattice has no rim a beam
+  // could reach past (LV #936): the stop's disc bounds it, and no field is flagged for its rim.
   assert.ok(data.fields.every((field) => !field.reason?.includes("lattice-edge-lit")));
   assert.ok(data.fields.every((field) => field.sampling.edgeCells === 0));
   // Without the option the coarser lattice has twice a run's own cells.

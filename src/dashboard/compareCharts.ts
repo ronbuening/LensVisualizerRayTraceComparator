@@ -26,6 +26,7 @@ import { curveAt } from "./chartViews.ts";
 import type { Answer } from "./chartViews.ts";
 import { figureAt, optionalFigureAt } from "./figure.ts";
 import type { Curve, Derived, DocumentName, Figure } from "./figure.ts";
+import { currentCheckId } from "../core/legacyIds.ts";
 
 const TEXT = DASHBOARD_TEXT.compare;
 
@@ -160,12 +161,18 @@ function recordedFigure(place: PairPlace, side: "a" | "b", name: string, element
 /** The attention band the policy at hand gives a metric of the rung; null where it gives none. */
 function bandOf(place: PairPlace, rung: string, metric: string | null): Figure | null {
   if (metric === null || place.policyDocument === null || place.policy === null) return null;
-  return optionalFigureAt(place.policyDocument, place.policy, ["rungs", rung, "metrics", metric, "attention"]);
+  return optionalFigureAt(place.policyDocument, place.policy, [
+    "rungs",
+    currentCheckId(rung),
+    "metrics",
+    metric,
+    "attention",
+  ]);
 }
 
 /** A limit of the sorting: the attention of a metric of the rung in the policy, or no limit. */
 function limitOf(policy: Policy | null, rung: string, metric: string): number {
-  return policy?.rungs[rung]?.metrics[metric]?.attention ?? Number.POSITIVE_INFINITY;
+  return policy?.rungs[currentCheckId(rung)]?.metrics[metric]?.attention ?? Number.POSITIVE_INFINITY;
 }
 
 /** The value of a record at an element as a number, or null. */

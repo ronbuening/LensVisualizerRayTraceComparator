@@ -9,19 +9,22 @@ export const R6C_GOLDEN = "r6c-stand-ins";
 export const R6C_POLICY: Policy = {
   ...R5_POLICY,
   rungs: {
-    r6c: {
-      ...R5_POLICY.rungs.r5,
+    "mtf-vs-optiland-wavefront": {
+      ...R5_POLICY.rungs["mtf-vs-optiland-fft"],
       metrics: {
-        ...R5_POLICY.rungs.r5.metrics,
-        "chiefLanding.maxAbs": { ...R5_POLICY.rungs.r5.metrics["chiefLanding.maxAbs"], attentionSeveralLines: 1e-3 },
+        ...R5_POLICY.rungs["mtf-vs-optiland-fft"].metrics,
+        "chiefLanding.maxAbs": {
+          ...R5_POLICY.rungs["mtf-vs-optiland-fft"].metrics["chiefLanding.maxAbs"],
+          attentionSeveralLines: 1e-3,
+        },
       },
     },
   },
 };
 export const R6C_FIXTURE_RUNG: RungDefinition = {
   ...R5_FIXTURE_RUNG,
-  id: "r6c",
-  engines: ["lv", "wave", "optiland", "optiland-wave"],
+  id: "mtf-vs-optiland-wavefront",
+  engines: ["lv", "wave-mtf-of-lv-rays", "optiland", "otf-of-optiland-wavefront"],
 };
 function spectralLines(caseId: string) {
   return caseId === ALL_FEATURES_CASE.id
@@ -38,14 +41,14 @@ export function r6cCycle(runsDir: string) {
         ...spectralLines(request.caseId),
       },
     })),
-    wave: mtfEngine((request) => ({
+    "wave-mtf-of-lv-rays": mtfEngine((request) => ({
       status: "ok",
       data: {
         ...answer("hopkins-autocorrelation", [{}, {}, { status: "unconverged", reason: "undersampled" }]),
         ...spectralLines(request.caseId),
       },
     })),
-    "optiland-wave": mtfEngine((request) => ({
+    "otf-of-optiland-wavefront": mtfEngine((request) => ({
       status: "ok",
       data: {
         ...answer("hopkins-optiland-wavefront", [

@@ -5,10 +5,12 @@ import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 
 import { COMPARE_TABS, GATED_HEADLINES } from "../../src/dashboard/compare.ts";
+import { escapeHtml, renderCompare } from "../../src/dashboard/html.ts";
 import { createViews } from "../../src/dashboard/server.ts";
 import type { DashboardViews } from "../../src/dashboard/server.ts";
 import { createSources } from "../../src/dashboard/sources.ts";
 import { MATRIX_ROWS } from "../../src/report/wording.ts";
+import { engineName } from "../../src/vocabulary/index.ts";
 import { BASELINE_ONLY, COMPARE_KEY, compareGoldenQueries } from "./compareFixture.ts";
 import { buildFixture } from "./support.ts";
 import type { DashboardFixture } from "./support.ts";
@@ -35,8 +37,8 @@ test("the cards are the validation matrix's tab rows; a recorded rung is a card'
   );
   const mtf = COMPARE_TABS.find((tab) => tab.tab === "mtf");
   // R6b is lv beside wave, the comparator's estimator on LensVisualizer's rays: no counterpart of LensVisualizer's.
-  assert.deepEqual(mtf?.recorded, ["r5", "r5g", "r6c"]);
-  assert.deepEqual(COMPARE_TABS.find((tab) => tab.tab === "vignetting")?.recorded, ["r11b"]);
+  assert.deepEqual(mtf?.recorded, ["mtf-vs-optiland-fft", "geometric-mtf-vs-optiland", "mtf-vs-optiland-wavefront"]);
+  assert.deepEqual(COMPARE_TABS.find((tab) => tab.tab === "vignetting")?.recorded, ["vignetting-vs-flux-estimate"]);
   for (const tab of COMPARE_TABS) for (const rung of tab.gated) assert.ok(rung in GATED_HEADLINES, rung);
 });
 
@@ -72,7 +74,7 @@ test("a condition is a case: chips of each facet, the first value of a compared 
   const odd = views.compare(COMPARE_KEY, "stop=99&colour=red", null);
   assert.deepEqual(odd?.notes, [
     "The address has parameters that a compare page does not take, and they are left out: colour.",
-    "The stop asked, 99, is of no case in the condition chosen so far, so the first one is shown.",
+    "The stop asked, 99, is of no lens state in the condition chosen so far, so the first one is shown.",
   ]);
 });
 
@@ -84,14 +86,14 @@ test("a gated line is read from the run directories, else from a baseline's reco
   assert.ok(view.count >= 2, `${view.count} cases`);
   const line = (tab: string, rung: string) =>
     view.cards.find((card) => card.tab === tab)?.gated.find((each) => each.rung === rung);
-  assert.equal(line("axial", "r8a")?.source.kind, "runs");
+  assert.equal(line("axial", "axial-rays")?.source.kind, "runs");
   // R7a's run directory has no comparisons: its case's records are the baseline's.
-  const r7a = line("coma-bokeh", "r7a");
+  const r7a = line("coma-bokeh", "spot-rays");
   assert.deepEqual(r7a?.source, { kind: "baselines", stems: [BASELINE_ONLY] });
   assert.equal(r7a?.headline?.value.source.document, `baseline:${BASELINE_ONLY}`);
   // R1 was run in no directory and is in no baseline here.
-  assert.deepEqual(line("summary", "r1")?.source, { kind: "none" });
-  assert.deepEqual(line("summary", "r1")?.pairs, []);
+  assert.deepEqual(line("summary", "first-order")?.source, { kind: "none" });
+  assert.deepEqual(line("summary", "first-order")?.pairs, []);
 });
 
 test("a recorded line is LensVisualizer beside its counterpart, with the policy's bands and the sorting's limits", () => {
@@ -102,7 +104,7 @@ test("a recorded line is LensVisualizer beside its counterpart, with the policy'
   assert.ok(lines.length >= 7, `${lines.length} lines`);
   for (const line of lines) {
     assert.equal(line.a, "lv");
-    assert.ok(["optiland", "flux"].includes(line.b), line.b);
+    assert.ok(["optiland", "flux-of-lv-rays"].includes(line.b), line.b);
     assert.equal(line.detail, null, "no details on the cards' page");
     for (const metric of line.metrics) {
       assert.ok(metric.band === null || metric.limit === null, `${metric.name}: a band or a limit, never both`);
@@ -112,9 +114,9 @@ test("a recorded line is LensVisualizer beside its counterpart, with the policy'
     }
   }
   const vignetting = view.cards.find((card) => card.tab === "vignetting")?.recorded[0];
-  assert.equal(vignetting?.b, "flux");
+  assert.equal(vignetting?.b, "flux-of-lv-rays");
   assert.deepEqual(
-    lines.filter((line) => line.rung === "r9b").map((line) => line.label),
+    lines.filter((line) => line.rung === "chief-vs-optiland").map((line) => line.label),
     ["distortion", "lateral-colour", "pupils"].filter((label) => lines.some((line) => line.label === label)),
   );
 });
@@ -140,4 +142,27 @@ test("a tab's page has its card alone, with the details of each recorded line; a
   const coma = views.compare(COMPARE_KEY, fan, "coma-bokeh")?.cards[0].recorded;
   assert.ok(coma?.some((line) => line.detail?.charts.some((chart) => chart.kind === "fan")));
   assert.equal(views.compare(COMPARE_KEY, shared, "no-such-tab"), null);
+});
+
+test("a card's badge names the counterparts of its own checks: the vignetting card's is flux, never optiland", () => {
+  const counterparts = (tab: string) => COMPARE_TABS.find((each) => each.tab === tab)?.counterparts;
+  assert.deepEqual(counterparts("vignetting"), ["flux-of-lv-rays"]);
+  assert.deepEqual(counterparts("mtf"), ["optiland", "otf-of-optiland-wavefront"]);
+  assert.deepEqual(counterparts("chief"), ["optiland"]);
+  assert.deepEqual(counterparts("foundation"), []);
+  const { shared } = compareGoldenQueries(views);
+  const view = views.compare(COMPARE_KEY, shared, null);
+  assert.ok(view !== null);
+  const html = renderCompare(view, null);
+  const heading = (tab: string): string => {
+    const title = escapeHtml(COMPARE_TABS.find((each) => each.tab === tab)?.title ?? tab);
+    return html.split("\n").find((line) => line.startsWith(`<h2>${title} <span class="badges">`)) ?? "";
+  };
+  const flux = `beside <span title="flux-of-lv-rays">${escapeHtml(engineName("flux-of-lv-rays"))}</span>`;
+  assert.ok(heading("vignetting").includes(flux), heading("vignetting"));
+  assert.ok(!heading("vignetting").includes("optiland"), heading("vignetting"));
+  assert.ok(heading("chief").includes("beside <code>optiland</code>"), heading("chief"));
+  assert.ok(heading("mtf").includes(escapeHtml(engineName("otf-of-optiland-wavefront"))), heading("mtf"));
+  // A card with no counterpart names none.
+  assert.ok(heading("foundation") !== "" && !heading("foundation").includes("beside"), heading("foundation"));
 });

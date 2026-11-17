@@ -533,7 +533,7 @@ function fieldsAtTheirHeights(
 }
 
 test(
-  "lvrtc run --rungs r2: on the 12 benchmark configurations, every ray lv traces is LensVisualizer's own",
+  "lvrtc run --checks ray-trace: on the 12 benchmark configurations, every ray lv traces is LensVisualizer's own",
   { skip, timeout: 600_000 },
   async (t) => {
     const directory = tempDir(t);
@@ -545,16 +545,13 @@ test(
     writeFileSync(suiteFile, JSON.stringify({ ...benchmark, name: "benchmark-reference", runs }));
 
     const runsDir = join(directory, "runs");
-    const ran = lvrtc(runsDir, "run", suiteFile, "--engines", "lv", "--rungs", "r2");
+    const ran = lvrtc(runsDir, "run", suiteFile, "--engines", "lv", "--checks", "ray-trace");
     assert.equal(ran.code, 0, ran.err);
     assert.equal(ran.err, "", "every field has rays");
-    assert.match(
-      ran.out,
-      /^benchmark-reference: 36 jobs: 36 ok, 0 unsupported, 0 error, 0 pending \(36 computed, 0 cached\)$/m,
-    );
+    assert.match(ran.out, /^benchmark-reference: 36 jobs: 36 answered \(36 asked now\)$/m);
     // The same command again asks nothing: the rays are the same rays, so the requests have the same ids.
-    const again = lvrtc(runsDir, "run", suiteFile, "--engines", "lv", "--rungs", "r2");
-    assert.match(again.out, /36 ok, 0 unsupported, 0 error, 0 pending \(0 computed, 36 cached\)$/m);
+    const again = lvrtc(runsDir, "run", suiteFile, "--engines", "lv", "--checks", "ray-trace");
+    assert.match(again.out, /36 answered \(36 from the result cache\)$/m);
 
     const manifest: RunManifest = JSON.parse(readFileSync(join(runsDir, "benchmark-reference", MANIFEST_FILE), "utf8"));
     const store = createResultStore(join(runsDir, STORE_DIRECTORY));
@@ -582,7 +579,7 @@ test(
       assert.deepEqual(
         jobs.map((job) => [job.rung, job.quantity, job.engine, job.status, job.requestId]),
         sets.map((spec) => [
-          "r2",
+          "ray-trace",
           RAYS_TRACE,
           "lv",
           "ok",
@@ -662,16 +659,17 @@ test(
       fields: { kind: "image-height-fractions", values: [0.5] },
     });
     assert.deepEqual(problems, []);
+    // LV #988's nine photopic lines (five before f5b456fec).
     assert.deepEqual(
       sets.map((spec) => spec.line),
-      [0, 1, 2, 3, 4],
+      [0, 1, 2, 3, 4, 5, 6, 7, 8],
     );
     // One field, whose stop lattice LensVisualizer aims at each line with that line's anchored indices (LV #936): the
-    // five sets are of five lattices, each held below to LensVisualizer's own bundle of it.
-    assert.equal(new Set(sets.map((spec) => JSON.stringify(spec.origins))).size, 5);
+    // nine sets are of nine lattices, each held below to LensVisualizer's own bundle of it.
+    assert.equal(new Set(sets.map((spec) => JSON.stringify(spec.origins))).size, 9);
     const setup = lvLaunchSetup(binding.api, model);
     assert.ok(!("problem" in setup));
-    assert.equal(setup.support.spectralLines[0].wavelengthNm, 555);
+    assert.equal(setup.support.spectralLines[0].wavelengthNm, 560);
     const landings: number[] = [];
     for (const spec of sets) {
       const result = await lv.run(makeRequest({ caseId: opticalCase.id, quantity: RAYS_TRACE, spec }), opticalCase);
@@ -684,7 +682,7 @@ test(
       landings.push(f8(data.imagePoint)[3 * (spec.groups?.chiefIndex as number) + 1]);
     }
     // Lateral colour: the chief ray lands at another height at every line.
-    assert.equal(new Set(landings).size, 5, JSON.stringify(landings));
+    assert.equal(new Set(landings).size, 9, JSON.stringify(landings));
   },
 );
 
@@ -911,9 +909,9 @@ test(
     const directory = tempDir(t);
     const outputs = ["first", "second"].map((name) => {
       const runsDir = join(directory, name);
-      const ran = lvrtc(runsDir, "run", suitePath("smoke"), "--engines", "lv", "--rungs", "r2");
+      const ran = lvrtc(runsDir, "run", suitePath("smoke"), "--engines", "lv", "--checks", "ray-trace");
       assert.equal(ran.code, 0, ran.err);
-      assert.match(ran.out, /^smoke: 27 jobs: 27 ok, 0 unsupported, 0 error, 0 pending \(27 computed, 0 cached\)$/m);
+      assert.match(ran.out, /^smoke: 39 jobs: 39 answered \(39 asked now\)$/m);
       const manifestText = readFileSync(join(runsDir, "smoke", MANIFEST_FILE), "utf8");
       const manifest: RunManifest = JSON.parse(manifestText);
       const entries = manifest.jobs.map((job) =>
@@ -922,10 +920,10 @@ test(
       return { manifestText, manifest, entries };
     });
     const [first, second] = outputs;
-    // 3 fields of a lens on its reference line, 3 fields at each of 5 photopic lines, 3 fields of another lens,
-    // and 3 fields at each end of a zoom.
-    assert.equal(first.manifest.jobs.length, 27);
-    assert.equal(new Set(first.manifest.jobs.map((job) => job.requestId)).size, 27);
+    // 3 fields of a lens on its reference line, 3 fields at each of 9 photopic lines (5 before LV #988), 3 fields of
+    // another lens, and 3 fields at each end of a zoom.
+    assert.equal(first.manifest.jobs.length, 39);
+    assert.equal(new Set(first.manifest.jobs.map((job) => job.requestId)).size, 39);
     assert.equal(first.manifestText, second.manifestText);
     first.entries.forEach((entry, index) => assert.ok(entry.equals(second.entries[index]), `store entry ${index}`));
     // Nothing of this machine is in the manifest, and the rays are in the store, not in the manifest.

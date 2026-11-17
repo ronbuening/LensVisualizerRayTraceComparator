@@ -15,7 +15,7 @@ import type { NdArrayWire } from "../../src/core/numeric/ndarray.ts";
 import { systemDescribeQuantity } from "../../src/quantities/systemDescribe.ts";
 import { DESCRIBE_DATA_ASPHERE, DESCRIBE_DATA_SINGLET } from "../contract/corpus.ts";
 
-const R0 = loadPolicy().rungs.r0;
+const R0 = loadPolicy().rungs["built-system"];
 /** Two surfaces, two lines, two radii each: a paraboloid with two terms, and a ball whose second sag is a NaN. */
 const BASE: SystemDescribeData = DESCRIBE_DATA_ASPHERE;
 
@@ -128,7 +128,12 @@ test("a surface that clips nothing has an infinite clip radius: the same in two 
       where: { field: "clipRadius", surface: last },
     });
   }
-  const judged = comparePair(participant("ref", open), participant("other", BASE), R0, systemDescribeComparator);
+  const judged = comparePair(
+    participant("reference-tracer", open),
+    participant("other", BASE),
+    R0,
+    systemDescribeComparator,
+  );
   assert.equal(judged.verdict, "FAIL");
 });
 
@@ -248,7 +253,12 @@ test("a sag that only one answer has is a NaN, which fails; one that neither has
   assert.ok(Number.isNaN(other["sag.maxAbs"].value));
   assert.deepEqual(other["sag.maxAbs"].where, { surface: 0, sample: 0 });
 
-  const pair = comparePair(participant("ref", BASE), participant("lv", lost), R0, systemDescribeComparator);
+  const pair = comparePair(
+    participant("reference-tracer", BASE),
+    participant("lv", lost),
+    R0,
+    systemDescribeComparator,
+  );
   assert.equal(pair.verdict, "FAIL");
   assert.equal(pair.reason, "sag.maxScaled is NaN at sample 0, surface 0");
   assert.equal(pair.metrics.find((metric) => metric.name === "sag.maxScaled")?.value, null);

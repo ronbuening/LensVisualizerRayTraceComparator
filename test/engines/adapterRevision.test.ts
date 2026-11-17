@@ -142,13 +142,16 @@ test("ref states its adapter revision beside its fingerprint, and stamps it on e
   assert.notEqual(revision, descriptor.identity.fingerprint);
   assert.ok(fileCount > refFingerprint().fileCount);
   assert.deepEqual(engineStamp(descriptor.identity), {
-    id: "ref",
+    id: "reference-tracer",
     fingerprint: descriptor.identity.fingerprint,
     adapterRevision: revision,
     details: descriptor.identity.details,
   });
 
-  const adapter = new RemoteEngineAdapter({ id: "ref", transport: createInProcessTransport(createRefEngine()) });
+  const adapter = new RemoteEngineAdapter({
+    id: "reference-tracer",
+    transport: createInProcessTransport(createRefEngine()),
+  });
   t.after(() => adapter.close());
   const result = await adapter.run(REQUEST_MINIMAL, SINGLET_CASE);
   assert.equal(result.status, "ok");

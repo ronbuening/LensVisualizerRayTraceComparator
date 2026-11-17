@@ -69,12 +69,12 @@ test("an MTF baseline of a run keeps each request, counts where a metric was mea
   let steps = 0;
   for (const run of mtf.runs) {
     const [rung] = run.rungs;
-    assert.equal(rung.rung, "r5");
+    assert.equal(rung.rung, "mtf-vs-optiland-fft");
     assert.equal(rung.sets?.length, rung.requests);
     assert.deepEqual(rung.bands, {
-      "chiefLanding.maxAbs": R5_POLICY.rungs.r5.metrics["chiefLanding.maxAbs"].attention,
-      "mtfOffAxis.maxAbs": R5_POLICY.rungs.r5.metrics["mtfOffAxis.maxAbs"].attention,
-      "mtfOnAxis.maxAbs": R5_POLICY.rungs.r5.metrics["mtfOnAxis.maxAbs"].attention,
+      "chiefLanding.maxAbs": R5_POLICY.rungs["mtf-vs-optiland-fft"].metrics["chiefLanding.maxAbs"].attention,
+      "mtfOffAxis.maxAbs": R5_POLICY.rungs["mtf-vs-optiland-fft"].metrics["mtfOffAxis.maxAbs"].attention,
+      "mtfOnAxis.maxAbs": R5_POLICY.rungs["mtf-vs-optiland-fft"].metrics["mtfOnAxis.maxAbs"].attention,
     });
     // A kept request is the comparison's own: its engines with what they record, its pairs with their figures.
     const compared = comparisons.comparisons.find((set) => set.run === run.name && set.mode === "pairwise");
@@ -120,13 +120,15 @@ test("an MTF baseline of a run keeps each request, counts where a metric was mea
   }
   // The option of rungs leaves out what it does not name.
   assert.ok(
-    buildBaseline(manifest, comparisons, R5_POLICY, { rungs: ["r4"] }).runs.every((run) => run.rungs.length === 0),
+    buildBaseline(manifest, comparisons, R5_POLICY, { rungs: ["geometric-mtf"] }).runs.every(
+      (run) => run.rungs.length === 0,
+    ),
   );
 });
 
 for (const [golden, cycle, policy, rungId] of [
-  [R5_GOLDEN, r5Cycle, R5_POLICY, "r5"],
-  [R5G_GOLDEN, r5gCycle, R5G_POLICY, "r5g"],
+  [R5_GOLDEN, r5Cycle, R5_POLICY, "mtf-vs-optiland-fft"],
+  [R5G_GOLDEN, r5gCycle, R5G_POLICY, "geometric-mtf-vs-optiland"],
 ] as const) {
   test(`the MTF report of ${golden} is rendered from the baseline alone, and is the golden file`, async (t) => {
     const { manifest, comparisons } = await cycle(tempDir(t));
@@ -144,7 +146,7 @@ for (const [golden, cycle, policy, rungId] of [
     assert.equal(report.contract, CONTRACT_VERSION_1_1);
     const [table] = report.tables;
     assert.equal(table.rung, rungId);
-    assert.equal(table.kind, rungId === "r5g" ? "geometric" : "diffraction");
+    assert.equal(table.kind, rungId === "geometric-mtf-vs-optiland" ? "geometric" : "diffraction");
     // Every value of a row is the kept one of its engine, and the difference is the first minus the second.
     let seen = 0;
     for (const run of baseline.runs) {
@@ -201,9 +203,11 @@ test("check: a recorded rung that moved is MOVED and fails nothing; every figure
   assert.ok(at >= 0, "the fixture has a pair inside its bands");
   const pairAt = committed.runs[at].rungs[0].pairs.findIndex((pair) => pair.verdict === "RECORDED");
   const pair = committed.runs[at].rungs[0].pairs[pairAt];
-  const metricAt = pair.metrics.findIndex((metric) => Object.hasOwn(R5_POLICY.rungs.r5.metrics, metric.name));
+  const metricAt = pair.metrics.findIndex((metric) =>
+    Object.hasOwn(R5_POLICY.rungs["mtf-vs-optiland-fft"].metrics, metric.name),
+  );
   const metric = pair.metrics[metricAt];
-  const band = R5_POLICY.rungs.r5.metrics[metric.name].attention as number;
+  const band = R5_POLICY.rungs["mtf-vs-optiland-fft"].metrics[metric.name].attention as number;
   const pointer = `/runs/${at}/rungs/0/pairs/${pairAt}`;
   const recordOf = (fresh: Baseline) =>
     checkBaseline(committed, fresh, R5_POLICY).find(
@@ -235,7 +239,7 @@ test("check: a recorded rung that moved is MOVED and fails nothing; every figure
   assert.deepEqual(
     { ...summary, largest: undefined },
     {
-      rung: "r5",
+      rung: "mtf-vs-optiland-fft",
       a: pair.a,
       b: pair.b,
       name: metric.name,

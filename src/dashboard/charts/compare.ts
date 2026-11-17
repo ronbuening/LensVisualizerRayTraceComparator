@@ -2,7 +2,8 @@
 // strip of the first engine's value minus the second's with the attention band of the policy shaded about zero ("no
 // attention band" said where it gives none). Pure: a view and a subject give the same bytes.
 import { numberText } from "../../compare/metricText.ts";
-import { COMPARE_AXES, DASHBOARD_TEXT } from "../../report/wording.ts";
+import { COMPARE_AXES, DASHBOARD_TEXT, fieldReasonText } from "../../report/wording.ts";
+import { LIMIT_KIND_TEXT, classLabel, engineName, metricLabel } from "../../vocabulary/index.ts";
 import type { FanChartView, PairChartView, SetAsideElement } from "../compareCharts.ts";
 import { fieldText, heading, line } from "./mtf.ts";
 import {
@@ -89,12 +90,12 @@ function stripScale(differences: readonly number[], band: number | null): Scale 
 /** The sentence of an element set aside, where it is on the axis. */
 export function setAsideSentence(aside: SetAsideElement): string {
   const at = aside.at === null ? TEXT.setAsideAt(String(aside.element)) : fieldText(aside.at.value.value);
-  return TEXT.setAside(at, aside.class, aside.reason);
+  return TEXT.setAside(at, classLabel(aside.class), fieldReasonText(aside.reason));
 }
 
 /** What a pair chart's caption says of its band: where the policy gives none, or no metric is of its values. */
 export function pairBandCaption(view: PairChartView): string {
-  return view.metric === null ? TEXT.noMetricSaid : view.band === null ? TEXT.noBandSaid(view.metric) : "";
+  return view.metric === null ? TEXT.noMetricSaid : view.band === null ? TEXT.noBandSaid(metricLabel(view.metric)) : "";
 }
 
 /** What a pair chart's description says beyond the page's intro: its band, and the elements set aside. */
@@ -120,7 +121,7 @@ export function renderPairChart(view: PairChartView, subject: string, options: C
   const valuesLabel = view.values.map(axisName).join(", ");
   const title = TEXT.pairTitle(subject, valuesLabel, xLabel);
   const seriesName = (series: PairChartView["series"][number]): string =>
-    series.group === null ? series.engine : TEXT.legendGroup(series.engine, series.group);
+    series.group === null ? engineName(series.engine) : TEXT.legendGroup(engineName(series.engine), series.group);
   const entries: LegendEntry[] = view.series.map((series, index) => ({
     swatch: series.engine === view.a ? "line" : "dash",
     className: seriesClass(index),
@@ -128,7 +129,9 @@ export function renderPairChart(view: PairChartView, subject: string, options: C
     label: seriesName(series),
   }));
   const groupName = (group: string | null): string =>
-    group === null ? TEXT.legendMinus(view.a, view.b) : `${TEXT.legendMinus(view.a, view.b)}, ${group}`;
+    group === null
+      ? TEXT.legendMinus(engineName(view.a), engineName(view.b))
+      : TEXT.legendGroup(TEXT.legendMinus(engineName(view.a), engineName(view.b)), group);
   view.differences.forEach((group, index) =>
     entries.push({
       swatch: "line",
@@ -140,7 +143,11 @@ export function renderPairChart(view: PairChartView, subject: string, options: C
   entries.push(
     band === null
       ? { swatch: "none", className: "none", label: TEXT.legendNoBand }
-      : { swatch: "band", className: "band", label: CHARTS.legendBand("attention", numberText(band)) },
+      : {
+          swatch: "band",
+          className: "band",
+          label: CHARTS.legendBand(LIMIT_KIND_TEXT.attention, numberText(band)),
+        },
   );
   const stripBottom = TOP + PLOT + GAP + STRIP;
   const body = [
@@ -216,8 +223,8 @@ export function renderPairChart(view: PairChartView, subject: string, options: C
 /** What a fan chart's description says beyond its intro: the field's sorting, the band, answers without a fan. */
 export function fanChartCaption(view: FanChartView): string {
   return [
-    view.sorting.banded ? "" : TEXT.fanSorting(view.sorting.class, view.sorting.reason),
-    view.band === null ? TEXT.noBandSaid(view.metric) : "",
+    view.sorting.banded ? "" : TEXT.fanSorting(classLabel(view.sorting.class), fieldReasonText(view.sorting.reason)),
+    view.band === null ? TEXT.noBandSaid(metricLabel(view.metric)) : "",
     ...view.series.flatMap((series) => (series.missing === null ? [] : [series.missing])),
   ]
     .filter((each) => each !== "")
@@ -238,19 +245,23 @@ export function renderFanChart(view: FanChartView, subject: string, options: Cha
     swatch: series.missing !== null ? "none" : series.engine === view.a ? "line" : "dash",
     className: seriesClass(index),
     marker: markerShape(index),
-    label: series.engine,
+    label: engineName(series.engine),
     ...(series.missing === null ? {} : { hover: series.missing }),
   }));
   entries.push({
     swatch: "line",
     className: seriesClass(view.series.length),
     marker: markerShape(view.series.length),
-    label: TEXT.legendMinus(view.a, view.b),
+    label: TEXT.legendMinus(engineName(view.a), engineName(view.b)),
   });
   entries.push(
     band === null
       ? { swatch: "none", className: "none", label: TEXT.legendNoBand }
-      : { swatch: "band", className: "band", label: CHARTS.legendBand("attention", numberText(band)) },
+      : {
+          swatch: "band",
+          className: "band",
+          label: CHARTS.legendBand(LIMIT_KIND_TEXT.attention, numberText(band)),
+        },
   );
   const stripBottom = TOP + PLOT + GAP + STRIP;
   const body = [

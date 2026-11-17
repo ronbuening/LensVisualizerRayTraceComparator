@@ -24,7 +24,7 @@ import type { SeidelNativeData } from "../../src/contract/quantities/seidelNativ
 import { seidelNativeQuantity } from "../../src/quantities/seidelNative.ts";
 import { SEIDEL_DATA_TWO_SURFACES, SEIDEL_DATA_UNAVAILABLE } from "../contract/corpus.ts";
 
-const POLICY: RungPolicy = loadPolicy().rungs.r13b;
+const POLICY: RungPolicy = loadPolicy().rungs["seidel-vs-optiland"];
 
 /** The corpus's answer as another engine states it: no chromatic sum, and other sums by `delta`. */
 function other(delta: number, more: Partial<SeidelNativeData> = {}): SeidelNativeData {
@@ -160,7 +160,12 @@ test("policy 24: the invariant's limit of 3e-14 mm and a band of 8e-15 on the sc
   assert.equal(POLICY.class, "recorded");
   const pairOf = (b: SeidelNativeData) =>
     comparePair(
-      { engine: "ref-seidel", fingerprint: "a", status: "ok", data: SEIDEL_DATA_TWO_SURFACES as unknown as JsonObject },
+      {
+        engine: "reference-seidel",
+        fingerprint: "a",
+        status: "ok",
+        data: SEIDEL_DATA_TWO_SURFACES as unknown as JsonObject,
+      },
       { engine: "optiland", fingerprint: "b", status: "ok", data: b as unknown as JsonObject },
       POLICY,
       seidelNativeComparator,

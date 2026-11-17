@@ -254,10 +254,10 @@ test("the fixture root's fake-py-oneshot passes the conformance kit, by the comm
     env: { ...process.env, LVRTC_RUNS_DIR: join(tempDir(t), "runs"), LVRTC_PYTHON: PYTHON },
   });
   assert.equal(child.status, EXIT_OK, child.stdout + child.stderr);
-  const lines = child.stdout.split("\n").filter((line) => /^(PASS|FAIL|SKIPPED) /.test(line));
+  const lines = child.stdout.split("\n").filter((line) => /^(passed|failed|skipped) /.test(line));
   assert.equal(lines.length, 15, child.stdout);
   assert.deepEqual(
-    lines.filter((line) => !/^(PASS|SKIPPED) /.test(line)),
+    lines.filter((line) => !/^(passed|skipped) /.test(line)),
     [],
   );
 });
@@ -331,16 +331,16 @@ test(
     };
     const first = run();
     assert.equal(first.code, EXIT_OK, first.out + first.err);
-    assert.match(first.out, /^singlet {7}selftest {2}fake-py {10}ok {11}computed$/m);
-    assert.match(first.out, /^singlet {7}selftest {2}fake-py-oneshot {2}ok {11}computed$/m);
-    assert.match(first.out, /^double-gauss {2}selftest {2}fake-py {10}ok {11}computed$/m);
-    assert.match(first.out, /^double-gauss {2}selftest {2}fake-py-oneshot {2}ok {11}computed$/m);
+    assert.match(first.out, /^singlet {7}pipeline-echo {16}fake-py {20}answered {17}asked now$/m);
+    assert.match(first.out, /^singlet {7}pipeline-echo {16}fake-py-oneshot {12}answered {17}asked now$/m);
+    assert.match(first.out, /^double-gauss {2}pipeline-echo {16}fake-py {20}answered {17}asked now$/m);
+    assert.match(first.out, /^double-gauss {2}pipeline-echo {16}fake-py-oneshot {12}answered {17}asked now$/m);
     assert.match(
       first.out,
-      /^fake-pair: 18 jobs: 14 ok, 2 unsupported, 0 error, 2 pending \(16 computed, 0 cached\)$/m,
+      /^fake-pair: 18 jobs: 14 answered, 2 not computed, 2 waiting for an operator \(16 asked now, 2 not offered\)$/m,
     );
     // fake-human answers by file exchange: its jobs are handed over and pending, and pending is no failure.
-    assert.match(first.out, /^singlet {7}selftest {2}fake-human {7}pending {6}computed$/m);
+    assert.match(first.out, /^singlet {7}pipeline-echo {16}fake-human {17}waiting for an operator {2}asked now$/m);
 
     const manifestPath = join(runsDir, "fake-pair", MANIFEST_FILE);
     const manifestText = readFileSync(manifestPath, "utf8");
@@ -381,7 +381,7 @@ test(
     const second = run();
     assert.equal(second.code, EXIT_OK, second.err);
     // fake-human's jobs are still unanswered: asked again, and still pending.
-    assert.match(second.out, /\(2 computed, 14 cached\)$/m);
+    assert.match(second.out, /\(2 asked now, 14 from the result cache, 2 not offered\)$/m);
     assert.equal(readFileSync(manifestPath, "utf8"), manifestText);
     assert.equal(existsSync(join(runsDir, "fake-pair")), true);
   },

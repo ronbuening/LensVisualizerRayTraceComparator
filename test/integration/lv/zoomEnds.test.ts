@@ -61,11 +61,14 @@ function lvrtc(runsDir: string, ...args: string[]): { code: number | null; out: 
   return { code: child.status, out: child.stdout, err: child.stderr };
 }
 
-/** `lv` on the real LensVisualizer and `ref`, each behind an adapter, in this process, and the exporter. */
+/** `lv` on the real LensVisualizer and `reference-tracer`, each behind an adapter, in this process, and the exporter. */
 async function engines(t: TestContext) {
   const binding = await loadLvBinding(LV_PATH);
   const lv = new RemoteEngineAdapter({ id: "lv", transport: createInProcessTransport(createLvEngineOn(binding)) });
-  const ref = new RemoteEngineAdapter({ id: "ref", transport: createInProcessTransport(createRefEngine()) });
+  const ref = new RemoteEngineAdapter({
+    id: "reference-tracer",
+    transport: createInProcessTransport(createRefEngine()),
+  });
   t.after(() => Promise.all([lv.close(), ref.close()]));
   return { binding, exporter: createLvExporter(binding), lv, ref };
 }
@@ -77,10 +80,10 @@ function runOf(key: string, options: RunOptions): RunSpec {
   return { contract: CONTRACT_VERSION, kind: "run-spec", name: key, lens: { kind: "lv", key }, ...options };
 }
 
-/** The pair of `lv` and `ref` on one request of a rung, judged by the rung's policy as `lvrtc compare` judges it. */
+/** The pair of `lv` and `reference-tracer` on one request of a rung, judged by the rung's policy as `lvrtc compare` judges it. */
 async function judged(
   ask: Engines,
-  rung: "r0" | "r1" | "r2" | "r3",
+  rung: "built-system" | "first-order" | "ray-trace" | "optical-path",
   request: QuantityRequest,
   opticalCase: OpticalCase,
   at: string,
@@ -93,7 +96,7 @@ async function judged(
 }
 
 function judgedAnswers(
-  rung: "r0" | "r1" | "r2" | "r3",
+  rung: "built-system" | "first-order" | "ray-trace" | "optical-path",
   request: QuantityRequest,
   opticalCase: OpticalCase,
   lvData: JsonObject,
@@ -111,7 +114,7 @@ function judgedAnswers(
       requestId: request.id,
       participants: [
         { engine: "lv", fingerprint: null, status: "ok", data: lvData },
-        { engine: "ref", fingerprint: null, status: "ok", data: refData },
+        { engine: "reference-tracer", fingerprint: null, status: "ok", data: refData },
       ],
       policy: POLICY.rungs[rung],
       comparator: COMPARATORS.get(quantity, rung),
@@ -187,11 +190,11 @@ test(
           judgedCases++;
           const spec = runOf(key, { state: { zoomT }, lines });
           for (const rung of [r0Rung, r1Rung]) {
-            const id = rung.id as "r0" | "r1";
+            const id = rung.id as "built-system" | "first-order";
             const [request] = rung.buildRequests(opticalCase, spec);
             const pair = await judged(ask, id, request, opticalCase, at);
             if (pair.verdict !== "PASS") failed.push(`${at} ${id}: ${pair.verdict} ${pair.reason ?? ""}`);
-            if (id === "r0") {
+            if (id === "built-system") {
               const sag = metricOf(pair, "sag.maxScaled");
               if (sag > worst.sag) Object.assign(worst, { sag, sagAt: at });
             } else {
@@ -278,8 +281,8 @@ test(
       assert.equal(opticalCase.conditions.stopSemiDiameter, stopTele, key);
       const { sets, problems } = await ask.exporter.raySets(opticalCase, options);
       assert.deepEqual(problems, [], key);
-      // Three fields at five lines.
-      assert.equal(sets.length, 15, key);
+      // Three fields at nine lines (LV #988's photopic lines; five before f5b456fec).
+      assert.equal(sets.length, 27, key);
 
       const verdicts: Record<string, number> = {};
       const worst = { hits: 0, direction: 0, landing: 0, path: 0, rays: 0 };
@@ -288,11 +291,11 @@ test(
         const [mine, theirs] = [await ask.lv.run(request, opticalCase), await ask.ref.run(request, opticalCase)];
         assert.deepEqual([mine.status, theirs.status], ["ok", "ok"], at);
         const [lvData, refData] = [mine.data as JsonObject, theirs.data as JsonObject];
-        const r2 = judgedAnswers("r2", request, opticalCase, lvData, refData, at);
-        const r3 = judgedAnswers("r3", request, opticalCase, lvData, refData, at);
+        const r2 = judgedAnswers("ray-trace", request, opticalCase, lvData, refData, at);
+        const r3 = judgedAnswers("optical-path", request, opticalCase, lvData, refData, at);
         for (const [rung, pair] of [
-          ["r2", r2],
-          ["r3", r3],
+          ["ray-trace", r2],
+          ["optical-path", r3],
         ] as const) {
           assert.equal(pair.verdict, "PASS", `${at} ${rung}: ${pair.verdict} ${pair.reason}`);
           verdicts[`${rung} ${pair.verdict}`] = (verdicts[`${rung} ${pair.verdict}`] ?? 0) + 1;
@@ -325,19 +328,19 @@ test(
     const ran = lvrtc(runsDir, "run", suitePath("features"));
     assert.equal(ran.code, 0, ran.err);
     assert.equal(ran.err, "");
-    // 18 runs on two engines: neither answers the conformance quantity, and every other job is answered. The 162
-    // ray sets are traced once by each engine, for R2, and R3 and R4 find them in the store. R4f is asked of lv and
-    // of the replay of its sampling, one request each for a run. R6a finds the 162 sets in the store and has each
-    // engine trace the same fields on the finer lattice, 162 sets more; R6b is asked of lv and of the wave
-    // estimator on its rays, one request each for a run. R7a has each engine trace the 540 spot sets of the coma and
-    // bokeh tabs, ten a line, R8a the 117 axial sets of the spherical-aberration and axial-colour sections, two a
-    // line and the colour at each of the nine lines that are a chromatic channel's, R9a the 216 chief sets of the
-    // distortion, pupils and lateral-colour tabs, four a line, R10a the 108 curvature sets of the field-curve
-    // sections, two a line, and R11a the 690 beam sets of the vignetting tab, the stop lattice of each of its fields
-    // at every line (LensVisualizer 607ff23ae).
+    // 18 runs on two engines: neither answers the conformance quantity, and every other job is answered. The 270
+    // ray sets (nine photopic lines since LV #988, five before f5b456fec) are traced once by each engine, for R2, and
+    // R3 and R4 find them in the store. R4f is asked of lv and of the replay of its sampling, one request each for a
+    // run. R6a finds the 270 sets in the store and has each engine trace the same fields on the finer lattice, 270
+    // sets more; R6b is asked of lv and of the wave estimator on its rays, one request each for a run. R7a has each
+    // engine trace the 900 spot sets of the coma and bokeh tabs, ten a line, R8a the 189 axial sets of the
+    // spherical-aberration and axial-colour sections, two a line and the colour at each of the nine lines that are a
+    // chromatic channel's, R9a the 360 chief sets of the distortion, pupils and lateral-colour tabs, four a line, R10a
+    // the 180 curvature sets of the field-curve sections, two a line, and R11a the 1150 beam sets of the vignetting
+    // tab, the stop lattice of each of its fields at every line (LensVisualizer f5b456fec).
     assert.match(
       ran.out,
-      /^features: 5142 jobs: 5106 ok, 36 unsupported, 0 error, 0 pending \(4134 computed, 972 cached\)$/m,
+      /^features: 8438 jobs: 8402 answered, 36 not computed \(6782 asked now, 1620 from the result cache, 36 not offered\)$/m,
     );
     const manifest: RunManifest = JSON.parse(readFileSync(join(runsDir, "features", MANIFEST_FILE), "utf8"));
     assert.equal(manifest.runs.length, 18);
@@ -348,10 +351,10 @@ test(
     );
     assert.equal(new Set(zoom.map((run) => run.caseId)).size, 4);
     for (const run of manifest.runs) assert.deepEqual(run.problems, [], run.name);
-    // Each end has its own rays: three fields at one line, three at five.
+    // Each end has its own rays: three fields at one line, three at nine (LV #988's photopic lines).
     assert.deepEqual(
       zoom.map((run) => run.raySets?.sets.length),
-      [3, 3, 15, 15],
+      [3, 3, 27, 27],
     );
     const setsAt = (end: string): string[] =>
       zoom.filter((run) => run.name.endsWith(end)).flatMap((run) => run.raySets?.sets ?? []);
@@ -380,24 +383,24 @@ test(
 
     const compared = lvrtc(runsDir, "compare", "features");
     assert.equal(compared.code, 0, compared.out);
-    // R6a adds a pair for each of the 54 fields, R6b one for each run, recorded, R7a one for each of the 540 spot
-    // sets, R8a one for each of the 117 axial sets, R9a one for each of the 72 chief spans (four patterns a run), R10a
-    // one for each of the 108 curvature sets and R11a one for each of the 54 vignetting spans (the beams of a line):
+    // R6a adds a pair for each of the 54 fields, R6b one for each run, recorded, R7a one for each of the 900 spot
+    // sets, R8a one for each of the 189 axial sets, R9a one for each of the 72 chief spans (four patterns a run), R10a
+    // one for each of the 180 curvature sets and R11a one for each of the 90 vignetting spans (the beams of a line):
     // each counted in both modes.
     const summary =
-      /^features: 2826 pairs: \d+ PASS, 0 FLOOR, 0 FAIL, (\d+) RECORDED, (\d+) ATTENTION, 36 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/m.exec(
+      /^features: 4338 pairs: \d+ Pass(?:, (\d+) Side by side(?!, worth))?(?:, (\d+) Side by side, worth a look)?, 36 Not computed$/m.exec(
         compared.out,
       );
     assert.ok(
       summary !== null,
       compared.out.split("\n").find((line) => line.startsWith("features: ")),
     );
-    assert.equal(Number(summary[1]) + Number(summary[2]), 36);
+    assert.equal(Number(summary[1] ?? 0) + Number(summary[2] ?? 0), 36);
     for (const end of ["wide", "tele"]) {
-      for (const rung of ["r0", "r1", "r2", "r3", "r4", "r6a"]) {
+      for (const rung of ["built-system", "first-order", "ray-trace", "optical-path", "geometric-mtf", "wave-mtf"]) {
         assert.match(
           compared.out,
-          new RegExp(`^fixed-iris-zoom-photopic-${end} +${rung} +pairwise +lv +ref +PASS`, "m"),
+          new RegExp(`^fixed-iris-zoom-photopic-${end} +${rung} +every pair +lv +reference-tracer +Pass`, "m"),
         );
       }
     }
@@ -419,16 +422,18 @@ test(
     assert.equal(blocks.length, 2);
     assert.deepEqual(
       blocks.map((block) => block.split("\n")[2]),
-      ["state    zoom 0 (wide), infinity focus", "state    zoom 1 (tele), infinity focus"],
+      ["lens state  zoom 0 (wide), infinity focus", "lens state  zoom 1 (tele), infinity focus"],
     );
     for (const block of blocks) {
-      assert.match(block, /^lv {2}ok {2}computed$/m);
+      assert.match(block, /^lv {2}answered {2}asked now$/m);
       // Eleven fields at the tab's 10 % steps, each with a number at both shown frequencies in both cuts.
       assert.equal(block.match(/^[0-9.]+ +[0-9.]+ +[0-9.]+ +ok +0\.\d+ +0\.\d+ +0\.\d+ +0\.\d+$/gm)?.length, 11);
     }
     // The two ends are two cases and two tables.
-    assert.notEqual(blocks[0].split("\n")[3], blocks[1].split("\n")[3]);
-    assert.notEqual(blocks[0].split("\n").slice(6, -2).join("\n"), blocks[1].split("\n").slice(6, -2).join("\n"));
+    const caseIdOf = (name: string): string =>
+      JSON.parse(readFileSync(join(bothDir, "mtf", "lv-tab-default", name, MTF_RUN_FILE), "utf8")).caseId;
+    assert.notEqual(caseIdOf("nikon-z-24-70f4s"), caseIdOf("nikon-z-24-70f4s-zoom1"));
+    assert.notEqual(blocks[0].split("\n").slice(4, -2).join("\n"), blocks[1].split("\n").slice(4, -2).join("\n"));
 
     // The tele end, asked for by itself: the same text, and the same bytes on disk.
     assert.equal(blocks[1].replaceAll(bothDir, "<runs>"), tele.out.replaceAll(teleDir, "<runs>"));

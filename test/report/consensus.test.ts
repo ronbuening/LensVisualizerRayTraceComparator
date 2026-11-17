@@ -217,9 +217,9 @@ test("the sentence under a matrix names the consensus and its outliers, or why t
   ];
   assert.equal(
     sentences[0],
-    "Consensus: `a`, `b`, every two of them within the gates of each other; outlier: `c`, beyond the gates of every " +
-      "engine of the consensus; apart: `d`, outside the consensus and not beyond the gates of all of it; not placed: " +
-      "`e`, with no pair within or beyond the gates.",
+    "Consensus: `a`, `b`, every two of them within the limits of each other; outlier: `c`, beyond the limits of every " +
+      "engine of the consensus; apart: `d`, outside the consensus and not beyond the limits of all of it; not placed: " +
+      "`e`, with no pair within or beyond the limits.",
   );
   assert.match(sentences[2], /^No consensus: the largest set .*; not placed: `x`, `y`, with no pair /);
   for (const sentence of sentences) assert.deepEqual(wordingProblems(sentence), [], sentence);
@@ -228,7 +228,7 @@ test("the sentence under a matrix names the consensus and its outliers, or why t
 // ── In a report ──────────────────────────────────────────────────────────────────────────────────────────────────
 
 const CASE = "c".repeat(64);
-const POLICY: Policy = { contract: "1.0", kind: "policy", version: 1, rungs: { selftest: GATED } };
+const POLICY: Policy = { contract: "1.0", kind: "policy", version: 1, rungs: { "pipeline-echo": GATED } };
 
 /** A manifest of the engines, available, each asked every request of the rung `selftest` of one run. */
 function manifestOf(engines: readonly string[], requests: readonly string[]): RunManifest {
@@ -242,7 +242,7 @@ function manifestOf(engines: readonly string[], requests: readonly string[]): Ru
       engines.map((engine) => ({
         run: "only",
         caseId: CASE,
-        rung: "selftest",
+        rung: "pipeline-echo",
         quantity: "selftest.echo",
         requestId,
         engine,
@@ -262,7 +262,7 @@ function pairwiseSet(requestId: string, engines: string, pairs: readonly string[
     suite: "groups",
     run: "only",
     caseId: CASE,
-    rung: "selftest",
+    rung: "pipeline-echo",
     quantity: "selftest.echo",
     requestId,
     participants: participants.map(({ engine }) => ({ engine, fingerprint: engine, status: "ok" })),
@@ -315,13 +315,16 @@ test("a report counts, over its sections, where each engine of the run stands", 
   const markdown = renderMarkdown(model);
   assert.match(markdown, /\n## Verdict summary\n[^#]*\n## Consensus\n[^#]*\n## Support matrix\n/);
   assert.match(markdown, /^Of 3 requests with a consensus to look for, 2 have one\.$/m);
-  assert.match(markdown, /^\| no consensus: split \| 1 \|$/m);
+  assert.match(
+    markdown,
+    /^\| No consensus: the engines within the limits of each other split into two or more largest sets \| 1 \|$/m,
+  );
   assert.match(markdown, /^\| c \| 1 \| 0 \| 1 \| 1 \| 0 \|$/m);
   assert.match(
     markdown,
-    /^Consensus: `a`, `b`, `c`, every two of them within the gates of each other; outlier: `d`, /m,
+    /^Consensus: `a`, `b`, `c`, every two of them within the limits of each other; outlier: `d`, /m,
   );
-  assert.match(markdown, /^No consensus: the engines within the gates of each other split into two or more /m);
+  assert.match(markdown, /^No consensus: the engines within the limits of each other split into two or more /m);
   assert.deepEqual(wordingProblems(markdown), []);
 });
 
@@ -337,7 +340,7 @@ test("a report of two engines, or of a recorded rung, has no consensus and its M
   assert.doesNotMatch(renderMarkdown(pair), /onsensus/);
 
   const three = manifestOf(["a", "b", "c"], [request]);
-  const recorded = { ...POLICY, rungs: { selftest: RECORDED } };
+  const recorded = { ...POLICY, rungs: { "pipeline-echo": RECORDED } };
   const set = pairwiseSet(request, "a b c", ["a b RECORDED", "a c ATTENTION", "b c RECORDED"]);
   const model = buildReport(three, fileOf(three, [set]), recorded);
   assert.equal(model.sections[0].consensus, null);

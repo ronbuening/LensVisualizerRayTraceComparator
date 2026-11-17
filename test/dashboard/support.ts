@@ -32,6 +32,7 @@ import { REPO_ROOT } from "../../src/core/config.ts";
 import { MANIFEST_FILE } from "../../src/core/manifest.ts";
 import type { RunManifest } from "../../src/core/manifest.ts";
 import { canonicalJson } from "../../src/core/numeric/canonicalJson.ts";
+import { COMPARE_TABS } from "../../src/dashboard/compare.ts";
 import { COUNT_KEYS, isCurve, isDerived, isFigure } from "../../src/dashboard/figure.ts";
 import type { Curve, Derived, DocumentName, Figure } from "../../src/dashboard/figure.ts";
 import { compareManifest } from "../../src/compare/manifest.ts";
@@ -70,8 +71,8 @@ export interface DashboardFixture {
   readonly mtfRunsDir: string;
   readonly mtfPolicyFile: string;
   /**
-   * The rays of `ref` against two copies of it (`RAYS_SUITE`), one with a radius one part in 1e6 too long, judged by
-   * the comparator's policy with an R0 that blocks nothing: its own root, runs directory and policy file.
+   * The rays of `reference-tracer` against two copies of it (`RAYS_SUITE`), one with a radius one part in 1e6 too long,
+   * judged by the comparator's policy with an R0 that blocks nothing: its own root, runs directory and policy file.
    */
   readonly raysRootDir: string;
   readonly raysRunsDir: string;
@@ -105,18 +106,18 @@ export const ODD_NAME = "a<b&c";
 /** The policy of the MTF part of the fixture: the R5 stand-ins' rung and the R5g stand-ins', with their bands. */
 export const MTF_FIXTURE_POLICY: Policy = { ...R5_POLICY, rungs: { ...R5_POLICY.rungs, ...R5G_POLICY.rungs } };
 
-/** The suite of the rays part of the fixture: `ref`, a copy with a bent radius and a faithful copy, on R0 and R2. */
+/** The suite of the rays part of the fixture: `reference-tracer`, a copy with a bent radius and a faithful copy, on R0 and R2. */
 export const RAYS_SUITE = "rays";
 
 /** The comparator's own policy with an R0 that blocks nothing, so that R2 speaks for itself. */
 export function unblockingPolicy(): Policy {
   const own = loadPolicy();
-  const { blocksLaterRungs: _blocks, ...r0 } = own.rungs.r0;
-  return { ...own, rungs: { ...own.rungs, r0 } };
+  const { blocksLaterRungs: _blocks, ...r0 } = own.rungs["built-system"];
+  return { ...own, rungs: { ...own.rungs, "built-system": r0 } };
 }
 
-/** Runs `ref` and its two copies on the Double-Gauss case into `runsDir`, and compares them by `policy`. */
-/** The copy of `ref` whose radius on surface 8 is one part in 1e6 too long; it sorts after the faithful copy. */
+/** Runs `reference-tracer` and its two copies on the Double-Gauss case into `runsDir`, and compares them by `policy`. */
+/** The copy of `reference-tracer` whose radius on surface 8 is one part in 1e6 too long; it sorts after the faithful copy. */
 export const WARPED = "ref-warped";
 
 /**
@@ -149,7 +150,7 @@ async function raysCycle(runsDir: string, policy: Policy): Promise<ComparisonFil
       new RemoteEngineAdapter({ id, transport: createInProcessTransport(fixedIdentity(id, handler())) });
   const bend: BentOptions = { id: WARPED, edits: [{ pointer: "/system/surfaces/8/shape/radius", scale: 1 + 1e-6 }] };
   const { registry } = watchedRegistry({
-    ref: engine(() => createRefEngine()),
+    "reference-tracer": engine(() => createRefEngine()),
     [WARPED]: engine(() => createBentEngine(bend)),
     "ref-twin": engine(() => createBentEngine({ id: "ref-twin" })),
   });
@@ -157,7 +158,7 @@ async function raysCycle(runsDir: string, policy: Policy): Promise<ComparisonFil
     {
       name: "double-gauss",
       opticalCase: DOUBLE_GAUSS,
-      rungs: ["r0", "r2"],
+      rungs: ["built-system", "ray-trace"],
       fields: { kind: "angles-deg", values: [0, 10] },
       sampling: { bundleGrid: 12 },
     },
@@ -167,7 +168,7 @@ async function raysCycle(runsDir: string, policy: Policy): Promise<ComparisonFil
   const sources = { fixture: createFixtureCaseSource(runsDir) };
   const { manifest } = await runSuite({ suite, registry, runsDir, sources });
   const store = createResultStore(join(runsDir, STORE_DIRECTORY));
-  return compareManifest({ manifest, store, policy, reference: "ref", cases: () => DOUBLE_GAUSS });
+  return compareManifest({ manifest, store, policy, reference: "reference-tracer", cases: () => DOUBLE_GAUSS });
 }
 
 /** The suite whose first field is off the axis and whose stand-in for optiland fails when asked again at 512 rays. */
@@ -181,7 +182,7 @@ export const REORDERED_SUITE = "r5-reordered";
 async function reorderedCycle(runsDir: string, policy: Policy): Promise<ComparisonFile> {
   const spec: MtfNativeSpec = { ...SPEC, fields: { kind: "image-height-fractions", values: [0.5, 0] } };
   const rung: RungDefinition = {
-    id: "r5",
+    id: "mtf-vs-optiland-fft",
     quantity: MTF_NATIVE,
     engines: ["lv", "optiland"],
     buildRequests: (opticalCase) => [makeRequest({ caseId: opticalCase.id, quantity: MTF_NATIVE, spec })],
@@ -562,4 +563,44 @@ export function visibleText(html: string): string {
     )
     .filter((text) => text !== "")
     .join("\n\n");
+}
+
+/** Every page path of a dashboard: the index, help and checks pages, and those read from its index, run and baseline pages. */
+export async function everyPage(port: number): Promise<string[]> {
+  const index = JSON.parse((await fetchFrom(port, "/api/index")).body);
+  const paths = ["/", "/help", "/checks"];
+  const viewOf = async (path: string) => JSON.parse((await fetchFrom(port, `/api${path}`)).body);
+  for (const run of index.runs as { name: string }[]) {
+    const path = `/run/${encodeURIComponent(run.name)}`;
+    paths.push(path);
+    const view = await viewOf(path);
+    const sections: { section: number }[] = [...view.sections];
+    for (const { place } of view.runs as { place: number }[]) {
+      paths.push(`${path}/run/${place}`);
+      if (view.split) sections.push(...(await viewOf(`${path}/run/${place}`)).sections);
+    }
+    for (const section of sections) paths.push(`${path}/section/${section.section}`);
+  }
+  for (const baseline of index.baselines as { stem: string }[]) {
+    const path = `/baseline/${encodeURIComponent(baseline.stem)}`;
+    paths.push(path);
+    for (const { place } of (await viewOf(path)).runs as { place: number }[]) paths.push(`${path}/run/${place}`);
+  }
+  // The compare pages of each lens compared (Stage 8.5): every condition its chips reach, and each tab's details.
+  for (const { key } of index.compared as { key: string }[]) {
+    const base = `/compare/${encodeURIComponent(key)}`;
+    const queries = [""];
+    for (let at = 0; at < queries.length; at++) {
+      const view = await viewOf(`${base}${queries[at] === "" ? "" : `?${queries[at]}`}`);
+      for (const facet of view.facets as { options: { query: string }[] }[]) {
+        for (const option of facet.options) if (!queries.includes(option.query)) queries.push(option.query);
+      }
+    }
+    for (const query of queries) {
+      const suffix = query === "" ? "" : `?${query}`;
+      paths.push(`${base}${suffix}`);
+      for (const tab of COMPARE_TABS) paths.push(`${base}/${tab.tab}${suffix}`);
+    }
+  }
+  return paths;
 }

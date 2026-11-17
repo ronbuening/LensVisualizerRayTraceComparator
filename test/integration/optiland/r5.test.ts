@@ -26,7 +26,7 @@ import { LV_UNAVAILABLE } from "../lv/support.ts";
 import { OPTILAND_PYTHON, OPTILAND_UNAVAILABLE, lvrtc, pairsOf, runAndCompare, tempDir } from "./support.ts";
 
 const skip = OPTILAND_UNAVAILABLE || LV_UNAVAILABLE;
-const R5 = loadPolicy().rungs.r5;
+const R5 = loadPolicy().rungs["mtf-vs-optiland-fft"];
 const band = (name: string): number => R5.metrics[name].attention as number;
 
 const PHOTOPIC = "canon-ef-135-f2l-usm-photopic";
@@ -46,12 +46,12 @@ test(
     const { manifest, comparisons, runsDir } = runAndCompare(t, {
       suite,
       name: "benchmark",
-      engines: "lv,ref",
-      rungs: "r5",
+      engines: "lv,reference-tracer",
+      rungs: "mtf-vs-optiland-fft",
     });
 
     const first = manifest.jobs.filter((job) => job.step === undefined);
-    assert.deepEqual([...new Set(first.map((job) => job.engine))].sort(), ["lv", "optiland", "wave"]);
+    assert.deepEqual([...new Set(first.map((job) => job.engine))].sort(), ["lv", "optiland", "wave-mtf-of-lv-rays"]);
     assert.equal(first.length, 3 * RUNS.length);
     for (const job of first) {
       const expected = job.run === PHOTOPIC && job.engine === "optiland" ? "unsupported" : "ok";
@@ -60,7 +60,7 @@ test(
     const refused = first.find((job) => job.status === "unsupported");
     assert.deepEqual(refused?.unsupported, [{ code: "feature", item: "lines.polychromatic" }]);
 
-    const pairs = pairsOf(comparisons, "r5", MTF_NATIVE);
+    const pairs = pairsOf(comparisons, "mtf-vs-optiland-fft", MTF_NATIVE);
     assert.equal(pairs.length, 3 * RUNS.length);
     for (const pair of pairs) {
       const unsupported = pair.run === PHOTOPIC && pair.engines.includes("optiland");
@@ -100,7 +100,7 @@ test(
         outside,
       );
     }
-    assert.ok(steps.every((job) => job.rung === "r5" && job.engine === "optiland"));
+    assert.ok(steps.every((job) => job.rung === "mtf-vs-optiland-fft" && job.engine === "optiland"));
 
     const reported = lvrtc(runsDir, REPO_ROOT, ["report", "benchmark"], OPTILAND_PYTHON);
     assert.equal(reported.code, 0, reported.out + reported.err);
@@ -109,7 +109,7 @@ test(
     assert.equal(markdown.match(/^The engines' own MTF, side by side\./gm)?.length, RUNS.length);
     assert.match(
       markdown,
-      /^`lv` against `optiland` is UNSUPPORTED: optiland is unsupported \(feature lines\.polychromatic\)\.$/m,
+      /^`lv` against `optiland` is Not computed: optiland is unsupported \(feature lines\.polychromatic\)\.$/m,
     );
     for (const sentence of NOT_COVERED) assert.ok(markdown.includes(`- ${sentence}\n`), sentence);
   },

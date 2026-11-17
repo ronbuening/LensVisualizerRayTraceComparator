@@ -1,7 +1,7 @@
-// Rungs R2 and R3 of `lv` against `ref` on the real LensVisualizer: the committed suites through the commands, as a
-// user runs them, and the lenses of the catalog on which LensVisualizer does what a comparison must know about.
-// `ref` is the arbiter here: its own proof is the analytic tests of test/engines/ref, which need no LensVisualizer.
-// Run output goes to a temporary directory.
+// Rungs R2 and R3 of `lv` against `reference-tracer` on the real LensVisualizer: the committed suites through the
+// commands, as a user runs them, and the lenses of the catalog on which LensVisualizer does what a comparison must know
+// about. `reference-tracer` is the arbiter here: its own proof is the analytic tests of test/engines/ref, which need no
+// LensVisualizer. Run output goes to a temporary directory.
 //
 // The numbers quoted in comments, and the pinned ones, were measured at LV commit 3af45e3f with the catalog of that
 // commit; its engine files are those of the d36f44b3 working tree the earlier stages name (closure f6681074). The
@@ -19,7 +19,7 @@ import { test, type TestContext } from "node:test";
 import { fileURLToPath } from "node:url";
 
 import { buildBaseline, parseBaseline } from "../../../src/baseline/build.ts";
-import { checkBaseline } from "../../../src/baseline/check.ts";
+import { checkInIdSpace } from "../../../src/cli/commands/baseline.ts";
 import { COMPARISONS_FILE } from "../../../src/compare/comparisonFile.ts";
 import type { ComparisonFile } from "../../../src/compare/comparisonFile.ts";
 import { compareGroup } from "../../../src/compare/group.ts";
@@ -87,7 +87,15 @@ interface Cycle {
 
 function cycle(t: TestContext, suite: "benchmark" | "features"): Cycle {
   const runsDir = tempDir(t);
-  const ran = lvrtc(runsDir, "run", suitePath(suite), "--engines", "lv,ref", "--rungs", "r0,r1,r2,r3");
+  const ran = lvrtc(
+    runsDir,
+    "run",
+    suitePath(suite),
+    "--engines",
+    "lv,reference-tracer",
+    "--checks",
+    "built-system,first-order,ray-trace,optical-path",
+  );
   assert.equal(ran.code, 0, ran.err);
   assert.equal(ran.err, "", "every field of every run has rays");
   const compared = lvrtc(runsDir, "compare", suite);
@@ -141,7 +149,7 @@ function tallyOf(file: ComparisonFile) {
     const [pair] = set.pairs;
     verdicts[`${set.rung} ${pair.verdict}`] = (verdicts[`${set.rung} ${pair.verdict}`] ?? 0) + 1;
     if (pair.verdict === "FLOOR") floors.set(`${set.run} ${set.rung}`, pair.reason ?? "");
-    if (set.rung !== "r2") continue;
+    if (set.rung !== "ray-trace") continue;
     const value = (name: string): number => pair.metrics.find((metric) => metric.name === name)?.value ?? 0;
     rays.compared += value("rays.compared");
     rays.rimBand += value("mask.rimBand");
@@ -151,8 +159,8 @@ function tallyOf(file: ComparisonFile) {
     rays.lvOk += recorded("lv", "rays.ok");
     rays.lvBlocked += recorded("lv", "rays.blocked");
     rays.lvFailed += recorded("lv", "rays.failed");
-    rays.refOk += recorded("ref", "rays.ok");
-    rays.refFailed += recorded("ref", "rays.failed");
+    rays.refOk += recorded("reference-tracer", "rays.ok");
+    rays.refFailed += recorded("reference-tracer", "rays.failed");
   }
   return { verdicts, floors, rays };
 }
@@ -172,22 +180,20 @@ test(
   (t) => {
     const { manifest, comparisons, verdicts } = cycle(t, "benchmark");
     // 96 runs: 12 configurations in four conditions (wide open and the tab's f/8, at the design plane and at
-    // LensVisualizer's best axial focus), on one line and on five. R0 and R1 once each, and 864 ray sets (three
-    // fields a line), which each engine traces once for R2 and R3 together.
-    assert.equal(manifest.jobs.length, 2 * (96 + 96 + 864 + 864));
+    // LensVisualizer's best axial focus), on one line and on nine (LV #988's photopic lines; five before f5b456fec).
+    // R0 and R1 once each, and 1440 ray sets (three fields a line), which each engine traces once for R2 and R3
+    // together.
+    assert.equal(manifest.jobs.length, 2 * (96 + 96 + 1440 + 1440));
     assert.equal(
       manifest.runs.reduce((sets, run) => sets + (run.raySets?.sets.length ?? 0), 0),
-      864,
+      1440,
     );
     assert.ok(manifest.jobs.every((job) => job.status === "ok"));
 
     // Every gated pair is PASS, and nothing else: no failure, no error, nothing blocked.
-    assert.match(
-      verdicts,
-      /^benchmark: 3840 pairs: 3840 PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/,
-    );
+    assert.match(verdicts, /^benchmark: 6144 pairs: 6144 Pass$/);
     const { verdicts: counts, floors, rays } = tallyOf(comparisons);
-    const [r2, r3] = [worstOf(comparisons, "r2"), worstOf(comparisons, "r3")];
+    const [r2, r3] = [worstOf(comparisons, "ray-trace"), worstOf(comparisons, "optical-path")];
     t.diagnostic(
       `benchmark: ${verdicts}; ${JSON.stringify(counts)}; R2 ${said(r2, R2_METRICS)}; R3 ${said(r3, R3_METRICS)}; ` +
         `rays ${JSON.stringify(rays)}; floors ${JSON.stringify([...floors.keys()])}`,
@@ -214,14 +220,19 @@ test(
     // nothing but the landing and the path to it. At 31c34396 (closure a52a7b8e), whose intersection tolerance is
     // 1e-12 mm, the same pairs pass with a hit distance of 1.9e-12 mm, a direction of 8.0e-14 and a landing of
     // 2.4e-12 mm at the most. The bounds are upper bounds: a more accurate LensVisualizer is not a failure.
-    assert.deepEqual(counts, { "r0 PASS": 96, "r1 PASS": 96, "r2 PASS": 864, "r3 PASS": 864 });
+    assert.deepEqual(counts, {
+      "built-system PASS": 96,
+      "first-order PASS": 96,
+      "ray-trace PASS": 1440,
+      "optical-path PASS": 1440,
+    });
     assert.equal(floors.size, 0);
     assert.ok(r2["hits.maxDistance"].value < 1e-8, said(r2, R2_METRICS));
     assert.ok(r2["direction.maxAbs"].value < 1e-9 && r2["landing.maxDistance"].value < 1e-8, said(r2, R2_METRICS));
     for (const name of R3_METRICS) assert.ok(r3[name].value < 2e-5, said(r3, R3_METRICS));
 
     // No floor remains in the real policy, at either rung or metric level.
-    for (const rung of [POLICY.rungs.r2, POLICY.rungs.r3]) {
+    for (const rung of [POLICY.rungs["ray-trace"], POLICY.rungs["optical-path"]]) {
       assert.equal(rung.floor, undefined);
       assert.ok(Object.values(rung.metrics).every((metric) => metric.floor === undefined));
     }
@@ -234,16 +245,26 @@ test(
     const read = parseBaseline(readFileSync(COMMITTED_BASELINE, "utf8"));
     assert.ok("baseline" in read, JSON.stringify(read));
     const fresh = buildBaseline(manifest, comparisons, POLICY);
-    const records = checkBaseline(read.baseline, fresh, POLICY).filter(
-      (record) => record.a === "lv" && record.b === "ref" && record.outcome !== "GONE",
+    // Held as the command holds it (`checkInIdSpace`), whatever ids the baseline was written with.
+    const records = checkInIdSpace(read.baseline, fresh, [], POLICY).records.filter(
+      (record) => record.a === "lv" && record.b === "reference-tracer" && record.outcome !== "GONE",
     );
     assert.equal(records.length, 4 * 96);
-    const held = records.filter((record) => record.stale.length === 0);
+    // A record out of date by its limits file, or by the reference tracer's code where lv is the baseline's own (so
+    // that the reference tracer is the engine that moved), holds as REFRESHABLE; one otherwise current is OK.
+    const lvOf = (engines: readonly { id: string; fingerprint: string; adapterRevision?: string }[]) =>
+      engines.find((engine) => engine.id === "lv");
+    const [lvBefore, lvNow] = [lvOf(read.baseline.engines), lvOf(fresh.engines)];
+    const lvSame = lvBefore?.fingerprint === lvNow?.fingerprint && lvBefore?.adapterRevision === lvNow?.adapterRevision;
+    const held = records.filter((record) =>
+      record.stale.every((reason) => reason === "policy" || (reason === "engine" && lvSame)),
+    );
     for (const record of held) {
-      assert.equal(record.outcome, "OK", `${record.run} ${record.rung}: ${record.moved.join("; ")}`);
+      const holds = record.stale.length === 0 ? "OK" : "REFRESHABLE";
+      assert.equal(record.outcome, holds, `${record.run} ${record.rung}: ${record.moved.join("; ")}`);
     }
     t.diagnostic(
-      `baselines/benchmark.json: ${held.length} of ${records.length} records of lv and ref are of the cases and ` +
+      `baselines/benchmark.json: ${held.length} of ${records.length} records of lv and reference-tracer are of the cases and ` +
         `engines here and hold; ${records.filter((record) => record.outcome === "DRIFT").length} drifted`,
     );
   },
@@ -263,12 +284,10 @@ test(
       ["ref-wide", "ref-tele", "photopic-wide", "photopic-tele"].map((rest) => `fixed-iris-zoom-${rest}`),
     );
     assert.ok(manifest.jobs.every((job) => job.status === "ok"));
-    assert.match(
-      verdicts,
-      /^features: 720 pairs: 720 PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/,
-    );
+    // Nine photopic lines since LV #988 (720 pairs of five before f5b456fec).
+    assert.match(verdicts, /^features: 1152 pairs: 1152 Pass$/);
     const { verdicts: counts, floors, rays } = tallyOf(comparisons);
-    const [r2, r3] = [worstOf(comparisons, "r2"), worstOf(comparisons, "r3")];
+    const [r2, r3] = [worstOf(comparisons, "ray-trace"), worstOf(comparisons, "optical-path")];
     t.diagnostic(
       `features: ${verdicts}; ${JSON.stringify(counts)}; R2 ${said(r2, R2_METRICS)}; R3 ${said(r3, R3_METRICS)}; ` +
         `rays ${JSON.stringify(rays)}; floors ${JSON.stringify([...floors])}`,
@@ -288,7 +307,12 @@ test(
     // is 6e-15 mm and 2e-11 waves from the truth on that ray, and LensVisualizer the rest. See docs/gotchas.md.
     // That is LensVisualizer's intersection tolerance of 1e-9 mm. At 31c34396, where it is 1e-12 mm, no pair is a
     // floor: every pair of the suite passes. Policy version 11 removes the floors entirely.
-    assert.deepEqual(counts, { "r0 PASS": 18, "r1 PASS": 18, "r2 PASS": 162, "r3 PASS": 162 });
+    assert.deepEqual(counts, {
+      "built-system PASS": 18,
+      "first-order PASS": 18,
+      "ray-trace PASS": 270,
+      "optical-path PASS": 270,
+    });
     assert.equal(floors.size, 0);
     // The hits themselves are inside their gate on every lens: it is the landing, behind a steep exit, that at a
     // tolerance of 1e-9 mm is not.
@@ -307,16 +331,19 @@ test(
 
 // ── Lenses of the catalog a comparison must know about ───────────────────────────────────────────────────────────
 
-/** `lv` and `ref` in this process, and what is needed to ask LensVisualizer about a single ray. */
+/** `lv` and `reference-tracer` in this process, and what is needed to ask LensVisualizer about a single ray. */
 async function engines(t: TestContext) {
   const binding = await loadLvBinding(LV_PATH);
   const lv = new RemoteEngineAdapter({ id: "lv", transport: createInProcessTransport(createLvEngineOn(binding)) });
-  const ref = new RemoteEngineAdapter({ id: "ref", transport: createInProcessTransport(createRefEngine()) });
+  const ref = new RemoteEngineAdapter({
+    id: "reference-tracer",
+    transport: createInProcessTransport(createRefEngine()),
+  });
   t.after(() => Promise.all([lv.close(), ref.close()]));
   return { binding, exporter: createLvExporter(binding), lv, ref };
 }
 
-/** One ray set of a lens with what `lv` and `ref` answer about it, and the two rungs' pairs. */
+/** One ray set of a lens with what `lv` and `reference-tracer` answer about it, and the two rungs' pairs. */
 interface TracedSet {
   readonly opticalCase: OpticalCase;
   readonly spec: RaysTraceSpec;
@@ -341,7 +368,7 @@ async function tracedSets(
   return traced;
 }
 
-/** One ray set of a case traced by `lv` and `ref`, with the two rungs' pairs. */
+/** One ray set of a case traced by `lv` and `reference-tracer`, with the two rungs' pairs. */
 async function tracedSet(
   ask: { lv: RemoteEngineAdapter; ref: RemoteEngineAdapter },
   key: string,
@@ -354,9 +381,9 @@ async function tracedSet(
     assert.deepEqual([mine.status, theirs.status], ["ok", "ok"], key);
     const participants = [
       { engine: "lv", fingerprint: null, status: "ok" as const, data: mine.data as JsonObject },
-      { engine: "ref", fingerprint: null, status: "ok" as const, data: theirs.data as JsonObject },
+      { engine: "reference-tracer", fingerprint: null, status: "ok" as const, data: theirs.data as JsonObject },
     ];
-    const pairOf = (rung: "r2" | "r3"): PairComparison =>
+    const pairOf = (rung: "ray-trace" | "optical-path"): PairComparison =>
       compareGroup(
         {
           suite: "catalog",
@@ -377,8 +404,8 @@ async function tracedSet(
       spec,
       lvData: mine.data as RaysTraceData,
       refData: theirs.data as RaysTraceData,
-      r2: pairOf("r2"),
-      r3: pairOf("r3"),
+      r2: pairOf("ray-trace"),
+      r3: pairOf("optical-path"),
     };
   }
 }
@@ -422,8 +449,9 @@ const TELE_ONLY_CROSSINGS: readonly (readonly [key: string, surface: number, zoo
  * The lenses in which a surface lay behind the one before it within both clear apertures at LV ed78cf40, with the
  * surface at which LensVisualizer lost rays then: a stop or a flat face set into the curve of its neighbour. A zoom is
  * named with the end it does so at: at its default state, the wide end, where none is named. Since LV #934 its
- * sequential trace meets such a surface by a step backwards, as `ref` does; #929 moved three of these stops out of
- * the glass (the Leica 90, the Olympus 50/1.4, the Sonnar 50/2) and #928 cut the Nokton's surface 8 at its stop plane.
+ * sequential trace meets such a surface by a step backwards, as `reference-tracer` does; #929 moved three of these
+ * stops out of the glass (the Leica 90, the Olympus 50/1.4, the Sonnar 50/2) and #928 cut the Nokton's surface 8 at its
+ * stop plane.
  */
 const CROSSING_SURFACES: readonly (readonly [key: string, surface: number, zoomT?: 1])[] = [
   ["bertele-sonnar-50f2-scaled", 6],
@@ -538,7 +566,8 @@ test(
     assert.equal(metricOf(set.r2, "mask.rimBand").value, 0);
     const [lvEnd, refEnd] = [decodeNdArray(set.lvData.endSurface).values, decodeNdArray(set.refData.endSurface).values];
     assert.deepEqual([...lvEnd], [...refEnd]);
-    // The rays LensVisualizer leaves travelling toward the object: each must have ended in both engines, at one surface.
+    // The rays LensVisualizer leaves travelling toward the object: each must have ended in both engines, at one
+    // surface.
     const turned: number[] = [];
     const traceOptions = lvTraceOptions(rebuilt.model, set.spec.line);
     for (let ray = 0; ray < cells; ray++) {

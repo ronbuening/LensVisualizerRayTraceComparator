@@ -31,7 +31,7 @@ import { OPTILAND_PYTHON, OPTILAND_UNAVAILABLE, lvrtc, pairsOf, runAndCompare, t
 import type { RungPair } from "./support.ts";
 
 const skip = OPTILAND_UNAVAILABLE || LV_UNAVAILABLE;
-const R12B = loadPolicy().rungs.r12b;
+const R12B = loadPolicy().rungs["summary-vs-optiland"];
 
 const DESIGN = "nikkor-z50f12-ref";
 const PHOTOPIC = "nikkor-z50f12-photopic";
@@ -61,10 +61,10 @@ test(
       suite,
       name: "benchmark",
       engines: "lv,optiland",
-      rungs: "r12b",
+      rungs: "summary-vs-optiland",
     });
 
-    const native = manifest.jobs.filter((job) => job.rung === "r12b");
+    const native = manifest.jobs.filter((job) => job.rung === "summary-vs-optiland");
     assert.deepEqual([...new Set(native.map((job) => job.engine))].sort(), ["lv", "optiland"]);
     // A photopic run has no line of the prescription's own indices and no ask; the macro lens has two stations.
     assert.ok(!native.some((job) => job.run === PHOTOPIC));
@@ -81,7 +81,7 @@ test(
     assert.deepEqual(statuses(BEST, "lv"), ["focus.off-design"]);
     for (const run of [DESIGN, BEST, F8, ...stations]) assert.deepEqual(statuses(run, "optiland"), ["ok"], run);
 
-    const recorded = pairsOf(comparisons, "r12b", SUMMARY_NATIVE);
+    const recorded = pairsOf(comparisons, "summary-vs-optiland", SUMMARY_NATIVE);
     const of = (run: string): RungPair => recorded.find((pair) => pair.run === run)!;
     assert.equal(of(BEST).verdict, "UNSUPPORTED");
     const value = (pair: RungPair, name: string): number | null | undefined => pair.metrics[name]?.value;

@@ -27,7 +27,7 @@ import { decodeTrace, noWorst, placeOf, takeWorst, whereOf } from "./raysRead.ts
 import type { DecodedTrace } from "./raysRead.ts";
 
 /** The rung of the axial intercepts of identical rays. */
-export const AXIAL_RAYS_RUNG = "r8a";
+export const AXIAL_RAYS_RUNG = "axial-rays";
 
 /** The figures of a set's focus, in the order the comparator reports them. */
 const FOCUS_FIGURES = ["focus.maxScaled", "focus.maxAbs", "focusRms.maxAbs"] as const;

@@ -8,22 +8,26 @@ import type { StatementInput } from "../../src/report/statement.ts";
 
 export const MATRIX_POLICY: Policy = { contract: "1.3", kind: "policy", version: 1, rungs: {} };
 const policy = { version: 1, hash: hashCanonical(MATRIX_POLICY) };
-const engines: BaselineEngine[] = ["lv", "optiland", "ref", "replay", "wave"].map((id) => ({
-  id,
-  version: "stand-in",
-  fingerprint: (id === "lv" || id === "replay" || id === "wave" ? "a" : "b").repeat(64),
-  adapterRevision: id.length.toString(16).repeat(64),
-  details: (id === "lv"
-    ? { commit: "c".repeat(40), dirty: false, engineFileCount: 3 }
-    : {}) as BaselineEngine["details"],
-}));
+const engines: BaselineEngine[] = ["lv", "optiland", "reference-tracer", "replay-of-lv-mtf", "wave-mtf-of-lv-rays"].map(
+  (id) => ({
+    id,
+    version: "stand-in",
+    fingerprint: (id === "lv" || id === "replay-of-lv-mtf" || id === "wave-mtf-of-lv-rays" ? "a" : "b").repeat(64),
+    // The digit of the stand-in revision is the length of the engine's id before the rename (Stage 9.8).
+    adapterRevision:
+      { lv: "2", optiland: "8", "reference-tracer": "3", "replay-of-lv-mtf": "6" }[id]?.repeat(64) ?? "4".repeat(64),
+    details: (id === "lv"
+      ? { commit: "c".repeat(40), dirty: false, engineFileCount: 3 }
+      : {}) as BaselineEngine["details"],
+  }),
+);
 
 const QUANTITIES: Readonly<Record<string, string>> = {
-  r0: "system.describe",
-  r1: "paraxial.first-order",
-  r4f: "mtf.native",
-  r5: "mtf.native",
-  r6b: "mtf.native",
+  "built-system": "system.describe",
+  "first-order": "paraxial.first-order",
+  "lv-mtf-replay": "mtf.native",
+  "mtf-vs-optiland-fft": "mtf.native",
+  "mtf-vs-wave-estimate": "mtf.native",
 };
 
 /** One rung of one run: every pair of `engines` at the given request verdicts, the gravest the pair's verdict. */
@@ -49,12 +53,12 @@ function rung(
     quantity: QUANTITIES[id] ?? "rays.trace",
     requests: verdicts.length,
     support: members.map((engine) => ({ engine, status: engine === unsupported ? "unsupported" : "ok" })),
-    ...(id === "r5" || id === "r6b" ? { bands: { "mtfOnAxis.maxAbs": 1 / 16 } } : {}),
+    ...(id === "mtf-vs-optiland-fft" || id === "mtf-vs-wave-estimate" ? { bands: { "mtfOnAxis.maxAbs": 1 / 16 } } : {}),
     pairs,
   };
 }
 
-const TRACERS = ["lv", "optiland", "ref"];
+const TRACERS = ["lv", "optiland", "reference-tracer"];
 
 /** The rays baseline holds R0 to R4 and R7a to R10a (no R11a); the MTF baseline R4, R4f, R5, R6a and R6b. */
 export function matrixInputs(): StatementInput[] {
@@ -65,22 +69,27 @@ export function matrixInputs(): StatementInput[] {
       caseId: (second ? "e" : "f").repeat(64),
       rungs: mtf
         ? [
-            rung("r4", TRACERS, ["PASS", "PASS"]),
-            rung("r4f", ["lv", "replay"], ["PASS"]),
-            rung("r5", ["lv", "optiland", "wave"], ["ATTENTION"], second ? "optiland" : undefined),
-            rung("r6a", TRACERS, ["PASS", "PASS"]),
-            rung("r6b", ["lv", "wave"], [second ? "ATTENTION" : "RECORDED"]),
+            rung("geometric-mtf", TRACERS, ["PASS", "PASS"]),
+            rung("lv-mtf-replay", ["lv", "replay-of-lv-mtf"], ["PASS"]),
+            rung(
+              "mtf-vs-optiland-fft",
+              ["lv", "optiland", "wave-mtf-of-lv-rays"],
+              ["ATTENTION"],
+              second ? "optiland" : undefined,
+            ),
+            rung("wave-mtf", TRACERS, ["PASS", "PASS"]),
+            rung("mtf-vs-wave-estimate", ["lv", "wave-mtf-of-lv-rays"], [second ? "ATTENTION" : "RECORDED"]),
           ]
         : [
-            rung("r0", TRACERS, ["PASS"]),
-            rung("r1", TRACERS, ["PASS"]),
-            rung("r2", TRACERS, ["PASS", "PASS", "PASS"]),
-            rung("r3", TRACERS, ["PASS", "PASS", "PASS"]),
-            rung("r4", TRACERS, ["PASS", "PASS"]),
-            rung("r7a", TRACERS, ["PASS", "PASS", "PASS", "PASS"], second ? "optiland" : undefined),
-            rung("r8a", TRACERS, ["PASS", "PASS"]),
-            rung("r9a", TRACERS, ["PASS"]),
-            rung("r10a", TRACERS, ["PASS", "PASS"]),
+            rung("built-system", TRACERS, ["PASS"]),
+            rung("first-order", TRACERS, ["PASS"]),
+            rung("ray-trace", TRACERS, ["PASS", "PASS", "PASS"]),
+            rung("optical-path", TRACERS, ["PASS", "PASS", "PASS"]),
+            rung("geometric-mtf", TRACERS, ["PASS", "PASS"]),
+            rung("spot-rays", TRACERS, ["PASS", "PASS", "PASS", "PASS"], second ? "optiland" : undefined),
+            rung("axial-rays", TRACERS, ["PASS", "PASS"]),
+            rung("chief-rays", TRACERS, ["PASS"]),
+            rung("field-curve-rays", TRACERS, ["PASS", "PASS"]),
           ],
     }));
     const baseline: Baseline = {

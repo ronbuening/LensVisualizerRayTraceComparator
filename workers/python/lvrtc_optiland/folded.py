@@ -38,8 +38,9 @@ def model_class():
             medium = getattr(rays, "_lvrtc_medium", np.ones_like(rays.opd))
             previous_path = getattr(rays, "_lvrtc_path", np.zeros_like(rays.opd))
             nominal = self.parent_surface.material_pre.n(rays.w)
-            # Surface._trace_real charged its line parameter to material_pre. The conditional material is a
-            # per-ray one; retain the native parameter and charge that same stretch to the actual medium.
+            # Surface._trace_real charged its line parameter to material_pre (through the medium's
+            # propagate_to_surface since optiland a9e544a2). The conditional material is a per-ray one; retain the
+            # native parameter and charge that same stretch to the actual medium.
             increment = rays.opd - previous_path
             rays.opd = rays.opd + increment * ((medium - nominal) / nominal)
             rays._lvrtc_path = np.copy(rays.opd)

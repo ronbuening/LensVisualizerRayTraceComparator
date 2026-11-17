@@ -221,10 +221,11 @@ export function fieldNotes(field: LvMtfFieldResult): string[] {
  *   LensVisualizer's own best axial focus (`caseAtBestAxial`), that plane is the plane of the case as it is: the
  *   mode is the contract's `design` and the shift 0, and `method.params.focus` says that LensVisualizer was asked
  *   for "best-axial". It throws when LensVisualizer's result is then of another plane than the case's.
- * - `aperture`: since LV #936 its MTF traces no f-number of its own (the "traced f-number" is gone); where the
- *   axial marginal ray is vignetted (`axialVignetting`, the summary's working f-number in its `vignetted` state) it is
+ * - `aperture`: where the chart's axial marginal ray is vignetted (`axialVignetting`; since LV #988 its own stop-rim
+ *   ray, `traceWorkingFNumber` of the chart's object at its first line, no longer the summary's) it is
  *   `axialVignettingSurfaceIndex`, the index of the surface labelled so, and `axialVignettingBeforeStop`, 1 before
- *   the stop and 0 after it. Empty when the ray is not vignetted.
+ *   the stop and 0 after it. Empty when the ray is not vignetted. The working f-number and magnification LV #988 adds
+ *   to a result are not written: R12b compares the summary's.
  * - `lines`: the lines of LensVisualizer's support record for the request.
  * - `notes`: `notes` as given, then what LensVisualizer says of each field (`fieldNotes`).
  */
@@ -288,8 +289,8 @@ function mtfData(
 
 /**
  * The view of the tab that the stop radius of a case is the stop of, or why it is the stop of neither. A lens that
- * is f/8 or slower wide open has one radius for both, the stop rule's f/8 stop being its wide-open one (LV #933): it is
- * the wide-open view.
+ * is as slow as its comparison wide open (f/8 with LensVisualizer's defaults) has one radius for both, the stop rule's
+ * stop at that f-number being its wide-open one (LV #933): it is the wide-open view.
  */
 function tabViewOf(api: LvTabApi, model: LvCaseModel): LvTabRequest | { readonly neither: string } {
   const { runtime, state, exported } = model;
@@ -301,7 +302,7 @@ function tabViewOf(api: LvTabApi, model: LvCaseModel): LvTabRequest | { readonly
   return {
     neither:
       `the stop radius of the case, ${stop} mm, is neither the one LensVisualizer's MTF tab traces wide open, ` +
-      `${wideOpen.options.stopSemiDiameterMm} mm, nor that of its f/8 comparison, ` +
+      `${wideOpen.options.stopSemiDiameterMm} mm, nor that of its f/${comparison.fNumber} comparison, ` +
       `${comparison.options.stopSemiDiameterMm} mm`,
   };
 }

@@ -1,8 +1,8 @@
 // Rungs R13b and R14b from end to end on engines that know no optics: a suite is run, compared and reported, and each
-// report is a golden file. Stand-ins named `ref-seidel` and `optiland` answer `seidel.native` of a small lens, the
-// second without chromatic sums and with spherical aberration 2^-30 mm apart; stand-ins named `optiland` and
-// `optiland-wave` answer `zernike.native` of two fields, the second field unavailable in one, and a coefficient 2^-40
-// waves apart. Every number is synthetic.
+// report is a golden file. Stand-ins named `reference-seidel` and `optiland` answer `seidel.native` of a small lens,
+// the second without chromatic sums and with spherical aberration 2^-30 mm apart; stand-ins named `optiland` and
+// `otf-of-optiland-wavefront` answer `zernike.native` of two fields, the second field unavailable in one, and a
+// coefficient 2^-40 waves apart. Every number is synthetic.
 import { join } from "node:path";
 
 import { compareManifest } from "../../src/compare/manifest.ts";
@@ -34,14 +34,14 @@ export const R13B_GOLDEN = "r13b-stand-ins";
 export const R14B_GOLDEN = "r14b-stand-ins";
 
 /** A policy of each rung, its entry of the comparator's own policy. */
-const policyOf = (rung: "r13b" | "r14b"): Policy => ({
+const policyOf = (rung: "seidel-vs-optiland" | "zernike-vs-optiland"): Policy => ({
   contract: "1.0",
   kind: "policy",
   version: 1,
   rungs: { [rung]: loadPolicy().rungs[rung] },
 });
-export const R13B_POLICY: Policy = policyOf("r13b");
-export const R14B_POLICY: Policy = policyOf("r14b");
+export const R13B_POLICY: Policy = policyOf("seidel-vs-optiland");
+export const R14B_POLICY: Policy = policyOf("zernike-vs-optiland");
 
 /** What one cycle of the fixture gave. */
 export interface R13Cycle {
@@ -193,13 +193,15 @@ async function cycleOf(
   return { manifest, comparisons, report: renderReport(manifest, comparisons, policy) };
 }
 
-/** R13b on its stand-ins: `ref-seidel` with colour, `optiland` without, their SPHA 2^-30 mm apart. */
+/** R13b on its stand-ins: `reference-seidel` with colour, `optiland` without, their SPHA 2^-30 mm apart. */
 export async function r13bCycle(runsDir: string): Promise<R13Cycle> {
   return cycleOf(
     R13B_GOLDEN,
-    rungOf("r13b", SEIDEL_NATIVE, SEIDEL_ASK, ["ref-seidel", "optiland"]),
+    rungOf("seidel-vs-optiland", SEIDEL_NATIVE, SEIDEL_ASK, ["reference-seidel", "optiland"]),
     {
-      "ref-seidel": standIn(SEIDEL_NATIVE, SEIDEL_NATIVE_VERSION, () => body(sums("paraxial-seidel-sums", 0, true))),
+      "reference-seidel": standIn(SEIDEL_NATIVE, SEIDEL_NATIVE_VERSION, () =>
+        body(sums("paraxial-seidel-sums", 0, true)),
+      ),
       optiland: standIn(SEIDEL_NATIVE, SEIDEL_NATIVE_VERSION, () => body(sums("optiland-seidels", 2 ** -30, false))),
     },
     R13B_POLICY,
@@ -207,14 +209,14 @@ export async function r13bCycle(runsDir: string): Promise<R13Cycle> {
   );
 }
 
-/** R14b on its stand-ins: `optiland` with its second field unavailable, `optiland-wave` with a coefficient apart. */
+/** R14b on its stand-ins: `optiland` with its second field unavailable, `otf-of-optiland-wavefront` with a coefficient apart. */
 export async function r14bCycle(runsDir: string): Promise<R13Cycle> {
   return cycleOf(
     R14B_GOLDEN,
-    rungOf("r14b", ZERNIKE_NATIVE, ZERNIKE_ASK, ["optiland", "optiland-wave"]),
+    rungOf("zernike-vs-optiland", ZERNIKE_NATIVE, ZERNIKE_ASK, ["optiland", "otf-of-optiland-wavefront"]),
     {
       optiland: standIn(ZERNIKE_NATIVE, ZERNIKE_NATIVE_VERSION, () => body(fits("optiland-zernike-fit", 0, true))),
-      "optiland-wave": standIn(ZERNIKE_NATIVE, ZERNIKE_NATIVE_VERSION, () =>
+      "otf-of-optiland-wavefront": standIn(ZERNIKE_NATIVE, ZERNIKE_NATIVE_VERSION, () =>
         body(fits("comparator-zernike-optiland-wavefront", 2 ** -40, false)),
       ),
     },

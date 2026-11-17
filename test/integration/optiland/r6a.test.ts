@@ -8,7 +8,7 @@
 // here is 17 of those runs, chosen for what they hold: the historical worst of LensVisualizer at 33ebdb30
 // (`sony-fe-20mm-f18-g` at f/8), the current worst against ref (`nikon-z-24-70f4s` at
 // its wide end and best focus), a lens whose every field is undersampled wide open (`nikkor-z50f12`), each in its
-// four conditions on the reference line, and one run on the five photopic lines.
+// four conditions on the reference line, and one run on the nine photopic lines (LV #988; five before f5b456fec).
 //
 // Nothing is pinned to a figure of LensVisualizer: every pair is held to the gate of the policy, and a pair of
 // LensVisualizer needs no margin beyond it. Stage 3.12 pins the gate at 2e-8, ten times the measured 1.18e-9
@@ -29,7 +29,7 @@ import { OPTILAND_UNAVAILABLE, pairsOf, runAndCompare, tempDir } from "./support
 import type { RungPair } from "./support.ts";
 
 const skip = OPTILAND_UNAVAILABLE || LV_UNAVAILABLE;
-const GATE = loadPolicy().rungs.r6a.metrics["waveMtf.maxAbs"].tolerance as number;
+const GATE = loadPolicy().rungs["wave-mtf"].metrics["waveMtf.maxAbs"].tolerance as number;
 
 /** The lenses whose four conditions on the reference line are run, and the one run on the photopic lines. */
 const LENSES = ["sony-fe-20mm-f18-g", "nikon-z-24-70f4s", "nikkor-z50f12"];
@@ -62,8 +62,8 @@ test(
     const cycle = runAndCompare(t, {
       suite: waveSuite(t),
       name: "benchmark",
-      engines: "lv,ref,optiland",
-      rungs: "r6a",
+      engines: "lv,reference-tracer,optiland",
+      rungs: "wave-mtf",
     });
     const { manifest } = cycle;
     assert.deepEqual(
@@ -74,13 +74,13 @@ test(
     assert.equal(manifest.runs.length, 17);
     for (const run of manifest.runs) {
       // Three fields at every line, on the run's own lattice and on the finer one: other sets, and as many.
-      const lines = run.name === PHOTOPIC ? 5 : 1;
+      const lines = run.name === PHOTOPIC ? 9 : 1;
       assert.equal(run.raySets?.sets.length, 3 * lines, run.name);
       assert.equal(run.fineRaySets?.sets.length, 3 * lines, run.name);
       assert.deepEqual([run.raySets?.problems, run.fineRaySets?.problems], [[], []], run.name);
     }
 
-    const pairs = pairsOf(cycle.comparisons, "r6a", RAYS_TRACE);
+    const pairs = pairsOf(cycle.comparisons, "wave-mtf", RAYS_TRACE);
     // A field of a run is one comparison, whatever its lines: 51 fields, three pairs of engines.
     assert.equal(pairs.length, 3 * 3 * manifest.runs.length);
     const worst = new Map<string, { value: number; at: string; judged: number; flagged: number }>();
@@ -92,7 +92,7 @@ test(
       const columns = pair.metrics["lattice.columns"].value as number;
       assert.ok(columns >= 48 && columns <= 96, `${pair.run}: ${columns} columns`);
       assert.equal(pair.metrics["rays.dropped"].value, 0, `${pair.run} ${pair.engines}`);
-      assert.equal(pair.metrics["lines.compared"].value, pair.run === PHOTOPIC ? 5 : 1, pair.run);
+      assert.equal(pair.metrics["lines.compared"].value, pair.run === PHOTOPIC ? 9 : 1, pair.run);
       const step = pair.metrics["phaseStep.waves"].value as number;
       const moved = pair.metrics["convergence.maxAbs"].value as number;
       if (judged) {
@@ -108,7 +108,7 @@ test(
         assert.ok(step > QUARTER_WAVE || moved > 0.005, `${pair.run} ${pair.engines}: flagged at ${step}, ${moved}`);
       }
       // The exact tracers keep the absolute Stage 3.12 bound, whether the lattice is an arbiter or not.
-      if (pair.engines === "optiland / ref") assert.ok(value <= 2e-9, `${pair.run}: ${value}`);
+      if (pair.engines === "optiland / reference-tracer") assert.ok(value <= 2e-9, `${pair.run}: ${value}`);
       const held = worst.get(pair.engines) ?? { value: -1, at: "", judged: 0, flagged: 0 };
       if (judged) held.judged++;
       else held.flagged++;
@@ -118,7 +118,11 @@ test(
       }
       worst.set(pair.engines, held);
     }
-    assert.deepEqual([...worst.keys()].sort(), ["lv / optiland", "lv / ref", "optiland / ref"]);
+    assert.deepEqual([...worst.keys()].sort(), [
+      "lv / optiland",
+      "lv / reference-tracer",
+      "optiland / reference-tracer",
+    ]);
     for (const [engines, held] of [...worst].sort(([a], [b]) => (a < b ? -1 : 1))) {
       // Every pair of engines has fields that are judged: the gate is held, and not only passed by.
       assert.ok(held.judged > 0, engines);

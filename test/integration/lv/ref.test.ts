@@ -2,7 +2,7 @@
 // LV's surface profiles evaluate, by the comparator and the tolerance of rung R0, and its cardinal points against
 // LV's first-order module and its pupils against LV's paraxial kernel, by the tolerance of rung R1. The engine
 // `lv` that answers both quantities for itself is a later stage; here LV's own functions are called directly, so
-// that `ref` is held to another implementation on real prescriptions before it arbitrates anything.
+// that `reference-tracer` is held to another implementation on real prescriptions before it arbitrates anything.
 //
 // The numbers quoted in comments were measured at LV commit d36f44b3 with the catalog of that commit.
 import assert from "node:assert/strict";
@@ -44,7 +44,7 @@ test(
   async (t) => {
     const binding = await loadLvBinding(LV_PATH);
     const exporter = createLvExporter(binding);
-    const tolerance = POLICY.rungs.r0.metrics["sag.maxScaled"].tolerance;
+    const tolerance = POLICY.rungs["built-system"].metrics["sag.maxScaled"].tolerance;
     assert.equal(tolerance, 1e-12);
 
     const worst = { scaled: 0, scaledAt: "", abs: 0, absAt: "" };
@@ -93,8 +93,8 @@ test(
     assert.ok(worst.scaled < 1e-14, `the scaled difference is rounding: ${worst.scaled} on ${worst.scaledAt}`);
     // The plain difference is not: 1.3e-10 mm on russar-22-70f8, whose second surface ends 1e-10 short of a
     // hemisphere's rim in the root, and up to 8e-12 mm on three lenses whose terms of 1e4 to 1e5 mm cancel to a sag
-    // of a millimetre: there `ref`, which sums its terms with their rounding errors carried along, is the exact
-    // sum, and LensVisualizer's plain sum is that far from it. A gate of 1e-12 mm on the plain difference would
+    // of a millimetre: there `reference-tracer`, which sums its terms with their rounding errors carried along, is the
+    // exact sum, and LensVisualizer's plain sum is that far from it. A gate of 1e-12 mm on the plain difference would
     // fail four lenses whose sag both engines have right.
     assert.ok(worst.abs > 1e-12 && worst.abs < 1e-9, `${worst.abs} mm on ${worst.absAt}`);
     assert.ok(overPlainGate.size >= 1 && overPlainGate.size < 20, String(overPlainGate.size));
@@ -106,7 +106,7 @@ test(
   { skip },
   async (t) => {
     const binding = await loadLvBinding(LV_PATH);
-    const tolerance = POLICY.rungs.r1.metrics["firstOrder.maxAbs"].tolerance;
+    const tolerance = POLICY.rungs["first-order"].metrics["firstOrder.maxAbs"].tolerance;
     assert.equal(tolerance, 1e-9);
 
     const worst = { value: 0, at: "" };
@@ -176,7 +176,7 @@ test(
     const binding = await loadLvBinding(LV_PATH);
     const exporter = createLvExporter(binding);
     const trace = binding.api.paraxialTrace;
-    const tolerance = POLICY.rungs.r1.metrics["firstOrder.maxAbs"].tolerance;
+    const tolerance = POLICY.rungs["first-order"].metrics["firstOrder.maxAbs"].tolerance;
     assert.equal(tolerance, 1e-9);
 
     const worst = { entrance: 0, entranceAt: "", exit: 0, exitAt: "" };
@@ -259,7 +259,8 @@ test(
     // pupil lies 7.7 m behind the first vertex at the d line and, at the photopic lines, anywhere from 1.4 m to
     // 20 m behind it and 14 m in front of it. There the two differ by 1.1e-9 mm at the d line and by up to
     // 3.0e-9 mm at a photopic one: 2e-13 of the distance, and above the plain tolerance of R1. So an engine that
-    // places its pupils with LensVisualizer's kernel fails R1 against `ref` on this lens by rounding alone.
+    // places its pupils with LensVisualizer's kernel fails R1 against `reference-tracer` on this lens by rounding
+    // alone.
     assert.ok(worst.entrance < 1e-10, `${worst.entrance} mm on ${worst.entranceAt}`);
     assert.ok(worst.exit < 1e-7, `${worst.exit} mm on ${worst.exitAt}`);
     assert.ok(overPlainGate.size < 10, `only a nearly telecentric lens is that far off: ${[...overPlainGate.keys()]}`);

@@ -13,7 +13,7 @@ import type { SpotNativeData, SpotNativeField } from "../../src/contract/quantit
 import { encodeNdArray } from "../../src/core/numeric/ndarray.ts";
 import { spotNativeQuantity } from "../../src/quantities/spotNative.ts";
 
-const POLICY = loadPolicy().rungs.r7b;
+const POLICY = loadPolicy().rungs["spot-vs-optiland"];
 
 /** The policy of the rung without its limit on the chief rays' landing: what a comparator does with none. */
 const UNLIMITED: RungPolicy = {

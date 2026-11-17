@@ -1,9 +1,9 @@
 {
   "contract": "1.3",
   "kind": "policy",
-  "version": 24,
+  "version": 25,
   "rungs": {
-    "selftest": {
+    "pipeline-echo": {
       "quantity": "selftest.echo",
       "mode": "direct",
       "class": "gated",
@@ -12,7 +12,7 @@
         "values.maxAbs": { "tolerance": 1e-12, "unit": "1" }
       }
     },
-    "r0": {
+    "built-system": {
       "quantity": "system.describe",
       "mode": "direct",
       "class": "gated",
@@ -25,7 +25,7 @@
       },
       "blocksLaterRungs": true
     },
-    "r1": {
+    "first-order": {
       "quantity": "paraxial.first-order",
       "mode": "direct",
       "class": "gated",
@@ -35,7 +35,7 @@
         "pupilZ.maxScaled": { "tolerance": 1e-9, "unit": "mm" }
       }
     },
-    "r2": {
+    "ray-trace": {
       "quantity": "rays.trace",
       "mode": "identical-rays",
       "class": "gated",
@@ -46,7 +46,7 @@
         "mask.mismatches": { "tolerance": 0, "unit": "rays" }
       }
     },
-    "r3": {
+    "optical-path": {
       "quantity": "rays.trace",
       "mode": "identical-rays",
       "class": "gated",
@@ -60,7 +60,7 @@
         "phasePath.maxAbs": { "tolerance": 2e-5, "unit": "waves" }
       }
     },
-    "r4": {
+    "geometric-mtf": {
       "quantity": "rays.trace",
       "mode": "identical-rays",
       "class": "gated",
@@ -68,7 +68,7 @@
         "mtf.maxAbs": { "tolerance": 1e-7, "unit": "1" }
       }
     },
-    "r4f": {
+    "lv-mtf-replay": {
       "quantity": "mtf.native",
       "mode": "direct",
       "class": "gated",
@@ -78,7 +78,7 @@
         "sampling.mismatches": { "tolerance": 0, "unit": "elements" }
       }
     },
-    "r5": {
+    "mtf-vs-optiland-fft": {
       "quantity": "mtf.native",
       "mode": "independent-method",
       "class": "recorded",
@@ -88,7 +88,7 @@
         "mtfOnAxis.maxAbs": { "attention": 0.005, "unit": "1" }
       }
     },
-    "r5g": {
+    "geometric-mtf-vs-optiland": {
       "quantity": "mtf.native",
       "mode": "independent-method",
       "class": "recorded",
@@ -98,7 +98,7 @@
         "mtfOnAxis.maxAbs": { "attention": 0.005, "unit": "1" }
       }
     },
-    "r6a": {
+    "wave-mtf": {
       "quantity": "rays.trace",
       "mode": "identical-rays",
       "class": "gated",
@@ -106,7 +106,7 @@
         "waveMtf.maxAbs": { "tolerance": 2e-8, "unit": "1" }
       }
     },
-    "r6b": {
+    "mtf-vs-wave-estimate": {
       "quantity": "mtf.native",
       "mode": "independent-method",
       "class": "recorded",
@@ -115,7 +115,7 @@
         "mtfOnAxis.maxAbs": { "attention": 0.005, "unit": "1" }
       }
     },
-    "r6c": {
+    "mtf-vs-optiland-wavefront": {
       "quantity": "mtf.native",
       "mode": "independent-method",
       "class": "recorded",
@@ -125,7 +125,7 @@
         "mtfOnAxis.maxAbs": { "attention": 0.005, "unit": "1" }
       }
     },
-    "r7a": {
+    "spot-rays": {
       "quantity": "rays.trace",
       "mode": "identical-rays",
       "class": "gated",
@@ -136,7 +136,7 @@
         "transverseError.maxAbs": { "tolerance": 1e-8, "unit": "mm" }
       }
     },
-    "r7b": {
+    "spot-vs-optiland": {
       "quantity": "spot.native",
       "mode": "independent-method",
       "class": "recorded",
@@ -147,7 +147,7 @@
         "spotRmsRadius.maxAbs": { "unit": "mm" }
       }
     },
-    "r8a": {
+    "axial-rays": {
       "quantity": "rays.trace",
       "mode": "identical-rays",
       "class": "gated",
@@ -158,7 +158,7 @@
         "mask.mismatches": { "tolerance": 0, "unit": "rays" }
       }
     },
-    "r8b": {
+    "axial-vs-optiland": {
       "quantity": "axial.native",
       "mode": "independent-method",
       "class": "recorded",
@@ -176,7 +176,7 @@
         "relativeFocus.maxAbs": { "unit": "mm" }
       }
     },
-    "r9a": {
+    "chief-rays": {
       "quantity": "rays.trace",
       "mode": "identical-rays",
       "class": "gated",
@@ -188,7 +188,7 @@
         "mask.mismatches": { "tolerance": 0, "unit": "rays" }
       }
     },
-    "r9b": {
+    "chief-vs-optiland": {
       "quantity": "chief.native",
       "mode": "independent-method",
       "class": "recorded",
@@ -205,7 +205,7 @@
         "realHeight.maxAbs": { "unit": "mm" }
       }
     },
-    "r10a": {
+    "field-curve-rays": {
       "quantity": "rays.trace",
       "mode": "identical-rays",
       "class": "gated",
@@ -216,7 +216,7 @@
         "tangentialFocus.maxScaled": { "tolerance": 1e-8, "unit": "mm" }
       }
     },
-    "r10b": {
+    "field-curve-vs-optiland": {
       "quantity": "curvature.native",
       "mode": "independent-method",
       "class": "recorded",
@@ -227,7 +227,7 @@
         "tangentialShift.maxAbs": { "attention": 1e-5, "unit": "mm" }
       }
     },
-    "r11a": {
+    "vignetting-rays": {
       "quantity": "rays.trace",
       "mode": "identical-rays",
       "class": "gated",
@@ -238,7 +238,7 @@
         "transmission.maxAbs": { "tolerance": 0, "unit": "1" }
       }
     },
-    "r11b": {
+    "vignetting-vs-flux-estimate": {
       "quantity": "vignetting.native",
       "mode": "independent-method",
       "class": "recorded",
@@ -247,7 +247,7 @@
         "geometricTransmission.maxAbs": { "attention": 0.01, "unit": "1" }
       }
     },
-    "r12b": {
+    "summary-vs-optiland": {
       "quantity": "summary.native",
       "mode": "independent-method",
       "class": "recorded",
@@ -262,7 +262,7 @@
         "workingFNumber.maxAbs": { "attention": 7e-8, "unit": "1" }
       }
     },
-    "r13b": {
+    "seidel-vs-optiland": {
       "quantity": "seidel.native",
       "mode": "independent-method",
       "class": "recorded",
@@ -279,7 +279,7 @@
         "total.maxScaled": { "attention": 8e-15, "unit": "1" }
       }
     },
-    "r14b": {
+    "zernike-vs-optiland": {
       "quantity": "zernike.native",
       "mode": "independent-method",
       "class": "recorded",

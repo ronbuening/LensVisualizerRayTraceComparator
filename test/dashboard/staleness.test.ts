@@ -173,7 +173,7 @@ test("against the suite's last run: current, a case that moved, an engine that m
   // The case of each run in the last run, found or not, as the badge judged it.
   const caseMoved = views.baselineRun("case-moved", 0);
   assert.equal(caseMoved?.caseNow?.found, true);
-  assert.ok(visibleText(renderBaselineRun(caseMoved!)).includes(DASHBOARD_TEXT.staleness.caseMoved("")));
+  assert.ok(visibleText(renderBaselineRun(caseMoved!)).includes(DASHBOARD_TEXT.staleness.caseMoved));
   assert.ok(
     visibleText(renderBaselineRun(views.baselineRun("case-moved", 1)!)).includes(DASHBOARD_TEXT.staleness.caseSame),
   );

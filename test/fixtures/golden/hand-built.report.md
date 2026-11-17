@@ -5,57 +5,54 @@
 | Input | Value |
 |---|---|
 | Suite | hand-built |
-| Suite hash | 5555555555555555555555555555555555555555555555555555555555555555 |
 | Contract version | 1.0 |
-| Policy | rungs v3 |
-| Policy hash | e5d4b2b491ff3425c5b5f3ad552232256fe7ccbbb6c033f407c81f1a2546865a |
+| Limits file | v3 |
 
 ### Engines
 
-| Engine | Status | Version | Fingerprint |
-|---|---|---|---|
-| lv | available | 0.9 \| dev | ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff |
-| optiland | available | 0.5.9 | operator<br>build |
-| zemax | unavailable: spawn-failed | — | — |
+| Engine | Status | Version |
+|---|---|---|
+| lv | available | 0.9 \| dev |
+| optiland | available | 0.5.9 |
+| zemax | unavailable: spawn-failed | — |
 
 ### Runs
 
-| Run | Case | Status |
-|---|---|---|
-| tele | cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc | run |
-| wide | — | not started: lens fixture a\|b.json: it cannot be read (ENOENT); second<br>problem |
+| Run | Status |
+|---|---|
+| tele | run |
+| wide | not started: lens fixture a\|b.json: it cannot be read (ENOENT); second<br>problem |
 
 ## Verdict summary
 
-3 of 7 pairs are FAIL or ERROR.
+3 of 7 pairs are Fail or Error.
 
-| Verdict | reference-vs-each | pairwise |
+| Verdict | against the reference | every pair |
 |---|---|---|
-| PASS | 0 | 0 |
-| FLOOR | 0 | 0 |
-| FAIL | 0 | 0 |
-| RECORDED | 0 | 0 |
-| ATTENTION | 1 | 1 |
-| UNSUPPORTED | 0 | 1 |
-| BLOCKED | 1 | 0 |
-| ERROR | 1 | 2 |
+| Pass: within limit | 0 | 0 |
+| Fail: beyond limit | 0 | 0 |
+| Side by side | 0 | 0 |
+| Side by side, worth a look | 1 | 1 |
+| Not computed | 0 | 1 |
+| Not judged (an earlier check failed) | 1 | 0 |
+| Error | 1 | 2 |
 
 ## Support matrix
 
-| Run | Rung | lv | optiland | zemax |
+| Run | Check | lv | optiland | zemax |
 |---|---|---|---|---|
-| tele | r5, request 1 of 2 | ok | ok | error: spawn-failed |
-| tele | r5, request 2 of 2 | ok | unsupported: feature surface.asphere.odd, option a\|b | — |
-| tele | r0 | ok | pending | — |
-| tele | r1 | ok | ok | — |
+| tele | mtf-vs-optiland-fft, request 1 of 2 | ok | ok | error: spawn-failed |
+| tele | mtf-vs-optiland-fft, request 2 of 2 | ok | unsupported: feature surface.asphere.odd, option a\|b | — |
+| tele | built-system | ok | pending | — |
+| tele | first-order | ok | ok | — |
 
 ## Results
 
 ### tele
 
-#### r5, request 1 of 2
+#### MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft`, request 1 of 2
 
-Quantity `mtf.native`, compared independent-method, recorded. Request `1111111111111111111111111111111111111111111111111111111111111111`.
+Quantity `mtf.native`: each engine's own method; side by side, no limit.
 
 Reference vs each, against `lv`:
 
@@ -72,9 +69,9 @@ Pairwise, the verdict of each two engines and the metric nearest to or furthest 
 | optiland | ATTENTION (mtf.maxAbs 1.25e-2 at field 14 deg, frequencyPerMm 40, line 5.00e-1) | — | ERROR |
 | zemax | ERROR | ERROR | — |
 
-#### r5, request 2 of 2
+#### MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft`, request 2 of 2
 
-Quantity `mtf.native`, compared independent-method, recorded. Request `2222222222222222222222222222222222222222222222222222222222222222`.
+Quantity `mtf.native`: each engine's own method; side by side, no limit.
 
 Pairwise, the verdict of each two engines and the metric nearest to or furthest past its limit:
 
@@ -83,23 +80,23 @@ Pairwise, the verdict of each two engines and the metric nearest to or furthest 
 | lv | — | UNSUPPORTED |
 | optiland | UNSUPPORTED | — |
 
-#### r0
+#### Built system — `built-system`
 
-Quantity `system.describe`, the policy has no entry for this rung. Request `1111111111111111111111111111111111111111111111111111111111111111`.
+Quantity `system.describe`: the limits file has no entry for this check.
 
 Reference vs each, against `lv`:
 
 No other engine was compared.
 
-#### r1
+#### First-order data — `first-order`
 
-Quantity `paraxial.first-order`, compared direct, gated. Request `2222222222222222222222222222222222222222222222222222222222222222`.
+Quantity `paraxial.first-order`: numbers of each engine set against each other; held to a limit.
 
 Reference vs each, against `lv`:
 
 | Engine | firstOrder.maxAbs (≤ 1.00e-9 mm) | Verdict | Note |
 |---|---|---|---|
-| optiland | — | BLOCKED | not judged: rung r0 failed for lv and optiland on this case |
+| optiland | — | BLOCKED | not judged: rung built-system failed for lv and optiland on this case |
 
 Recorded values, as each engine reports them. They are listed and never judged:
 
@@ -114,43 +111,73 @@ Recorded values, as each engine reports them. They are listed and never judged:
 
 What this comparison does not show, whatever its verdicts:
 
-- optiland's FFT and Huygens MTF take no injected rays. An MTF of optiland's own is on optiland's own pupil grid, reference sphere and frequency axes, so rung R5 is recorded and never gated: it sets two methods side by side.
-- A polychromatic curve of optiland's FFT class. It gives a one-line modulus, so several lines have no FFT row in R5 or R6c. R6c's external counterpart is the comparator's complex sum of optiland's raw wavefronts; its synthetic sum proof checks the declared weighting and phase convention, not physical spectral fidelity.
-- optiland's geometric MTF takes no injected rays either. Its rays are an even grid on the stop surface, out to the clip radius; LensVisualizer's are a lattice across the entrance beam; neither is weighted by direction cosine. Rung R5g is recorded and never gated: a difference of the two pupil samplings is written down, not explained.
-- The bins of optiland's geometric MTF. On one line optiland's curve is of landings counted into bins, and a field whose bins move a value by more than a band has no optiland curve. On several lines the sum over optiland's landings is the worker's, without bins, about the axis point of the image plane; LensVisualizer's is about a chief ray's landing.
-- Dispersion and white-light weighting. Every engine is handed the indices and the line weights LensVisualizer states; no glass catalog and no spectrum is checked against another.
+- optiland's FFT and Huygens MTF take no injected rays. An MTF of optiland's own is on optiland's own pupil grid, reference sphere and frequency axes, so check mtf-vs-optiland-fft sets two methods side by side and holds them to no limit.
+- A polychromatic curve of optiland's FFT class. It gives the modulus at one wavelength, so a run of several wavelengths has no FFT row in checks mtf-vs-optiland-fft or mtf-vs-optiland-wavefront. The external counterpart in check mtf-vs-optiland-wavefront is this tool's complex sum of optiland's raw wavefronts; its proof on synthetic sums checks the declared weighting and phase convention, not physical spectral fidelity.
+- optiland's geometric MTF takes no injected rays either. Its rays are an even grid on the stop surface, out to the clip radius; LensVisualizer's are a lattice across the entrance beam; neither is weighted by direction cosine. Check geometric-mtf-vs-optiland sets the two side by side and holds them to no limit: a difference of the two pupil samplings is written down, not explained.
+- The bins of optiland's geometric MTF. At one wavelength optiland's curve is of landings counted into bins, and a field whose bins move a value by more than its convergence band (0.005 on the axis, 0.01 off it) has no optiland curve. At several wavelengths the sum over optiland's landings is this tool's, without bins, about the axis point of the image plane; LensVisualizer's is about a chief ray's landing.
+- Dispersion and white-light weighting. Every engine is handed the refractive indices and the wavelength weights LensVisualizer states; no glass catalog and no spectrum is checked against another.
 - The choice of focus. A best-focus plane is LensVisualizer's own, handed to every engine as a plane; no engine searches for one of its own.
 - The sizing of the stop. The stop radius, wide open and stopped down, is LensVisualizer's, by its own rule.
 - Models of vignetting. Each engine clips rays at the apertures it is handed; how an engine's own MTF fills, samples and calibrates a clipped pupil is its method, and a difference that comes of it is written down, not explained.
-- Zoom and focus positions other than the states a run names, and the catalog beyond these suites.
-- Fields that an engine's own convergence test did not pass. Their figures are shown apart and enter no band.
+- Zoom and focus positions other than the lens states a run names, and the catalog beyond these suites.
+- Fields that an engine's own convergence test did not pass. Their figures are shown apart and enter no review band.
 
 ## How to read this
 
-Each pair of engines that answered one request gets one verdict.
+Each pair of engines that answered one request gets one verdict. The verdict summary shows its label; the other
+tables of this report show its stored value. This is each label, its stored value and what it means:
 
-| Verdict | Meaning |
-|---|---|
-| PASS | A gated rung: every judged metric is at or below its tolerance. |
-| FLOOR | A gated rung: a judged metric is above its tolerance by the known numerical floor of one of the two engines. That engine is within the floor limit of the rung's arbiter, and no other engine sides with it against the arbiter; the note gives the figures, and names a witness that did not corroborate the arbiter. It counts as a pass. |
-| FAIL | A gated rung: a judged metric is above its tolerance, or is not a number. |
-| RECORDED | A recorded rung: the difference is written down. It is not a failure. |
-| ATTENTION | A recorded rung: a metric is outside its attention band. It is worth a look and is not a failure. |
-| UNSUPPORTED | One of the two engines cannot answer the request. That is an answer, not a failure. |
-| BLOCKED | Both engines answered and the pair is not judged: an earlier rung, on which this one rests, failed for the same two engines on the same case. The failure is that rung's, and the note names it. |
-| ERROR | One of the two engines gave no result, or the two results cannot be compared. |
+| Label | Stored value | Meaning |
+|---|---|---|
+| Pass: within limit | `PASS` | A check held to a limit: every judged figure is at or below its limit. |
+| Fail: beyond limit | `FAIL` | A check held to a limit: a judged figure is above its limit, or is not a number. |
+| Side by side | `RECORDED` | A side-by-side comparison with no limit: the difference is written down, inside its review band or with none. It is not a failure. |
+| Side by side, worth a look | `ATTENTION` | A side-by-side comparison with no limit: a figure is outside its review band. It is not a failure. |
+| Not computed | `UNSUPPORTED` | One of the two engines cannot compute what was asked. That is an answer, not a failure. |
+| Not judged (an earlier check failed) | `BLOCKED` | The pair is not judged, whether or not both engines answered: an earlier check that this one rests on failed or ended in an error for the same two engines and the same lens state. |
+| Error | `ERROR` | One of the two engines gave no result, or the two results cannot be compared. |
 
-Only FAIL and ERROR fail a comparison. FLOOR is a pass that is counted apart from PASS. RECORDED and ATTENTION
-are not failures: a recorded rung compares methods that are expected to differ, and its numbers are kept to be
-read, not to be gated. BLOCKED is not a second failure: two engines that built different systems would differ
-in every rung after that one.
+Only Fail (`FAIL`) and Error (`ERROR`) fail a comparison.
+Side by side (`RECORDED`) and Side by side, worth a look (`ATTENTION`) are not failures: a side-by-side check
+compares methods that are expected to differ, and its numbers are kept to be read, not held to a limit. Not
+judged (`BLOCKED`) is not a second failure: two engines that built different systems would differ in every check
+after that one.
 
-A limit is shown in the heading of its metric: `≤` is the tolerance of a gated rung, `band` the attention band
-of a recorded one, and `floor ≤` how far the engine with a floor may be from the arbiter for a FLOOR. A metric
+A limit is shown in the heading of its figure: `≤` is the limit of a check held to a limit, `band` the review
+band of a side-by-side check. A figure
 without a limit is shown and not judged. Where its name begins as a judged one's does, it stands beside that
 one: `pupilZ.maxAbs`, the plain difference, beside `pupilZ.maxScaled`, the one on the scale that is judged.
 Numbers have 3 significant digits, and a whole number, such as a count, is written in full.
-A recorded value has 9 significant digits, or is a whole number in full, and is named with the index of its
+A value written down has 9 significant digits, or is a whole number in full, and is named with the index of its
 element. `—` marks a place with nothing to compare, and `not finite` a number that is a NaN or an infinity.
 The reference-vs-each table and the pairwise matrix judge a pair alike, so a pair that is in both has the same
 verdict in both.
+
+## Identifiers
+
+The hashes that tell one version from another: of the suite file and of the limits file; of each engine's code
+and, for an engine of this tool's own, of this tool's code behind it; of each run's lens state; and of each
+request a section of the results is of.
+
+| Identifier | Value |
+|---|---|
+| Suite file | 5555555555555555555555555555555555555555555555555555555555555555 |
+| Limits file | 6f5fbb754d2d10dd36e1c7b3afd705801745bcd0d2eb3a6df3a22a7a294902b4 |
+
+| Engine | Engine code |
+|---|---|
+| lv | ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff |
+| optiland | operator<br>build |
+| zemax | — |
+
+| Run | Lens state |
+|---|---|
+| tele | cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc |
+| wide | — |
+
+| Run | Check | Request |
+|---|---|---|
+| tele | mtf-vs-optiland-fft, request 1 of 2 | 1111111111111111111111111111111111111111111111111111111111111111 |
+| tele | mtf-vs-optiland-fft, request 2 of 2 | 2222222222222222222222222222222222222222222222222222222222222222 |
+| tele | built-system | 1111111111111111111111111111111111111111111111111111111111111111 |
+| tele | first-order | 2222222222222222222222222222222222222222222222222222222222222222 |

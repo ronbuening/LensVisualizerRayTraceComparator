@@ -107,7 +107,15 @@ function keptSet(set: ComparisonSet): BaselineSet {
 }
 
 /** The rungs of an MTF baseline, in ladder order: every rung that judges or records an MTF. */
-export const MTF_BASELINE_RUNGS: readonly string[] = Object.freeze(["r4", "r4f", "r5", "r5g", "r6a", "r6b", "r6c"]);
+export const MTF_BASELINE_RUNGS: readonly string[] = Object.freeze([
+  "geometric-mtf",
+  "lv-mtf-replay",
+  "mtf-vs-optiland-fft",
+  "geometric-mtf-vs-optiland",
+  "wave-mtf",
+  "mtf-vs-wave-estimate",
+  "mtf-vs-optiland-wavefront",
+]);
 
 /** What a baseline is to hold of a run. */
 export interface BaselineOptions {

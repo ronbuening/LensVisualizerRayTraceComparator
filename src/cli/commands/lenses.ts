@@ -14,6 +14,8 @@ import { primeZoomNote, teleHint } from "../../engines/lv/zoomEnds.ts";
 import { parseArguments } from "../arguments.ts";
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "../command.ts";
 import type { CliCommand, CliIo } from "../command.ts";
+import { ROOT_OPTION, helpText, options, paragraph, wrap } from "../help.ts";
+import { LENSES_SHOW_LEGEND } from "../../vocabulary/index.ts";
 
 /** What `lvrtc lenses` is wired to, injected so that tests choose all three. */
 export interface LensesCommandInputs {
@@ -29,25 +31,29 @@ const SYNOPSIS = [
   "       lvrtc lenses show <key> [--zoom <t>] [--focus <t>] [--root <dir>] [--json]",
   "",
 ].join("\n");
-const HELP = [
+const HELP = helpText([
   SYNOPSIS,
-  "Reads the configured LensVisualizer checkout; nothing is written anywhere.",
-  "",
-  "  list  the number of lenses, then the key, name and file of each, sorted by key",
-  "  show  the lens as LensVisualizer prepares it for tracing at one zoom and focus position: one row per",
-  "        surface (radius or flat, gap after it, index after it, clear semi-diameter, vertex z), then the stop",
-  "        surface and its radius, the last lens surface and the image plane; lengths are in mm",
-  "",
-  "  --zoom <t>    zoom position from 0 (wide) to 1 (tele); default 0, the wide end: --zoom 1 gives the tele end",
-  "                of a zoom. A prime has no zoom position",
-  "  --focus <t>   focus position from 0 (infinity) to 1 (closest); default 0",
-  "  --root <dir>  the directory that holds lvrtc.config.json (default: this repository)",
-  "  --json        print one JSON object in place of the lines",
-  "",
-  "Exit code: 0 when done; 1 when LensVisualizer cannot be loaded or, for list, a lens file cannot be indexed;",
-  "2 when the command line cannot be used as given, which includes a key that is not in the catalog.",
-  "",
-].join("\n");
+  ...paragraph("Reads the configured LensVisualizer checkout (lvPath); nothing is written anywhere."),
+  ...options([
+    ["list", "the number of lenses, then the key, name and file of each, sorted by key"],
+    [
+      "show",
+      "one lens as LensVisualizer prepares it for tracing at one zoom and focus position: a row per surface (radius or flat, gap after it, index after it, clear semi-diameter, vertex z, and whether its rim clips), then the stop surface and its radius, the last lens surface and the image plane; lengths are in mm. It is printed only, never written to a file",
+    ],
+  ]),
+  ...options([
+    [
+      "--zoom <t>",
+      "zoom position from 0 (wide) to 1 (tele); default 0, the wide end: --zoom 1 gives the tele end of a zoom. A prime has no zoom position",
+    ],
+    ["--focus <t>", "focus position from 0 (infinity) to 1 (closest); default 0"],
+    ROOT_OPTION,
+    ["--json", "print one JSON object in place of the lines"],
+  ]),
+  ...paragraph(
+    "Exit code: 0 when done; 1 when LensVisualizer cannot be loaded or, for list, a lens file cannot be read; 2 when the command line cannot be used as given, which includes a key that is not in the catalog.",
+  ),
+]);
 
 /** Canonical JSON sorts the keys at every depth; parsing it keeps that order for the indented text. */
 function jsonText(value: unknown): string {
@@ -119,7 +125,7 @@ function showText(lens: { key: string; name: string; file: string }, summary: St
     ["stop index", String(summary.stopIndex)],
     ["stop radius", numberText(summary.stopRadius)],
     ["last lens surface", String(summary.lastLensSurfaceIndex)],
-    ["imgZ", numberText(summary.imgZ)],
+    ["image plane z", numberText(summary.imgZ)],
   ]);
   return [
     `${lens.key}  ${lens.name}`,
@@ -128,6 +134,8 @@ function showText(lens: { key: string; name: string; file: string }, summary: St
     `zoom   ${numberText(summary.zoomT)}`,
     "",
     ...table([header, ...rows], new Set([0, 2, 3, 4, 5, 7])),
+    "",
+    ...wrap(LENSES_SHOW_LEGEND),
     "",
     ...totals,
     "",

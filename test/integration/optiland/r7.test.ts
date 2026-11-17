@@ -25,7 +25,7 @@ import { LV_UNAVAILABLE } from "../lv/support.ts";
 import { OPTILAND_PYTHON, OPTILAND_UNAVAILABLE, lvrtc, pairsOf, runAndCompare, tempDir, worstOf } from "./support.ts";
 
 const skip = OPTILAND_UNAVAILABLE || LV_UNAVAILABLE;
-const R7A = loadPolicy().rungs.r7a;
+const R7A = loadPolicy().rungs["spot-rays"];
 const tolerance = (name: string): number => R7A.metrics[name].tolerance as number;
 
 const DESIGN = "nikkor-z50f12-ref";
@@ -42,7 +42,7 @@ const SETS = 10;
  * The rung's limit of the sorting: two chief rays of one field land within it, or the field is data and the pair is
  * marked (1e-5 mm, owner decision 2026-10-26); the benchmark's largest distance is 1.40e-6 mm.
  */
-const SAME_FIELD_MM = loadPolicy().rungs.r7b.metrics["chiefLanding.maxAbs"].attention as number;
+const SAME_FIELD_MM = loadPolicy().rungs["spot-vs-optiland"].metrics["chiefLanding.maxAbs"].attention as number;
 
 test(
   "R7a and R7b: the rays of LensVisualizer's coma and bokeh tabs in three engines, and its tabs beside optiland's",
@@ -58,12 +58,12 @@ test(
     const { manifest, comparisons, runsDir } = runAndCompare(t, {
       suite,
       name: "benchmark",
-      engines: "lv,ref,optiland",
-      rungs: "r7a,r7b",
+      engines: "lv,reference-tracer,optiland",
+      rungs: "spot-rays,spot-vs-optiland",
     });
 
     // R7a: every set is traced by the three engines, and every pair passes with every figure measured.
-    const traced = manifest.jobs.filter((job) => job.rung === "r7a");
+    const traced = manifest.jobs.filter((job) => job.rung === "spot-rays");
     // A set at every line of the case: R7a traces the photopic lines too, which LensVisualizer's tabs do not.
     const sets = new Map(manifest.runs.map((run) => [run.name, run.spotRaySets?.sets.length ?? 0]));
     assert.equal(sets.get(DESIGN), SETS);
@@ -73,7 +73,7 @@ test(
     const total = 2 * SETS + photopicSets;
     assert.equal(traced.length, 3 * total);
     for (const job of traced) assert.equal(job.status, "ok", `${job.run} ${job.engine} ${job.requestId}`);
-    const gated = pairsOf(comparisons, "r7a", RAYS_TRACE);
+    const gated = pairsOf(comparisons, "spot-rays", RAYS_TRACE);
     assert.equal(gated.length, 3 * total);
     for (const pair of gated) {
       assert.equal(pair.verdict, "PASS", `${pair.run} ${pair.engines}: ${pair.reason ?? ""}`);
@@ -88,7 +88,7 @@ test(
 
     // R7b: LensVisualizer answers its tabs' own asks: none on lines that are not its authored indices, and of a
     // case off the design plane only the bokeh tile, which the tab draws at a plane of its choosing.
-    const native = manifest.jobs.filter((job) => job.rung === "r7b");
+    const native = manifest.jobs.filter((job) => job.rung === "spot-vs-optiland");
     assert.deepEqual([...new Set(native.map((job) => job.engine))].sort(), ["lv", "optiland"]);
     assert.equal(native.length, 2 * ASKS * RUNS.length);
     const statuses = (run: string, engine: string): string[] =>
@@ -102,7 +102,7 @@ test(
     assert.deepEqual(statuses(BEST, "lv"), ["focus.off-design", "focus.off-design", "focus.off-design", "ok"]);
     for (const run of RUNS) assert.deepEqual(statuses(run, "optiland"), Array(ASKS).fill("ok"), run);
 
-    const recorded = pairsOf(comparisons, "r7b", SPOT_NATIVE);
+    const recorded = pairsOf(comparisons, "spot-vs-optiland", SPOT_NATIVE);
     assert.equal(recorded.length, ASKS * RUNS.length);
     const answered = recorded.filter((pair) => pair.verdict === "RECORDED");
     assert.equal(answered.length, ASKS + 1);

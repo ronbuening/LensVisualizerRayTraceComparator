@@ -22,6 +22,7 @@ import { MTF_NATIVE } from "../contract/quantities/mtfNative.ts";
 import type { ManifestJob, RunManifest } from "../core/manifest.ts";
 import { RUNGS } from "../core/rungs.ts";
 import { DASHBOARD_TEXT, MATRIX_ROWS } from "../report/wording.ts";
+import { SORTING_LIMITS } from "../vocabulary/metrics.ts";
 import { answerOf, samePair } from "./chartViews.ts";
 import type { Answer, MtfDifferenceView, MtfOverlayView, SectionCharts, StoreReader } from "./chartViews.ts";
 import { pairDetails } from "./compareCharts.ts";
@@ -30,11 +31,16 @@ import { caseDocument, figureAt, optionalFigureAt } from "./figure.ts";
 import type { DocumentName, Figure } from "./figure.ts";
 import type { LensRunRef } from "./lens.ts";
 import type { CaseSummary, Loaded } from "./sources.ts";
+import { currentCheckId, currentEngineId } from "../core/legacyIds.ts";
 
 const TEXT = DASHBOARD_TEXT.compare;
 
 /** The engines a recorded rung sets beside LensVisualizer's own analysis: its counterparts. */
-export const COUNTERPARTS: readonly string[] = Object.freeze(["optiland", "optiland-wave", "flux"]);
+export const COUNTERPARTS: readonly string[] = Object.freeze([
+  "optiland",
+  "otf-of-optiland-wavefront",
+  "flux-of-lv-rays",
+]);
 /** LensVisualizer's engine. */
 export const LV_ENGINE = "lv";
 
@@ -45,27 +51,22 @@ export type ConditionFacet = (typeof CONDITION_FACETS)[number];
 
 /** The metric of a gated rung a card's line names: the one of the rung's metrics that says most of the tab's rays. */
 export const GATED_HEADLINES: Readonly<Record<string, string>> = Object.freeze({
-  r0: "sag.maxScaled",
-  r1: "firstOrder.maxAbs",
-  r2: "hits.maxDistance",
-  r3: "opticalPath.maxAbs",
-  r4: "mtf.maxAbs",
-  r4f: "mtf.maxAbs",
-  r6a: "waveMtf.maxAbs",
-  r7a: "transverseError.maxAbs",
-  r8a: "intercept.maxScaled",
-  r9a: "landing.maxAbs",
-  r10a: "tangentialFocus.maxScaled",
-  r11a: "illumination.maxAbs",
+  "built-system": "sag.maxScaled",
+  "first-order": "firstOrder.maxAbs",
+  "ray-trace": "hits.maxDistance",
+  "optical-path": "opticalPath.maxAbs",
+  "geometric-mtf": "mtf.maxAbs",
+  "lv-mtf-replay": "mtf.maxAbs",
+  "wave-mtf": "waveMtf.maxAbs",
+  "spot-rays": "transverseError.maxAbs",
+  "axial-rays": "intercept.maxScaled",
+  "chief-rays": "landing.maxAbs",
+  "field-curve-rays": "tangentialFocus.maxScaled",
+  "vignetting-rays": "illumination.maxAbs",
 });
 
 /** The metrics of a recorded rung that are limits of its sorting (an element beyond one is `data`), not bands. */
-export const SORTING_METRICS: readonly string[] = Object.freeze([
-  "chiefLanding.maxAbs",
-  "landing.maxAbs",
-  "pupilRadius.relative",
-  "rearFocus.maxAbs",
-]);
+export const SORTING_METRICS: readonly string[] = SORTING_LIMITS;
 
 /** Whether a recorded metric counts elements: how many fields or lines the comparison sorted into a class. */
 function isCount(name: string): boolean {
@@ -78,12 +79,22 @@ export interface CompareTab {
   readonly title: string;
   readonly gated: readonly string[];
   readonly recorded: readonly string[];
+  /** The counterparts its recorded rungs set beside LensVisualizer, in the order of `COUNTERPARTS`: what its badge names. */
+  readonly counterparts: readonly string[];
 }
 
 /** Whether a recorded rung sets LensVisualizer beside a counterpart: its own engines name one. */
 function hasCounterpart(rung: string): boolean {
-  const engines = RUNGS.find((each) => each.id === rung)?.engines ?? [];
+  const engines = RUNGS.find((each) => each.id === currentCheckId(rung))?.engines ?? [];
   return engines.includes(LV_ENGINE) && engines.some((engine) => COUNTERPARTS.includes(engine));
+}
+
+/** The counterparts of LensVisualizer that some of `rungs` are asked of, in the order of `COUNTERPARTS`. */
+function counterpartsOf(rungs: readonly string[]): string[] {
+  const engines = new Set(
+    rungs.flatMap((rung) => RUNGS.find((each) => each.id === currentCheckId(rung))?.engines ?? []),
+  );
+  return COUNTERPARTS.filter((engine) => engines.has(engine));
 }
 
 /** The cards, in the order of the validation matrix's rows, without the row of analyses LensVisualizer has no tab of. */
@@ -93,12 +104,16 @@ export const COMPARE_TABS: readonly CompareTab[] = Object.freeze(
     title: row.title,
     gated: [...row.gated],
     recorded: row.recorded.filter(hasCounterpart),
+    counterparts: counterpartsOf(row.recorded.filter(hasCounterpart)),
   })),
 );
 
-/** Whether a pair is of LensVisualizer and a counterpart. */
+/** Whether a pair is of LensVisualizer and a counterpart, either named by an id it had before a rename or by today's. */
 function counterpartPair(a: string, b: string): boolean {
-  return (a === LV_ENGINE && COUNTERPARTS.includes(b)) || (b === LV_ENGINE && COUNTERPARTS.includes(a));
+  const [first, second] = [currentEngineId(a), currentEngineId(b)];
+  return (
+    (first === LV_ENGINE && COUNTERPARTS.includes(second)) || (second === LV_ENGINE && COUNTERPARTS.includes(first))
+  );
 }
 
 // ── Inputs ───────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -538,7 +553,7 @@ function gatedLine(
   caseIds: readonly string[],
   rung: string,
 ): GatedLine {
-  const metric = GATED_HEADLINES[rung] ?? null;
+  const metric = GATED_HEADLINES[currentCheckId(rung)] ?? null;
   const byPair = new Map<string, { a: string; b: string; verdicts: { verdict: Verdict; count: number }[] }>();
   const candidates: { a: string; b: string; value: Figure }[] = [];
   const add = (a: string, b: string, verdicts: readonly { verdict: Verdict; count: number }[]): void => {
@@ -571,7 +586,8 @@ function gatedLine(
     for (const { stem, baseline, runsOfCase } of inputs.baselines) {
       for (const caseId of caseIds) {
         for (const place of runsOfCase.get(caseId) ?? []) {
-          const rungAt = baseline.runs[place].rungs.findIndex((each) => each.rung === rung);
+          // A baseline committed before a rename names the check by its old id.
+          const rungAt = baseline.runs[place].rungs.findIndex((each) => currentCheckId(each.rung) === rung);
           if (rungAt < 0) continue;
           if (!stems.includes(stem)) stems.push(stem);
           baseline.runs[place].rungs[rungAt].pairs.forEach((record, pairAt) => {
@@ -649,7 +665,13 @@ function metricViews(
     const attention =
       inputs.policy === null
         ? null
-        : optionalFigureAt(inputs.policy.document, inputs.policy.policy, ["rungs", rung, "metrics", name, "attention"]);
+        : optionalFigureAt(inputs.policy.document, inputs.policy.policy, [
+            "rungs",
+            currentCheckId(rung),
+            "metrics",
+            name,
+            "attention",
+          ]);
     const sorting = SORTING_METRICS.includes(name);
     out.push({ name, unit, value, band: sorting ? null : attention, limit: sorting ? attention : null });
   });
@@ -726,7 +748,7 @@ function recordedLines(
     for (const caseId of caseIds) {
       for (const place of runsOfCase.get(caseId) ?? []) {
         const run = baseline.runs[place];
-        const rungAt = run.rungs.findIndex((each) => each.rung === rung);
+        const rungAt = run.rungs.findIndex((each) => currentCheckId(each.rung) === rung);
         if (rungAt < 0) continue;
         run.rungs[rungAt].pairs.forEach((record, pairAt) => {
           if (!counterpartPair(record.a, record.b)) return;

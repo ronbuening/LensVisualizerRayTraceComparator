@@ -19,7 +19,7 @@ test("job ceilings respect memory, R6c replicas and CPUs, and never refuse a ser
   // A serial run starts no pool: it is allowed whatever the budget, so a 16 GB machine (budget 2 GiB) still runs.
   assert.equal(maxJobs(2, 2.5, 14), 1);
   assert.equal(maxJobs(0, 2.5, 14), 1);
-  assert.equal(jobEstimateGiB(["r4", "r6c"]), 4);
+  assert.equal(jobEstimateGiB(["geometric-mtf", "mtf-vs-optiland-wavefront"]), 4);
   assert.equal(jobsOption(undefined, 10), 1);
   assert.equal(jobsOption(undefined, 2), 1);
   assert.equal(jobsOption("1", 0), 1);
@@ -38,12 +38,12 @@ test("written and overridden suite rungs select the estimate before exporting an
     file,
     JSON.stringify({
       name: "memory",
-      defaults: { rungs: ["r6c"] },
+      defaults: { rungs: ["mtf-vs-optiland-wavefront"] },
       runs: [{ name: "one", lens: { kind: "fixture", path: "unused.json" } }],
     }),
   );
   assert.equal(suiteJobEstimate(file), 4);
-  assert.equal(suiteJobEstimate(file, ["r0"]), 2.5);
+  assert.equal(suiteJobEstimate(file, ["built-system"]), 2.5);
   const runsDir = join(root, "runs");
   const command = createRunCommand({ rootDir: FAKE_ROOT, cwd: root, env: { LVRTC_RUNS_DIR: runsDir } });
   let error = "";

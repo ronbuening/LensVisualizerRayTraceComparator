@@ -39,7 +39,7 @@ export const R12B_POLICY: Policy = {
   contract: "1.0",
   kind: "policy",
   version: 1,
-  rungs: { r12b: loadPolicy().rungs.r12b },
+  rungs: { "summary-vs-optiland": loadPolicy().rungs["summary-vs-optiland"] },
 };
 
 /** What one cycle of the fixture gave. */
@@ -53,7 +53,7 @@ const ASK: SummaryNativeSpec = { lines: [0, 1] };
 
 /** The rung `r12b` as stand-ins can be asked it: a summary at both lines of the lens. */
 export const R12B_FIXTURE_RUNG: RungDefinition = {
-  id: "r12b",
+  id: "summary-vs-optiland",
   quantity: SUMMARY_NATIVE,
   engines: ["lv", "optiland"],
   buildRequests: (opticalCase) => [
@@ -151,7 +151,7 @@ export async function r12bCycle(runsDir: string): Promise<R12Cycle> {
     registry: watched.registry,
     runsDir,
     rungDefinitions,
-    rungs: ["r12b"],
+    rungs: ["summary-vs-optiland"],
   });
   const store = createResultStore(join(runsDir, STORE_DIRECTORY));
   const cases = (caseId: string) => readRunCase(join(runsDir, R12B_GOLDEN), caseId);

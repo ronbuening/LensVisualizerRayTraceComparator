@@ -22,14 +22,14 @@ test("optiland is asked again once, at 512 rays, for the run whose figure is out
     [
       "edge lv ok",
       "edge optiland ok",
-      "edge wave ok",
+      "edge wave-mtf-of-lv-rays ok",
       "beyond lv ok",
       "beyond optiland ok",
-      "beyond wave ok",
+      "beyond wave-mtf-of-lv-rays ok",
       "beyond optiland +fft512 ok",
       "polychromatic lv ok",
       "polychromatic optiland unsupported",
-      "polychromatic wave ok",
+      "polychromatic wave-mtf-of-lv-rays ok",
     ],
   );
   const asked = watched.requests.filter((_request, index) => watched.ran[index] === "optiland");
@@ -54,15 +54,15 @@ test("each pair of the three is RECORDED, marked for ATTENTION or UNSUPPORTED, a
     .filter((set) => set.mode === "pairwise")
     .map((set) => `${set.run}: ${set.pairs.map((pair) => `${pair.a}-${pair.b} ${pair.verdict}`).join(", ")}`);
   assert.deepEqual(verdicts, [
-    "edge: lv-optiland RECORDED, lv-wave RECORDED, optiland-wave RECORDED",
-    "beyond: lv-optiland ATTENTION, lv-wave RECORDED, optiland-wave ATTENTION",
-    "polychromatic: lv-optiland UNSUPPORTED, lv-wave RECORDED, optiland-wave UNSUPPORTED",
+    "edge: lv-optiland RECORDED, lv-wave-mtf-of-lv-rays RECORDED, optiland-wave-mtf-of-lv-rays RECORDED",
+    "beyond: lv-optiland ATTENTION, lv-wave-mtf-of-lv-rays RECORDED, optiland-wave-mtf-of-lv-rays ATTENTION",
+    "polychromatic: lv-optiland UNSUPPORTED, lv-wave-mtf-of-lv-rays RECORDED, optiland-wave-mtf-of-lv-rays UNSUPPORTED",
   ]);
   // No engine is a participant twice: the step is its engine's, and its values stand beside the first answer's.
   for (const set of comparisons.comparisons) {
     assert.deepEqual(
       set.participants.map((participant) => participant.engine),
-      ["lv", "optiland", "wave"],
+      ["lv", "optiland", "wave-mtf-of-lv-rays"],
     );
   }
   const beyond = comparisons.comparisons.find((set) => set.run === "beyond" && set.mode === "pairwise");
@@ -103,7 +103,7 @@ test("the table has a row per field, cut and frequency, with the difference, its
   assert.deepEqual(edge.mtf.columns, [
     { engine: "lv", step: null, judged: true },
     { engine: "optiland", step: null, judged: true },
-    { engine: "wave", step: null, judged: false },
+    { engine: "wave-mtf-of-lv-rays", step: null, judged: false },
   ]);
   assert.deepEqual(edge.mtf.bands, {
     onAxis: ON_AXIS_BAND,
@@ -139,7 +139,7 @@ test("the table has a row per field, cut and frequency, with the difference, its
   // One unit in the last place beyond the band is ATTENTION, and the difference is of optiland's last step.
   assert.deepEqual(
     beyond.mtf.columns.map((column) => `${column.engine} ${column.step} ${column.judged}`),
-    ["lv null true", "optiland null false", "optiland fft512 true", "wave null false"],
+    ["lv null true", "optiland null false", "optiland fft512 true", "wave-mtf-of-lv-rays null false"],
   );
   const marked = beyond.row(0, "sagittal", 50);
   assert.deepEqual(
@@ -196,7 +196,7 @@ test("the report of the stand-ins is its golden file, claims nothing it may not,
   // The table is of the shown frequencies; the model holds them all.
   assert.match(
     report.markdown,
-    /^\| 0 \| sagittal \| 50 \| 0\.5000 \| 0\.4961 \| 0\.4961 \| 0\.5000 \| 3\.91e-3 \| ATTENTION \| method \|$/m,
+    /^\| 0 \| sagittal \| 50 \| 0\.5000 \| 0\.4961 \| 0\.4961 \| 0\.5000 \| 3\.91e-3 \| Side by side, worth a look \| the methods differ \|$/m,
   );
   assert.doesNotMatch(report.markdown, /^\| 1 \| tangential \| 70 \|/m);
   assert.match(report.markdown, /^### The engines' own MTF$/m);

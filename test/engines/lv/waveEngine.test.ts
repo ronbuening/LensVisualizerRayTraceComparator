@@ -1,7 +1,7 @@
-// The engine `wave`, with no LensVisualizer: on the fake LV tree, whose launch and tracer have LensVisualizer's
-// names and numbers of their own. What is held here is what the engine does with a request: what it refuses, which
-// rays it asks for, and that its answer is the estimator's on those very rays. What the estimator computes is
-// test/estimators/waveOtf.test.ts, and what a lattice may carry test/estimators/waveValidity.test.ts.
+// The engine `wave-mtf-of-lv-rays`, with no LensVisualizer: on the fake LV tree, whose launch and tracer have
+// LensVisualizer's names and numbers of their own. What is held here is what the engine does with a request: what it
+// refuses, which rays it asks for, and that its answer is the estimator's on those very rays. What the estimator
+// computes is test/estimators/waveOtf.test.ts, and what a lattice may carry test/estimators/waveValidity.test.ts.
 import assert from "node:assert/strict";
 import { test, type TestContext } from "node:test";
 
@@ -88,8 +88,8 @@ test("the engine is wave: LensVisualizer's fingerprint, an adapter revision of i
   });
   t.after(() => adapter.close());
   const descriptor = await adapter.describe();
-  assert.equal(LV_WAVE_ENGINE_ID, "wave");
-  assert.equal(descriptor.identity.id, "wave");
+  assert.equal(LV_WAVE_ENGINE_ID, "wave-mtf-of-lv-rays");
+  assert.equal(descriptor.identity.id, "wave-mtf-of-lv-rays");
   assert.equal(descriptor.identity.fingerprint, binding.fingerprint().engineClosureHash);
   assert.equal(descriptor.identity.adapterRevision, adapterRevision(LV_WAVE_ENGINE_MODULE).revision);
   assert.deepEqual(descriptor.capabilities.quantities, { [MTF_NATIVE]: { version: 1 } });

@@ -79,9 +79,15 @@ const CONFIGURATIONS: readonly { readonly key: string; readonly zoomT: number; r
  * the Sigma 35 mm's case moved with its authored rims (LV #943), and its figures at 70 % with it. At LV ff57c4469
  * (closure 0b6c085a, 184 files: LV #954's focus readout), 290c6dd85 (closure 0516a7c7: LV #949's glass entry) and
  * 25f65d4b4 (closure 4669921b: LV #950's two glass entries) every configuration was measured again and found
- * unchanged, case and figures.
+ * unchanged, case and figures. At LV 420b47555 (closure c5c5ba6d, 187 files: LV #960's curved image surfaces, whose
+ * flat branch is every analysis's old line, and six lens packages) every configuration was measured again and found
+ * unchanged, case and figures. At LV f5b456fec (closure f0066505, 193 files: LV #988's MTF audit, whose photopic
+ * spectrum is nine lines, a Gauss-Legendre quadrature of V(λ) from 560 nm, where it was five from 555 nm) every case
+ * moved with its lines and every figure with them: measured and pinned anew. The shifts moved by up to 0.0045 mm (the
+ * Canon EF 135 mm, -0.0269 to -0.0224), the figures by up to 0.030 (the same lens on the axis at 30 cycles/mm, 0.7546
+ * to 0.7844); no axial marginal ray is vignetted, as before.
  */
-const PINNED_CLOSURE = "4669921bae7179c7eddd220fa367e696eae7acec3a5a788d0ca90da632d3eb6b";
+const PINNED_CLOSURE = "f0066505c45b705ef5e22a44ee6303ae9f47de00e295faad6d72b6090cdd4a61";
 
 /**
  * What LensVisualizer's MTF tab presents for each configuration, as `lvrtc mtf` prints it: the case the figures
@@ -103,100 +109,100 @@ const PINNED: Readonly<
   >
 > = {
   "canon-ef-135-f2l-usm": {
-    caseId: "5a1e4774772748058756cfcb4d918aedab000c3e4857e484254fe6688c651513",
+    caseId: "b5db810e50204c2dc4f40c8720eec2acc118a3f5ba43ad7718e8e361f62c9a8c",
     spectrum: "photopic",
-    shift: "-0.0269",
+    shift: "-0.0224",
     vignetted: "-",
-    axis: ["0.9492", "0.9492", "0.7546", "0.7546"],
-    field70: ["0.9428", "0.9430", "0.6692", "0.7050"],
+    axis: ["0.9582", "0.9582", "0.7844", "0.7844"],
+    field70: ["0.9440", "0.9467", "0.6637", "0.7178"],
   },
   "fujifilm-fujinon-gf-63mm-f28-r-wr": {
-    caseId: "b241011c9681597d858ca830bb42493ed5d2719b1aa8782269e0f54cde52c35f",
+    caseId: "45f1fc0b454f809de9f793d565d6aa7bd8ca0460ea03e89c675039251c296a60",
     spectrum: "photopic",
-    shift: "-0.0420",
+    shift: "-0.0439",
     vignetted: "-",
-    axis: ["0.9693", "0.9693", "0.8786", "0.8786"],
-    field70: ["0.8312", "0.8813", "0.5938", "0.6326"],
+    axis: ["0.9711", "0.9711", "0.8897", "0.8897"],
+    field70: ["0.8329", "0.8830", "0.5976", "0.6407"],
   },
   "sigma-35mm-f14-dg-hsm-a": {
-    caseId: "7ff423e8023923c0d2ce5797fab6e1acce05b4d12bfb3528765c4020ba4fd7c9",
+    caseId: "49eae83980d3a2b089251ac79188e8e6f11910bfd72f33cb245397531e11cf16",
     spectrum: "photopic",
-    shift: "-0.0257",
+    shift: "-0.0228",
     vignetted: "-",
-    axis: ["0.9564", "0.9564", "0.7684", "0.7684"],
-    field70: ["0.7230", "0.8358", "0.4802", "0.5524"],
+    axis: ["0.9642", "0.9642", "0.7973", "0.7973"],
+    field70: ["0.7326", "0.8413", "0.4742", "0.5638"],
   },
   "nikkor-z50f12": {
-    caseId: "25e839a37b367ed1c9f7298f4e44f9fdb017645f73647e4f965832cb1d28ede2",
+    caseId: "84400e63b4de00e35171d3bd0bf8df3aa8e940f3d5dade0ee298761249c637e2",
     spectrum: "photopic",
-    shift: "-0.0507",
+    shift: "-0.0511",
     vignetted: "-",
-    axis: ["0.9756", "0.9756", "0.8540", "0.8540"],
-    field70: ["0.8431", "0.9277", "0.6152", "0.6973"],
+    axis: ["0.9781", "0.9781", "0.8713", "0.8713"],
+    field70: ["0.8462", "0.9290", "0.6211", "0.7144"],
   },
   "sony-fe-20mm-f18-g": {
-    caseId: "9bf71fcc2c01fb1e7c25546d8b6a2758be33c6bba8fe4742ebcd3fbac72405d7",
+    caseId: "3ef2cff569dc2714ff638c58f6b0ca0c1a10f180c31a8cf76095e96b3648dbda",
     spectrum: "photopic",
-    shift: "-0.0394",
+    shift: "-0.0397",
     vignetted: "-",
-    axis: ["0.9715", "0.9715", "0.8630", "0.8630"],
-    field70: ["0.7606", "0.3210", "0.1453", "0.0447"],
+    axis: ["0.9719", "0.9719", "0.8656", "0.8656"],
+    field70: ["0.7611", "0.3209", "0.1428", "0.0436"],
   },
   "sony-fe-400mm-f28-gm-oss": {
-    caseId: "25a3d0697df2ed6fe2fd355a06ce5f7a89664142dadd6e7d5e049d3bbc636df7",
+    caseId: "a58e00887093c8578107118a6f861e957b3ba012781c0061a213fc938268fd6d",
     spectrum: "photopic",
-    shift: "0.0512",
+    shift: "0.0516",
     vignetted: "-",
-    axis: ["0.9768", "0.9768", "0.9209", "0.9209"],
-    field70: ["0.9737", "0.9669", "0.9017", "0.8865"],
+    axis: ["0.9772", "0.9772", "0.9240", "0.9240"],
+    field70: ["0.9744", "0.9673", "0.9072", "0.8902"],
   },
   "sigma-105mm-f28-dg-dn-macro-art": {
-    caseId: "c5a507024e5ab43f94adcb83c67c948a9731a2af72fed96ac5515f6eb04f708e",
+    caseId: "a164cd6b31901aed41e804b10704df98977ca3559bc547c2f876eefea0af010f",
     spectrum: "photopic",
-    shift: "-0.0191",
+    shift: "-0.0192",
     vignetted: "-",
-    axis: ["0.9733", "0.9733", "0.9023", "0.9023"],
-    field70: ["0.9545", "0.9191", "0.7555", "0.5763"],
+    axis: ["0.9738", "0.9738", "0.9061", "0.9061"],
+    field70: ["0.9542", "0.9198", "0.7536", "0.5808"],
   },
   "nikon-z-24-70f4s": {
-    caseId: "1bd5a8443c6b4b625eb1568bd6805873a1ccbc2caaedbba46e51ee5a5fb5d2dc",
+    caseId: "392526a2d4fb6800be21455fb7097f75e53156a130b490f79830e62460359a12",
     spectrum: "photopic",
-    shift: "-0.0729",
+    shift: "-0.0743",
     vignetted: "-",
-    axis: ["0.9663", "0.9663", "0.8785", "0.8785"],
-    field70: ["0.9640", "0.9222", "0.8718", "0.6402"],
+    axis: ["0.9664", "0.9664", "0.8792", "0.8792"],
+    field70: ["0.9648", "0.9262", "0.8775", "0.6649"],
   },
   "nikon-z-24-70f4s-zoom1": {
-    caseId: "7c55143a9f94c725e66c944a44bf00e5871532ed3d91bcde1e1cffa7caa0dc33",
+    caseId: "9e3b47006624814732c91d238b73f183b938f21c947092003915ea16b13a4827",
     spectrum: "photopic",
-    shift: "0.0153",
+    shift: "0.0152",
     vignetted: "-",
-    axis: ["0.9688", "0.9688", "0.9024", "0.9024"],
-    field70: ["0.8553", "0.8808", "0.5863", "0.6755"],
+    axis: ["0.9688", "0.9688", "0.9032", "0.9032"],
+    field70: ["0.8549", "0.8839", "0.5873", "0.6820"],
   },
   "nikon-z-mc-105f28": {
-    caseId: "e492101b147bcf0f0e156d83376aba617d1c24f20cfdcf0d82b48a03f8b4a92e",
+    caseId: "ceaed4b7737a40f115bd46b8c7fff24f61a9b7586604a0c02db850a74702fc97",
     spectrum: "photopic",
-    shift: "0.0304",
+    shift: "0.0308",
     vignetted: "-",
-    axis: ["0.9756", "0.9756", "0.9167", "0.9167"],
-    field70: ["0.9721", "0.9389", "0.8889", "0.7269"],
+    axis: ["0.9761", "0.9761", "0.9199", "0.9199"],
+    field70: ["0.9721", "0.9406", "0.8891", "0.7378"],
   },
   "nikon-z-135f18-plena": {
-    caseId: "9ac66541b918eea604fa81c70999f824029cc1d2d481851438f0d5d7e86d8224",
+    caseId: "47a027ecb521ce8e8589f9605124d6b966785de4024b1793e9961dbcfcc75afa",
     spectrum: "photopic",
-    shift: "-0.0088",
+    shift: "-0.0097",
     vignetted: "-",
-    axis: ["0.9804", "0.9804", "0.9167", "0.9167"],
-    field70: ["0.9657", "0.9660", "0.8237", "0.8605"],
+    axis: ["0.9807", "0.9807", "0.9185", "0.9185"],
+    field70: ["0.9662", "0.9669", "0.8269", "0.8653"],
   },
   "sigma-45mm-f28-dg-dn-contemporary": {
-    caseId: "6f62ee09c0c8b3a1cc345e3ed0e0e27aebea0ce5e96cdbee7664ffbab4914e73",
+    caseId: "e88166a19b0d185b63ed16ca4c493102684d84578284592096743da5fd9f8bdd",
     spectrum: "photopic",
-    shift: "-0.0315",
+    shift: "-0.0327",
     vignetted: "-",
-    axis: ["0.9376", "0.9376", "0.7729", "0.7729"],
-    field70: ["0.9519", "0.9148", "0.7649", "0.6872"],
+    axis: ["0.9389", "0.9389", "0.7796", "0.7796"],
+    field70: ["0.9530", "0.9172", "0.7718", "0.6984"],
   },
 };
 
@@ -323,10 +329,12 @@ async function stateOf(
 
 /**
  * The request LensVisualizer's MTF tab makes for a lens as it opens, written out from MtfTab.tsx and
- * useLensComputation.ts as they read at 607ff23ae, with the tab's defaults as literals: diffraction, the photopic
- * spectrum where the glass data allows, best axial focus, a grid cap of 256 (LV #936) and fields at 10 % steps; the
- * stop radius the stop rule's at the slider's f-number, `stopSemiDiameterForFNumber(fNumber, zoomT, L)`, and the pupil
- * radius the paraxial pupil of that stop, `entrancePupilAtState(stop, ...)` (LV #933), with the aperture slider at 0.
+ * useLensComputation.ts as they read at 607ff23ae, and again at f5b456fec (LV #988: the defaults resolved with the
+ * advanced options off, the regular spectrum and the default wavelength), with the tab's defaults as literals:
+ * diffraction, the photopic spectrum where the glass data allows, best axial focus, a grid cap of 256 (LV #936) and
+ * fields at 10 % steps; the stop radius the stop rule's at the slider's f-number, `stopSemiDiameterForFNumber(fNumber,
+ * zoomT, L)`, and the pupil radius the paraxial pupil of that stop, `entrancePupilAtState(stop, ...)` (LV #933), with
+ * the aperture slider at 0.
  * The comparator's own restatement is src/engines/lv/tabRequest.ts; this one shares no line with it.
  */
 function tabRequest(binding: LvBinding, runtime: LvRuntimeLens, state: LvPreparedState): LvMtfOptions {
@@ -337,7 +345,7 @@ function tabRequest(binding: LvBinding, runtime: LvRuntimeLens, state: LvPrepare
   const fieldGeometry = api.computeAnalysisFieldGeometryAtState(focusT, zoomT, runtime, 0);
   return {
     method: "diffraction",
-    spectrum: api.resolveMtfSpectrum(state, "photopic").spectrum,
+    spectrum: api.resolveMtfSpectrum(state, "photopic", 546.074).spectrum,
     focus: "best-axial",
     maxGridSize: 256,
     fieldFractions: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
@@ -704,8 +712,8 @@ test(
     assert.match(
       slow.out,
       offered || wideOpenCase
-        ? /^lv {2}ok {2}computed$/m
-        : /^lv {2}unsupported {2}computed\n {2}feature aperture\.f8-comparison: the lens /m,
+        ? /^lv {2}answered {2}asked now$/m
+        : /^lv {2}not computed {2}asked now\n {2}feature aperture\.f8-comparison: the lens /m,
     );
   },
 );
@@ -932,7 +940,7 @@ test(
     // Through the command, such a lens is presented as LensVisualizer presents it: no MTF, and why.
     const fisheye = await lvrtc(tempDir(), "mtf", refused[0].split(" ")[0]);
     assert.equal(fisheye.code, 0, fisheye.err);
-    assert.match(fisheye.out, /^lv {2}unsupported {2}computed\n {2}feature [a-z-]+: \S/m);
+    assert.match(fisheye.out, /^lv {2}not computed {2}asked now\n {2}feature [a-z-]+: \S/m);
   },
 );
 

@@ -17,6 +17,7 @@ import { BUILTIN_ENGINES } from "./builtin.ts";
 import type { BuiltinEngines } from "./builtin.ts";
 import { RemoteEngineAdapter } from "./remote.ts";
 import type { EngineTimeouts } from "./remote.ts";
+import { LEGACY_ENGINE_IDS, legacyEngineDefinitions } from "../core/legacyIds.ts";
 
 /** What a transport factory is told beside the definition. */
 export interface TransportContext {
@@ -215,16 +216,32 @@ export interface EngineRegistry {
   create(id: string): Promise<EngineAdapter>;
 }
 
+/** The code of a configuration that defines an engine under an id that has been renamed. */
+export const OLD_ENGINE_ID_CODE = "engine-defined-under-old-id";
+
+/** A configuration that defines an engine under the id it had before it was renamed. */
+export class OldEngineIdError extends Error {
+  readonly code: string = OLD_ENGINE_ID_CODE;
+}
+
 /**
  * The registry of the engines that `loaded` defines under `engines.<id>`, with the built-in engines beside them.
  * `factories` maps each transport to what builds it, and defaults to every transport implemented; `builtins`
- * defaults to the comparator's own (`BUILTIN_ENGINES`).
+ * defaults to the comparator's own (`BUILTIN_ENGINES`). Throws an `OldEngineIdError` for a configuration that defines
+ * an engine under an id that has been renamed (`legacy`, `LEGACY_ENGINE_IDS`): what it defines would be run under an
+ * id no result is kept by any more.
  */
 export function createEngineRegistry(
   loaded: Pick<LoadedConfig, "rootDir" | "config">,
   factories: TransportFactories = TRANSPORT_FACTORIES,
   builtins: BuiltinEngines = BUILTIN_ENGINES,
+  legacy: Readonly<Record<string, string>> = LEGACY_ENGINE_IDS,
 ): EngineRegistry {
+  const old = legacyEngineDefinitions(Object.keys(loaded.config.engineDefinitions), legacy);
+  if (old.length > 0) {
+    const said = old.map(({ old: id, now }) => `engines.${id} (now ${now})`).join(", ");
+    throw new OldEngineIdError(`${OLD_ENGINE_ID_CODE}: the configuration defines ${said} under an old id`);
+  }
   return {
     ids: () => Object.keys(loaded.config.engineDefinitions).sort(),
     builtinIds: () => Object.keys(builtins).sort(),

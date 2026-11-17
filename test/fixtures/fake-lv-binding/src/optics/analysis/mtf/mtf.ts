@@ -127,14 +127,32 @@ function mark(field: FakeMtfFieldResult, reason: string, message: string): FakeM
   return field;
 }
 
+// As LV since #988: the method words the note (the fake's own words), the share alone decides.
 export function assessUnresolvedFlux(
   unresolvedRays: number,
   unknownFluxFraction: number,
+  method: string,
   inBeam: number | null = null,
 ): { acceptable: boolean; note: string | null } {
   if (unknownFluxFraction > MTF_MAX_UNKNOWN_FLUX) return { acceptable: false, note: null };
   if (unresolvedRays === 0) return { acceptable: true, note: null };
-  return { acceptable: true, note: `${unresolvedRays} unresolved samples, ${inBeam ?? "?"} beside the beam, are omitted.` };
+  return {
+    acceptable: true,
+    note: `${unresolvedRays} unresolved samples, ${inBeam ?? "?"} beside the beam, are omitted from the ${method} estimate.`,
+  };
+}
+
+// As LV since #988: each line's transmitted and unresolved-in-beam weights at the line's incident weight.
+export function mtfUnresolvedFluxFraction(
+  lines: readonly { weight: number; transmittedWeight: number; unresolvedInBeamWeight: number }[],
+): number {
+  let sampledWeight = 0;
+  let unresolvedWeight = 0;
+  for (const line of lines) {
+    sampledWeight += line.weight * (line.transmittedWeight + line.unresolvedInBeamWeight);
+    unresolvedWeight += line.weight * line.unresolvedInBeamWeight;
+  }
+  return sampledWeight > 0 ? unresolvedWeight / sampledWeight : 0;
 }
 
 // The fake's transfer function of one line: plain sums in the order of the rays, a cosine and a sine a ray.
@@ -172,8 +190,7 @@ function sampledAtGrid(
   const openBorders = { x: false, y0: false, y1: false };
   const cuts = { x: [] as { re: number[]; im: number[]; weight: number }[], y: [] as { re: number[]; im: number[]; weight: number }[] };
   let reference: Spot | undefined;
-  let sampled = 0;
-  let unresolved = 0;
+  const fluxWeights: { weight: number; transmittedWeight: number; unresolvedInBeamWeight: number }[] = [];
   let dark = 0;
   for (const [index, line] of support.spectralLines.entries()) {
     let bundle: FakeBundle | null;
@@ -205,8 +222,7 @@ function sampledAtGrid(
     if (lattice && lattice.aimedCount === 0 && lattice.blockedCount === 0 && lattice.unaimedCount > 0)
       return unavailable("aim-failed", "The fake aims no cell of this lattice.");
     const transmitted = bundle.rays.reduce((sum, ray) => sum + ray.weight, 0);
-    sampled += transmitted + bundle.unresolvedInBeamWeight;
-    unresolved += bundle.unresolvedInBeamWeight;
+    fluxWeights.push({ weight: line.weight, transmittedWeight: transmitted, unresolvedInBeamWeight: bundle.unresolvedInBeamWeight });
     if (bundle.rays.length === 0 && bundle.unaimed + bundle.failed === 0) {
       dark++;
       continue;
@@ -221,9 +237,9 @@ function sampledAtGrid(
   }
   if (dark === support.spectralLines.length) return unavailable("vignetted", "No rays reach this image height.", true);
   if (dark > 0) return unavailable("empty-pupil", "Too little pupil remains to estimate MTF.", true);
-  field.unknownFluxFraction = sampled > 0 ? unresolved / sampled : 0;
+  field.unknownFluxFraction = mtfUnresolvedFluxFraction(fluxWeights);
   const unresolvedRays = field.failedRays + field.unaimedRays;
-  const flux = assessUnresolvedFlux(unresolvedRays, field.unknownFluxFraction, field.unresolvedInBeamRays);
+  const flux = assessUnresolvedFlux(unresolvedRays, field.unknownFluxFraction, options.method, field.unresolvedInBeamRays);
   if (!flux.acceptable) return unavailable("trace-failed", "Unresolved samples beside the beam carry too much flux.", true);
   if (flux.note) field.notes.push(flux.note);
   const modulus = (lines: { re: number[]; im: number[]; weight: number }[]): number[] => {
@@ -316,7 +332,9 @@ function* sampledField(job: Job, target: FakeFieldTarget): Generator<FakeMtfFiel
   yield* refineMtfField(job.ladder, evaluate, job.frequencies);
 }
 
-export function* computeMtfSteps(request: FakeAnalysisRequest, settings: Omit<FakeMtfOptions, "pupilSemiDiameterMm" | "stopSemiDiameterMm">): Generator<FakeMtfResult, FakeMtfResult> {
+// As LV since #988: progress, a phase boundary with the result where a step completed one. The request before any
+// field is traced is the first progress that carries a result; a refused request yields nothing.
+export function* computeMtfSteps(request: FakeAnalysisRequest, settings: Omit<FakeMtfOptions, "pupilSemiDiameterMm" | "stopSemiDiameterMm">): Generator<{ phase: { kind: string }; result?: FakeMtfResult }, FakeMtfResult> {
   const state = request.preparedGeometry;
   const options = resolveMtfOptions(request, settings);
   const support = assessMtfSupport(request, settings);
@@ -333,6 +351,7 @@ export function* computeMtfSteps(request: FakeAnalysisRequest, settings: Omit<Fa
     axialVignetting: null,
   };
   if (!support.available) return result;
+  yield { phase: { kind: "geometry" } };
 
   const chiefHeight = mtfChiefHeight(state, options, support);
   const geometry = resolveMtfFieldGeometry(state, mtfModeledHalfField(state), chiefHeight) as FakeFieldGeometry | null;
@@ -366,7 +385,8 @@ export function* computeMtfSteps(request: FakeAnalysisRequest, settings: Omit<Fa
   // The fake's axial marginal ray is vignetted only where a lens says so, at the surface it names, after the stop.
   result.axialVignetting =
     stated.axialVignettingLabel === undefined ? null : { surfaceLabel: stated.axialVignettingLabel, beforeStop: false };
-  yield result;
+  yield { phase: { kind: "aperture" } };
+  yield { phase: { kind: "aperture" }, result };
 
   if (stated.sampled && options.method === "geometric") {
     const job: Job = {
@@ -381,7 +401,7 @@ export function* computeMtfSteps(request: FakeAnalysisRequest, settings: Omit<Fa
       if (target.outsideModel) continue;
       for (const field of sampledField(job, target)) {
         result.fields[index] = field;
-        yield result;
+        yield { phase: { kind: "field" }, result };
       }
     }
     return result;

@@ -1,21 +1,52 @@
 // The pages of the dashboard, from their view models alone: pure functions, equal views giving equal bytes. Every
 // interpolated string is escaped; a page has one inline <style> (light and dark by prefers-color-scheme) and no
 // script. A number read from a file shows its source on hover; every sentence is a template of `DASHBOARD_TEXT`.
+// Every label is the vocabulary's (`src/vocabulary`): a check by its title with its id beside it, an engine by its
+// name with its id on hover, a verdict, badge, class or figure by its label with the stored value on hover. Hashes
+// (suite file, lens states, requests, engine code, store keys) are under a <details> whose summary is "Identifiers".
 import { numberText } from "../compare/metricText.ts";
 import type { Verdict } from "../contract/comparison.ts";
+import { LEGACY_RUN_CODE } from "../core/legacyIds.ts";
 import { formatFixed } from "../core/numeric/format.ts";
 import {
+  COMPARE_AXES,
   CONSENSUS_SECTION,
   DASHBOARD_TEXT,
+  fieldReasonText,
   GEOMETRIC_SEVERAL_LINES,
   MTF_COMPARISON_INTROS,
   MTF_COMPARISON_OUTRO,
-  MTF_ROW_STATUS_TEXT,
   NOT_COVERED,
   WAVEFRONT_SEVERAL_LINES,
   consensusSentence,
 } from "../report/wording.ts";
-import type { MtfRowStatus } from "../report/wording.ts";
+import {
+  CHECKS_COMMAND_TEXT,
+  BASELINE_KIND_TEXT,
+  CLASS_KIND,
+  GLOSSARY_TEXT,
+  LIMIT_KIND_TEXT,
+  METHOD_TEXT,
+  PLACE_TEXT,
+  ROW_STATUS_TEXT,
+  SORTING_LIMITS,
+  SORTING_LIMIT_LABEL,
+  SUPPORT_STATUS_TEXT,
+  VERDICT_TEXT,
+  badgeLabel,
+  checkTitle,
+  classLabel,
+  codeTextOf,
+  engineName,
+  metricLabel,
+  modeLabel,
+  reasonsText,
+  quantityLabel,
+  rowStatusLabel,
+  valueLabel,
+  verdictLabel,
+  verdictShort,
+} from "../vocabulary/index.ts";
 import { HEAT_MAP_ROWS } from "./chartViews.ts";
 import type { HeatMapView, SectionCharts } from "./chartViews.ts";
 import { renderDeviation } from "./charts/deviation.ts";
@@ -34,6 +65,7 @@ import type { CompareCard, CompareView, ConditionLabel, GatedLine, RecordedLine 
 import type { SetAsideElement, ValuesTableView } from "./compareCharts.ts";
 import { fanChartCaption, pairBandCaption, renderFanChart, renderPairChart } from "./charts/compare.ts";
 import type { LensCondition, LensCurveView, LensView } from "./lens.ts";
+import type { ChecksView, HelpView } from "./helpViews.ts";
 import type {
   BaselinePairView,
   BaselineRunView,
@@ -98,8 +130,12 @@ figure{margin:8px 0 16px}figcaption{color:var(--muted);max-width:110ch;margin-to
 ${CHART_STYLE}
 `;
 
+const L = DASHBOARD_TEXT.labels;
+const C = L.columns;
+
 /** A whole page: the head with its one stylesheet, the bar of links, and the body; `refresh` reloads it every 2 s. */
 function page(title: string, json: string, body: readonly string[], refresh = false): string {
+  const links = [link("/", L.home), link("/control", L.runControl), link("/checks", L.checks), link("/help", L.help)];
   return [
     "<!doctype html>",
     '<html lang="en">',
@@ -111,7 +147,7 @@ function page(title: string, json: string, body: readonly string[], refresh = fa
     `<style>${STYLE}</style>`,
     "</head>",
     "<body>",
-    `<header><a href="/">lvrtc dashboard</a><a href="/control">Control</a><span class="muted">${escapeHtml(title)}</span><a href="${escapeHtml(json)}">JSON</a></header>`,
+    `<header>${links.join("")}<span class="muted">${escapeHtml(title)}</span>${link(json, L.json)}</header>`,
     "<main>",
     ...body,
     "</main>",
@@ -127,86 +163,207 @@ const h = (level: 1 | 2 | 3, text: string): string => `<h${level}>${escapeHtml(t
 const code = (text: string): string => `<code>${escapeHtml(text)}</code>`;
 const link = (href: string, text: string): string => `<a href="${escapeHtml(href)}">${escapeHtml(text)}</a>`;
 const count = (value: number): string => formatFixed(value, 0);
+const MUTED_DASH = '<span class="muted">—</span>';
 
-/** A table, its cells HTML already. */
-function table(header: readonly string[], rows: readonly (readonly string[])[]): string {
-  const head = `<tr>${header.map((cell) => `<th>${escapeHtml(cell)}</th>`).join("")}</tr>`;
+/** A table, its header cells HTML already as well as its cells. */
+function htmlTable(header: readonly string[], rows: readonly (readonly string[])[]): string {
+  const head = `<tr>${header.map((cell) => `<th>${cell}</th>`).join("")}</tr>`;
   const body = rows.map((row) => `<tr>${row.map((cell) => `<td>${cell}</td>`).join("")}</tr>`).join("\n");
   return `<div class="scroll"><table>\n${head}\n${body}\n</table></div>`;
 }
 
+/** A table, its header plain text and its cells HTML already. */
+function table(header: readonly string[], rows: readonly (readonly string[])[]): string {
+  return htmlTable(header.map(escapeHtml), rows);
+}
+
+/** "How to read this page": a short <details> of the sentences that say how, closed until it is opened. */
+function howToRead(sentences: readonly string[], more: readonly string[] = []): string {
+  return [
+    `<details><summary>${escapeHtml(L.howToRead)}</summary>`,
+    ...sentences.map((sentence) => p(sentence)),
+    ...more,
+    "</details>",
+  ].join("\n");
+}
+
+/**
+ * The identifiers of a page (hashes of files, engines, lens states and requests) under a <details> whose summary is
+ * exactly "Identifiers"; nothing where there are none. Its parts are HTML, and none is a <details>.
+ */
+function identifiers(parts: readonly string[]): string {
+  if (parts.length === 0) return "";
+  return [
+    `<details><summary>${escapeHtml(L.identifiers)}</summary>`,
+    p(DASHBOARD_TEXT.howTo.identifiers, "muted"),
+    ...parts,
+    "</details>",
+  ].join("\n");
+}
+
+/** Rows of identifiers as a table of two columns: what each is of, and the identifier. */
+function identifierTable(rows: readonly (readonly [string, string])[]): string {
+  return table(
+    [C.name, L.identifiers],
+    rows.map(([what, id]) => [escapeHtml(what), code(id)]),
+  );
+}
+
+/** A check: its title, with its id beside it in small code. */
+function check(id: string): string {
+  const title = checkTitle(id);
+  return title === id ? code(id) : `${escapeHtml(title)} ${code(id)}`;
+}
+
+/** A check in plain text, for a sentence: its title with its id in parentheses. */
+function checkName(id: string): string {
+  const title = checkTitle(id);
+  return title === id ? id : `${title} (${id})`;
+}
+
+/** An engine: its name, with its id on hover; an engine of a configuration, which has no name, by its id. */
+function engine(id: string): string {
+  const name = engineName(id);
+  return name === id ? code(id) : `<span title="${escapeHtml(id)}">${escapeHtml(name)}</span>`;
+}
+
+/** A figure's name: its label, with the key the files store it under on hover; a key with no label as it is. */
+function metricName(key: string): string {
+  const label = metricLabel(key);
+  return label === key ? code(key) : `<span title="${escapeHtml(key)}">${escapeHtml(label)}</span>`;
+}
+
+/** A quantity: its label, with its stored name beside it in small code. */
+function quantity(name: string): string {
+  const label = quantityLabel(name);
+  return label === name ? code(name) : `${escapeHtml(label)} ${code(name)}`;
+}
+
+/** A class of a difference: its label, with the stored value on hover. */
+function differenceClass(kind: string | null): string {
+  if (kind === null) return MUTED_DASH;
+  return `<span title="${escapeHtml(kind)}">${escapeHtml(classLabel(kind))}</span>`;
+}
+
+/** A reason of a field: its sentence, with the stored value on hover; a reason with no sentence as it is. */
+function fieldReason(reason: string | null): string {
+  if (reason === null) return MUTED_DASH;
+  return `<span title="${escapeHtml(reason)}">${escapeHtml(fieldReasonText(reason))}</span>`;
+}
+
 /** A figure: its value, with its file and pointer on hover. */
 function figure(value: Figure | null): string {
-  if (value === null) return '<span class="muted">—</span>';
-  const said = value.value === null ? "not finite" : numberText(value.value);
+  if (value === null) return MUTED_DASH;
+  const said = value.value === null ? L.notFinite : numberText(value.value);
   const where = `${documentLabel(value.source.document)} ${value.source.pointer}`;
   return `<span class="fig" title="${escapeHtml(where)}">${escapeHtml(said)}</span>`;
 }
 
 /** A figure written as the file holds it, shortest form (a position, a stop, a wavelength), with its source on hover. */
 function plainFigure(value: Figure | null): string {
-  if (value === null) return '<span class="muted">—</span>';
-  const said = value.value === null ? "not finite" : String(value.value);
+  if (value === null) return MUTED_DASH;
+  const said = value.value === null ? L.notFinite : String(value.value);
   const where = `${documentLabel(value.source.document)} ${value.source.pointer}`;
   return `<span class="fig" title="${escapeHtml(where)}">${escapeHtml(said)}</span>`;
 }
 
 /** A derived number: its value, with how it was computed on hover. */
 function derivedValue(value: Derived): string {
-  const said = value.value === null ? "not finite" : numberText(value.value);
+  const said = value.value === null ? L.notFinite : numberText(value.value);
   const of = value.of.map((source) => `${documentLabel(source.document)} ${source.pointer}`).join("; ");
-  return `<span class="derived" title="${escapeHtml(`derived: ${value.derivation}${of === "" ? "" : ` of ${of}`}`)}">${escapeHtml(said)}</span>`;
+  return `<span class="derived" title="${escapeHtml(L.derivedTitle(value.derivation, of))}">${escapeHtml(said)}</span>`;
 }
 
 function figureOrDerived(value: Figure | Derived | null): string {
-  if (value === null) return '<span class="muted">—</span>';
+  if (value === null) return MUTED_DASH;
   return "derivation" in value ? derivedValue(value) : figure(value);
 }
 
+/** A verdict: its label, with the stored value on hover; the class of the stored value colours it. */
 function verdict(value: Verdict | null): string {
-  return value === null ? '<span class="muted">—</span>' : `<span class="v-${value}">${escapeHtml(value)}</span>`;
+  if (value === null) return MUTED_DASH;
+  return `<span class="v-${value}" title="${escapeHtml(value)}">${escapeHtml(verdictLabel(value))}</span>`;
 }
 
+/**
+ * A verdict in a list of counts or a cell of a large table: its short label, with the stored value on hover unless
+ * `bare` (a baseline's table of runs, where every cell has one: the legend says what each label stores).
+ */
+function shortVerdict(value: Verdict, bare = false): string {
+  const title = bare ? "" : ` title="${escapeHtml(value)}"`;
+  return `<span class="v-${value}"${title}>${escapeHtml(verdictShort(value))}</span>`;
+}
+
+/** A badge of a record (`STALE(<reasons>)`, `CURRENT`, `NOT KNOWN(<reasons>)`): its label, the stored badge on hover. */
 function badge(value: string): string {
+  const reasons = /^(STALE|NOT KNOWN)\((.*)\)$/.exec(value);
   const kind = value.startsWith("STALE") ? "STALE" : value.startsWith("NOT KNOWN") ? "NOTKNOWN" : "CURRENT";
-  return `<span class="b-${kind}">${escapeHtml(value)}</span>`;
+  const label =
+    reasons === null
+      ? value === "CURRENT"
+        ? badgeLabel([], [])
+        : value
+      : reasons[1] === "STALE"
+        ? badgeLabel(reasons[2].split(","), [])
+        : badgeLabel([], reasons[2].split(","));
+  return `<span class="b-${kind}" title="${escapeHtml(value)}">${escapeHtml(label)}</span>`;
 }
 
 function verdictCounts(counts: readonly VerdictCount[]): string {
-  const said = counts.filter(({ count: n }) => n > 0).map(({ verdict: v, count: n }) => `${count(n)} ${verdict(v)}`);
-  return said.length === 0 ? '<span class="muted">—</span>' : said.join(", ");
+  const said = counts
+    .filter(({ count: n }) => n > 0)
+    .map(({ verdict: v, count: n }) => `${count(n)} ${shortVerdict(v)}`);
+  return said.length === 0 ? MUTED_DASH : said.join(", ");
+}
+
+/** How a job or a cell of the support matrix ended, in words. */
+function statusText(status: string): string {
+  return valueLabel(SUPPORT_STATUS_TEXT, status);
 }
 
 function statusCounts(counts: readonly StatusCount[]): string {
   const said = counts
     .filter(({ count: n }) => n > 0)
-    .map(({ status, count: n }) => `${count(n)} ${escapeHtml(status)}`);
-  return said.length === 0 ? '<span class="muted">—</span>' : said.join(", ");
+    .map(
+      ({ status, count: n }) =>
+        `${count(n)} <span title="${escapeHtml(status)}">${escapeHtml(statusText(status))}</span>`,
+    );
+  return said.length === 0 ? MUTED_DASH : said.join(", ");
 }
 
 function problems(list: readonly DocumentProblem[]): string[] {
   return list.map(({ document, problem }) => p(DASHBOARD_TEXT.documentProblem(document, problem), "problem"));
 }
 
-function engineText(engine: ViewEngine | null): string {
-  if (engine === null) return '<span class="muted">not known</span>';
-  if (engine.status === "unavailable") return `unavailable: ${code(engine.code)}`;
-  const adapter = engine.adapterRevision === null ? "" : ` / ${code(engine.adapterRevision)}`;
-  return `${escapeHtml(engine.version)}, ${code(engine.fingerprint)}${adapter}`;
+/** An engine's state and version; its code and this tool's code behind it are identifiers (`engineIdentifiers`). */
+function engineText(value: ViewEngine | null): string {
+  if (value === null) return `<span class="muted">${escapeHtml(L.notKnown)}</span>`;
+  if (value.status === "unavailable") return `${escapeHtml(L.unavailableCode)} ${code(value.code)}`;
+  return escapeHtml(value.version);
 }
 
 function enginesTable(engines: readonly ViewEngine[]): string {
   return table(
-    ["Engine", "Status", "Version", "Fingerprint", "Adapter revision"],
-    engines.map((engine) =>
-      engine.status === "unavailable"
-        ? [escapeHtml(engine.id), "unavailable", code(engine.code), "—", "—"]
+    [C.engine, C.status, C.version],
+    engines.map((each) =>
+      each.status === "unavailable"
+        ? [engine(each.id), escapeHtml(L.unavailable), code(each.code)]
+        : [engine(each.id), escapeHtml(L.available), escapeHtml(each.version)],
+    ),
+  );
+}
+
+/** The engines' code and this tool's code behind each, for a page's identifiers. */
+function engineIdentifiers(engines: readonly ViewEngine[]): string {
+  return table(
+    [C.engine, C.engineCode, C.toolCode],
+    engines.map((each) =>
+      each.status === "unavailable"
+        ? [engine(each.id), MUTED_DASH, MUTED_DASH]
         : [
-            escapeHtml(engine.id),
-            "available",
-            escapeHtml(engine.version),
-            code(engine.fingerprint),
-            engine.adapterRevision === null ? "—" : code(engine.adapterRevision),
+            engine(each.id),
+            code(each.fingerprint),
+            each.adapterRevision === null ? MUTED_DASH : code(each.adapterRevision),
           ],
     ),
   );
@@ -285,10 +442,10 @@ function heatMapBlock(view: HeatMapView | null, subject: string, kind: "run" | "
   if (view === null) return [];
   const text = DASHBOARD_TEXT.charts;
   if (view.omitted !== null) {
-    return [h(2, "Ladder heat map"), p(text.heatMapOmitted(count(view.omitted.count), count(HEAT_MAP_ROWS)))];
+    return [h(2, L.heatMap), p(text.heatMapOmitted(count(view.omitted.count), count(HEAT_MAP_ROWS)))];
   }
   return [
-    h(2, "Ladder heat map"),
+    h(2, L.heatMap),
     chartFigure(renderHeatMap(view, subject, kind), kind === "run" ? text.heatMapRun : text.heatMapBaseline),
   ];
 }
@@ -299,23 +456,23 @@ function chartsBlock(charts: SectionCharts, subject: string): string[] {
   const any = charts.overlays.length + charts.differences.length + charts.deviations.length > 0;
   if (!any && charts.problems.length === 0) return [];
   const out = [
-    h(2, "Charts"),
+    h(2, L.charts),
     p(text.intro),
     p(text.storeIntro),
     ...charts.problems.map((problem) => p(problem, "problem")),
   ];
   if (charts.overlays.length > 0) {
-    out.push(h(3, "MTF of each answer"), p(text.overlayIntro));
+    out.push(h(3, L.overlays), p(text.overlayIntro));
     for (const view of charts.overlays) out.push(chartFigure(renderMtfOverlay(view, subject), overlayCaption(view)));
   }
   if (charts.differences.length > 0) {
-    out.push(h(3, "Differences of each pair"), p(text.differenceIntro));
+    out.push(h(3, L.differences), p(text.differenceIntro));
     for (const view of charts.differences) {
       out.push(chartFigure(renderMtfDifference(view, subject), differenceCaption(view)));
     }
   }
   if (charts.deviations.length > 0) {
-    out.push(h(3, "Hit distance by surface or visit"), p(text.deviationIntro));
+    out.push(h(3, L.deviations), p(text.deviationIntro));
     for (const view of charts.deviations) {
       out.push(
         ...view.problems.map((problem) => p(problem, "problem")),
@@ -327,30 +484,44 @@ function chartsBlock(charts: SectionCharts, subject: string): string[] {
   return out;
 }
 
+/** The legend of the verdicts: each label with its meaning, the stored value on hover. */
+function verdictLegend(): string {
+  const items = Object.entries(VERDICT_TEXT).map(
+    ([stored, text]) =>
+      `<li>${shortVerdictLabel(stored as Verdict, L.labelStored(text.label, stored))}: ${escapeHtml(text.meaning)}</li>`,
+  );
+  return `${p(DASHBOARD_TEXT.verdictsIntro)}<ul>${items.join("")}</ul>`;
+}
+
+function shortVerdictLabel(value: Verdict, label: string): string {
+  return `<span class="v-${value}" title="${escapeHtml(value)}">${escapeHtml(label)}</span>`;
+}
+
 // ── The index ────────────────────────────────────────────────────────────────────────────────────────────────────
 
 /** The index page. */
 export function renderIndex(view: IndexView): string {
   const text = DASHBOARD_TEXT.staleness;
   const body = [
-    h(1, "Runs and baselines"),
+    h(1, L.indexHeading),
     p(DASHBOARD_TEXT.readOnly),
-    p(DASHBOARD_TEXT.sources),
+    howToRead(
+      [DASHBOARD_TEXT.howTo.index, DASHBOARD_TEXT.sources, text.intro, text.badges, text.check],
+      [verdictLegend()],
+    ),
     ...problems(view.problems),
-    view.policy === null
-      ? ""
-      : `<p>${fill(DASHBOARD_TEXT.policyAtHand, [escapeHtml(view.policy.name), figure(view.policy.version), code(view.policy.hash)])}</p>`,
+    view.policy === null ? "" : `<p>${fill(DASHBOARD_TEXT.policyAtHand, [figure(view.policy.version)])}</p>`,
     p(askedText(view.engines)),
     ...comparedBlock(view),
-    h(2, "Runs"),
+    h(2, L.runs),
     view.runs.length === 0
       ? p(DASHBOARD_TEXT.noRuns)
       : table(
-          ["Suite", "Jobs", "Compared", "Pairs by verdict", "FAIL or ERROR", "Problems"],
+          [C.suite, C.jobs, C.compared, C.pairsByVerdict, C.failing, C.problems],
           view.runs.map((run) => [
             link(runHref(run.name), run.name),
             statusCounts(run.jobs),
-            run.comparisons === "ok" ? "yes" : run.comparisons === "none" ? "no" : '<span class="muted">—</span>',
+            run.comparisons === "ok" ? escapeHtml(L.yes) : run.comparisons === "none" ? escapeHtml(L.no) : MUTED_DASH,
             verdictCounts(run.verdicts),
             count(run.failing),
             problemsCell([
@@ -359,16 +530,16 @@ export function renderIndex(view: IndexView): string {
             ]),
           ]),
         ),
-    h(2, "Baselines"),
+    h(2, L.baselines),
     view.baselines.length === 0
       ? p(DASHBOARD_TEXT.noBaselines)
       : table(
-          ["Baseline", "Kind", "Suite", "Policy", "Records", "Records by verdict", "Records by badge", "Problems"],
+          [C.baseline, C.kind, C.suite, C.limitsFile, C.records, C.recordsByVerdict, C.recordsByBadge, C.problems],
           view.baselines.map((baseline) => [
             link(baselineHref(baseline.stem), baseline.stem),
-            escapeHtml(baseline.kind),
+            escapeHtml(valueLabel(BASELINE_KIND_TEXT, baseline.kind)),
             baseline.suite === null ? "—" : escapeHtml(baseline.suite),
-            baseline.policyVersion === null ? "—" : `v${figure(baseline.policyVersion)}`,
+            baseline.policyVersion === null ? "—" : figure(baseline.policyVersion),
             count(baseline.records),
             verdictCounts(baseline.verdicts),
             badgeCounts(baseline.badges),
@@ -377,13 +548,13 @@ export function renderIndex(view: IndexView): string {
             ),
           ]),
         ),
-    h(2, "Lenses"),
+    h(2, L.lenses),
     p(DASHBOARD_TEXT.lens.indexIntro),
     ...problems(view.lensProblems),
     view.lenses.length === 0
       ? p(DASHBOARD_TEXT.lens.noLenses)
       : table(
-          ["Lens", "Name", "Runs", "Run directories"],
+          [C.lens, C.name, C.runCount, C.runDirectories],
           view.lenses.map((lens) => [
             link(lensHref(lens.key), lens.key),
             lens.name === null ? "—" : escapeHtml(lens.name),
@@ -391,30 +562,35 @@ export function renderIndex(view: IndexView): string {
             lens.suites.map((suite) => link(runHref(suite), suite)).join(", "),
           ]),
         ),
-    p(text.intro),
-    p(text.badges),
-    p(text.check),
+    identifiers(
+      view.policy === null
+        ? []
+        : [
+            identifierTable([
+              [L.identifierRows.limitsFileName, view.policy.name],
+              [L.identifierRows.limitsFile, view.policy.hash],
+            ]),
+          ],
+    ),
   ];
-  return page("Index", "/api/index", body);
+  return page(L.index, "/api/index", body);
 }
 
 function badgeCounts(counts: readonly { readonly badge: string; readonly count: number }[]): string {
-  return (
-    counts.map(({ badge: b, count: n }) => `${count(n)} ${badge(b)}`).join("<br>") || '<span class="muted">—</span>'
-  );
+  return counts.map(({ badge: b, count: n }) => `${count(n)} ${badge(b)}`).join("<br>") || MUTED_DASH;
 }
 
 // ── The run pages ────────────────────────────────────────────────────────────────────────────────────────────────
 
 function supportTable(engines: readonly string[], rows: RunPartView["rows"]): string {
-  return table(
-    ["Rung", "Request", ...engines],
+  return htmlTable(
+    [escapeHtml(C.check), escapeHtml(C.request), ...engines.map(engine)],
     rows.map((row) => [
-      escapeHtml(row.rung),
+      check(row.rung),
       row.request === null ? "—" : escapeHtml(row.request),
       ...row.cells.map(
         (cell) =>
-          `${escapeHtml(cell.status)}${cell.detail === undefined ? "" : ` <span class="muted">${escapeHtml(cell.detail)}</span>`}`,
+          `<span title="${escapeHtml(cell.status)}">${escapeHtml(statusText(cell.status))}</span>${cell.detail === undefined ? "" : ` <span class="muted">${escapeHtml(cell.detail)}</span>`}`,
       ),
     ]),
   );
@@ -422,47 +598,83 @@ function supportTable(engines: readonly string[], rows: RunPartView["rows"]): st
 
 function sectionsTable(name: string, sections: readonly SectionEntry[]): string {
   return table(
-    ["Section", "Run", "Rung", "Quantity", "Request", "Verdict"],
+    [C.section, C.run, C.check, C.quantity, C.request, C.verdict],
     sections.map((section) => [
       link(sectionHref(name, section.section), count(section.section)),
       escapeHtml(section.run),
-      escapeHtml(section.rung),
-      code(section.quantity),
+      check(section.rung),
+      quantity(section.quantity),
       section.request === null ? "—" : escapeHtml(section.request),
       verdict(section.verdict),
     ]),
   );
 }
 
+/**
+ * The pending jobs of a page, one row for the jobs that differ only in their request (which only Identifiers tell
+ * apart), with how many requests the row is of; in the order of their first job.
+ */
+function pendingRows<J extends { readonly run: string; readonly rung: string; readonly engine: string }>(
+  jobs: readonly (J & { readonly step: string | null; readonly suite?: string })[],
+): { readonly job: J & { readonly step: string | null }; readonly requests: number }[] {
+  const rows = new Map<string, { job: J & { readonly step: string | null }; requests: number }>();
+  for (const job of jobs) {
+    const key = JSON.stringify([job.suite ?? null, job.run, job.rung, job.engine, job.step]);
+    const row = rows.get(key);
+    if (row === undefined) rows.set(key, { job, requests: 1 });
+    else row.requests++;
+  }
+  return [...rows.values()];
+}
+
+/** The pending jobs of a page: what is waiting, and under Identifiers the request each is of. */
+function pendingIdentifiers(
+  jobs: readonly { readonly run: string; readonly rung: string; readonly engine: string; readonly requestId: string }[],
+): string {
+  return table(
+    [C.run, C.check, C.engine, C.request],
+    jobs.map((job) => [escapeHtml(job.run), check(job.rung), engine(job.engine), code(job.requestId)]),
+  );
+}
+
+/** The notice of a run directory written before a rename of ids: what its code says, and the old ids it names. */
+function oldIdsNotice(oldIds: readonly string[]): string[] {
+  const said = codeTextOf(LEGACY_RUN_CODE);
+  if (oldIds.length === 0 || said === undefined) return [];
+  return [
+    p(DASHBOARD_TEXT.writtenBeforeRename(said.sentence, said.remedy), "problem"),
+    `<ul>${oldIds.map((id) => `<li>${code(id)}</li>`).join("")}</ul>`,
+  ];
+}
+
 /** A run page. */
 export function renderRun(view: RunView): string {
-  const body: string[] = [h(1, `Run of ${view.name}`), ...problems(view.problems)];
+  const body: string[] = [h(1, L.runOf(view.name)), ...problems(view.problems)];
   if (view.suite === null) {
-    body.push(p(DASHBOARD_TEXT.notReadable));
+    body.push(howToRead([DASHBOARD_TEXT.howTo.run]), p(DASHBOARD_TEXT.notReadable));
     return page(view.name, `/api${runHref(view.name)}`, body);
   }
   const compared = view.comparisons === "ok";
   body.push(
-    `<p>Suite hash ${code(view.suite.hash)}</p>`,
-    p(DASHBOARD_TEXT.sources),
+    howToRead([DASHBOARD_TEXT.howTo.run, DASHBOARD_TEXT.sources], [verdictLegend()]),
     ...(view.comparisons === "none" ? [p(DASHBOARD_TEXT.notCompared)] : []),
     ...(view.comparisons === "invalid" ? [p(DASHBOARD_TEXT.comparisonsUnreadable)] : []),
+    ...oldIdsNotice(view.oldIds),
     ...(view.inputProblems.length === 0
       ? []
       : [
           p(DASHBOARD_TEXT.inputProblems, "problem"),
           `<ul>${view.inputProblems.map((problem) => `<li>${escapeHtml(problem)}</li>`).join("")}</ul>`,
         ]),
-    h(2, "Engines"),
+    h(2, L.engines),
     enginesTable(view.engines),
-    h(2, "Runs"),
+    h(2, L.runs),
     ...(view.split ? [p(DASHBOARD_TEXT.split)] : []),
     table(
-      ["Run", "Lens", "Case", "Requests", "Sections", "Gravest verdict", "Problems"],
+      [C.run, C.lens, C.requests, C.sections, C.worstVerdict, C.problems],
       view.runs.map((run) => [
         view.split ? link(runPartHref(view.name, run.place), run.name) : escapeHtml(run.name),
         run.lens === null ? "—" : link(lensHref(run.lens), run.lens),
-        run.caseId === null ? "—" : code(run.caseId),
         count(run.requests),
         count(run.sectionCount),
         verdict(run.verdict),
@@ -472,23 +684,25 @@ export function renderRun(view: RunView): string {
   );
   if (compared) {
     body.push(
-      h(2, "Verdicts"),
+      h(2, L.verdicts),
       table(
-        ["Mode", "Pairs by verdict"],
-        view.summary.map(({ mode, counts }) => [escapeHtml(mode), verdictCounts(counts)]),
+        [C.pairing, C.pairsByVerdict],
+        view.summary.map(({ mode, counts }) => [
+          `<span title="${escapeHtml(mode)}">${escapeHtml(modeLabel(mode))}</span>`,
+          verdictCounts(counts),
+        ]),
       ),
       p(DASHBOARD_TEXT.failing(view.failing)),
-      ...DASHBOARD_TEXT.verdicts.map((sentence) => p(sentence)),
       ...heatMapBlock(view.heatMap, view.name, "run"),
     );
   }
-  const engineIds = view.supportByRung[0]?.engines.map(({ engine }) => engine) ?? [];
+  const engineIds = view.supportByRung[0]?.engines.map(({ engine: id }) => id) ?? [];
   body.push(
-    h(2, "Support"),
+    h(2, L.support),
     p(DASHBOARD_TEXT.supportByRung),
-    table(
-      ["Rung", ...engineIds],
-      view.supportByRung.map((row) => [escapeHtml(row.rung), ...row.engines.map(({ counts }) => statusCounts(counts))]),
+    htmlTable(
+      [escapeHtml(C.check), ...engineIds.map(engine)],
+      view.supportByRung.map((row) => [check(row.rung), ...row.engines.map(({ counts }) => statusCounts(counts))]),
     ),
   );
   if (!view.split) {
@@ -497,7 +711,7 @@ export function renderRun(view: RunView): string {
       ...view.supportByRun.map(
         ({ run, rows }) => `<details><summary>${escapeHtml(run)}</summary>${supportTable(engineIds, rows)}</details>`,
       ),
-      h(2, "Sections"),
+      h(2, L.sections),
       view.sections.length === 0
         ? p(
             compared
@@ -510,24 +724,33 @@ export function renderRun(view: RunView): string {
     );
   }
   body.push(
-    h(2, "Pending jobs"),
+    h(2, L.pendingJobs),
     view.pending.length === 0
       ? p(DASHBOARD_TEXT.noPending)
       : [
           p(DASHBOARD_TEXT.pending),
           table(
-            ["Run", "Rung", "Engine", "Step", "Request"],
-            view.pending.map((job) => [
+            [C.run, C.check, C.engine, C.step, C.requests],
+            pendingRows(view.pending).map(({ job, requests }) => [
               escapeHtml(job.run),
-              escapeHtml(job.rung),
-              escapeHtml(job.engine),
+              check(job.rung),
+              engine(job.engine),
               job.step === null ? "—" : escapeHtml(job.step),
-              code(job.requestId),
+              count(requests),
             ]),
           ),
         ].join("\n"),
-    h(2, "Not covered"),
+    h(2, L.notCovered),
     `<ul>${NOT_COVERED.map((sentence) => `<li>${escapeHtml(sentence)}</li>`).join("")}</ul>`,
+    identifiers([
+      identifierTable([[L.identifierRows.suiteFile, view.suite.hash]]),
+      engineIdentifiers(view.engines),
+      table(
+        [C.run, C.lensState],
+        view.runs.map((run) => [escapeHtml(run.name), run.caseId === null ? "—" : code(run.caseId)]),
+      ),
+      ...(view.pending.length === 0 ? [] : [pendingIdentifiers(view.pending)]),
+    ]),
   );
   return page(view.name, `/api${runHref(view.name)}`, body);
 }
@@ -535,16 +758,18 @@ export function renderRun(view: RunView): string {
 /** The page of one run of a suite whose run page is split. */
 export function renderRunPart(view: RunPartView): string {
   const body = [
-    h(1, `${view.run}, a run of ${view.name}`),
-    `<p>${link(runHref(view.name), `Run of ${view.name}`)} · case ${view.caseId === null ? "—" : code(view.caseId)}${view.lens === null ? "" : ` · ${link(lensHref(view.lens), `Lens ${view.lens}`)}`}</p>`,
+    h(1, L.runPart(view.run, view.name)),
+    `<p>${link(runHref(view.name), L.runOf(view.name))}${view.lens === null ? "" : ` · ${link(lensHref(view.lens), L.lensOf(view.lens))}`}</p>`,
+    howToRead([DASHBOARD_TEXT.howTo.runPart, DASHBOARD_TEXT.sources]),
     ...view.problems.map((problem) => p(problem, "problem")),
-    h(2, "Support"),
+    h(2, L.support),
     p(DASHBOARD_TEXT.supportByRun),
     supportTable(view.engines, view.rows),
-    h(2, "Sections"),
+    h(2, L.sections),
     view.sections.length === 0
       ? p(DASHBOARD_TEXT.noSections)
       : [p(DASHBOARD_TEXT.sections), sectionsTable(view.name, view.sections)].join("\n"),
+    identifiers(view.caseId === null ? [] : [identifierTable([[L.identifierRows.lensState, view.caseId]])]),
   ];
   return page(`${view.name}: ${view.run}`, `/api${runPartHref(view.name, view.place)}`, body);
 }
@@ -554,20 +779,27 @@ export function renderRunPart(view: RunPartView): string {
 function whereText(where: readonly WhereEntry[]): string {
   if (where.length === 0) return "";
   const said = where.map(
-    ({ key, value }) => `${escapeHtml(key)} ${typeof value === "string" ? escapeHtml(value) : figure(value)}`,
+    ({ key, value }) =>
+      `<span title="${escapeHtml(key)}">${escapeHtml(valueLabel(PLACE_TEXT, key))}</span> ${typeof value === "string" ? escapeHtml(value) : figure(value)}`,
   );
-  return ` <span class="muted">at ${said.join(", ")}</span>`;
+  return ` <span class="muted">${fill(L.at, [said.join(", ")])}</span>`;
 }
 
 function metric(value: MetricView | null, withName = false): string {
-  if (value === null) return '<span class="muted">—</span>';
-  const name = withName ? `${escapeHtml(value.name)} ` : "";
+  if (value === null) return MUTED_DASH;
+  const name = withName ? `${metricName(value.name)} ` : "";
   return `${name}${figure(value.value)}${whereText(value.where)}`;
+}
+
+/** A row's status in an MTF table: its label, with the stored value on hover. */
+function rowStatus(status: string): string {
+  return `<span title="${escapeHtml(status)}">${escapeHtml(rowStatusLabel(status))}</span>`;
 }
 
 function mtfTable(view: MtfView, name: string): string[] {
   const head = view.columns.map(
-    (column) => `${column.engine}${column.step === null ? "" : ` #${column.step}`}${column.judged ? " *" : ""}`,
+    (column) =>
+      `${engine(column.engine)}${column.step === null ? "" : ` #${escapeHtml(column.step)}`}${column.judged ? " *" : ""}`,
   );
   const reason = view.pair.reason === null ? "" : ` <span class="muted">${escapeHtml(view.pair.reason)}</span>`;
   const out = [
@@ -576,18 +808,18 @@ function mtfTable(view: MtfView, name: string): string[] {
     ...(view.severalLines && view.kind !== "diffraction"
       ? [p((view.kind === "geometric" ? GEOMETRIC_SEVERAL_LINES : WAVEFRONT_SEVERAL_LINES).join(" "))]
       : []),
-    `<p>${fill(DASHBOARD_TEXT.mtfPair, [escapeHtml(view.pair.a), escapeHtml(view.pair.b), verdict(view.pair.verdict)])}${reason}</p>`,
+    `<p>${fill(DASHBOARD_TEXT.mtfPair, [engine(view.pair.a), engine(view.pair.b), verdict(view.pair.verdict)])}${reason}</p>`,
     `<p>${fill(DASHBOARD_TEXT.mtfBands, [figureOrDerived(view.bands.onAxis), figureOrDerived(view.bands.offAxis), figureOrDerived(view.bands.chiefLandingMm)])}</p>`,
-    table(
+    htmlTable(
       [
-        "Field",
-        "Angle (deg)",
-        ...head.map((column) => `${column}: flag, across, last change`),
-        "Chief landing (mm)",
-        "Rim rays lost",
-        "Rim spread (mm)",
-        "Class",
-        "Reason",
+        escapeHtml(C.field),
+        escapeHtml(C.angle),
+        ...head.map((column) => fill(C.sampling, [column])),
+        escapeHtml(C.chiefLanding),
+        escapeHtml(C.rimRaysLost),
+        escapeHtml(C.rimSpread),
+        escapeHtml(C.class),
+        escapeHtml(C.reason),
       ],
       view.fields.map((field) => [
         figure(field.field),
@@ -599,12 +831,21 @@ function mtfTable(view: MtfView, name: string): string[] {
         figureOrDerived(field.chiefLandingMm),
         figureOrDerived(field.rimRaysLost),
         figureOrDerived(field.rimLandingSpreadMm),
-        field.class === null ? "—" : escapeHtml(field.class),
-        field.reason === null ? "—" : escapeHtml(field.reason),
+        differenceClass(field.class),
+        fieldReason(field.reason),
       ]),
     ),
-    table(
-      ["Field", "Cut", "Frequency (cycles/mm)", ...head, "Difference", "Band", "Status", "Class"],
+    htmlTable(
+      [
+        escapeHtml(C.field),
+        escapeHtml(C.cut),
+        escapeHtml(C.frequency),
+        ...head,
+        escapeHtml(C.difference),
+        escapeHtml(C.band),
+        escapeHtml(C.status),
+        escapeHtml(C.class),
+      ],
       view.rows.map((row) => [
         figure(row.field),
         escapeHtml(row.cut),
@@ -612,58 +853,67 @@ function mtfTable(view: MtfView, name: string): string[] {
         ...row.values.map((value) => figure(value)),
         figureOrDerived(row.difference),
         figureOrDerived(row.band),
-        escapeHtml(row.status),
-        row.class === null ? "—" : escapeHtml(row.class),
+        rowStatus(row.status),
+        differenceClass(row.class),
       ]),
     ),
     table(
-      ["Status", "Meaning"],
-      (Object.keys(MTF_ROW_STATUS_TEXT) as MtfRowStatus[]).map((status) => [
-        escapeHtml(status),
-        escapeHtml(MTF_ROW_STATUS_TEXT[status]),
-      ]),
+      [C.status, C.meaning],
+      Object.entries(ROW_STATUS_TEXT).map(([status, text]) => [rowStatus(status), escapeHtml(text.meaning)]),
     ),
     p(MTF_COMPARISON_OUTRO.join(" ")),
   ];
-  view.peers.forEach((peer, index) => out.push(...mtfTable(peer, `${name}: peer ${index + 1}`)));
+  view.peers.forEach((peer, index) => out.push(...mtfTable(peer, L.peer(name, String(index + 1)))));
   return out;
 }
 
 /** A section page. */
 export function renderSection(view: SectionView): string {
-  const title = `${view.name}: section ${view.section}`;
+  const title = L.sectionOf(view.name, String(view.section));
+  const mode = view.mode === null ? L.noPolicyEntry : valueLabel(METHOD_TEXT, view.mode);
+  const kind = view.class === null ? "—" : GLOSSARY_TEXT.kinds[CLASS_KIND[view.class]];
   const body: string[] = [
-    h(1, `${view.run}, ${view.rung}${view.request === null ? "" : `, ${view.request}`}`),
-    `<p>${link(runHref(view.name), `Run of ${view.name}`)} · quantity ${code(view.quantity)} · request ${code(view.requestId)} · ${escapeHtml(view.mode ?? "no policy entry")}, ${escapeHtml(view.class ?? "no class")} · ${verdict(view.verdict)}</p>`,
-    p(DASHBOARD_TEXT.sources),
-    p(DASHBOARD_TEXT.derived),
+    `<h1>${escapeHtml(view.run)}, ${check(view.rung)}${view.request === null ? "" : `, ${escapeHtml(view.request)}`}</h1>`,
+    `<p>${link(runHref(view.name), L.runOf(view.name))} · ${escapeHtml(L.quantity)} ${quantity(view.quantity)} · ${escapeHtml(mode)}, ${escapeHtml(kind)} · ${verdict(view.verdict)}</p>`,
+    howToRead([DASHBOARD_TEXT.howTo.section, DASHBOARD_TEXT.sources, DASHBOARD_TEXT.derived], [verdictLegend()]),
     ...(view.inputProblems.length === 0
       ? []
       : [
           p(DASHBOARD_TEXT.inputProblems, "problem"),
           `<ul>${view.inputProblems.map((problem) => `<li>${escapeHtml(problem)}</li>`).join("")}</ul>`,
         ]),
-    h(2, "Columns"),
+    h(2, L.figures),
     p(DASHBOARD_TEXT.columns),
     table(
-      ["Metric", "Unit", "Limit", "Kind", "Floor limit"],
+      [C.figure, C.unit, C.limit, C.kind, C.floorLimit],
       view.columns.map((column) => [
-        escapeHtml(column.name),
+        metricName(column.name),
         column.unit === null ? "—" : escapeHtml(column.unit),
         figureOrDerived(column.limit),
-        column.limitKind === null ? "—" : escapeHtml(column.limitKind),
+        column.limitKind === null
+          ? "—"
+          : escapeHtml(
+              column.limitKind === "attention" && SORTING_LIMITS.includes(column.name)
+                ? SORTING_LIMIT_LABEL
+                : valueLabel(LIMIT_KIND_TEXT, column.limitKind),
+            ),
         figure(column.floorLimit),
       ]),
     ),
   ];
   if (view.referenceVsEach !== null) {
     body.push(
-      h(2, "Reference against each"),
-      p(DASHBOARD_TEXT.referenceVsEach(view.referenceVsEach.reference)),
-      table(
-        ["Engine", ...view.columns.map((column) => column.name), "Verdict", "Reason"],
+      h(2, L.referenceVsEach),
+      `<p>${fill(DASHBOARD_TEXT.referenceVsEach, [engine(view.referenceVsEach.reference)])}</p>`,
+      htmlTable(
+        [
+          escapeHtml(C.engine),
+          ...view.columns.map((column) => metricName(column.name)),
+          escapeHtml(C.verdict),
+          escapeHtml(C.reason),
+        ],
         view.referenceVsEach.rows.map((row) => [
-          escapeHtml(row.engine),
+          engine(row.engine),
           ...row.metrics.map((value) => metric(value)),
           verdict(row.verdict),
           row.reason === null ? "—" : escapeHtml(row.reason),
@@ -674,121 +924,146 @@ export function renderSection(view: SectionView): string {
   if (view.pairwise !== null) {
     const { engines, cells } = view.pairwise;
     body.push(
-      h(2, "Pairwise"),
+      h(2, L.pairwise),
       p(DASHBOARD_TEXT.pairwise),
-      table(
-        ["", ...engines],
+      htmlTable(
+        ["", ...engines.map(engine)],
         cells.map((row, index) => [
-          escapeHtml(engines[index]),
+          engine(engines[index]),
           ...row.map((cell) => (cell === null ? "—" : `${verdict(cell.verdict)}<br>${metric(cell.worst, true)}`)),
         ]),
       ),
     );
   }
   if (view.consensus !== null) {
-    body.push(h(2, "Consensus"), p(CONSENSUS_SECTION.join(" ")), p(consensusSentence(view.consensus)));
+    body.push(h(2, L.consensus), p(CONSENSUS_SECTION.join(" ")), p(consensusSentence(view.consensus)));
   }
   if (view.recorded !== null) {
     body.push(
-      h(2, "Recorded"),
+      h(2, L.recorded),
       p(DASHBOARD_TEXT.recorded),
-      table(
-        ["Value", "Element", ...view.recorded.engines],
-        view.recorded.rows.map((row) => [
-          escapeHtml(row.name),
-          count(row.element),
-          ...row.cells.map((cell) => figure(cell)),
-        ]),
+      htmlTable(
+        [escapeHtml(C.value), escapeHtml(C.element), ...view.recorded.engines.map(engine)],
+        view.recorded.rows.map((row) => [code(row.name), count(row.element), ...row.cells.map((cell) => figure(cell))]),
       ),
     );
   }
-  if (view.mtf !== null) body.push(h(2, "MTF"), p(DASHBOARD_TEXT.mtf), ...mtfTable(view.mtf, "Table"));
-  body.push(...chartsBlock(view.charts, `${view.run}, ${view.rung}`));
+  if (view.mtf !== null) body.push(h(2, L.mtf), p(DASHBOARD_TEXT.mtf), ...mtfTable(view.mtf, L.mtfTable));
+  body.push(
+    ...chartsBlock(view.charts, `${view.run}, ${checkName(view.rung)}`),
+    identifiers([identifierTable([[L.identifierRows.request, view.requestId]])]),
+  );
   return page(title, `/api${sectionHref(view.name, view.section)}`, body);
 }
 
 // ── The baseline pages ───────────────────────────────────────────────────────────────────────────────────────────
 
-/** The head both baseline pages share: which baseline, its inputs, the snapshot note and the bases. */
+/** The head both baseline pages share: which baseline, the snapshot note and the bases. */
 function baselineHead(view: BaselineView | BaselineRunView): string[] {
   if (view.suite === null || view.policy === null || view.bases === null) return [];
   const text = DASHBOARD_TEXT.staleness;
   const version = view.policy.version.value === null ? "?" : numberText(view.policy.version.value);
   return [
     `<p>${fill(DASHBOARD_TEXT.baselineHead, [
-      escapeHtml(view.baselineKind),
+      escapeHtml(valueLabel(BASELINE_KIND_TEXT, view.baselineKind)),
       escapeHtml(view.suite.name),
-      code(view.suite.hash),
       figure(view.policy.version),
-      code(view.policy.hash),
     ])}</p>`,
     ...(view.snapshot ? [p(text.snapshot(version))] : []),
-    p(DASHBOARD_TEXT.sources),
     ...basesText(view.bases).map((sentence) => p(sentence)),
+  ];
+}
+
+/** The identifiers both baseline pages share: the suite file and the limits file the baseline records. */
+function baselineIdentifiers(view: BaselineView | BaselineRunView): [string, string][] {
+  if (view.suite === null || view.policy === null) return [];
+  return [
+    [L.identifierRows.suiteFile, view.suite.hash],
+    [L.identifierRows.limitsFile, view.policy.hash],
   ];
 }
 
 /** A baseline page: inputs, engines, staleness summary and a row per run. */
 export function renderBaseline(view: BaselineView): string {
   const text = DASHBOARD_TEXT.staleness;
-  const body: string[] = [h(1, `Baseline ${view.stem}`), ...problems(view.problems), ...baselineHead(view)];
-  if (view.suite === null) return page(view.stem, `/api${baselineHref(view.stem)}`, body);
+  const body: string[] = [h(1, L.baselineOf(view.stem)), ...problems(view.problems), ...baselineHead(view)];
+  if (view.suite === null) {
+    body.push(howToRead([DASHBOARD_TEXT.howTo.baseline]));
+    return page(view.stem, `/api${baselineHref(view.stem)}`, body);
+  }
   body.push(
-    h(2, "Staleness"),
-    p(text.intro),
-    p(text.badges),
-    p(text.check),
+    howToRead(
+      [DASHBOARD_TEXT.howTo.baseline, DASHBOARD_TEXT.sources, text.intro, text.badges, text.check],
+      [verdictLegend()],
+    ),
+    h(2, L.upToDate),
     table(
-      ["Badge", "Records"],
+      [C.badge, C.records],
       view.summary.badges.map(({ badge: b, count: n }) => [badge(b), count(n)]),
     ),
     table(
-      ["Reason", "Records stale by it", "Records where it is not known"],
+      [C.reason, C.staleBy, C.notKnownBy],
       view.summary.stale.map(({ reason, count: n }, index) => [
-        escapeHtml(reason),
+        `<span title="${escapeHtml(reason)}">${escapeHtml(reasonsText([reason]))}</span>`,
         count(n),
         count(view.summary.notKnown[index]?.count ?? 0),
       ]),
     ),
-    h(2, "Engines"),
+    h(2, L.engines),
     table(
-      ["Engine", "In the baseline", "Now, by the basis"],
-      view.engines.map((engine) => [
-        escapeHtml(engine.id),
-        `${escapeHtml(engine.version)}, ${code(engine.fingerprint)}${engine.adapterRevision === null ? "" : ` / ${code(engine.adapterRevision)}`}`,
-        engineText(engine.now),
-      ]),
+      [C.engine, C.inBaseline, C.now],
+      view.engines.map((each) => [engine(each.id), escapeHtml(each.version), engineText(each.now)]),
     ),
     ...heatMapBlock(view.heatMap, view.stem, "baseline"),
-    h(2, "Runs"),
+    h(2, L.runs),
     p(DASHBOARD_TEXT.baselineRuns),
-    table(
-      ["Run", "Records", ...view.rungs, "Records by badge"],
+    htmlTable(
+      [escapeHtml(C.run), escapeHtml(C.records), ...view.rungs.map(check), escapeHtml(C.recordsByBadge)],
       view.runs.map((run) => [
         link(baselineRunHref(view.stem, run.place), run.name),
         count(run.records),
-        ...run.verdicts.map((each) => verdict(each)),
+        ...run.verdicts.map((each) => (each === null ? MUTED_DASH : shortVerdict(each, true))),
         badgeCounts(run.badges),
       ]),
     ),
+    identifiers([
+      identifierTable(baselineIdentifiers(view)),
+      table(
+        [C.engine, C.engineCode, C.toolCode, C.engineCodeNow, C.toolCodeNow],
+        view.engines.map((each) => {
+          const now = each.now;
+          return [
+            engine(each.id),
+            code(each.fingerprint),
+            each.adapterRevision === null ? MUTED_DASH : code(each.adapterRevision),
+            now === null || now.status === "unavailable" ? MUTED_DASH : code(now.fingerprint),
+            now === null || now.status === "unavailable" || now.adapterRevision === null
+              ? MUTED_DASH
+              : code(now.adapterRevision),
+          ];
+        }),
+      ),
+    ]),
   );
   return page(view.stem, `/api${baselineHref(view.stem)}`, body);
 }
 
 function pairRow(rung: BaselineRunView["rungs"][number], pair: BaselinePairView): string[] {
   return [
-    escapeHtml(rung.rung),
+    check(rung.rung),
     figure(rung.requests),
-    `${escapeHtml(pair.a)} – ${escapeHtml(pair.b)}`,
+    `${engine(pair.a)} – ${engine(pair.b)}`,
     verdict(pair.verdict),
-    pair.verdicts.map(({ verdict: v, requests }) => `${figure(requests)} ${verdict(v)}`).join(", "),
+    pair.verdicts.map(({ verdict: v, requests }) => `${figure(requests)} ${shortVerdict(v)}`).join(", "),
     pair.metrics
       .map(
         (each) =>
-          `${escapeHtml(each.name)} ${figure(each.value)}${each.unit === "1" ? "" : ` ${escapeHtml(each.unit)}`}${each.tolerance === null ? "" : ` (≤ ${figure(each.tolerance)})`}${each.measured === null ? "" : ` [${figure(each.measured)} measured]`}${whereText(each.where)}`,
+          `${metricName(each.name)} ${figure(each.value)}${each.unit === "1" ? "" : ` ${escapeHtml(each.unit)}`}${each.tolerance === null ? "" : ` (≤ ${figure(each.tolerance)})`}${each.measured === null ? "" : ` ${fill(L.measured, [figure(each.measured)])}`}${whereText(each.where)}`,
       )
       .join("<br>") || "—",
-    pair.failures.map((failure) => `${escapeHtml(failure.metric)}: ${escapeHtml(failure.class)}`).join("<br>") || "—",
+    pair.failures
+      .map((failure) => `${metricName(failure.metric)}: ${differenceClass(failure.class)} ${code(failure.gotcha)}`)
+      .join("<br>") || "—",
     badge(pair.badge),
   ];
 }
@@ -805,28 +1080,156 @@ export function renderBaselineRun(view: BaselineRunView): string {
           ? text.caseRefused
           : view.caseNow.caseId === view.caseId
             ? text.caseSame
-            : text.caseMoved(view.caseNow.caseId);
+            : text.caseMoved;
+  const moved =
+    view.caseNow !== null && view.caseNow.found && view.caseNow.caseId !== null && view.caseNow.caseId !== view.caseId
+      ? view.caseNow.caseId
+      : null;
   const body = [
-    h(1, `${view.name}, a run of the baseline ${view.stem}`),
-    `<p>${link(baselineHref(view.stem), `Baseline ${view.stem}`)} · case ${view.caseId === null ? "—" : code(view.caseId)}${caseNow === "" ? "" : `; ${escapeHtml(caseNow)}`}</p>`,
+    h(1, L.baselineRun(view.name, view.stem)),
+    `<p>${link(baselineHref(view.stem), L.baselineOf(view.stem))}${caseNow === "" ? "" : ` · ${escapeHtml(caseNow)}`}</p>`,
     ...problems(view.problems),
     ...view.runProblems.map((problem) => p(problem, "problem")),
     ...baselineHead(view),
-    p(text.badges),
-    table(
-      ["Rung", "Requests", "Pair", "Verdict", "Requests by verdict", "Metrics", "Classified", "Badge"],
+    howToRead([DASHBOARD_TEXT.howTo.baselineRun, DASHBOARD_TEXT.sources, text.badges], [verdictLegend()]),
+    htmlTable(
+      [C.check, C.requests, C.pair, C.verdict, C.requestsByVerdict, C.figures, C.classified, C.badge].map(escapeHtml),
       view.rungs.flatMap((rung) => rung.pairs.map((pair) => pairRow(rung, pair))),
     ),
+    identifiers([
+      identifierTable([
+        ...baselineIdentifiers(view),
+        ...(view.caseId === null ? [] : [[L.identifierRows.lensState, view.caseId] as [string, string]]),
+        ...(moved === null ? [] : [[text.caseMoved, moved] as [string, string]]),
+      ]),
+    ]),
   ];
   return page(`${view.stem}: ${view.name}`, `/api${baselineRunHref(view.stem, view.place)}`, body);
 }
 
 /** The page of a path the dashboard has nothing at, or of a request it refuses. */
 export function renderRefusal(status: number, what: string): string {
-  return page(`${status}`, "/api/index", [h(1, `${status} ${what}`), `<p>${link("/", "Index")}</p>`]);
+  return page(`${status}`, "/api/index", [h(1, `${status} ${what}`), `<p>${link("/", L.index)}</p>`]);
 }
 
-// ── Run control (Stage 8.3) ──────────────────────────────────────────────────────────────────────────────────────
+// ── The help and checks pages ────────────────────────────────────────────────────────────────────────────────────
+
+/** A table of labels, each with the value the files store and its meaning. */
+function labelTable(entries: readonly { readonly stored: string; readonly label: string; readonly meaning: string }[]) {
+  return table(
+    [C.label, C.stored, C.meaning],
+    entries.map((each) => [escapeHtml(each.label), code(each.stored), escapeHtml(each.meaning)]),
+  );
+}
+
+/** The help page: the glossary's terms, the verdicts, outcomes, badges and classes, and the engines. */
+export function renderHelp(view: HelpView): string {
+  const text = DASHBOARD_TEXT.help;
+  const body = [
+    h(1, L.help),
+    p(text.intro),
+    howToRead([DASHBOARD_TEXT.howTo.help]),
+    `<p>${escapeHtml(text.checksLink)} ${link("/checks", L.checks)}</p>`,
+    h(2, GLOSSARY_TEXT.terms),
+    table(
+      [C.term, C.meaning],
+      view.terms.map((term) => [escapeHtml(term.term), escapeHtml(term.definition)]),
+    ),
+    h(2, GLOSSARY_TEXT.verdicts),
+    p(GLOSSARY_TEXT.verdictsIntro),
+    table(
+      [C.label, C.stored, C.meaning],
+      view.verdicts.map((each) => [
+        shortVerdictLabel(each.stored as Verdict, each.label),
+        code(each.stored),
+        escapeHtml(each.meaning),
+      ]),
+    ),
+    h(2, text.badges),
+    p(text.badgesIntro),
+    labelTable(view.badges),
+    h(3, text.reasons),
+    labelTable(view.reasons),
+    h(2, text.outcomes),
+    p(text.outcomesIntro),
+    labelTable(view.outcomes),
+    h(2, GLOSSARY_TEXT.classes),
+    p(GLOSSARY_TEXT.classesIntro),
+    labelTable(view.classes),
+    h(3, text.statuses),
+    labelTable(view.statuses),
+    h(2, GLOSSARY_TEXT.engines),
+    p(GLOSSARY_TEXT.enginesIntro),
+    table(
+      [C.engine, C.id, C.oldId, C.whatItIs],
+      view.engines.map((each) => [
+        escapeHtml(each.name),
+        code(each.id),
+        code(each.oldId),
+        escapeHtml(each.description),
+      ]),
+    ),
+  ];
+  return page(L.help, "/api/help", body);
+}
+
+/** What one figure of a check is held to, in words: its limit, its review band, its sorting limit or no band. */
+function limitText(limit: ChecksView["checks"][number]["limits"][number]): string {
+  const t = CHECKS_COMMAND_TEXT;
+  const unit = limit.unit === "1" ? "" : limit.unit === "percent" ? " %" : ` ${escapeHtml(limit.unit)}`;
+  if (limit.tolerance !== null) return `${escapeHtml(t.limit)} ${figure(limit.tolerance)}${unit}`;
+  if (limit.band === null) return escapeHtml(t.noBand);
+  const several =
+    limit.bandSeveralLines === null ? "" : `, ${figure(limit.bandSeveralLines)}${unit} ${escapeHtml(t.bandSeveral)}`;
+  return `${escapeHtml(limit.sorting ? t.sorting : t.band)} ${figure(limit.band)}${unit}${several}`;
+}
+
+/** The checks page: every check, what it compares, shows and does not show, its engines and its limits. */
+export function renderChecks(view: ChecksView): string {
+  const text = DASHBOARD_TEXT.checksPage;
+  const body = [
+    h(1, L.checks),
+    p(CHECKS_COMMAND_TEXT.intro),
+    howToRead([DASHBOARD_TEXT.howTo.checks]),
+    view.limitsFile === null
+      ? p(text.noLimitsFile, "problem")
+      : `<p>${fill(text.limitsFile, [figure(view.limitsFile)])}</p>`,
+  ];
+  for (const each of view.checks) {
+    body.push(
+      `<h2>${escapeHtml(each.title)} ${code(each.id)}</h2>`,
+      table(
+        [C.name, C.value],
+        [
+          [escapeHtml(C.kind), escapeHtml(GLOSSARY_TEXT.kinds[each.kind])],
+          [escapeHtml(C.compares), escapeHtml(`${each.compares}.`)],
+          [escapeHtml(C.shows), escapeHtml(each.shows)],
+          [escapeHtml(C.doesNotShow), escapeHtml(each.doesNotShow)],
+          [
+            escapeHtml(C.engines),
+            each.engines === null
+              ? escapeHtml(CHECKS_COMMAND_TEXT.enginesOfSuite)
+              : `${each.engines.map(engine).join(", ")}; ${escapeHtml(CHECKS_COMMAND_TEXT.enginesOwn)}`,
+          ],
+          [
+            escapeHtml(C.runsWhen),
+            escapeHtml(each.onlyWhereNamed ? CHECKS_COMMAND_TEXT.runsNamed : CHECKS_COMMAND_TEXT.runsAlways),
+          ],
+          [escapeHtml(C.oldId), code(each.oldId)],
+        ],
+      ),
+      each.limits.length === 0
+        ? p(text.noLimits, "muted")
+        : table(
+            [C.figure, C.limit],
+            each.limits.map((limit) => [metricName(limit.metric), limitText(limit)]),
+          ),
+    );
+  }
+  return page(L.checks, "/api/checks", body);
+}
+
+// ── Run control ──────────────────────────────────────────────────────────────────────────────────────────────────
 
 const jobHref = (job: number): string => `/control/job/${job}`;
 
@@ -875,9 +1278,17 @@ export function renderControl(view: ControlView, token: string): string {
       : view.busy.reason === "job"
         ? `<p>${fill(text.busyJob, [link(jobHref(view.busy.job), count(view.busy.job))])}</p>`
         : p(text.busyAsking);
-  const body: string[] = [h(1, "Run control"), p(text.intro), p(text.heavy, "problem"), p(text.noMaintenance), busy];
+  const labels = L.control;
+  const body: string[] = [
+    h(1, L.runControl),
+    p(text.intro),
+    howToRead([DASHBOARD_TEXT.howTo.control]),
+    p(text.heavy, "problem"),
+    p(text.noMaintenance),
+    busy,
+  ];
 
-  body.push(h(2, "Start a suite"), p(text.startHow), p(text.startFields(String(CONTROL_MAX_JOBS))));
+  body.push(h(2, labels.startSuite), p(text.startHow), p(text.startFields(String(CONTROL_MAX_JOBS))));
   if (!view.configured) body.push(p(text.notConfigured));
   else if (view.suites.length === 0) body.push(p(text.noSuites));
   else {
@@ -890,12 +1301,12 @@ export function renderControl(view: ControlView, token: string): string {
         "start",
         token,
         [
-          `<label>Suite <select name="suite">${options.join("")}</select></label>`,
-          '<label>Engines <input type="text" name="engines" size="40"></label>',
-          '<label>Rungs <input type="text" name="rungs" size="40"></label>',
-          `<label>Jobs <input type="number" name="jobs" min="1" max="${CONTROL_MAX_JOBS}" value="1"></label>`,
+          `<label>${escapeHtml(labels.suite)} <select name="suite">${options.join("")}</select></label>`,
+          `<label>${escapeHtml(labels.enginesField)} <input type="text" name="engines" size="40"></label>`,
+          `<label>${escapeHtml(labels.checksField)} <input type="text" name="rungs" size="40"></label>`,
+          `<label>${escapeHtml(labels.jobsField)} <input type="number" name="jobs" min="1" max="${CONTROL_MAX_JOBS}" value="1"></label>`,
         ],
-        "Start",
+        labels.start,
       ),
     );
   }
@@ -905,7 +1316,7 @@ export function renderControl(view: ControlView, token: string): string {
     p(text.rungsKnown(view.rungs.join(", "))),
   );
 
-  body.push(h(2, "Run one lens"), p(text.lensHow), p(DASHBOARD_TEXT.lens.runHeavy, "problem"));
+  body.push(h(2, labels.runOneLens), p(text.lensHow), p(DASHBOARD_TEXT.lens.runHeavy, "problem"));
   body.push(
     view.configured
       ? [
@@ -923,101 +1334,130 @@ export function renderControl(view: ControlView, token: string): string {
   );
 
   body.push(
-    h(2, "Collect"),
+    h(2, labels.collect),
     p(text.collectHow),
-    view.configured ? form("collect", token, [], "Collect") : p(text.notConfigured),
+    view.configured ? form("collect", token, [], labels.collectButton) : p(text.notConfigured),
   );
 
   const store = DASHBOARD_TEXT.store;
   body.push(
-    h(2, "Store maintenance"),
+    h(2, labels.maintenance),
     p(store.intro),
     p(store.writers, "problem"),
     p(store.pruneRule, "problem"),
     p(store.compressRule),
     p(store.temporary),
     view.configured
-      ? [form("plan-prune", token, [], "Plan prune"), form("plan-compress", token, [], "Plan compress")].join("\n")
+      ? [form("plan-prune", token, [], labels.planPrune), form("plan-compress", token, [], labels.planCompress)].join(
+          "\n",
+        )
       : p(text.notConfigured),
   );
 
   body.push(
-    h(2, "Engines"),
+    h(2, labels.engines),
     p(askedText({ state: view.asked.state as IndexView["engines"]["state"], problem: view.asked.problem })),
   );
-  body.push(
-    view.canAsk ? [p(text.askHow), form("ask", token, [], "Ask the engines again")].join("\n") : p(text.cannotAsk),
-  );
+  body.push(view.canAsk ? [p(text.askHow), form("ask", token, [], labels.ask)].join("\n") : p(text.cannotAsk));
 
-  body.push(h(2, "Jobs"), p(text.jobsKept));
+  body.push(h(2, labels.jobs), p(text.jobsKept));
   body.push(
     view.jobs.length === 0
       ? p(text.noJobs)
       : table(
-          ["Job", "Kind", "Suite", "Steps"],
+          [C.job, C.kind, C.suite, C.steps],
           [...view.jobs]
             .reverse()
             .map((job) => [
               link(jobHref(job.job), count(job.job)),
               escapeHtml(jobKindText(job)),
               `${job.suite === null ? "—" : escapeHtml(job.suite)}${job.lens === null ? "" : ` (${link(lensHref(job.lens), job.lens)})`}`,
-              job.steps.map((step) => `${escapeHtml(step.name)}: ${escapeHtml(stepState(step))}`).join("<br>"),
+              job.steps.map((step) => `${stepName(step.name)}: ${escapeHtml(stepState(step))}`).join("<br>"),
             ]),
         ),
   );
 
-  body.push(h(2, "Pending jobs"));
+  body.push(h(2, labels.pendingJobs));
   body.push(
     view.pending.length === 0
       ? p(text.noPending)
       : [
           p(text.pending),
           table(
-            ["Suite", "Run", "Rung", "Engine", "Step", "Request"],
-            view.pending.map((job) => [
+            [C.suite, C.run, C.check, C.engine, C.step, C.requests],
+            pendingRows(view.pending).map(({ job, requests }) => [
               link(runHref(job.suite), job.suite),
               escapeHtml(job.run),
-              escapeHtml(job.rung),
-              escapeHtml(job.engine),
+              check(job.rung),
+              engine(job.engine),
               job.step === null ? "—" : escapeHtml(job.step),
-              code(job.requestId),
+              count(requests),
             ]),
           ),
         ].join("\n"),
   );
 
-  body.push(h(2, "Exchange directories"));
+  body.push(h(2, labels.exchange));
   if (!view.configured) body.push(p(text.notConfigured));
   else if (view.exchange.length === 0) body.push(p(text.noExchange));
   else {
     const folders = view.exchange[0].folders.map(({ folder }) => folder);
     body.push(
       p(text.exchange),
-      table(
-        ["Engine", ...folders],
-        view.exchange.map((engine) => [escapeHtml(engine.engine), ...engine.folders.map((each) => count(each.count))]),
+      htmlTable(
+        [escapeHtml(C.engine), ...folders.map(escapeHtml)],
+        view.exchange.map((each) => [engine(each.engine), ...each.folders.map((folder) => count(folder.count))]),
       ),
-      ...view.exchange.map((engine) => p(text.operator(engine.engine))),
+      ...view.exchange.map((each) => p(text.operator(each.engine))),
     );
   }
-  return page("Run control", "/api/control", body);
+  body.push(
+    identifiers(
+      view.pending.length === 0
+        ? []
+        : [
+            table(
+              [C.suite, C.run, C.check, C.engine, C.request],
+              view.pending.map((job) => [
+                escapeHtml(job.suite),
+                escapeHtml(job.run),
+                check(job.rung),
+                engine(job.engine),
+                code(job.requestId),
+              ]),
+            ),
+          ],
+    ),
+  );
+  return page(L.runControl, "/api/control", body);
+}
+
+/** A step's name in words, with its name as run control keeps it on hover. */
+function stepName(name: string): string {
+  const steps = L.control.steps;
+  const said = Object.hasOwn(steps, name) ? steps[name as keyof typeof steps] : name;
+  return `<span title="${escapeHtml(name)}">${escapeHtml(said)}</span>`;
 }
 
 /** A job's kind, as the jobs table names it. */
 function jobKindText(job: Pick<JobEntry, "jobKind" | "store">): string {
-  if (job.store !== null) return `${job.store.mode === "plan" ? "plan of" : "confirmed"} store ${job.store.action}`;
-  return job.jobKind === "suite" ? "start" : job.jobKind === "lens" ? "run of a lens" : "collect";
+  const labels = L.control;
+  if (job.store !== null) {
+    return job.store.mode === "plan" ? labels.kindPlan(job.store.action) : labels.kindConfirmed(job.store.action);
+  }
+  return job.jobKind === "suite" ? labels.kindStart : job.jobKind === "lens" ? labels.kindLens : labels.kindCollect;
 }
 
 /** Bytes as a whole number of them and in GiB. */
 function bytesText(bytes: number): string {
-  return `${count(bytes)} B (${formatFixed(bytes / 2 ** 30, 3)} GiB)`;
+  return L.control.bytes(count(bytes), formatFixed(bytes / 2 ** 30, 3));
 }
 
 /** A store job's report: the prune's notice, its tables, its state, and from a plan the form that confirms it. */
 function storeBlock(view: StoreJobView, job: number, token: string | null): string[] {
   const store = DASHBOARD_TEXT.store;
-  const out: string[] = [h(2, view.mode === "plan" ? `Plan of store ${view.action}` : `Store ${view.action}`)];
+  const labels = L.control;
+  const out: string[] = [h(2, view.mode === "plan" ? labels.planOf(view.action) : labels.storeAction(view.action))];
   if (view.action === "prune") out.push(p(store.pruneRule, "problem"));
   else out.push(p(store.compressRule));
   out.push(p(store.writers, "problem"), p(store.temporary));
@@ -1032,9 +1472,9 @@ function storeBlock(view: StoreJobView, job: number, token: string | null): stri
     out.push(`<p class="problem"><strong>${escapeHtml(report.notice)}</strong></p>`, p(store.pruneReport));
     out.push(
       table(
-        ["Engine", "Kept files", "Kept bytes", "Removable files", "Removable bytes"],
+        [C.engine, C.keptFiles, C.keptBytes, C.removableFiles, C.removableBytes],
         report.engines.map((each) => [
-          escapeHtml(each.engine),
+          engine(each.engine),
           count(each.kept.files),
           bytesText(each.kept.bytes),
           count(each.removable.files),
@@ -1042,11 +1482,10 @@ function storeBlock(view: StoreJobView, job: number, token: string | null): stri
         ]),
       ),
       table(
-        ["Removable engine", "Fingerprint", "Adapter revision", "Files", "Bytes", "Newest entry"],
+        [C.removableEngine, C.engineVersion, C.files, C.bytes, C.newestEntry],
         report.removable.map((each) => [
-          escapeHtml(each.engine),
-          code(each.fingerprint),
-          each.adapterRevision === null ? "—" : code(each.adapterRevision),
+          engine(each.engine),
+          `<code title="${escapeHtml(`${each.fingerprint} / ${each.adapterRevision ?? "—"}`)}">${escapeHtml(`${each.fingerprint.slice(0, 8)}/${(each.adapterRevision ?? "—").slice(0, 8)}`)}</code>`,
           count(each.files),
           bytesText(each.bytes),
           escapeHtml(each.newestEntry),
@@ -1066,7 +1505,7 @@ function storeBlock(view: StoreJobView, job: number, token: string | null): stri
     out.push(
       p(store.compressReport),
       table(
-        ["Plain entries", "Gzip entries", "Bytes before", "Bytes after"],
+        [C.plainEntries, C.gzipEntries, C.bytesBefore, C.bytesAfter],
         [
           [
             count(report.plain.files),
@@ -1079,7 +1518,7 @@ function storeBlock(view: StoreJobView, job: number, token: string | null): stri
     );
     if (view.dryRun === false) out.push(p(store.compressed(count(report.changed.count))));
   }
-  out.push(p(store.state(view.state)));
+  out.push(p(store.state));
   if (view.dryRun === true) out.push(p(store.dryRun));
   if (view.mode === "plan") {
     if (view.confirmable && token !== null) {
@@ -1092,11 +1531,28 @@ function storeBlock(view: StoreJobView, job: number, token: string | null): stri
             `<input type="hidden" name="plan" value="${escapeHtml(String(job))}">`,
             `<input type="hidden" name="state" value="${escapeHtml(view.state)}">`,
           ],
-          view.action === "prune" ? "Prune" : "Compress",
+          view.action === "prune" ? labels.prune : labels.compress,
         ),
       );
     } else out.push(p(store.notConfirmable));
   }
+  out.push(
+    identifiers([
+      identifierTable([[L.identifierRows.storeState, view.state]]),
+      ...(view.prune === null || view.prune.removable.length === 0
+        ? []
+        : [
+            table(
+              [C.removableEngine, C.engineCode, C.toolCode],
+              view.prune.removable.map((each) => [
+                engine(each.engine),
+                code(each.fingerprint),
+                each.adapterRevision === null ? MUTED_DASH : code(each.adapterRevision),
+              ]),
+            ),
+          ]),
+    ]),
+  );
   return out;
 }
 
@@ -1106,25 +1562,28 @@ function storeBlock(view: StoreJobView, job: number, token: string | null): stri
  */
 export function renderJob(view: JobView, token: string | null = null): string {
   const text = DASHBOARD_TEXT.control;
+  const labels = L.control;
   const what =
     view.jobKind === "suite"
-      ? `start of ${view.suite ?? "a suite"}`
+      ? labels.startOf(view.suite ?? labels.aSuite)
       : view.jobKind === "lens"
-        ? `run of the lens ${view.lens ?? ""}`
+        ? labels.runOfLens(view.lens ?? "")
         : view.jobKind === "store"
           ? jobKindText(view)
-          : "collect";
+          : labels.kindCollect;
   const body: string[] = [
-    h(1, `Job ${count(view.job)}: ${what}`),
-    `<p>${link("/control", "Run control")}${view.suite === null ? "" : ` · ${link(runHref(view.suite), `Run of ${view.suite}`)}`}${view.lens === null ? "" : ` · ${link(lensHref(view.lens), `Lens ${view.lens}`)}`}</p>`,
+    h(1, labels.job(count(view.job), what)),
+    `<p>${link("/control", L.runControl)}${view.suite === null ? "" : ` · ${link(runHref(view.suite), L.runOf(view.suite))}`}${view.lens === null ? "" : ` · ${link(lensHref(view.lens), L.lensOf(view.lens))}`}</p>`,
+    howToRead([DASHBOARD_TEXT.howTo.job]),
     p(view.running ? text.jobRunning : text.jobEnded),
     // A store job's report first: the prune's notice, and from a plan the form that confirms it.
     ...(view.store === null ? [] : storeBlock(view.store, view.job, token)),
     p(text.output),
   ];
   for (const step of view.steps) {
+    const steps = labels.steps;
     body.push(
-      h(2, step.name),
+      h(2, Object.hasOwn(steps, step.name) ? steps[step.name as keyof typeof steps] : step.name),
       `<p>${code(step.command)}</p>`,
       p(stepState(step)),
       ...(step.name === "catalog" ? [p(text.catalogQuiet)] : []),
@@ -1136,39 +1595,39 @@ export function renderJob(view: JobView, token: string | null = null): string {
     );
   }
   if (view.collect !== null) {
-    body.push(h(2, "Collected"), p(text.collected));
+    body.push(h(2, labels.collected), p(text.collected));
     if (view.collect.problem !== null) body.push(p(view.collect.problem, "problem"));
     else if (view.collect.engines.length === 0) body.push(p(text.collectNothing));
     else {
       body.push(
         table(
-          ["Engine", "Collected", "Rejected", "Still pending"],
-          view.collect.engines.map((engine) => [
-            escapeHtml(engine.engine),
-            count(engine.collected.count),
-            count(engine.rejected.count),
-            count(engine.pending.count),
+          [C.engine, C.collected, C.rejected, C.stillPending],
+          view.collect.engines.map((each) => [
+            engine(each.engine),
+            count(each.collected.count),
+            count(each.rejected.count),
+            count(each.pending.count),
           ]),
         ),
       );
-      for (const engine of view.collect.engines) {
-        if (engine.unavailable !== null)
+      for (const each of view.collect.engines) {
+        if (each.unavailable !== null)
           body.push(
-            `<p class="problem">${fill(text.collectUnavailable, [escapeHtml(engine.engine), code(engine.unavailable)])}</p>`,
+            `<p class="problem">${fill(text.collectUnavailable, [engine(each.engine), code(each.unavailable)])}</p>`,
           );
-        if (engine.rejected.jobs.length > 0) {
+        if (each.rejected.jobs.length > 0) {
           body.push(
             table(
-              ["Engine", "Rejected job", "Reason"],
+              [C.engine, C.rejectedJob, C.reason],
               // The reason is lvrtc collect's own words, shown as it said them: none of the dashboard's sentences.
-              engine.rejected.jobs.map(({ job, reason }) => [escapeHtml(engine.engine), code(job), code(reason)]),
+              each.rejected.jobs.map(({ job, reason }) => [engine(each.engine), code(job), code(reason)]),
             ),
           );
         }
       }
     }
   }
-  return page(`Job ${count(view.job)}`, `/api${jobHref(view.job)}`, body, view.running);
+  return page(labels.jobTitle(count(view.job)), `/api${jobHref(view.job)}`, body, view.running);
 }
 
 /** The page of an action that was refused: its status and the sentence that says why. */
@@ -1176,11 +1635,11 @@ export function renderActionRefusal(status: number, reason: string): string {
   return page(`${status}`, "/api/control", [
     h(1, `${status} ${DASHBOARD_TEXT.control.refusedTitle}`),
     p(reason),
-    `<p>${link("/control", "Run control")}</p>`,
+    `<p>${link("/control", L.runControl)}</p>`,
   ]);
 }
 
-// ── The lens page (Stage 8.4) ────────────────────────────────────────────────────────────────────────────────────
+// ── The lens page ────────────────────────────────────────────────────────────────────────────────────────────────
 
 /** The form that runs one lens: POST to run control with the server's token; the key fixed where a lens page has it. */
 function lensForm(
@@ -1191,8 +1650,9 @@ function lensForm(
   runs: readonly string[],
   chosenRun: string | null = null,
 ): string {
+  const labels = L.control;
   const options = [
-    '<option value="">both</option>',
+    `<option value="">${escapeHtml(labels.both)}</option>`,
     ...apertures.map((each) => `<option value="${escapeHtml(each)}">${escapeHtml(each)}</option>`),
   ];
   // The first profile is what an empty field runs (benchmark); the others are named.
@@ -1205,14 +1665,14 @@ function lensForm(
     token,
     [
       lens === null
-        ? '<label>Lens key <input type="text" name="lens" size="40"></label>'
+        ? `<label>${escapeHtml(labels.lensKey)} <input type="text" name="lens" size="40"></label>`
         : `<input type="hidden" name="lens" value="${escapeHtml(lens)}">`,
-      `<label>Engines <input type="text" name="engines" size="24" placeholder="${escapeHtml(engines.join(","))}"></label>`,
-      `<label>Profile <select name="profile">${runOptions.join("")}</select></label>`,
-      `<label>Aperture <select name="aperture">${options.join("")}</select></label>`,
-      `<label>Jobs <input type="number" name="jobs" min="1" max="${CONTROL_MAX_JOBS}" value="1"></label>`,
+      `<label>${escapeHtml(labels.enginesField)} <input type="text" name="engines" size="24" placeholder="${escapeHtml(engines.join(","))}"></label>`,
+      `<label>${escapeHtml(labels.profile)} <select name="profile">${runOptions.join("")}</select></label>`,
+      `<label>${escapeHtml(labels.aperture)} <select name="aperture">${options.join("")}</select></label>`,
+      `<label>${escapeHtml(labels.jobsField)} <input type="number" name="jobs" min="1" max="${CONTROL_MAX_JOBS}" value="1"></label>`,
     ],
-    "Run this lens",
+    labels.runLens,
   );
 }
 
@@ -1232,20 +1692,28 @@ function lensQuery(view: LensView, reference: string | null): string {
   return params.toString();
 }
 
+/** A kind of image plane in words: the design plane, LensVisualizer's best axial focus, or another kind by its name. */
+function planeKind(kind: string): string {
+  const text = DASHBOARD_TEXT.compare;
+  const said =
+    kind === "design" ? text.chipDesign : kind === "lv-best-axial" ? text.chipBestAxial : text.chipPlaneKind(kind);
+  return `<span title="${escapeHtml(kind)}">${escapeHtml(said)}</span>`;
+}
+
 /** The condition of a run as table cells: zoom, focus, stop, object, image plane, lines. */
 function conditionCells(condition: LensCondition | null): string[] {
   if (condition === null) return ["—", "—", "—", "—", "—", "—"];
   const plane =
     condition.plane === null
       ? `${plainFigure(condition.imageZ)} <span class="muted">(${escapeHtml(DASHBOARD_TEXT.lens.planeNotRecorded)})</span>`
-      : `${plainFigure(condition.imageZ)} ${escapeHtml(condition.plane.kind)}${condition.plane.shiftMm === null ? "" : ` ${plainFigure(condition.plane.shiftMm)} mm`}`;
+      : `${plainFigure(condition.imageZ)} <span class="muted">(${planeKind(condition.plane.kind)}${condition.plane.shiftMm === null ? "" : fill(L.lens.shifted, [plainFigure(condition.plane.shiftMm)])})</span>`;
   return [
     plainFigure(condition.zoomT),
     plainFigure(condition.focusT),
     plainFigure(condition.stopSemiDiameterMm),
     condition.object.kind === "infinity"
       ? escapeHtml(DASHBOARD_TEXT.lens.objectInfinity)
-      : `z ${plainFigure(condition.object.z)}`,
+      : fill(L.lens.objectAt, [plainFigure(condition.object.z)]),
     plane,
     condition.lines.map((line) => `${plainFigure(line.wavelengthNm)} nm × ${plainFigure(line.weight)}`).join("<br>"),
   ];
@@ -1267,7 +1735,7 @@ function curveRow(view: LensView, curve: LensCurveView): string[] {
     count(curve.curve),
     link(runHref(curve.suite), curve.suite),
     escapeHtml(curve.runName),
-    escapeHtml(curve.rung),
+    check(curve.rung),
     escapeHtml(curveEngine(curve)),
     plainFigure(curve.field),
     escapeHtml(curve.cut),
@@ -1284,16 +1752,15 @@ export function renderLens(
   run: { readonly token: string; readonly configured: boolean } | null,
 ): string {
   const text = DASHBOARD_TEXT.lens;
+  const labels = L.lens;
   const query = lensQuery(view, view.curves.find((curve) => curve.reference)?.id ?? null);
   const body: string[] = [
-    h(1, view.name === null ? `Lens ${view.key}` : `Lens ${view.key}: ${view.name}`),
+    h(1, view.name === null ? L.lensOf(view.key) : L.lensNamed(view.key, view.name)),
     `<p>${escapeHtml(text.compareLink)} ${link(compareHref(view.key, null, ""), DASHBOARD_TEXT.compare.title(view.key))}</p>`,
     p(text.intro),
-    p(text.lensOfRun),
-    p(DASHBOARD_TEXT.sources),
-    p(DASHBOARD_TEXT.derived),
+    howToRead([DASHBOARD_TEXT.howTo.lens, text.lensOfRun, DASHBOARD_TEXT.sources, DASHBOARD_TEXT.derived]),
     ...view.problems.map((problem) => p(problem, "problem")),
-    h(2, "Runs"),
+    h(2, labels.runs),
   ];
   if (view.runs.length === 0) body.push(p(text.noRuns));
   else {
@@ -1301,44 +1768,48 @@ export function renderLens(
       p(text.quickIntro),
       table(
         [
-          "Run directory",
-          "Run",
-          "Case",
-          "Zoom",
-          "Focus",
-          "Stop semi-diameter (mm)",
-          "Object",
-          "Image plane",
-          "Lines",
-          "Compared",
-          "MTF requests",
+          C.runDirectory,
+          C.run,
+          C.zoom,
+          C.focus,
+          C.stop,
+          C.object,
+          C.imagePlane,
+          C.wavelengths,
+          C.compared,
+          C.mtfRequests,
         ],
         view.runs.map((each) => [
-          link(runHref(each.suite), each.suite),
+          `${link(runHref(each.suite), each.suite)}${each.problems.length === 0 ? "" : `<br>${problemsCell(each.problems)}`}`,
           escapeHtml(each.run),
-          `${shortId(each.caseId)}${each.problems.length === 0 ? "" : `<br>${problemsCell(each.problems)}`}`,
           ...conditionCells(each.condition),
-          each.comparisons === "ok" ? "yes" : each.comparisons === "none" ? "no" : '<span class="muted">—</span>',
+          each.comparisons === "ok" ? escapeHtml(L.yes) : each.comparisons === "none" ? escapeHtml(L.no) : MUTED_DASH,
           each.requests.length === 0
             ? `<span class="muted">${escapeHtml(text.noMtf)}</span>`
             : each.requests
                 .map((request) =>
                   request.quick === null
-                    ? escapeHtml(request.rung)
-                    : link(`${lensHref(view.key)}?${request.quick}`, request.rung),
+                    ? escapeHtml(checkName(request.rung))
+                    : link(`${lensHref(view.key)}?${request.quick}`, checkName(request.rung)),
                 )
                 .join(", "),
         ]),
       ),
+      identifiers([
+        table(
+          [C.runDirectory, C.run, C.lensState],
+          view.runs.map((each) => [escapeHtml(each.suite), escapeHtml(each.run), shortId(each.caseId)]),
+        ),
+      ]),
     );
   }
 
-  body.push(h(2, "Choose curves"), p(text.pickerIntro), p(text.pickerHow));
+  body.push(h(2, labels.choose), p(text.pickerIntro), p(text.pickerHow));
   const { picker } = view;
   const group = (legend: string, boxes: readonly string[]): string =>
     `<fieldset><legend>${escapeHtml(legend)}</legend>${boxes.join(" ") || '<span class="muted">—</span>'}</fieldset>`;
   const references = [
-    '<option value="">none</option>',
+    `<option value="">${escapeHtml(labels.noReference)}</option>`,
     ...view.curves.map(
       (curve) =>
         `<option value="${escapeHtml(curve.id)}"${curve.reference ? " selected" : ""}>${escapeHtml(DASHBOARD_TEXT.lens.legendCurve(count(curve.curve), curveName(curve)))}</option>`,
@@ -1348,29 +1819,29 @@ export function renderLens(
     [
       `<form method="get" action="${escapeHtml(lensHref(view.key))}">`,
       group(
-        "Runs",
+        labels.runs,
         picker.runs.map((option) => checkbox("run", option.id, escapeHtml(option.label), option.chosen)),
       ),
       group(
-        "Rungs",
-        picker.rungs.map((option) => checkbox("rung", option.id, escapeHtml(option.label), option.chosen)),
+        labels.checks,
+        picker.rungs.map((option) => checkbox("rung", option.id, check(option.label), option.chosen)),
       ),
       group(
-        "Engines",
+        labels.engines,
         picker.engines.map((option) => checkbox("engine", option.id, escapeHtml(option.label), option.chosen)),
       ),
       group(
-        "Fields",
+        labels.fields,
         picker.fields.map((option) =>
           checkbox("field", option.id, `${escapeHtml(option.kind)} ${plainFigure(option.field)}`, option.chosen),
         ),
       ),
       group(
-        "Cuts",
+        labels.cuts,
         picker.cuts.map((option) => checkbox("cut", option.id, escapeHtml(option.label), option.chosen)),
       ),
-      `<label>Reference <select name="ref">${references.join("")}</select></label>`,
-      '<button type="submit">Draw</button>',
+      `<label>${escapeHtml(labels.reference)} <select name="ref">${references.join("")}</select></label>`,
+      `<button type="submit">${escapeHtml(labels.draw)}</button>`,
       "</form>",
     ].join("\n"),
     ...view.notes.map((note) => p(note, "problem")),
@@ -1378,12 +1849,12 @@ export function renderLens(
 
   if (view.curves.length > 0) {
     body.push(
-      h(2, "Curves"),
+      h(2, labels.curves),
       p(text.overlayIntro),
       chartFigure(renderLensOverlay(view.key, view.curves), ""),
       p(text.curves),
       table(
-        ["Curve", "Run directory", "Run", "Rung", "Engine", "Field", "Cut", "State", "Reference"],
+        [C.curve, C.runDirectory, C.run, C.check, C.engine, C.field, C.cut, C.state, C.reference],
         view.curves.map((curve) => curveRow(view, curve)),
       ),
     );
@@ -1395,18 +1866,18 @@ export function renderLens(
     );
   }
   if (view.curves.length > 0) {
-    body.push(h(2, "Differences"));
+    body.push(h(2, labels.differences));
     if (view.reference !== null) body.push(p(text.reference(count(view.reference.curve))));
     if (view.referenceNote !== null) body.push(p(view.referenceNote));
     if (view.within !== null) {
       const { within } = view;
       body.push(
-        h(3, "Within the reference's request"),
+        h(3, labels.within),
         p(text.withinIntro),
         ...(within.section === null
           ? []
           : [
-              `<p>${escapeHtml(text.withinSection)} ${link(sectionHref(within.section.suite, within.section.section), `${within.section.suite}, section ${count(within.section.section)}`)}</p>`,
+              `<p>${escapeHtml(text.withinSection)} ${link(sectionHref(within.section.suite, within.section.section), L.sectionLink(within.section.suite, count(within.section.section)))}</p>`,
             ]),
         ...within.notes.map((note) => p(note)),
         chartFigure(
@@ -1417,7 +1888,7 @@ export function renderLens(
     }
     if (view.other !== null && view.reference !== null) {
       body.push(
-        h(3, "Differences that no comparison judges"),
+        h(3, labels.other),
         p(text.otherIntro),
         chartFigure(renderLensOther(view.key, view.other, view.reference.curve), otherCaption(view.other)),
       );
@@ -1425,7 +1896,7 @@ export function renderLens(
     body.push(...view.unresolved.map((sentence) => p(sentence, "muted")));
   }
 
-  body.push(h(2, "Run this lens"), p(text.runIntro), p(text.runHeavy, "problem"));
+  body.push(h(2, labels.runLens), p(text.runIntro), p(text.runHeavy, "problem"));
   if (run === null || !run.configured) body.push(p(text.runNotConfigured));
   else {
     body.push(
@@ -1440,10 +1911,10 @@ export function renderLens(
       ),
     );
   }
-  return page(`Lens ${view.key}`, `/api${lensHref(view.key)}${query === "" ? "" : `?${query}`}`, body);
+  return page(L.lensOf(view.key), `/api${lensHref(view.key)}${query === "" ? "" : `?${query}`}`, body);
 }
 
-// ── The "LV vs optiland" pages (Stage 8.5) ───────────────────────────────────────────────────────────────────────
+// ── The "LV vs optiland" pages ───────────────────────────────────────────────────────────────────────────────────
 
 const compareHref = (key: string, tab: string | null, query: string): string =>
   `/compare/${encodeURIComponent(key)}${tab === null ? "" : `/${encodeURIComponent(tab)}`}${query === "" ? "" : `?${query}`}`;
@@ -1507,28 +1978,28 @@ function gatedTable(lines: readonly GatedLine[]): string[] {
       line.pairs.length === 0
         ? `<span class="muted">${escapeHtml(text.none)}</span>`
         : line.pairs
-            .map((pair) => fill(text.gatedPair, [escapeHtml(pair.a), escapeHtml(pair.b), verdict(pair.verdict)]))
+            .map((pair) => fill(text.gatedPair, [engine(pair.a), engine(pair.b), verdict(pair.verdict)]))
             .join("<br>");
     const largest =
       line.headline !== null
         ? fill(text.gatedLargest, [
-            code(line.headline.metric),
+            metricName(line.headline.metric),
             figure(line.headline.value),
-            escapeHtml(line.headline.a),
-            escapeHtml(line.headline.b),
+            engine(line.headline.a),
+            engine(line.headline.b),
           ])
         : line.unmeasured !== null
-          ? fill(text.gatedUnmeasured, [code(line.unmeasured)])
-          : '<span class="muted">—</span>';
+          ? fill(text.gatedUnmeasured, [metricName(line.unmeasured)])
+          : MUTED_DASH;
     const gate = line.headline?.gate ?? null;
-    return [escapeHtml(line.rung), pairs, largest, gate === null ? '<span class="muted">—</span>' : figure(gate)];
+    return [check(line.rung), pairs, largest, gate === null ? MUTED_DASH : figure(gate)];
   });
   const out = [table([text.columnRung, text.columnPairs, text.columnLargest, text.columnGate], rows)];
   const runs = [...new Set(lines.flatMap((line) => (line.source.kind === "runs" ? line.source.suites : [])))];
   const stems = [...new Set(lines.flatMap((line) => (line.source.kind === "baselines" ? line.source.stems : [])))];
   if (runs.length > 0) out.push(p(text.gatedFromRuns(runs.join(", ")), "muted"));
   if (stems.length > 0) out.push(p(text.gatedFromBaselines(stems.join(", ")), "muted"));
-  for (const line of lines) if (line.pairs.length === 0) out.push(p(text.gatedNone(line.rung), "muted"));
+  for (const line of lines) if (line.pairs.length === 0) out.push(p(text.gatedNone(checkName(line.rung)), "muted"));
   return out;
 }
 
@@ -1536,9 +2007,9 @@ function gatedTable(lines: readonly GatedLine[]): string[] {
 function recordedMetric(metric: RecordedLine["metrics"][number]): string {
   const text = DASHBOARD_TEXT.compare;
   const value = withUnit(metric.value, metric.unit);
-  if (metric.limit !== null) return fill(text.metricLimit, [code(metric.name), value, figure(metric.limit)]);
-  if (metric.band !== null) return fill(text.metricBand, [code(metric.name), value, figure(metric.band)]);
-  return fill(text.metricNoBand, [code(metric.name), value]);
+  if (metric.limit !== null) return fill(text.metricLimit, [metricName(metric.name), value, figure(metric.limit)]);
+  if (metric.band !== null) return fill(text.metricBand, [metricName(metric.name), value, figure(metric.band)]);
+  return fill(text.metricNoBand, [metricName(metric.name), value]);
 }
 
 /** The recorded lines of a card as a table, and below it each line's notes, sources and (on a tab's page) details. */
@@ -1547,12 +2018,12 @@ function recordedTable(view: CompareView, lines: readonly RecordedLine[]): strin
   if (lines.length === 0) return [];
   const none = '<span class="muted">—</span>';
   const rows = lines.map((line) => [
-    escapeHtml(line.rung),
+    check(line.rung),
     escapeHtml(line.label ?? "—"),
-    fill(text.pairText, [escapeHtml(line.a), escapeHtml(line.b)]),
+    fill(text.pairText, [engine(line.a), engine(line.b)]),
     verdict(line.verdict),
     line.metrics.map(recordedMetric).join("<br>") || none,
-    line.counts.map((each) => fill(text.countText, [code(each.name), figure(each.value)])).join("<br>") || none,
+    line.counts.map((each) => fill(text.countText, [metricName(each.name), figure(each.value)])).join("<br>") || none,
     line.source.kind === "baseline"
       ? escapeHtml(text.fromBaselineShort(line.source.stem))
       : line.source.section === null
@@ -1572,7 +2043,7 @@ function recordedTable(view: CompareView, lines: readonly RecordedLine[]): strin
   const notes = lines.flatMap((line) => [
     ...(line.reason === null
       ? []
-      : [`<li>${escapeHtml(text.lineNote(line.rung, line.label ?? "", line.reason))}</li>`]),
+      : [`<li>${escapeHtml(text.lineNote(checkName(line.rung), line.label ?? "", line.reason))}</li>`]),
     ...(line.source.kind === "baseline"
       ? [`<li>${escapeHtml(text.fromBaseline(line.source.stem, line.source.run))}</li>`]
       : []),
@@ -1584,7 +2055,10 @@ function recordedTable(view: CompareView, lines: readonly RecordedLine[]): strin
   if (view.tab !== null) {
     for (const line of lines) {
       if (line.detail === null) continue;
-      out.push(h(3, text.detailHeading(line.rung, line.label ?? "", line.a, line.b)), ...detailBlock(view, line));
+      out.push(
+        h(3, text.detailHeading(checkName(line.rung), line.label ?? "", engineName(line.a), engineName(line.b))),
+        ...detailBlock(view, line),
+      );
     }
   }
   return out;
@@ -1595,7 +2069,7 @@ function setAsideBlock(asides: readonly SetAsideElement[]): string[] {
   const text = DASHBOARD_TEXT.compare;
   return asides.map((aside) => {
     const at = aside.at === null ? escapeHtml(text.setAsideAt(String(aside.element))) : plainFigure(aside.at.value);
-    return `<p class="muted">${fill(text.setAside, [at, escapeHtml(aside.class), escapeHtml(aside.reason)])}</p>`;
+    return `<p class="muted">${fill(text.setAside, [at, differenceClass(aside.class), fieldReason(aside.reason)])}</p>`;
   });
 }
 
@@ -1603,10 +2077,10 @@ function setAsideBlock(asides: readonly SetAsideElement[]): string[] {
 function valuesTableBlock(view: ValuesTableView): string {
   const text = DASHBOARD_TEXT.compare;
   return table(
-    [text.columnLine, text.columnValue, view.a, view.b, text.columnDifference, text.columnBand],
+    [text.columnLine, text.columnValue, engineName(view.a), engineName(view.b), text.columnDifference, text.columnBand],
     view.rows.map((row) => [
       escapeHtml(row.group ?? ""),
-      code(row.name),
+      `<span title="${escapeHtml(row.name)}">${escapeHtml(COMPARE_AXES[row.name] ?? row.name)}</span>`,
       row.a === null ? '<span class="muted">—</span>' : figure(row.a.value),
       row.b === null ? '<span class="muted">—</span>' : figure(row.b.value),
       row.difference === null ? '<span class="muted">—</span>' : derivedValue(row.difference),
@@ -1620,7 +2094,7 @@ function detailBlock(view: CompareView, line: RecordedLine): string[] {
   const text = DASHBOARD_TEXT.compare;
   const detail = line.detail;
   if (detail === null) return [];
-  const subject = `${view.key}, ${line.source.kind === "run" ? line.source.run : line.source.stem}, ${line.rung}`;
+  const subject = `${view.key}, ${line.source.kind === "run" ? line.source.run : line.source.stem}, ${checkName(line.rung)}`;
   const out: string[] = [...detail.problems.map((problem) => p(problem, "problem"))];
   if (detail.overlays.length + detail.differences.length > 0) {
     out.push(p(text.mtfIntro));
@@ -1650,8 +2124,17 @@ function detailBlock(view: CompareView, line: RecordedLine): string[] {
 function cardBlock(view: CompareView, card: CompareCard): string[] {
   const text = DASHBOARD_TEXT.compare;
   const verdictText = (value: Verdict | null): string =>
-    value === null ? `<span class="muted">${escapeHtml(text.none)}</span>` : verdict(value);
-  const verdicts = fill(text.cardVerdicts, [verdictText(card.gatedVerdict), verdictText(card.recordedVerdict)]);
+    value === null ? `<span class="muted">${escapeHtml(text.noneCompared)}</span>` : verdict(value);
+  // The badge names the counterparts of the card's own checks: optiland's, or flux's for vignetting.
+  const counterparts = COMPARE_TABS.find((tab) => tab.tab === card.tab)?.counterparts ?? [];
+  const verdicts =
+    counterparts.length === 0
+      ? fill(text.cardVerdictsGated, [verdictText(card.gatedVerdict)])
+      : fill(text.cardVerdicts, [
+          verdictText(card.gatedVerdict),
+          counterparts.map(engine).join(escapeHtml(text.counterpartsJoin)),
+          verdictText(card.recordedVerdict),
+        ]);
   const out = [
     '<section class="card">',
     `<h2>${escapeHtml(card.title)} <span class="badges">${verdicts}</span></h2>`,
@@ -1660,9 +2143,9 @@ function cardBlock(view: CompareView, card: CompareCard): string[] {
   ];
   if (card.recorded.length + card.notCompared.length > 0) {
     out.push(h(3, text.recordedHeading));
-    if (card.tab === "vignetting") out.push(p(text.flux, "muted"));
+    if (card.tab === "vignetting") out.push(p(text.flux(engineName("flux-of-lv-rays")), "muted"));
     out.push(...recordedTable(view, card.recorded));
-    out.push(...card.notCompared.map((rung) => p(text.notCompared(rung), "muted")));
+    out.push(...card.notCompared.map((rung) => p(text.notCompared(checkName(rung)), "muted")));
   }
   if (view.tab === null && card.recorded.some((line) => line.source.kind === "run")) {
     out.push(`<p>${link(compareHref(view.key, card.tab, view.query), text.detailsLink)}</p>`);
@@ -1681,14 +2164,17 @@ export function renderCompare(
   const body: string[] = [
     h(1, view.name === null ? title : `${title} (${view.name})`),
     p(text.lead),
-    `<details><summary>${escapeHtml(text.howToRead)}</summary>`,
-    p(text.intro),
-    p(text.recordedMeaning),
-    p(text.chipsIntro),
-    p(text.chipsMuted),
-    p(DASHBOARD_TEXT.sources),
-    p(DASHBOARD_TEXT.derived),
-    "</details>",
+    howToRead(
+      [
+        text.intro,
+        text.recordedMeaning,
+        text.chipsIntro,
+        text.chipsMuted,
+        DASHBOARD_TEXT.sources,
+        DASHBOARD_TEXT.derived,
+      ],
+      [verdictLegend()],
+    ),
     ...chipsBlock(view),
     ...view.notes.map((note) => p(note, "problem")),
   ];
@@ -1702,8 +2188,8 @@ export function renderCompare(
     body.push(p(text.detailsIntro), `<p>${link(compareHref(view.key, null, view.query), text.cardsLink)}</p>`);
   }
   for (const card of view.cards) body.push(...cardBlock(view, card));
-  body.push(p(text.runTabsHint, "muted"), `<p>${link(lensHref(view.key), `Lens ${view.key}`)}</p>`);
-  body.push(h(2, "Run this lens"), p(DASHBOARD_TEXT.lens.runIntro), p(DASHBOARD_TEXT.lens.runHeavy, "problem"));
+  body.push(p(text.runTabsHint, "muted"), `<p>${link(lensHref(view.key), L.lensOf(view.key))}</p>`);
+  body.push(h(2, L.lens.runLens), p(DASHBOARD_TEXT.lens.runIntro), p(DASHBOARD_TEXT.lens.runHeavy, "problem"));
   if (run === null || !run.configured) body.push(p(DASHBOARD_TEXT.lens.runNotConfigured));
   else {
     body.push(
@@ -1727,15 +2213,17 @@ function comparedBlock(view: IndexView): string[] {
   const out = [h(2, text.indexHeading), p(text.indexIntro)];
   if (view.compared.length === 0) return [...out, p(text.indexNone)];
   const tabs = COMPARE_TABS.map((tab) => tab.title);
-  const cell = (verdictOf: Verdict | null): string =>
-    verdictOf === null ? `<span class="muted">${escapeHtml(text.none)}</span>` : verdict(verdictOf);
+  const cell = (verdictOf: Verdict | null, none: string): string =>
+    verdictOf === null ? `<span class="muted">${escapeHtml(none)}</span>` : verdict(verdictOf);
   out.push(
     table(
-      ["Lens", "Name", ...tabs],
+      [C.lens, C.name, ...tabs],
       view.compared.map((lens) => [
         link(compareHref(lens.key, null, ""), lens.key),
         lens.name === null ? "—" : escapeHtml(lens.name),
-        ...lens.cards.map((card) => fill(text.indexCell, [cell(card.gated), cell(card.recorded)])),
+        ...lens.cards.map((card) =>
+          fill(text.indexCell, [cell(card.gated, text.noGated), cell(card.recorded, text.noRecorded)]),
+        ),
       ]),
     ),
   );

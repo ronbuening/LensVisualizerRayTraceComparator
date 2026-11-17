@@ -8,15 +8,25 @@ import { MATRIX_JSON, MATRIX_MARKDOWN, readMatrixInputs, renderMatrix } from "..
 import { parseArguments } from "../arguments.ts";
 import { EXIT_OK, EXIT_USAGE } from "../command.ts";
 import type { CliCommand } from "../command.ts";
+import { helpText, options, paragraph } from "../help.ts";
 
-const HELP =
-  "Usage: lvrtc matrix [--root <dir>]\n\nWrites reports/benchmark/validation-matrix.{json,md} from the benchmark's two baselines alone (baselines/benchmark.json and benchmark.mtf.json): a row for each LensVisualizer analysis tab, with the rungs that cover it, the counts the baselines hold of each baselined rung, and the quantity and engines of each rung that is in no baseline. No engine is read. Missing or inconsistent inputs write nothing.\n";
+const SYNOPSIS = "Usage: lvrtc matrix [--root <dir>]\n";
+const HELP = helpText([
+  SYNOPSIS,
+  ...paragraph(
+    "For maintainers. Writes reports/benchmark/validation-matrix.json and .md, the coverage table of LensVisualizer's analysis tabs, from the benchmark's two baselines alone (baselines/benchmark.json and benchmark.mtf.json): a row for each tab, with the checks that cover it, the counts the baselines hold of each check they hold, and the quantity and engines of each side-by-side check that is in no baseline. No engine is read. Missing or inconsistent inputs write nothing.",
+  ),
+  ...options([["--root <dir>", "the directory that holds baselines/ and reports/ (default: this repository)"]]),
+  ...paragraph(
+    "Exit code: 0 when it was written; 1 when the baselines are missing or do not hold together; 2 when the command line cannot be used as given.",
+  ),
+]);
 
 /** The matrix command reads the benchmark's baselines only, without resolving any engine or configuration. */
 export function createMatrixCommand(inputs: { rootDir: string; cwd: string }): CliCommand {
   return {
     name: "matrix",
-    summary: "Write the benchmark's validation matrix from its two baselines alone",
+    summary: "Write the coverage table of LensVisualizer's tabs from the benchmark's committed results",
     run: async (args, io) => {
       if (args.includes("--help") || args.includes("-h")) {
         io.stdout(HELP);
@@ -38,7 +48,7 @@ export function createMatrixCommand(inputs: { rootDir: string; cwd: string }): C
       writeFileAtomic(resolve(root, MATRIX_JSON), rendered.json);
       writeFileAtomic(resolve(root, MATRIX_MARKDOWN), rendered.markdown);
       io.stdout(
-        `${MATRIX_JSON} and ${MATRIX_MARKDOWN}: written from the benchmark's two baselines; no engine was read.\n`,
+        `${MATRIX_JSON} and ${MATRIX_MARKDOWN}: written from the benchmark's two baselines; no engine was run.\n`,
       );
       return EXIT_OK;
     },

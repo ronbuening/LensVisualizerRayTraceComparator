@@ -25,11 +25,11 @@ import type {
 import { numberText } from "./metricText.ts";
 
 /** The rung of the engines' own diffraction MTF. */
-export const NATIVE_MTF_RUNG = "r5";
+export const NATIVE_MTF_RUNG = "mtf-vs-optiland-fft";
 /** The rung of the engines' own geometric MTF. */
-export const GEOMETRIC_MTF_RUNG = "r5g";
+export const GEOMETRIC_MTF_RUNG = "geometric-mtf-vs-optiland";
 /** The rungs this comparator is of, in ladder order. */
-export const NATIVE_MTF_RUNGS = [NATIVE_MTF_RUNG, GEOMETRIC_MTF_RUNG, "r6c"] as const;
+export const NATIVE_MTF_RUNGS = [NATIVE_MTF_RUNG, GEOMETRIC_MTF_RUNG, "mtf-vs-optiland-wavefront"] as const;
 /** One of them. */
 export type NativeMtfRung = (typeof NATIVE_MTF_RUNGS)[number];
 

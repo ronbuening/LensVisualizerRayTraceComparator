@@ -19,8 +19,11 @@ import { STORE_DIRECTORY, createResultStore } from "../../src/core/resultStore.t
 import { selftestRung } from "../../src/core/rungs.ts";
 import { echoData } from "../compare/support.ts";
 import { POLICY_SELFTEST } from "../contract/corpus.ts";
-import { SINGLET, fakeEngine, suiteOf, tempDir, watchedRegistry } from "./support.ts";
+import { SINGLET, atCurrentIds, fakeEngine, suiteOf, tempDir, watchedRegistry } from "./support.ts";
 import type { RunOf } from "./support.ts";
+
+/** The corpus's policy of the pipeline echo, under the check's id of today. */
+const SELFTEST = atCurrentIds(POLICY_SELFTEST);
 
 const rungDefinitions = [selftestRung];
 
@@ -28,7 +31,7 @@ const rungDefinitions = [selftestRung];
 function watchedFollowUp(needed: boolean, more: Partial<FollowUp> = {}) {
   const decided: { engines: string[]; spec: JsonObject; caseId: string; recipe: unknown }[] = [];
   const followUp: FollowUp = {
-    rung: "selftest",
+    rung: "pipeline-echo",
     engine: "fake-b",
     step: "finer",
     options: { finer: true },
@@ -98,7 +101,7 @@ test("nothing is asked again where it is not needed, changes nothing, or has no 
   const unanswered = watchedFollowUp(true, { engine: "fake-none" });
   assert.equal((await ran(t, [unanswered.followUp])).rows.length, 3);
   assert.equal(unanswered.decided.length, 0);
-  const elsewhere = watchedFollowUp(true, { rung: "r5" });
+  const elsewhere = watchedFollowUp(true, { rung: "mtf-vs-optiland-fft" });
   assert.equal((await ran(t, [elsewhere.followUp])).rows.length, 3);
   const nobody = watchedFollowUp(true, { engine: "fake-z" });
   assert.equal((await ran(t, [nobody.followUp])).rows.length, 3);
@@ -120,7 +123,7 @@ test("a step is its engine's later answer in a comparison: no participant of its
   const file = compareManifest({
     manifest,
     store,
-    policy: POLICY_SELFTEST,
+    policy: SELFTEST,
     comparators: createComparatorLookup([watching]),
     rungDefinitions,
     modes: ["pairwise"],
@@ -136,7 +139,7 @@ test("a step is its engine's later answer in a comparison: no participant of its
   );
   // The one pair that is compared is handed the step of its second engine, and the policy of the rung.
   assert.equal(seen.length, 1);
-  assert.equal(seen[0].policy, POLICY_SELFTEST.rungs.selftest);
+  assert.equal(seen[0].policy, SELFTEST.rungs["pipeline-echo"]);
   assert.deepEqual(
     seen[0].steps?.map((steps) => steps.map((answer) => answer.step)),
     [[], ["finer"]],
@@ -162,7 +165,7 @@ test("a step that is no answer is handed to no comparator and is named in the pa
   };
   assert.deepEqual(stepAnswers(b), [{ step: "last", data }]);
   assert.deepEqual(stepAnswers(a), []);
-  const pair = comparePair(a, b, POLICY_SELFTEST.rungs.selftest, selftestEchoComparator);
+  const pair = comparePair(a, b, SELFTEST.rungs["pipeline-echo"], selftestEchoComparator);
   assert.equal(pair.verdict, "PASS");
   assert.equal(
     pair.reason,

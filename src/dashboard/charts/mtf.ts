@@ -1,7 +1,8 @@
 // The MTF charts of a section: the curves of every answer at one field and cut (an overlay), and each pair's
 // differences at that field and cut with the band of the policy. Pure: a view and a subject give the same bytes.
 import { numberText } from "../../compare/metricText.ts";
-import { DASHBOARD_TEXT } from "../../report/wording.ts";
+import { DASHBOARD_TEXT, fieldReasonText } from "../../report/wording.ts";
+import { LIMIT_KIND_TEXT, classLabel, engineName, verdictLabel } from "../../vocabulary/index.ts";
 import type { MtfDifferenceView, MtfOverlayView, MtfSeriesView, SetAside } from "../chartViews.ts";
 import type { Curve } from "../figure.ts";
 import {
@@ -36,7 +37,12 @@ export function fieldText(value: number | null | undefined): string {
 }
 
 function setAsideText(aside: SetAside): string {
-  return TEXT.setAside(aside.a, aside.b, aside.class, aside.reason);
+  return TEXT.setAside(
+    engineName(aside.a),
+    engineName(aside.b),
+    classLabel(aside.class),
+    fieldReasonText(aside.reason),
+  );
 }
 
 /** What an overlay's caption says beyond its intro: each pair whose sorting sets the field aside. */
@@ -48,7 +54,9 @@ export function overlayCaption(view: MtfOverlayView): string {
 export function differenceCaption(view: MtfDifferenceView): string {
   return view.pairs
     .flatMap((pair) => [
-      ...(pair.drawn ? [] : [TEXT.differenceLeftOut(pair.a, pair.b, pair.verdict)]),
+      ...(pair.drawn
+        ? []
+        : [TEXT.differenceLeftOut(engineName(pair.a), engineName(pair.b), verdictLabel(pair.verdict))]),
       ...(pair.setAside === null ? [] : [setAsideText(pair.setAside)]),
     ])
     .join(" ");
@@ -126,7 +134,8 @@ export function line(
 }
 
 function seriesName(series: MtfSeriesView): string {
-  return series.step === null ? series.engine : TEXT.legendStep(series.engine, series.step);
+  const name = engineName(series.engine);
+  return series.step === null ? name : TEXT.legendStep(name, series.step);
 }
 
 /** A series's legend label: its name, and its field's status (or why it has no curves) where that is not ok. */
@@ -134,7 +143,7 @@ function seriesLabel(series: MtfSeriesView): string {
   const name = seriesName(series);
   if (series.state === "ok") return name;
   if (series.state === "no-answer") return TEXT.legendNoCurves(name, series.noCurves ?? "missing");
-  return TEXT.legendState(name, series.state, series.reason ?? "no reason stated");
+  return TEXT.legendState(name, series.state, series.reason ?? TEXT.noReasonStated);
 }
 
 /** The title's text, with the field's source on hover. */
@@ -223,8 +232,8 @@ export function renderMtfDifference(
   const y = linearScale(-extent, extent, TOP + PLOT, TOP, 6);
   const pairName = (pair: MtfDifferenceView["pairs"][number]): string =>
     TEXT.legendPair(
-      pair.aStep === null ? pair.a : TEXT.legendStep(pair.a, pair.aStep),
-      pair.bStep === null ? pair.b : TEXT.legendStep(pair.b, pair.bStep),
+      pair.aStep === null ? engineName(pair.a) : TEXT.legendStep(engineName(pair.a), pair.aStep),
+      pair.bStep === null ? engineName(pair.b) : TEXT.legendStep(engineName(pair.b), pair.bStep),
     );
   const entries: LegendEntry[] = shown.map((pair, index) => ({
     swatch: "line",
@@ -233,7 +242,11 @@ export function renderMtfDifference(
     label: pairName(pair),
   }));
   if (view.limit !== null && band !== null && view.limitKind !== null) {
-    entries.push({ swatch: "band", className: "band", label: TEXT.legendBand(view.limitKind, numberText(band)) });
+    entries.push({
+      swatch: "band",
+      className: "band",
+      label: TEXT.legendBand(LIMIT_KIND_TEXT[view.limitKind], numberText(band)),
+    });
   }
   const rows = legendRows(entries, LEFT, WIDTH - RIGHT);
   const title = TEXT.differenceTitle(subject, fieldText(view.field?.value), view.cut);
@@ -241,7 +254,12 @@ export function renderMtfDifference(
   if (view.limit !== null && band !== null) {
     const [upper, lower] = [y.at(band), y.at(-band)];
     const where = view.onAxis === null ? TEXT.anyField : view.onAxis ? TEXT.onAxis : TEXT.offAxis;
-    const hover = TEXT.tipLimit(view.limitKind ?? "band", numberText(band), where, sourceText(view.limit.source));
+    const hover = TEXT.tipLimit(
+      view.limitKind === null ? "band" : LIMIT_KIND_TEXT[view.limitKind],
+      numberText(band),
+      where,
+      sourceText(view.limit.source),
+    );
     body.push(
       `<rect class="band" x="${px(LEFT)}" y="${px(upper)}" width="${px(WIDTH - RIGHT - LEFT)}" height="${px(lower - upper)}">${tip(hover)}</rect>`,
     );

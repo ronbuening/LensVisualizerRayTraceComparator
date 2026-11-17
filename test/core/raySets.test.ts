@@ -102,21 +102,21 @@ test("a rung that traces rays is handed the sets of the run's source, and asks o
     registry: engines.registry,
     runsDir,
     sources: { fixture: source },
-    rungs: ["r2"],
+    rungs: ["ray-trace"],
   });
 
   // The source was asked once for each run, with the run and its case.
   assert.deepEqual(asked, [`singlet ${SINGLET.id.slice(0, 8)}`, `double-gauss ${DOUBLE_GAUSS.id.slice(0, 8)}`]);
   // Two sets a run: two requests for each engine. The fake does not offer the quantity and is not asked.
   assert.deepEqual(rows(result), [
-    "singlet r2 fake unsupported negotiated",
-    "singlet r2 fake unsupported negotiated",
-    "singlet r2 tracer ok computed",
-    "singlet r2 tracer ok computed",
-    "double-gauss r2 fake unsupported negotiated",
-    "double-gauss r2 fake unsupported negotiated",
-    "double-gauss r2 tracer ok computed",
-    "double-gauss r2 tracer ok computed",
+    "singlet ray-trace fake unsupported negotiated",
+    "singlet ray-trace fake unsupported negotiated",
+    "singlet ray-trace tracer ok computed",
+    "singlet ray-trace tracer ok computed",
+    "double-gauss ray-trace fake unsupported negotiated",
+    "double-gauss ray-trace fake unsupported negotiated",
+    "double-gauss ray-trace tracer ok computed",
+    "double-gauss ray-trace tracer ok computed",
   ]);
   for (const [index, opticalCase] of [SINGLET, DOUBLE_GAUSS].entries()) {
     const expected = rayTraceRequests(opticalCase, { raySets: BOTH.sets });
@@ -160,14 +160,14 @@ test("two rungs that trace rays share the sets and the answers: the source is as
     runsDir,
     sources: { fixture: source },
     rungDefinitions: [selftestRung, r2Rung, r3Rung],
-    rungs: ["r2", "r3"],
+    rungs: ["ray-trace", "optical-path"],
   });
   assert.equal(asked.length, 1);
   assert.deepEqual(rows(result), [
-    "singlet r2 tracer ok computed",
-    "singlet r2 tracer ok computed",
-    "singlet r3 tracer ok cached",
-    "singlet r3 tracer ok cached",
+    "singlet ray-trace tracer ok computed",
+    "singlet ray-trace tracer ok computed",
+    "singlet optical-path tracer ok cached",
+    "singlet optical-path tracer ok cached",
   ]);
   assert.equal(engines.ran.length, 2);
   const [first, second, third, fourth] = result.manifest.jobs;
@@ -188,12 +188,12 @@ test("the sets are generated only when a rung that needs them is run, and never 
     registry: watchedRegistry({ fake: fakeEngine() }).registry,
     runsDir: tempDir(t),
     sources,
-    rungs: ["selftest", "r0", "r1"],
+    rungs: ["pipeline-echo", "built-system", "first-order"],
   });
   assert.deepEqual(asked, []);
   assert.deepEqual(
     plain.manifest.jobs.map((job) => job.rung),
-    ["selftest", "r0", "r1"],
+    ["pipeline-echo", "built-system", "first-order"],
   );
   assert.deepEqual(
     plain.manifest.runs.map((run) => Object.hasOwn(run, "raySets")),
@@ -212,7 +212,15 @@ test("the sets are generated only when a rung that needs them is run, and never 
   assert.equal(Object.hasOwn(every.manifest.runs[0], "fineRaySets"), true);
   assert.deepEqual(
     every.manifest.jobs.map((job) => `${job.rung} ${job.status}`),
-    ["selftest unsupported", "r0 unsupported", "r1 unsupported", "r2 ok", "r2 ok", "r3 ok", "r3 ok"],
+    [
+      "pipeline-echo unsupported",
+      "built-system unsupported",
+      "first-order unsupported",
+      "ray-trace ok",
+      "ray-trace ok",
+      "optical-path ok",
+      "optical-path ok",
+    ],
   );
 
   const traced = await runSuite({
@@ -220,7 +228,7 @@ test("the sets are generated only when a rung that needs them is run, and never 
     registry: watchedRegistry({ tracer }).registry,
     runsDir: tempDir(t),
     sources,
-    rungs: ["r0", "r2"],
+    rungs: ["built-system", "ray-trace"],
   });
   assert.deepEqual(asked, [`singlet ${SINGLET.id.slice(0, 8)}`]);
   assert.deepEqual(traced.manifest.runs[1], { name: "no-case", caseId: null, problems: ["its lens has no case"] });
@@ -229,7 +237,7 @@ test("the sets are generated only when a rung that needs them is run, and never 
   // A rung that needs no rays is handed none: r0 asks what it always asks.
   assert.deepEqual(
     traced.manifest.jobs.map((job) => `${job.rung} ${job.status}`),
-    ["r0 unsupported", "r2 ok", "r2 ok"],
+    ["built-system unsupported", "ray-trace ok", "ray-trace ok"],
   );
 });
 
@@ -247,7 +255,7 @@ test("a field without rays is recorded with its code and fails nothing; the run 
     registry: watchedRegistry({ tracer }).registry,
     runsDir: tempDir(t),
     sources: { fixture: source },
-    rungs: ["r2"],
+    rungs: ["ray-trace"],
   });
   assert.deepEqual(
     result.manifest.runs.map((run) => [run.name, run.problems, run.raySets?.sets.length, run.raySets?.problems]),
@@ -257,9 +265,9 @@ test("a field without rays is recorded with its code and fails nothing; the run 
     ],
   );
   assert.deepEqual(rows(result), [
-    "short r2 tracer ok computed",
-    "whole r2 tracer ok computed",
-    "whole r2 tracer ok computed",
+    "short ray-trace tracer ok computed",
+    "whole ray-trace tracer ok computed",
+    "whole ray-trace tracer ok computed",
   ]);
   assert.deepEqual(result.warnings, []);
 });
@@ -273,7 +281,7 @@ test("a lens whose source makes no rays has no ray jobs, and the manifest says w
       registry: watchedRegistry({ tracer }).registry,
       runsDir: tempDir(t),
       sources,
-      rungs: ["r2"],
+      rungs: ["ray-trace"],
     });
     assert.deepEqual(result.manifest.jobs, []);
     assert.deepEqual(result.manifest.runs[0].raySets, {
@@ -296,7 +304,7 @@ test("a case read from a file is traced with its probe lattices, at each of its 
       registry: watchedRegistry({ tracer }).registry,
       runsDir,
       sources: { fixture: createFixtureCaseSource("/nowhere") },
-      rungs: ["r2"],
+      rungs: ["ray-trace"],
     });
   const result = await run();
   const probe = probeRaySets(ALL_FEATURES_CASE, options);
@@ -313,8 +321,8 @@ test("a case read from a file is traced with its probe lattices, at each of its 
     ],
   );
   assert.deepEqual(rows(result), [
-    ...new Array(4).fill("two-lines r2 tracer ok computed"),
-    "default-fields r2 tracer ok computed",
+    ...new Array(4).fill("two-lines ray-trace tracer ok computed"),
+    "default-fields ray-trace tracer ok computed",
   ]);
   assert.deepEqual(
     result.manifest.jobs.slice(0, 4).map((job) => job.requestId),

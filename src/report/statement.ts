@@ -3,18 +3,25 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { baselineText, parseBaseline } from "../baseline/build.ts";
-import { numberText, whereText } from "../compare/metricText.ts";
+import { numberText } from "../compare/metricText.ts";
 import type { Baseline, BaselineMetric, BaselineRun, BaselineRung } from "../contract/baseline.ts";
 import { VERDICTS } from "../contract/comparison.ts";
 import type { Verdict } from "../contract/comparison.ts";
 import type { RungPolicy } from "../contract/policy.ts";
 import { canonicalJson } from "../core/numeric/canonicalJson.ts";
 import { sha256Hex } from "../core/numeric/hash.ts";
+import { LEGACY_IDS, currentIds } from "../core/legacyIds.ts";
+import type { LegacyMaps } from "../core/legacyIds.ts";
 import { escapeCell } from "./markdown.ts";
 import { buildMtfComparison } from "./mtfComparison.ts";
 import type { MtfComparisonRow } from "./mtfComparison.ts";
+import { SORTING_LIMITS, checkTitle, classLabel, rowStatusLabel, verdictShort } from "../vocabulary/index.ts";
+import { checkName, placeText, unitName } from "./names.ts";
 import {
+  CATALOG_LABELS,
+  CATALOG_TEXT,
   NOT_COVERED,
+  STATEMENT_LABELS,
   STATEMENT_TEXT,
   STATEMENT_RUNGS,
   STATEMENT_Z50_ATTRIBUTION,
@@ -32,6 +39,11 @@ export const STATEMENT_MARKDOWN = "reports/validation-statement.md";
 export interface StatementInput {
   readonly file: string;
   readonly baseline: Baseline;
+}
+
+/** The inputs with every baseline under the ids of today (`currentIds`): a baseline may predate a rename. */
+function atCurrentIds(inputs: readonly StatementInput[], maps: LegacyMaps): StatementInput[] {
+  return inputs.map((input) => ({ ...input, baseline: currentIds(input.baseline, maps) }));
 }
 
 /** Reads only baselines, refusing incomplete inventories before anything is written. */
@@ -88,10 +100,17 @@ function largest<T extends Figure>(figures: readonly T[], scaled = false): T | n
     null,
   );
 }
-function figureText(figure: Figure | null): string {
-  return figure === null
-    ? "not measured"
-    : `${figure.name} ${figure.value === null ? "nonfinite" : numberText(figure.value)} ${figure.unit}; ${figure.suite} / ${figure.run}; ${figure.a} / ${figure.b}${whereText(figure.where)}`;
+/** Counts by stored value as words: each count with the value's label and the stored value, in the order of the keys. */
+function countsText(counts: Readonly<Record<string, number>>, label: (value: string) => string): string {
+  const keys = Object.keys(counts).sort();
+  return keys.map((key) => `${counts[key]} ${label(key)} (\`${key}\`)`).join("; ") || "none";
+}
+
+/** A figure as words: its value with its unit, where it is, and the place, a field with its unit (`placeText`). */
+function figureText(figure: Figure | null, quantity: string): string {
+  if (figure === null) return "not measured";
+  const place = placeText(figure.where, quantity);
+  return `${figure.name} ${figure.value === null ? "nonfinite" : numberText(figure.value)} ${unitName(figure.unit)}; ${figure.suite} / ${figure.run}; ${figure.a} / ${figure.b}${place === "" ? "" : ` at ${place}`}`;
 }
 
 function nativePolicy(rung: BaselineRung): RungPolicy {
@@ -105,7 +124,11 @@ function nativePolicy(rung: BaselineRung): RungPolicy {
   };
 }
 
-function counterpart(records: readonly RecordRung[], id: "r5" | "r6c", engine: string) {
+function counterpart(
+  records: readonly RecordRung[],
+  id: "mtf-vs-optiland-fft" | "mtf-vs-optiland-wavefront",
+  engine: string,
+) {
   const allRows: (MtfComparisonRow & { suite: string; run: string })[] = [];
   const coverage = records
     .filter(({ rung }) => rung.rung === id)
@@ -169,14 +192,52 @@ function counterpart(records: readonly RecordRung[], id: "r5" | "r6c", engine: s
   };
 }
 
+/** A pair a list of known failures lists, as its baseline classifies it (`classifyCatalog`). */
+const listedPair = (pair: BaselineRung["pairs"][number]): boolean =>
+  pair.verdict === "FAIL" && (pair.failures?.length ?? 0) > 0;
+
+/**
+ * The clause of the supportable sentence on configurations with a listed failure (the owner's words of 2026-11-16),
+ * or why it cannot be said: the listed pairs must name one engine, other than LensVisualizer and the reference tracer,
+ * in every pair, and that engine must be optiland, whose name the signed words carry, and the LensVisualizer–reference-tracer pairs of those configurations on the statement's gated checks
+ * must all pass, that of check ray-trace among them. Null where no configuration has a listed failure.
+ */
+function listedFailureClause(
+  records: readonly RecordRung[],
+  listed: readonly { readonly suite: string; readonly run: string; readonly a: string; readonly b: string }[],
+): { readonly configurations: number; readonly engine: string } | "unsayable" | null {
+  if (listed.length === 0) return null;
+  const configurations = [...new Set(listed.map(({ suite, run }) => `${suite}\0${run}`))];
+  const common = [listed[0].a, listed[0].b].filter(
+    (engine) =>
+      engine !== "lv" && engine !== "reference-tracer" && listed.every(({ a, b }) => a === engine || b === engine),
+  );
+  // The owner signed the clause's words naming optiland (2026-11-16): of any other engine it is not said.
+  if (common.length !== 1 || common[0] !== "optiland") return "unsayable";
+  const agree = configurations.every((key) => {
+    const own = records.filter(
+      ({ suite, run, rung }) => `${suite}\0${run.name}` === key && STATEMENT_RUNGS[rung.rung].mode === "gated",
+    );
+    const pairs = own.flatMap(({ rung }) =>
+      rung.pairs
+        .filter((pair) => [pair.a, pair.b].sort().join() === "lv,reference-tracer")
+        .map((pair) => ({ rung, pair })),
+    );
+    return pairs.some(({ rung }) => rung.rung === "ray-trace") && pairs.every(({ pair }) => pair.verdict === "PASS");
+  });
+  return agree ? { configurations: configurations.length, engine: common[0] } : "unsayable";
+}
+
 /** Reduces sources in fixed order, deduplicating R4 in rays/MTF by suite and run, with MTF's measured counts. */
-export function buildStatement(inputs: readonly StatementInput[]) {
+export function buildStatement(inputs: readonly StatementInput[], maps: LegacyMaps = LEGACY_IDS) {
   if (
     inputs.length !== STATEMENT_FILES.length ||
     STATEMENT_FILES.some((file) => inputs.filter((i) => i.file === file).length !== 1)
   )
     throw new Error("statement needs exactly the eight suite baselines");
-  const sources = STATEMENT_FILES.map((file) => inputs.find((input) => input.file === file)!);
+  // Each baseline as its file holds it, for its hash, and under the ids of today for everything else (`currentIds`).
+  const files = STATEMENT_FILES.map((file) => inputs.find((input) => input.file === file)!);
+  const sources = atCurrentIds(files, maps);
   const policy = sources[0].baseline.policy;
   const records: RecordRung[] = [];
   const suites = STATEMENT_SUITES.map((suite) => {
@@ -228,7 +289,7 @@ export function buildStatement(inputs: readonly StatementInput[]) {
       description.mode === "gated" ? metric.tolerance !== undefined : /^mtf(OnAxis|OffAxis)\.maxAbs$/.test(metric.name),
     );
     const reported =
-      id === "r6a"
+      id === "wave-mtf"
         ? figures.filter(
             (m) =>
               m.tolerance !== undefined ||
@@ -295,21 +356,46 @@ export function buildStatement(inputs: readonly StatementInput[]) {
       },
     ];
   });
-  const counterparts = [counterpart(records, "r5", "optiland"), counterpart(records, "r6c", "optiland-wave")];
+  const counterparts = [
+    counterpart(records, "mtf-vs-optiland-fft", "optiland"),
+    counterpart(records, "mtf-vs-optiland-wavefront", "otf-of-optiland-wavefront"),
+  ];
   const wavelengthsNm = sortedNumbers(counterparts.flatMap((c) => c.linesNm));
-  const required = ["r2", "r3", "r4", "r6a"];
+  // The failures a list of known failures lists, on the statement's gated checks: their configurations are not
+  // counted by the supportable sentence, which says so (`listedFailureClause`), and are listed with their classes.
+  const listedFailures = records.flatMap(({ suite, run, rung }) =>
+    STATEMENT_RUNGS[rung.rung].mode !== "gated"
+      ? []
+      : rung.pairs.filter(listedPair).flatMap((pair) =>
+          (pair.failures ?? []).map((failure) => ({
+            suite,
+            run: run.name,
+            rung: rung.rung,
+            a: pair.a,
+            b: pair.b,
+            metric: failure.metric,
+            class: failure.class,
+            gotcha: failure.gotcha,
+            reproducer: failure.reproducer,
+          })),
+        ),
+  );
+  const listedRuns = new Set(listedFailures.map(({ suite, run }) => `${suite}\0${run}`));
+  const clause = listedFailureClause(records, listedFailures);
+  const required = ["ray-trace", "optical-path", "geometric-mtf", "wave-mtf"];
   const eligible = suites.flatMap((suite) =>
     suite.states
       .filter(
         (state) =>
           state.caseId !== null &&
+          !listedRuns.has(`${suite.suite}\0${state.run}`) &&
           required.every((id) =>
             records.some(
               (r) =>
                 r.suite === suite.suite &&
                 r.run.name === state.run &&
                 r.rung.rung === id &&
-                ["optiland", "ref"].every((engine) =>
+                ["optiland", "reference-tracer"].every((engine) =>
                   r.rung.pairs.some(
                     (p) =>
                       p.a === "lv" &&
@@ -319,7 +405,7 @@ export function buildStatement(inputs: readonly StatementInput[]) {
                         (m) =>
                           m.tolerance !== undefined &&
                           m.value !== null &&
-                          (id !== "r6a" || m.name === "waveMtf.maxAbs") &&
+                          (id !== "wave-mtf" || m.name === "waveMtf.maxAbs") &&
                           (m.measured ?? r.rung.requests) > 0,
                       ),
                   ),
@@ -341,17 +427,25 @@ export function buildStatement(inputs: readonly StatementInput[]) {
     );
   const agreementFigures = {
     population: "agreementStates",
-    landing: agreementFigure("r2", "landing.maxDistance"),
-    opticalPath: agreementFigure("r3"),
-    geometricMtf: agreementFigure("r4"),
-    waveMtf: agreementFigure("r6a"),
+    landing: agreementFigure("ray-trace", "landing.maxDistance"),
+    opticalPath: agreementFigure("optical-path"),
+    geometricMtf: agreementFigure("geometric-mtf"),
+    waveMtf: agreementFigure("wave-mtf"),
   };
-  const gateHolds = rungs
-    .filter((r) => r.mode === "gated")
-    .every((r) => r.verdicts.every((v) => v.verdict === "PASS" || v.verdict === "UNSUPPORTED"));
+  // The gates hold where every pair of a gated check passed (or was not computed), but for a pair that fails exactly as
+  // a list of known failures lists it, whose clause must then be sayable (the owner's decision of 2026-11-16).
+  const gateHolds =
+    clause !== "unsayable" &&
+    records
+      .filter(({ rung }) => STATEMENT_RUNGS[rung.rung].mode === "gated")
+      .every(({ rung }) =>
+        rung.pairs.every(
+          (pair) => listedPair(pair) || pair.verdicts.every((v) => v.verdict === "PASS" || v.verdict === "UNSUPPORTED"),
+        ),
+      );
   const statement = {
     kind: "validation-statement",
-    sources: sources.map(({ file, baseline }) => ({
+    sources: files.map(({ file, baseline }) => ({
       file: `baselines/${file}`,
       sha256: sha256Hex(baselineText(baseline)),
     })),
@@ -372,6 +466,11 @@ export function buildStatement(inputs: readonly StatementInput[]) {
       ? STATEMENT_Z50_ATTRIBUTION
       : null,
     notCovered: NOT_COVERED,
+    // Only where there are any, so that a statement without them keeps its bytes.
+    ...(listedFailures.length === 0 ? {} : { listedFailures }),
+    ...(clause === null || clause === "unsayable"
+      ? {}
+      : { listedFailureClause: { configurations: clause.configurations, engine: clause.engine } }),
   };
   return { ...statement, supportable: statementSupport(statement, gateHolds) };
 }
@@ -379,18 +478,26 @@ export function buildStatement(inputs: readonly StatementInput[]) {
 export type ValidationStatement = ReturnType<typeof buildStatement>;
 
 /** Both deterministic texts; every prose sentence lives in wording.ts. */
-export function renderStatement(inputs: readonly StatementInput[]) {
-  const statement = buildStatement(inputs);
+export function renderStatement(inputs: readonly StatementInput[], maps: LegacyMaps = LEGACY_IDS) {
+  const L = STATEMENT_LABELS;
+  const statement = buildStatement(inputs, maps);
+  // The quantity of each check, as the baselines state it: what a field of a figure is (an angle or a fraction).
+  const quantities = new Map(
+    atCurrentIds(inputs, maps).flatMap(({ baseline }) =>
+      baseline.runs.flatMap((run) => run.rungs.map((rung) => [rung.rung, rung.quantity])),
+    ),
+  );
+  const quantityOf = (rung: string): string => quantities.get(rung) ?? "";
   const lines: string[] = [
     "# Validation statement",
     "",
     STATEMENT_TEXT.intro,
     "",
-    "## Supportable sentence",
+    `## ${L.supportable}`,
     "",
     statement.supportable,
     "",
-    "## Rungs",
+    `## ${L.checks}`,
     "",
     STATEMENT_TEXT.counts,
     "",
@@ -398,71 +505,75 @@ export function renderStatement(inputs: readonly StatementInput[]) {
     "",
     STATEMENT_TEXT.population,
     "",
-    "| Rung | Compares | Mode | Configurations | Configuration pairs | Request pairs | Verdicts | Worst residual |",
-    "|---|---|---|---:|---:|---:|---|---|",
+    `| ${L.checkColumns.join(" | ")} |`,
+    "|---|---|---|---|---:|---:|---:|---|---|",
   ];
   const row = (cells: readonly unknown[]) => `| ${cells.map((cell) => escapeCell(String(cell))).join(" | ")} |`;
   for (const rung of statement.rungs)
     lines.push(
       row([
-        rung.rung,
+        checkTitle(rung.rung),
+        `\`${rung.rung}\``,
         rung.compares,
-        rung.mode,
+        L.kind[rung.mode] ?? rung.mode,
         rung.configurations,
         rung.configurationPairs,
         rung.requestPairs,
-        rung.verdicts.map((v) => `${v.count} ${v.verdict}`).join(", "),
-        figureText(rung.worst),
+        rung.verdicts.map((v) => `${v.count} ${verdictShort(v.verdict)}`).join("; "),
+        figureText(rung.worst, quantityOf(rung.rung)),
       ]),
     );
-  lines.push("", "### Limits and metric maxima", "");
+  lines.push("", `### ${L.limits}`, "");
   for (const rung of statement.rungs) {
     lines.push(
-      `#### ${rung.rung}`,
+      `#### ${checkName(rung.rung)}`,
       "",
       ...rung.limits.map(
-        (limit) => `- ${limit.kind}: ${limit.metric} ${numberText(limit.value)}${limit.unit ? ` ${limit.unit}` : ""}`,
+        (limit) =>
+          `- ${L.limitKind[limit.kind === "attention" && SORTING_LIMITS.includes(limit.metric) ? "sorting" : limit.kind] ?? limit.kind}: ${limit.metric} ${numberText(limit.value)}${limit.unit ? ` ${unitName(limit.unit)}` : ""}`,
       ),
-      ...rung.metrics.map((m) => `- ${figureText(m.worst)}; measured request pairs ${m.measuredRequests}`),
+      ...rung.metrics.map(
+        (m) => `- ${figureText(m.worst, quantityOf(rung.rung))}; measured request pairs ${m.measuredRequests}`,
+      ),
       ...Object.entries(rung.diagnostics).map(([name, count]) => `- ${name}: ${count}`),
       "",
     );
   }
   lines.push(
-    "## External diffraction counterparts",
+    `## ${L.counterparts}`,
     "",
     STATEMENT_TEXT.counterparts,
     ...(statement.z50Attribution === null ? [] : ["", statement.z50Attribution]),
     "",
-    "| Rung | Counterpart | Configurations | Rows | Classes | Worst in band | Worst set aside |",
+    `| ${L.counterpartColumns.join(" | ")} |`,
     "|---|---|---:|---:|---|---|---|",
   );
   for (const c of statement.counterparts)
     lines.push(
       row([
-        c.rung,
+        checkName(c.rung),
         c.engine,
         c.configurations,
         c.rows,
-        canonicalJson(c.classes),
-        figureText(c.worstBanded),
-        figureText(c.worstSetAside),
+        countsText(c.classes, classLabel),
+        figureText(c.worstBanded, quantityOf(c.rung)),
+        figureText(c.worstSetAside, quantityOf(c.rung)),
       ]),
     );
   for (const c of statement.counterparts) {
     lines.push(
       "",
-      `### ${c.rung}: ${c.engine}`,
+      `### ${checkName(c.rung)}: ${c.engine}`,
       "",
-      `- LV requested lines (nm): ${c.linesNm.join(", ")}`,
-      `- Counterpart answered lines (nm): ${c.counterpartLinesNm.join(", ")}`,
-      `- Requested fields: ${c.fields.join(", ")}`,
-      `- Configurations with banded rows: ${c.bandedConfigurations}`,
-      `- Selected chief-landing sorting limits (mm): ${c.sortingLimitsMm.map(numberText).join(", ")}`,
-      `- Frequencies (cycles/mm): ${c.frequenciesPerMm.join(", ")}`,
-      `- Row statuses: ${canonicalJson(c.statuses)}`,
+      `- ${L.requestedLines}: ${c.linesNm.join(", ")}`,
+      `- ${L.answeredLines}: ${c.counterpartLinesNm.join(", ")}`,
+      `- ${L.fields}: ${c.fields.join(", ")}`,
+      `- ${L.bandedConfigurations}: ${c.bandedConfigurations}`,
+      `- ${L.sortingLimits}: ${c.sortingLimitsMm.map(numberText).join(", ")}`,
+      `- ${L.frequencies}: ${c.frequenciesPerMm.join(", ")}`,
+      `- ${L.rowStatuses}: ${countsText(c.statuses, rowStatusLabel)}`,
       "",
-      "| Suite | State / request | LV lines (nm) | Counterpart lines (nm) | Fields / classes / reasons | Landing sorting limit (mm) | Verdict |",
+      `| ${L.coverageColumns.join(" | ")} |`,
       "|---|---|---|---|---|---|---|",
     );
     for (const entry of c.coverage)
@@ -474,25 +585,25 @@ export function renderStatement(inputs: readonly StatementInput[]) {
           entry.counterpartLinesNm.join(", "),
           entry.fields.map((f) => `${f.field}: ${f.class ?? "unclassified"} / ${f.reason ?? "none"}`).join("; "),
           entry.bands.chiefLandingMm === null ? "none" : numberText(entry.bands.chiefLandingMm),
-          entry.verdict,
+          entry.verdict === null ? "none" : verdictShort(entry.verdict),
         ]),
       );
   }
-  lines.push("", "## States by suite", "", STATEMENT_TEXT.states, "");
+  lines.push("", `## ${L.states}`, "", STATEMENT_TEXT.states, "");
   for (const suite of statement.suites) {
     lines.push(
       `### ${suite.suite}`,
       "",
-      `- Declared: ${suite.declared}; configurations: ${suite.configurations}; refused: ${suite.declared - suite.configurations}`,
+      L.declared(suite.declared, suite.configurations, suite.declared - suite.configurations),
       "",
-      "| Named state | Case SHA-256 / refusal | Measured on R2/R3/R4/R6a for both LV/external pairs |",
+      `| ${L.stateColumns.join(" | ")} |`,
       "|---|---|---|",
     );
     for (const state of suite.states)
       lines.push(
         row([
           state.run,
-          state.caseId ?? state.problems.join("; "),
+          state.caseId === null ? state.problems.join("; ") : "—",
           statement.agreementStates.some((eligible) => eligible.suite === suite.suite && eligible.run === state.run)
             ? "yes"
             : "no",
@@ -500,13 +611,45 @@ export function renderStatement(inputs: readonly StatementInput[]) {
       );
     lines.push("");
   }
+  if (statement.listedFailures !== undefined) {
+    lines.push(
+      `## ${CATALOG_LABELS.failures}`,
+      "",
+      CATALOG_TEXT.failures,
+      "",
+      `| ${CATALOG_LABELS.failureColumns.join(" | ")} |`,
+      "|---|---|---|---|---|---|---|",
+      ...statement.listedFailures.map((f) =>
+        row([
+          `${f.suite} / ${f.run}`,
+          checkName(f.rung),
+          `${f.a} / ${f.b}`,
+          f.metric,
+          `${classLabel(f.class)} (\`${f.class}\`)`,
+          f.gotcha,
+          f.reproducer,
+        ]),
+      ),
+      "",
+    );
+  }
   lines.push(
-    "## Not covered",
+    `## ${L.notCovered}`,
     "",
     ...statement.notCovered.flatMap((sentence) => [`- ${sentence}`, ""]),
-    "## Sources",
+    `## ${L.identifiers}`,
     "",
-    ...statement.sources.map((source) => `- ${source.file}: ${source.sha256}`),
+    L.identifiersIntro,
+    "",
+    `| ${L.sourceColumns.join(" | ")} |`,
+    "|---|---|",
+    ...statement.sources.map((source) => row([source.file, source.sha256])),
+    "",
+    `| ${L.stateIdentifierColumns.join(" | ")} |`,
+    "|---|---|---|",
+    ...statement.suites.flatMap((suite) =>
+      suite.states.flatMap((state) => (state.caseId === null ? [] : [row([suite.suite, state.run, state.caseId])])),
+    ),
     "",
   );
   const markdown = lines.join("\n");

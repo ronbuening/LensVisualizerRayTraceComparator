@@ -5,8 +5,10 @@ import { dirname, join } from "node:path";
 import { test, type TestContext } from "node:test";
 
 import { createLensesCommand } from "../../src/cli/commands/lenses.ts";
+import { wrap } from "../../src/cli/help.ts";
 import { COMMANDS, EXIT_FAILURE, EXIT_OK, EXIT_USAGE, runCli } from "../../src/cli/main.ts";
 import { CONFIG_FILE } from "../../src/core/config.ts";
+import { LENSES_SHOW_LEGEND } from "../../src/vocabulary/index.ts";
 import { FAKE_LENS_FILES, fileHash, freshLv } from "../engines/lv/support.ts";
 
 interface Run {
@@ -136,11 +138,13 @@ test("show prints the prepared state: surfaces, stop, last lens surface and imag
       "5  RP1a   flat  1.5  1.5   12  yes      45  no       rearPlate",
       "6  RP1b   flat  0.5    1   12  yes    46.5  no       rearPlate",
       "",
+      ...wrap(LENSES_SHOW_LEGEND),
+      "",
       "surfaces           7",
       "stop index         2",
       "stop radius        4.5",
       "last lens surface  4",
-      "imgZ               47",
+      "image plane z      47",
       "",
     ].join("\n"),
   );
@@ -274,11 +278,20 @@ test("a LensVisualizer that is not configured, missing or not loadable is a fail
   assert.equal(unconfigured.code, EXIT_FAILURE);
   assert.equal(unconfigured.out, "");
   assert.match(unconfigured.err, /^lvrtc lenses: LensVisualizer is not configured: set lvPath /);
+  // LensVisualizer's own remedy (lv-not-configured), not that of an engine in general, which names optiland too.
+  assert.match(
+    unconfigured.err,
+    /\nWhat this means and what to do:\n {2}No LensVisualizer checkout is set, so no lens can be exported\. Set lvPath in lvrtc\.local\.json/,
+  );
+  assert.doesNotMatch(unconfigured.err, /optiland/);
 
   writeFileSync(join(rootDir, CONFIG_FILE), JSON.stringify({ lvPath: "no-lv-here" }));
   const missing = await lenses(["show", "a"], { rootDir });
   assert.equal(missing.code, EXIT_FAILURE);
-  assert.match(missing.err, /^lvrtc lenses: LensVisualizer path is not a directory: .*no-lv-here\n$/);
+  assert.match(
+    missing.err,
+    /^lvrtc lenses: LensVisualizer path is not a directory: .*no-lv-here\nWhat this means and what to do:\n {2}The LensVisualizer path that is set is not a directory\. Set lvPath /,
+  );
 
   const broken = freshRoot(t);
   rmSync(join(broken.lv, "src/optics/fieldGeometry.ts"));

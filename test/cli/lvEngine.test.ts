@@ -1,6 +1,6 @@
 import { gunzipSync } from "node:zlib";
-// The engine `lv` through the commands, against a copy of the fake LV tree: `lvrtc run --engines lv,ref`, then
-// `compare` and `report`, each in a child process, so that this process binds no LensVisualizer. The fake has a
+// The engine `lv` through the commands, against a copy of the fake LV tree: `lvrtc run --engines lv,reference-tracer`,
+// then `compare` and `report`, each in a child process, so that this process binds no LensVisualizer. The fake has a
 // paraxial kernel and conic surfaces of its own, and its numbers describe no real lens.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
@@ -26,7 +26,9 @@ import { adapterRevision } from "../../src/engines/adapterRevision.ts";
 import { LV_ENGINE_MODULE } from "../../src/engines/lv/engine.ts";
 import { REPORT_MARKDOWN_FILE } from "../../src/report/index.ts";
 import { POLICY_LADDER } from "../contract/corpus.ts";
-import { caseFixture, tempDir } from "../core/support.ts";
+import { atCurrentIds, caseFixture, tempDir } from "../core/support.ts";
+import { currentEngineId } from "../../src/core/legacyIds.ts";
+import type { Policy } from "../../src/contract/policy.ts";
 import { FAKE_ENGINE_FILES, FAKE_LV, closureOf } from "../engines/lv/support.ts";
 
 const BIN = fileURLToPath(new URL("../../bin/lvrtc.mjs", import.meta.url));
@@ -51,13 +53,30 @@ function lvrtc(rootDir: string, ...args: string[]): { code: number | null; out: 
   return { code: child.status, out: child.stdout, err: child.stderr };
 }
 
+/**
+ * The corpus's synthetic policy at today's ids, its floors held against the built-in reference tracer: the corpus
+ * names that engine by its id before the rename (`ref`), which a policy at hand would name by today's.
+ */
+function floorPolicy(): Policy {
+  const policy = atCurrentIds(POLICY_LADDER) as unknown as Policy;
+  const rungs = Object.fromEntries(
+    Object.entries(policy.rungs).map(([id, entry]) => [
+      id,
+      entry.floor === undefined
+        ? entry
+        : { ...entry, floor: { ...entry.floor, arbiter: currentEngineId(entry.floor.arbiter) } },
+    ]),
+  );
+  return { ...policy, rungs };
+}
+
 /** Floor machinery is exercised with a synthetic policy, independent of the shipped gates. */
 async function floorCommand(rootDir: string, ...args: string[]) {
   const inputs = {
     rootDir,
     cwd: REPO_ROOT,
     env: { LVRTC_RUNS_DIR: join(rootDir, "runs") },
-    policy: structuredClone(POLICY_LADDER),
+    policy: floorPolicy(),
   };
   const out: string[] = [];
   const err: string[] = [];
@@ -95,9 +114,9 @@ test("lv and ref run R0 and R1 on LensVisualizer lenses and every pair passes; t
       state: { focus: { kind: "focusT", value: 1 } },
     },
   ]);
-  const ran = lvrtc(rootDir, "run", suite, "--engines", "lv,ref", "--rungs", "r0,r1");
+  const ran = lvrtc(rootDir, "run", suite, "--engines", "lv,reference-tracer", "--checks", "built-system,first-order");
   assert.equal(ran.code, EXIT_OK, ran.err);
-  assert.match(ran.out, /^lv-ladder: 12 jobs: 12 ok, 0 unsupported, 0 error, 0 pending \(12 computed, 0 cached\)$/m);
+  assert.match(ran.out, /^lv-ladder: 12 jobs: 12 answered \(12 asked now\)$/m);
 
   const manifest: RunManifest = JSON.parse(readFileSync(join(rootDir, "runs", "lv-ladder", MANIFEST_FILE), "utf8"));
   const closure = closureOf(join(rootDir, "lv"), FAKE_ENGINE_FILES);
@@ -115,10 +134,7 @@ test("lv and ref run R0 and R1 on LensVisualizer lenses and every pair passes; t
 
   const compared = lvrtc(rootDir, "compare", "lv-ladder");
   assert.equal(compared.code, EXIT_OK, compared.err);
-  assert.match(
-    compared.out,
-    /^lv-ladder: 12 pairs: 12 PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/m,
-  );
+  assert.match(compared.out, /^lv-ladder: 12 pairs: 12 Pass$/m);
   const reported = lvrtc(rootDir, "report", "lv-ladder");
   assert.equal(reported.code, EXIT_OK, reported.err);
   const report = readFileSync(join(rootDir, "runs", "lv-ladder", REPORT_MARKDOWN_FILE), "utf8");
@@ -127,8 +143,16 @@ test("lv and ref run R0 and R1 on LensVisualizer lenses and every pair passes; t
   assert.match(report, /^\| magnification\[0\] \| -[^|]+ \| -[^|]+ \|$/m);
 
   // A second run finds every answer in the store, and the same report comes of it, byte for byte.
-  const again = lvrtc(rootDir, "run", suite, "--engines", "lv,ref", "--rungs", "r0,r1");
-  assert.match(again.out, /\(0 computed, 12 cached\)$/m);
+  const again = lvrtc(
+    rootDir,
+    "run",
+    suite,
+    "--engines",
+    "lv,reference-tracer",
+    "--checks",
+    "built-system,first-order",
+  );
+  assert.match(again.out, /\(12 from the result cache\)$/m);
   assert.equal(lvrtc(rootDir, "compare", "lv-ladder").code, EXIT_OK);
   assert.equal(lvrtc(rootDir, "report", "lv-ladder").code, EXIT_OK);
   assert.equal(readFileSync(join(rootDir, "runs", "lv-ladder", REPORT_MARKDOWN_FILE), "utf8"), report);
@@ -162,20 +186,23 @@ test("lv refuses a fixture by its source and a corrupted case as stale-case; ref
     { name: "fixture", lens: { kind: "fixture", path: "cases/contract-singlet.json" } },
     { name: "nudged", lens: { kind: "fixture", path: "cases/nudged.json" } },
   ]);
-  const ran = lvrtc(rootDir, "run", suite, "--engines", "lv,ref", "--rungs", "r0,r1");
+  const ran = lvrtc(rootDir, "run", suite, "--engines", "lv,reference-tracer", "--checks", "built-system,first-order");
   assert.equal(ran.code, EXIT_FAILURE, "a stale case is an error");
-  assert.match(ran.out, /^lv-ladder: 12 jobs: 8 ok, 2 unsupported, 2 error, 0 pending \(12 computed, 0 cached\)$/m);
+  assert.match(ran.out, /^lv-ladder: 12 jobs: 8 answered, 2 not computed, 2 error \(12 asked now\)$/m);
   // A stored case of a LensVisualizer lens is answered like one built in this run: its source is in its provenance.
-  assert.match(ran.out, /^exported +r0 +lv +ok +computed$/m);
-  assert.match(ran.out, /^fixture +r0 +lv +unsupported +computed +the engine lv answers from LensVisualizer's own/m);
+  assert.match(ran.out, /^exported +built-system +lv +answered +asked now$/m);
   assert.match(
     ran.out,
-    /^nudged +r1 +lv +error +computed +stale-case: the case of lens acme-singlet-50 is stale: its conditions are not/m,
+    /^fixture +built-system +lv +not computed +asked now +the engine lv answers from LensVisualizer's own/m,
   );
-  assert.match(ran.out, /^nudged +r1 +ref +ok +computed$/m);
+  assert.match(
+    ran.out,
+    /^nudged +first-order +lv +error +asked now +stale-case: the case of lens acme-singlet-50 is stale: its conditions are not/m,
+  );
+  assert.match(ran.out, /^nudged +first-order +reference-tracer +answered +asked now$/m);
 
   const manifest: RunManifest = JSON.parse(readFileSync(join(rootDir, "runs", "lv-ladder", MANIFEST_FILE), "utf8"));
-  const lvJobs = manifest.jobs.filter((job) => job.engine === "lv" && job.rung === "r0");
+  const lvJobs = manifest.jobs.filter((job) => job.engine === "lv" && job.rung === "built-system");
   assert.deepEqual(
     lvJobs.map((job) => [job.run, job.status, job.unsupported ?? job.error ?? null]),
     [
@@ -192,12 +219,12 @@ test("lv refuses a fixture by its source and a corrupted case as stale-case; ref
     .filter((set) => set.mode === "pairwise")
     .map((set) => [set.run, set.rung, set.pairs[0].verdict, set.pairs[0].reason ?? null]);
   assert.deepEqual(verdicts, [
-    ["exported", "r0", "PASS", null],
-    ["exported", "r1", "PASS", null],
-    ["fixture", "r0", "UNSUPPORTED", "lv is unsupported (case-source fixture)"],
-    ["fixture", "r1", "UNSUPPORTED", "lv is unsupported (case-source fixture)"],
-    ["nudged", "r0", "ERROR", "lv ended as error (stale-case)"],
-    ["nudged", "r1", "ERROR", "lv ended as error (stale-case)"],
+    ["exported", "built-system", "PASS", null],
+    ["exported", "first-order", "PASS", null],
+    ["fixture", "built-system", "UNSUPPORTED", "lv is unsupported (case-source fixture)"],
+    ["fixture", "first-order", "UNSUPPORTED", "lv is unsupported (case-source fixture)"],
+    ["nudged", "built-system", "ERROR", "lv ended as error (stale-case)"],
+    ["nudged", "first-order", "ERROR", "lv ended as error (stale-case)"],
   ]);
 });
 
@@ -207,19 +234,19 @@ test("without a LensVisualizer, lv is unavailable with its code and ref runs as 
   const suite = writeSuite(rootDir, [
     { name: "fixture", lens: { kind: "fixture", path: "cases/contract-singlet.json" } },
   ]);
-  const ran = lvrtc(rootDir, "run", suite, "--engines", "lv,ref", "--rungs", "r0");
+  const ran = lvrtc(rootDir, "run", suite, "--engines", "lv,reference-tracer", "--checks", "built-system");
   assert.equal(ran.code, EXIT_FAILURE);
   assert.match(
     ran.out,
-    /^fixture +r0 +lv +error +unavailable +not-configured: engine lv is unavailable \(not-configured\): /m,
+    /^fixture +built-system +lv +error +engine unusable +not-configured: engine lv is unavailable \(not-configured\): /m,
   );
-  assert.match(ran.out, /^fixture +r0 +ref +ok +computed$/m);
+  assert.match(ran.out, /^fixture +built-system +reference-tracer +answered +asked now$/m);
   const manifest: RunManifest = JSON.parse(readFileSync(join(rootDir, "runs", "lv-ladder", MANIFEST_FILE), "utf8"));
   assert.deepEqual(manifest.engines[0], { id: "lv", status: "unavailable", code: "not-configured" });
 
   const conformance = lvrtc(rootDir, "engine", "conformance", "lv");
   assert.equal(conformance.code, EXIT_FAILURE);
-  assert.match(conformance.out, /^FAIL +hello +engine lv is unavailable \(not-configured\): /m);
+  assert.match(conformance.out, /^failed +hello +engine lv is unavailable \(not-configured\): /m);
 });
 
 /** The suite of the ray rungs: a singlet on its three default fields, and a zoom on five lines with a lost field. */
@@ -247,17 +274,17 @@ function verdictsOf(rootDir: string): string[] {
   return [...new Set(said)];
 }
 
-test("lvrtc run --rungs r2,r3: lv and ref trace LensVisualizer's own launch rays, and every pair passes", (t) => {
+test("lvrtc run --checks ray-trace,optical-path: lv and ref trace LensVisualizer's own launch rays, and every pair passes", (t) => {
   const rootDir = lvRoot(t);
   const suite = raySuite(rootDir);
-  const ran = lvrtc(rootDir, "run", suite, "--engines", "lv,ref", "--rungs", "r2,r3");
+  const ran = lvrtc(rootDir, "run", suite, "--engines", "lv,reference-tracer", "--checks", "ray-trace,optical-path");
   assert.equal(ran.code, EXIT_OK, ran.err);
   // Three fields of the singlet on its one line; of the zoom, the axis at each of its five lines: the fake finds
   // no chief ray at 75 degrees. Each engine traces each set once, for r2, and r3 finds the answers in the store.
-  assert.match(ran.out, /^lv-ladder: 32 jobs: 32 ok, 0 unsupported, 0 error, 0 pending \(16 computed, 16 cached\)$/m);
-  assert.match(ran.out, /^singlet +r2 +lv +ok +computed$/m);
-  assert.match(ran.out, /^singlet +r2 +ref +ok +computed$/m);
-  assert.match(ran.out, /^zoom-photopic +r3 +ref +ok +cached$/m);
+  assert.match(ran.out, /^lv-ladder: 32 jobs: 32 answered \(16 asked now, 16 from the result cache\)$/m);
+  assert.match(ran.out, /^singlet +ray-trace +lv +answered +asked now$/m);
+  assert.match(ran.out, /^singlet +ray-trace +reference-tracer +answered +asked now$/m);
+  assert.match(ran.out, /^zoom-photopic +optical-path +reference-tracer +answered +from the cache$/m);
   assert.equal(
     ran.err,
     "lvrtc run: run zoom-photopic: a field has no rays: chief-ray-failed: LensVisualizer finds no chief ray for " +
@@ -288,18 +315,15 @@ test("lvrtc run --rungs r2,r3: lv and ref trace LensVisualizer's own launch rays
 
   // A second process generates the same rays: every request has the id it had, and its answer is in the store.
   const text = readFileSync(join(rootDir, "runs", "lv-ladder", MANIFEST_FILE), "utf8");
-  const again = lvrtc(rootDir, "run", suite, "--engines", "lv,ref", "--rungs", "r2,r3");
-  assert.match(again.out, /\(0 computed, 32 cached\)$/m);
+  const again = lvrtc(rootDir, "run", suite, "--engines", "lv,reference-tracer", "--checks", "ray-trace,optical-path");
+  assert.match(again.out, /\(32 from the result cache\)$/m);
   assert.equal(readFileSync(join(rootDir, "runs", "lv-ladder", MANIFEST_FILE), "utf8"), text);
 
   // The fake's tracer stops within 1e-13 mm of a surface, and the reference engine on it: every pair passes, in
   // both rungs and both modes, and no ray is in the rim band or in doubt.
   const compared = lvrtc(rootDir, "compare", "lv-ladder");
   assert.equal(compared.code, EXIT_OK, compared.err + compared.out);
-  assert.match(
-    compared.out,
-    /^lv-ladder: 32 pairs: 32 PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/m,
-  );
+  assert.match(compared.out, /^lv-ladder: 32 pairs: 32 Pass$/m);
   const file: ComparisonFile = JSON.parse(readFileSync(join(rootDir, "runs", "lv-ladder", COMPARISONS_FILE), "utf8"));
   const limits: Record<string, number> = {
     "hits.maxDistance": 1e-11,
@@ -314,7 +338,7 @@ test("lvrtc run --rungs r2,r3: lv and ref trace LensVisualizer's own launch rays
   let compared16 = 0;
   for (const set of file.comparisons) {
     const [pair] = set.pairs;
-    assert.deepEqual([pair.a, pair.b, pair.verdict], ["lv", "ref", "PASS"], `${set.run} ${set.rung}`);
+    assert.deepEqual([pair.a, pair.b, pair.verdict], ["lv", "reference-tracer", "PASS"], `${set.run} ${set.rung}`);
     for (const metric of pair.metrics) {
       if (metric.name === "rays.compared") {
         compared16 += metric.value ?? 0;
@@ -326,7 +350,7 @@ test("lvrtc run --rungs r2,r3: lv and ref trace LensVisualizer's own launch rays
     }
     // Each engine's rays are counted, ok and blocked and failed, beside the pair of rung r2.
     const recorded = set.participants.map((participant) => Object.keys(participant.recorded ?? {}));
-    const counts = set.rung === "r2" ? ["rays.blocked", "rays.failed", "rays.ok"] : [];
+    const counts = set.rung === "ray-trace" ? ["rays.blocked", "rays.failed", "rays.ok"] : [];
     assert.deepEqual(recorded, [counts, counts], `${set.run} ${set.rung}`);
   }
   assert.ok(compared16 > 100, `rays that are ok in both engines: ${compared16}`);
@@ -335,13 +359,14 @@ test("lvrtc run --rungs r2,r3: lv and ref trace LensVisualizer's own launch rays
   const reported = lvrtc(rootDir, "report", "lv-ladder");
   assert.equal(reported.code, EXIT_OK, reported.err);
   const report = readFileSync(join(rootDir, "runs", "lv-ladder", REPORT_MARKDOWN_FILE), "utf8");
-  assert.match(report, /^#### r2, request 3 of 3$/m);
+  assert.match(report, /^#### Ray trace — `ray-trace`, request 3 of 3$/m);
   assert.match(report, /\| direction\.maxAbs \(≤ 1\.00e-9\) \|/);
   assert.match(report, /\| hits\.maxDistance \(≤ 1\.00e-8 mm\) \|/);
   assert.match(report, /\| mask\.mismatches \(≤ 0 rays\) \|/);
   assert.match(report, /\| opd\.maxAbs \(≤ 2\.00e-5 waves\) \|/);
   assert.match(report, /^\| rays\.ok\[0\] \| \d+ \| \d+ \|$/m);
-  assert.match(report, /^\| Engine \| Status \| Version \| Fingerprint \| Adapter revision \|$/m);
+  assert.match(report, /^\| Engine \| Status \| Version \|$/m);
+  assert.match(report, /^\| Engine \| Engine code \| This tool's code behind it \|$/m);
 });
 
 /** Makes the tracer of a root's LensVisualizer meet every surface `offset` mm behind where the surface is. */
@@ -360,19 +385,27 @@ test("a synthetic policy grants FLOOR for fake LV hits 3e-8 mm off, counted apar
   const rootDir = lvRoot(t);
   // Three times the gate of a hit, and well inside the 1e-7 mm a floor may be.
   displaceHits(rootDir, "3e-8");
-  const ran = lvrtc(rootDir, "run", raySuite(rootDir), "--engines", "lv,ref", "--rungs", "r0,r1,r2,r3");
+  const ran = lvrtc(
+    rootDir,
+    "run",
+    raySuite(rootDir),
+    "--engines",
+    "lv,reference-tracer",
+    "--checks",
+    "built-system,first-order,ray-trace,optical-path",
+  );
   assert.equal(ran.code, EXIT_OK, ran.err);
   // The shipped policy has no floor: the same above-gate hits must FAIL before the synthetic policy grants one.
   const strict = lvrtc(rootDir, "compare", "lv-ladder");
   assert.equal(strict.code, EXIT_FAILURE, strict.out);
   assert.deepEqual(
-    verdictsOf(rootDir).filter((said) => / r2: /.test(said)),
-    ["singlet r2: FAIL", "zoom-photopic r2: FAIL"],
+    verdictsOf(rootDir).filter((said) => / ray-trace: /.test(said)),
+    ["singlet ray-trace: FAIL", "zoom-photopic ray-trace: FAIL"],
   );
   const compared = await floorCommand(rootDir, "compare", "lv-ladder");
   // A floor fails nothing: the command exits 0, and says how many pairs are FLOOR beside how many are PASS.
   assert.equal(compared.code, EXIT_OK, compared.out);
-  const counts = /^lv-ladder: (\d+) pairs: (\d+) PASS, (\d+) FLOOR, 0 FAIL, .* 0 BLOCKED, 0 ERROR$/m.exec(compared.out);
+  const counts = /^lv-ladder: (\d+) pairs: (\d+) Pass, (\d+) Within a numerical floor$/m.exec(compared.out);
   assert.ok(counts !== null, compared.out);
   const [pairs, pass, floor] = counts.slice(1).map(Number);
   assert.equal(pairs, 2 * (2 + 2 + 8 + 8));
@@ -380,38 +413,47 @@ test("a synthetic policy grants FLOOR for fake LV hits 3e-8 mm off, counted apar
   // The system and its first-order data are what they were; every set of rays is 3e-8 mm off in its hits.
   const verdicts = verdictsOf(rootDir);
   assert.deepEqual(
-    verdicts.filter((said) => / r[01]: /.test(said)),
-    ["singlet r0: PASS", "singlet r1: PASS", "zoom-photopic r0: PASS", "zoom-photopic r1: PASS"],
+    verdicts.filter((said) => / (built-system|first-order): /.test(said)),
+    [
+      "singlet built-system: PASS",
+      "singlet first-order: PASS",
+      "zoom-photopic built-system: PASS",
+      "zoom-photopic first-order: PASS",
+    ],
   );
   assert.deepEqual(
-    verdicts.filter((said) => / r2: /.test(said)),
-    ["singlet r2: FLOOR", "zoom-photopic r2: FLOOR"],
+    verdicts.filter((said) => / ray-trace: /.test(said)),
+    ["singlet ray-trace: FLOOR", "zoom-photopic ray-trace: FLOOR"],
   );
   assert.ok(floor >= 16, compared.out);
 
   const file: ComparisonFile = JSON.parse(readFileSync(join(rootDir, "runs", "lv-ladder", COMPARISONS_FILE), "utf8"));
-  const [pair] = file.comparisons.find((set) => set.rung === "r2" && set.mode === "reference-vs-each")?.pairs ?? [];
+  const [pair] =
+    file.comparisons.find((set) => set.rung === "ray-trace" && set.mode === "reference-vs-each")?.pairs ?? [];
   const hits = pair.metrics.find((metric) => metric.name === "hits.maxDistance")?.value ?? 0;
   assert.ok(hits > 2.5e-8 && hits < 6e-8, String(hits));
   // The reason names what exceeded its gate, and the figures against the arbiter that make it a floor.
   assert.match(
     pair.reason ?? "",
-    /^hits\.maxDistance \d\.\d\de-8 exceeds its tolerance 1\.00e-8 at .*; floor of lv: lv against ref direction\.maxAbs \d\.\d\de-\d+ within 1\.00e-8, lv against ref hits\.maxDistance \d\.\d\de-8 within 1\.00e-7, lv against ref landing\.maxDistance \d\.\d\de-\d+ within 1\.00e-7$/,
+    /^hits\.maxDistance \d\.\d\de-8 exceeds its tolerance 1\.00e-8 at .*; floor of lv: lv against reference-tracer direction\.maxAbs \d\.\d\de-\d+ within 1\.00e-8, lv against reference-tracer hits\.maxDistance \d\.\d\de-8 within 1\.00e-7, lv against reference-tracer landing\.maxDistance \d\.\d\de-\d+ within 1\.00e-7$/,
   );
 
   const reported = await floorCommand(rootDir, "report", "lv-ladder", "--floor", join(rootDir, "digest"));
   assert.equal(reported.code, EXIT_OK, reported.err);
   const report = readFileSync(join(rootDir, "runs", "lv-ladder", REPORT_MARKDOWN_FILE), "utf8");
-  assert.match(report, /^No pair is FAIL or ERROR, of 40 compared\.$/m);
-  assert.match(report, new RegExp(`^\\| FLOOR \\| ${floor / 2} \\| ${floor / 2} \\|$`, "m"));
+  assert.match(report, /^No pair is Fail or Error, of 40 compared\.$/m);
+  assert.match(report, new RegExp(`^\\| Within a known numerical floor \\| ${floor / 2} \\| ${floor / 2} \\|$`, "m"));
   // The reference is lv, the first engine by id that answered: the row is ref's, and the floor is still lv's.
-  assert.match(report, /^\| ref \| [^|]+ \| [^|]+ \| [^|]+ \| 0 \| 0 \| \d+ \| FLOOR \| hits\.maxDistance /m);
+  assert.match(
+    report,
+    /^\| reference-tracer \| [^|]+ \| [^|]+ \| [^|]+ \| 0 \| 0 \| \d+ \| FLOOR \| hits\.maxDistance /m,
+  );
   const digest = readFileSync(join(rootDir, "digest", "lv-floor.md"), "utf8");
   assert.match(digest, /^Quantity `rays\.trace`: 8 pairs, 8 FLOOR\.$/m);
   assert.match(digest, /^\| singlet \| 3 \| 3 FLOOR \| \d\.\d\de-8 \| /m);
   // The digest retains engine provenance, contains no rays or local path, and is deterministic.
   const model = JSON.parse(readFileSync(join(rootDir, "digest", "lv-floor.json"), "utf8"));
-  assert.deepEqual([model.kind, model.engine.id, model.arbiter.id], ["floor-report", "lv", "ref"]);
+  assert.deepEqual([model.kind, model.engine.id, model.arbiter.id], ["floor-report", "lv", "reference-tracer"]);
   assert.equal(model.engine.fingerprint, closureOf(join(rootDir, "lv"), FAKE_ENGINE_FILES));
   for (const text of [digest, JSON.stringify(model)]) assert.ok(!text.includes(rootDir) && !text.includes("$nd"));
   const again = await floorCommand(rootDir, "report", "lv-ladder", "--floor", join(rootDir, "digest"));
@@ -422,25 +464,33 @@ test("a synthetic policy grants FLOOR for fake LV hits 3e-8 mm off, counted apar
 test("a synthetic policy refuses fake LV hits beyond its floor: FAIL, and compare exits 1", async (t) => {
   const rootDir = lvRoot(t);
   displaceHits(rootDir, "3e-6");
-  const ran = lvrtc(rootDir, "run", raySuite(rootDir), "--engines", "lv,ref", "--rungs", "r2,r3");
+  const ran = lvrtc(
+    rootDir,
+    "run",
+    raySuite(rootDir),
+    "--engines",
+    "lv,reference-tracer",
+    "--checks",
+    "ray-trace,optical-path",
+  );
   assert.equal(ran.code, EXIT_OK, ran.err);
   const compared = await floorCommand(rootDir, "compare", "lv-ladder");
   assert.equal(compared.code, EXIT_FAILURE, compared.out);
   assert.deepEqual(
-    verdictsOf(rootDir).filter((said) => / r2: /.test(said)),
-    ["singlet r2: FAIL", "zoom-photopic r2: FAIL"],
+    verdictsOf(rootDir).filter((said) => / ray-trace: /.test(said)),
+    ["singlet ray-trace: FAIL", "zoom-photopic ray-trace: FAIL"],
   );
   // The reason says that the floor was considered, and which figure against the arbiter is beyond its limit.
   assert.match(
     compared.out,
-    /^singlet +r2 +pairwise +lv +ref +FAIL +.*hits\.maxDistance \d\.\d\de-6 exceeds its tolerance 1\.00e-8 .*; not a floor of lv: hits\.maxDistance against ref \d\.\d\de-6 exceeds the floor limit 1\.00e-7$/m,
+    /^singlet +ray-trace +every pair +lv +reference-tracer +Fail +.*hits\.maxDistance \d\.\d\de-6 exceeds its tolerance 1\.00e-8 .*; not a floor of lv: hits\.maxDistance against reference-tracer \d\.\d\de-6 exceeds the floor limit 1\.00e-7$/m,
   );
 });
 
-test("lvrtc run --rungs r7a: lv and ref trace the rays of LensVisualizer's coma and bokeh tabs, and every pair passes", (t) => {
+test("lvrtc run --checks spot-rays: lv and ref trace the rays of LensVisualizer's coma and bokeh tabs, and every pair passes", (t) => {
   const rootDir = lvRoot(t);
   const suite = raySuite(rootDir);
-  const ran = lvrtc(rootDir, "run", suite, "--engines", "lv,ref", "--rungs", "r7a");
+  const ran = lvrtc(rootDir, "run", suite, "--engines", "lv,reference-tracer", "--checks", "spot-rays");
   assert.equal(ran.code, EXIT_OK, ran.err);
   // The tabs' patterns do not depend on the run's fields: seven sets of the singlet on its one line, and seven of the
   // zoom at each of its lines. Each engine traces each set once.
@@ -455,7 +505,9 @@ test("lvrtc run --rungs r7a: lv and ref trace the rays of LensVisualizer's coma 
     ],
   );
   assert.equal(manifest.jobs.length, 2 * 7 * (1 + lines));
-  assert.ok(manifest.jobs.every((job) => job.rung === "r7a" && job.quantity === "rays.trace" && job.status === "ok"));
+  assert.ok(
+    manifest.jobs.every((job) => job.rung === "spot-rays" && job.quantity === "rays.trace" && job.status === "ok"),
+  );
 
   // The fake's tracer stops within 1e-13 mm of a surface, and the reference engine on it: every pair passes.
   const compared = lvrtc(rootDir, "compare", "lv-ladder");
@@ -464,7 +516,11 @@ test("lvrtc run --rungs r7a: lv and ref trace the rays of LensVisualizer's coma 
   let taken = 0;
   for (const set of file.comparisons) {
     const [pair] = set.pairs;
-    assert.deepEqual([set.rung, pair.a, pair.b, pair.verdict], ["r7a", "lv", "ref", "PASS"], pair.reason);
+    assert.deepEqual(
+      [set.rung, pair.a, pair.b, pair.verdict],
+      ["spot-rays", "lv", "reference-tracer", "PASS"],
+      pair.reason,
+    );
     for (const metric of pair.metrics) {
       if (metric.name === "rays.compared") taken += metric.value ?? 0;
       else if (metric.name.endsWith(".maxAbs"))
@@ -492,10 +548,10 @@ test("lvrtc run --rungs r7a: lv and ref trace the rays of LensVisualizer's coma 
   assert.match(report, /\| rmsRadius\.maxAbs \(≤ 1\.00e-8 mm\) \|/);
 });
 
-test("lvrtc run --rungs r8a: lv and ref trace the rays of LensVisualizer's axial sections, and every pair passes", (t) => {
+test("lvrtc run --checks axial-rays: lv and ref trace the rays of LensVisualizer's axial sections, and every pair passes", (t) => {
   const rootDir = lvRoot(t);
   const suite = raySuite(rootDir);
-  const ran = lvrtc(rootDir, "run", suite, "--engines", "lv,ref", "--rungs", "r8a");
+  const ran = lvrtc(rootDir, "run", suite, "--engines", "lv,reference-tracer", "--checks", "axial-rays");
   assert.equal(ran.code, EXIT_OK, ran.err);
   // The sections' zones do not depend on the run's fields: of the singlet on its one line, the reference line, which
   // is a chromatic channel's, the profile, the marginal rays and the colour; of the zoom at each of its photopic lines,
@@ -511,7 +567,9 @@ test("lvrtc run --rungs r8a: lv and ref trace the rays of LensVisualizer's axial
     ],
   );
   assert.equal(manifest.jobs.length, 2 * (3 + 2 * lines));
-  assert.ok(manifest.jobs.every((job) => job.rung === "r8a" && job.quantity === "rays.trace" && job.status === "ok"));
+  assert.ok(
+    manifest.jobs.every((job) => job.rung === "axial-rays" && job.quantity === "rays.trace" && job.status === "ok"),
+  );
 
   // The fake's tracer stops within 1e-13 mm of a surface, and the reference engine on it: every pair passes, every
   // figure measured.
@@ -521,7 +579,11 @@ test("lvrtc run --rungs r8a: lv and ref trace the rays of LensVisualizer's axial
   let taken = 0;
   for (const set of file.comparisons) {
     const [pair] = set.pairs;
-    assert.deepEqual([set.rung, pair.a, pair.b, pair.verdict], ["r8a", "lv", "ref", "PASS"], pair.reason);
+    assert.deepEqual(
+      [set.rung, pair.a, pair.b, pair.verdict],
+      ["axial-rays", "lv", "reference-tracer", "PASS"],
+      pair.reason,
+    );
     // A metric that was not measured would be named in the pair's reason.
     assert.equal(pair.reason, undefined);
     for (const metric of pair.metrics) {
@@ -550,10 +612,10 @@ test("lvrtc run --rungs r8a: lv and ref trace the rays of LensVisualizer's axial
   assert.match(report, /\| focusRms\.maxAbs \(≤ 1\.00e-8 mm\) \|/);
 });
 
-test("lvrtc run --rungs r9a: lv and ref trace the chief rays of LensVisualizer's field tabs, and every pair passes", (t) => {
+test("lvrtc run --checks chief-rays: lv and ref trace the chief rays of LensVisualizer's field tabs, and every pair passes", (t) => {
   const rootDir = lvRoot(t);
   const suite = raySuite(rootDir);
-  const ran = lvrtc(rootDir, "run", suite, "--engines", "lv,ref", "--rungs", "r9a");
+  const ran = lvrtc(rootDir, "run", suite, "--engines", "lv,reference-tracer", "--checks", "chief-rays");
   assert.equal(ran.code, EXIT_OK, ran.err);
   // The tabs' fields do not depend on the run's: four sets of the singlet on its one line (the distortion curve, its
   // grid, the pupils, the lateral colour), and four of the zoom at each of its lines. Each engine traces each once.
@@ -568,7 +630,9 @@ test("lvrtc run --rungs r9a: lv and ref trace the chief rays of LensVisualizer's
     ],
   );
   assert.equal(manifest.jobs.length, 2 * 4 * (1 + lines));
-  assert.ok(manifest.jobs.every((job) => job.rung === "r9a" && job.quantity === "rays.trace" && job.status === "ok"));
+  assert.ok(
+    manifest.jobs.every((job) => job.rung === "chief-rays" && job.quantity === "rays.trace" && job.status === "ok"),
+  );
 
   // The fake's tracer stops within 1e-13 mm of a surface, and the reference engine on it: every pair passes. A set
   // is compared at all its lines as one span: four of the singlet, four of the zoom.
@@ -579,7 +643,11 @@ test("lvrtc run --rungs r9a: lv and ref trace the chief rays of LensVisualizer's
   let taken = 0;
   for (const set of file.comparisons) {
     const [pair] = set.pairs;
-    assert.deepEqual([set.rung, pair.a, pair.b, pair.verdict], ["r9a", "lv", "ref", "PASS"], pair.reason);
+    assert.deepEqual(
+      [set.rung, pair.a, pair.b, pair.verdict],
+      ["chief-rays", "lv", "reference-tracer", "PASS"],
+      pair.reason,
+    );
     for (const metric of pair.metrics) {
       if (metric.name === "rays.compared") taken += metric.value ?? 0;
       else if (/\.max(Abs|Scaled)$/.test(metric.name))
@@ -601,10 +669,10 @@ test("lvrtc run --rungs r9a: lv and ref trace the chief rays of LensVisualizer's
   }
 });
 
-test("lvrtc run --rungs r10a: lv and ref trace the rays of LensVisualizer's field curves, and every pair passes", (t) => {
+test("lvrtc run --checks field-curve-rays: lv and ref trace the rays of LensVisualizer's field curves, and every pair passes", (t) => {
   const rootDir = lvRoot(t);
   const suite = raySuite(rootDir);
-  const ran = lvrtc(rootDir, "run", suite, "--engines", "lv,ref", "--rungs", "r10a");
+  const ran = lvrtc(rootDir, "run", suite, "--engines", "lv,reference-tracer", "--checks", "field-curve-rays");
   assert.equal(ran.code, EXIT_OK, ran.err);
   // The sections' fields do not depend on the run's: two sets of the singlet on its one line (the parabasal rays and
   // the real-ray fans), and two of the zoom at each of its lines. Each engine traces each once.
@@ -619,7 +687,11 @@ test("lvrtc run --rungs r10a: lv and ref trace the rays of LensVisualizer's fiel
     ],
   );
   assert.equal(manifest.jobs.length, 2 * 2 * (1 + lines));
-  assert.ok(manifest.jobs.every((job) => job.rung === "r10a" && job.quantity === "rays.trace" && job.status === "ok"));
+  assert.ok(
+    manifest.jobs.every(
+      (job) => job.rung === "field-curve-rays" && job.quantity === "rays.trace" && job.status === "ok",
+    ),
+  );
 
   // The fake's tracer stops within 1e-13 mm of a surface, and the reference engine on it: every pair passes, and its
   // foci are measured.
@@ -630,7 +702,11 @@ test("lvrtc run --rungs r10a: lv and ref trace the rays of LensVisualizer's fiel
   let fields = 0;
   for (const set of file.comparisons) {
     const [pair] = set.pairs;
-    assert.deepEqual([set.rung, pair.a, pair.b, pair.verdict], ["r10a", "lv", "ref", "PASS"], pair.reason);
+    assert.deepEqual(
+      [set.rung, pair.a, pair.b, pair.verdict],
+      ["field-curve-rays", "lv", "reference-tracer", "PASS"],
+      pair.reason,
+    );
     for (const metric of pair.metrics) {
       if (metric.name === "fields.compared") fields += metric.value ?? 0;
       else if (metric.name === "rays.compared") assert.ok((metric.value ?? 0) > 0);
@@ -648,10 +724,18 @@ test("lvrtc run --rungs r10a: lv and ref trace the rays of LensVisualizer's fiel
   }
 });
 
-test("lvrtc run --rungs r11a,r11b: the tab's beams pass between lv and ref, and lv's tab is set beside flux", (t) => {
+test("lvrtc run --checks vignetting-rays,vignetting-vs-flux-estimate: the tab's beams pass between lv and ref, and lv's tab is set beside flux", (t) => {
   const rootDir = lvRoot(t);
   const suite = raySuite(rootDir);
-  const ran = lvrtc(rootDir, "run", suite, "--engines", "lv,ref", "--rungs", "r11a,r11b");
+  const ran = lvrtc(
+    rootDir,
+    "run",
+    suite,
+    "--engines",
+    "lv,reference-tracer",
+    "--checks",
+    "vignetting-rays,vignetting-vs-flux-estimate",
+  );
   assert.equal(ran.code, EXIT_OK, ran.err);
   // The tab's fields do not depend on the run's: of each run a beam set of each field at each line. R11b asks the
   // singlet's reference line of lv and flux; the photopic run has no line of the tab's.
@@ -660,13 +744,13 @@ test("lvrtc run --rungs r11a,r11b: the tab's beams pass between lv and ref, and 
   assert.deepEqual([singlet.problems, zoom.problems], [[], []]);
   const singletSets = singlet.sets.length;
   assert.ok(singletSets > 2, "the beams of the singlet's fields at its one line");
-  const r11a = manifest.jobs.filter((job) => job.rung === "r11a");
-  const r11b = manifest.jobs.filter((job) => job.rung === "r11b");
+  const r11a = manifest.jobs.filter((job) => job.rung === "vignetting-rays");
+  const r11b = manifest.jobs.filter((job) => job.rung === "vignetting-vs-flux-estimate");
   assert.equal(r11a.length, 2 * (singlet.sets.length + zoom.sets.length));
   assert.deepEqual(
     r11b.map((job) => [job.run, job.engine, job.quantity, job.status]),
     [
-      ["singlet", "flux", "vignetting.native", "ok"],
+      ["singlet", "flux-of-lv-rays", "vignetting.native", "ok"],
       ["singlet", "lv", "vignetting.native", "ok"],
     ],
   );
@@ -676,9 +760,9 @@ test("lvrtc run --rungs r11a,r11b: the tab's beams pass between lv and ref, and 
   assert.equal(compared.code, EXIT_OK, compared.err + compared.out);
   const file: ComparisonFile = JSON.parse(readFileSync(join(rootDir, "runs", "lv-ladder", COMPARISONS_FILE), "utf8"));
   let fields = 0;
-  for (const set of file.comparisons.filter((each) => each.rung === "r11a")) {
+  for (const set of file.comparisons.filter((each) => each.rung === "vignetting-rays")) {
     const [pair] = set.pairs;
-    assert.deepEqual([pair.a, pair.b, pair.verdict], ["lv", "ref", "PASS"], pair.reason);
+    assert.deepEqual([pair.a, pair.b, pair.verdict], ["lv", "reference-tracer", "PASS"], pair.reason);
     for (const metric of pair.metrics) {
       if (metric.name === "fields.compared") fields += metric.value ?? 0;
       else if (metric.name === "rays.compared") assert.ok((metric.value ?? 0) > 0);
@@ -688,12 +772,15 @@ test("lvrtc run --rungs r11a,r11b: the tab's beams pass between lv and ref, and 
     }
   }
   assert.ok(fields > 4, `beam fields compared: ${fields}`);
-  // The fake's MTF launch aims its chief ray otherwise than the fake's tab solves it: the two land farther apart than the
-  // sorting's limit off the axis, so those fields are data and the landing marks the pair (ATTENTION, never a FAIL).
-  const recorded = file.comparisons.filter((each) => each.rung === "r11b" && each.mode === "pairwise");
+  // The fake's MTF launch aims its chief ray otherwise than the fake's tab solves it: the two land farther apart than
+  // the sorting's limit off the axis, so those fields are data and the landing marks the pair (ATTENTION, never a
+  // FAIL).
+  const recorded = file.comparisons.filter(
+    (each) => each.rung === "vignetting-vs-flux-estimate" && each.mode === "pairwise",
+  );
   assert.deepEqual(
     recorded.map((set) => [set.run, set.pairs[0].a, set.pairs[0].b, set.pairs[0].verdict]),
-    [["singlet", "flux", "lv", "ATTENTION"]],
+    [["singlet", "flux-of-lv-rays", "lv", "ATTENTION"]],
   );
   const counts = Object.fromEntries(recorded[0].pairs[0].metrics.map((metric) => [metric.name, metric.value]));
   assert.ok((counts["fields.compared"] ?? 0) >= 1 && (counts["fields.data"] ?? 0) >= 1, JSON.stringify(counts));

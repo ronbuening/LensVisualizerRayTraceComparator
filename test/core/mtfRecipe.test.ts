@@ -133,8 +133,8 @@ test("a case file without field angles has no recipe, and the problem says how t
 // ── The rung r4f ─────────────────────────────────────────────────────────────────────────────────────────────────
 
 test("r4f asks one geometric mtf.native of the recipe's fractions and frequencies, on the plane of the case", () => {
-  assert.deepEqual([r4fRung.id, r4fRung.quantity, r4fRung.needsRecipe], ["r4f", MTF_NATIVE, true]);
-  assert.deepEqual(r4fRung.engines, ["lv", "replay"]);
+  assert.deepEqual([r4fRung.id, r4fRung.quantity, r4fRung.needsRecipe], ["lv-mtf-replay", MTF_NATIVE, true]);
+  assert.deepEqual(r4fRung.engines, ["lv", "replay-of-lv-mtf"]);
   assert.equal(r4fRung.engines, R4F_ENGINES);
   assert.ok(Object.isFrozen(R4F_ENGINES));
   const requests = r4fRung.buildRequests(SINGLET, RUN, { raySets: [], recipe: RECIPE });
@@ -197,7 +197,7 @@ test("a wave MTF is taken at no more than eleven frequencies of a recipe, evenly
 test("r6a asks the run's ray sets and those of the finer lattice, each once, and nothing without a recipe", () => {
   assert.deepEqual(
     [r6aRung.id, r6aRung.quantity, r6aRung.needsRaySets, r6aRung.needsFineRaySets, r6aRung.needsRecipe],
-    ["r6a", "rays.trace", true, true, true],
+    ["wave-mtf", "rays.trace", true, true, true],
   );
   assert.equal(r6aRung.engines, undefined);
   const raySets = [RAYS_SPEC_SINGLET];
@@ -239,9 +239,9 @@ test("the finer lattice has twice the cells of the run's bundle grid, whatever e
 });
 
 test("r6b asks one diffraction mtf.native at the run's ray fields and the recipe's thinned frequencies", () => {
-  assert.deepEqual([r6bRung.id, r6bRung.quantity, r6bRung.needsRecipe], ["r6b", MTF_NATIVE, true]);
+  assert.deepEqual([r6bRung.id, r6bRung.quantity, r6bRung.needsRecipe], ["mtf-vs-wave-estimate", MTF_NATIVE, true]);
   assert.equal(r6bRung.needsRaySets, undefined);
-  assert.deepEqual(r6bRung.engines, ["lv", "wave"]);
+  assert.deepEqual(r6bRung.engines, ["lv", "wave-mtf-of-lv-rays"]);
   assert.equal(r6bRung.engines, R6B_ENGINES);
   assert.ok(Object.isFrozen(R6B_ENGINES));
   const requests = r6bRung.buildRequests(SINGLET, RUN, { raySets: [], recipe: RECIPE });
@@ -286,8 +286,8 @@ test("r6b hands the run's grid cap and bundle grid to its engines, each under it
 });
 
 test("r5 asks r6b's one request of three engines, and hands optiland alone the recipe's angle of each field", () => {
-  assert.deepEqual([r5Rung.id, r5Rung.quantity, r5Rung.needsRecipe], ["r5", MTF_NATIVE, true]);
-  assert.deepEqual([r5Rung.engines, r5Rung.onlyWhereNamed], [["lv", "optiland", "wave"], true]);
+  assert.deepEqual([r5Rung.id, r5Rung.quantity, r5Rung.needsRecipe], ["mtf-vs-optiland-fft", MTF_NATIVE, true]);
+  assert.deepEqual([r5Rung.engines, r5Rung.onlyWhereNamed], [["lv", "optiland", "wave-mtf-of-lv-rays"], true]);
   assert.equal(r5Rung.engines, R5_ENGINES);
   const inputs = { raySets: [], recipe: RECIPE };
   // One request, r6b's, so the three answers are one comparison and r6b's answers are not computed again.
@@ -307,7 +307,7 @@ test("r5 asks r6b's one request of three engines, and hands optiland alone the r
   // optiland is not handed the options of the other two, and they are handed r6b's and no angle.
   const sampled: RunSpec = { ...RUN, sampling: { lvGridCap: 64, bundleGrid: 16 } };
   assert.deepEqual(r5Rung.engineOptions?.(sampled, inputs, "optiland"), { fieldAnglesDeg: [0, 11.25] });
-  for (const engine of ["lv", "wave"]) {
+  for (const engine of ["lv", "wave-mtf-of-lv-rays"]) {
     assert.deepEqual(r5Rung.engineOptions?.(sampled, inputs, engine), { lvGridCap: 64, bundleGrid: 16 });
     assert.equal(r5Rung.engineOptions?.(RUN, inputs, engine), undefined);
   }
@@ -402,7 +402,7 @@ test("a rung that needs a recipe is handed the source's, once a run, and the man
   // is asked of those, in id order, whatever the run names; and of nobody where the run has no recipe.
   assert.deepEqual(
     result.manifest.jobs.map((job) => `${job.run} ${job.rung} ${job.engine}`),
-    ["with selftest fake-c", "with own fake-a", "with own fake-b", "without selftest fake-c"],
+    ["with pipeline-echo fake-c", "with own fake-a", "with own fake-b", "without pipeline-echo fake-c"],
   );
   assert.deepEqual(
     result.manifest.engines.map((engine) => engine.id),
@@ -468,7 +468,7 @@ test("a rung of its own engines is not held to the reference of a run that is no
   const sources = { fixture: recipeSource() };
   const { manifest } = await runSuite({ suite, registry, runsDir, sources, rungDefinitions });
   const base = loadPolicy();
-  const policy = { ...base, rungs: { selftest: base.rungs.selftest, own: base.rungs.selftest } };
+  const policy = { ...base, rungs: { "pipeline-echo": base.rungs["pipeline-echo"], own: base.rungs["pipeline-echo"] } };
   const store = createResultStore(join(runsDir, STORE_DIRECTORY));
   const rows = (reference?: string): string[] =>
     compareManifest({ manifest, store, policy, reference, rungDefinitions }).comparisons.flatMap((set) =>
@@ -479,8 +479,8 @@ test("a rung of its own engines is not held to the reference of a run that is no
   // A reference that is one of the rung's engines is taken there. In the rung of the run's engines it has no job,
   // and is shown as missing, as a reference is.
   assert.deepEqual(rows("fake-b"), [
-    "selftest reference-vs-each fake-b fake-b fake-c ERROR",
-    "selftest pairwise - fake-b fake-c ERROR",
+    "pipeline-echo reference-vs-each fake-b fake-b fake-c ERROR",
+    "pipeline-echo pairwise - fake-b fake-c ERROR",
     "own reference-vs-each fake-b fake-b fake-a PASS",
     "own pairwise - fake-a fake-b PASS",
   ]);

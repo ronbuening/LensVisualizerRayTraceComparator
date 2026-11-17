@@ -9,6 +9,7 @@ import { join } from "node:path";
 import { after, before, test } from "node:test";
 
 import { REPO_ROOT } from "../../src/core/config.ts";
+import { LEGACY_CHECK_IDS, LEGACY_ENGINE_IDS } from "../../src/core/legacyIds.ts";
 import { canonicalJson } from "../../src/core/numeric/canonicalJson.ts";
 import { renderIndex, renderLens, renderRun } from "../../src/dashboard/html.ts";
 import { MAX_LENS_CURVES, lensSelection } from "../../src/dashboard/lens.ts";
@@ -126,11 +127,11 @@ test("a lens page lists each run with its condition, read from its case file and
   assert.deepEqual(
     view.runs.map((run) => run.requests.map((request) => [request.rung, request.engines])),
     [
-      [["r5", ["lv", "optiland", "wave"]]],
-      [["r5", ["lv", "optiland", "optiland#fft512", "wave"]]],
+      [["mtf-vs-optiland-fft", ["lv", "optiland", "wave-mtf-of-lv-rays"]]],
+      [["mtf-vs-optiland-fft", ["lv", "optiland", "optiland#fft512", "wave-mtf-of-lv-rays"]]],
       [
-        ["r5", ["lv", "optiland"]],
-        ["r5g", ["lv", "optiland", "replay"]],
+        ["mtf-vs-optiland-fft", ["lv", "optiland"]],
+        ["geometric-mtf-vs-optiland", ["lv", "optiland", "replay-of-lv-mtf"]],
       ],
     ],
   );
@@ -142,6 +143,46 @@ test("a lens page lists each run with its condition, read from its case file and
       ["tangential", true],
     ],
   );
+});
+
+test("an address written before the rename of the check and engine ids chooses what it chose then, quietly", () => {
+  const views = viewsOf();
+  const today = lensGoldenQuery(views);
+  // Every check and engine, and the reference curve's check and engine, by the ids they had before the renames.
+  const back = Object.fromEntries(Object.entries(LEGACY_CHECK_IDS).map(([old, now]) => [now, old]));
+  const engineBack = Object.fromEntries(Object.entries(LEGACY_ENGINE_IDS).map(([old, now]) => [now, old]));
+  const engineOld = (label: string): string => {
+    const [id, ...step] = label.split("#");
+    return [engineBack[id] ?? id, ...step].join("#");
+  };
+  const params = new URLSearchParams(today);
+  const old = new URLSearchParams();
+  for (const [name, value] of params) {
+    if (name === "rung") old.append(name, back[value] ?? value);
+    else if (name === "engine") old.append(name, engineOld(value));
+    else if (name === "ref") {
+      const parts = value.split(",");
+      parts[1] = encodeURIComponent(back[decodeURIComponent(parts[1])] ?? decodeURIComponent(parts[1]));
+      parts[3] = encodeURIComponent(engineOld(decodeURIComponent(parts[3])));
+      old.append(name, parts.join(","));
+    } else old.append(name, value);
+  }
+  assert.notEqual(old.toString(), today);
+  assert.ok(
+    old.getAll("rung").every((id) => Object.hasOwn(LEGACY_CHECK_IDS, id)),
+    old.toString(),
+  );
+  assert.ok(
+    old.getAll("engine").some((id) => Object.hasOwn(LEGACY_ENGINE_IDS, id)),
+    old.toString(),
+  );
+  const viewOld = views.lens(LENS_KEY, old.toString());
+  const viewToday = views.lens(LENS_KEY, today);
+  assert.deepEqual(viewOld.curves, viewToday.curves);
+  assert.deepEqual(viewOld.reference, viewToday.reference);
+  assert.deepEqual(viewOld.notes, viewToday.notes, "no note of an unknown value");
+  // A value that is no check's, by either id, is still named.
+  assert.ok(views.lens(LENS_KEY, "rung=r99").notes.some((note) => note.includes("r99")));
 });
 
 test("within the reference's request a difference is drawn as its section page draws it; every other is apart", () => {
@@ -157,7 +198,9 @@ test("within the reference's request a difference is drawn as its section page d
   assert.ok(view.within !== null && view.other !== null);
 
   // The section page of the request: its difference chart at the reference's field and cut, pair by pair.
-  const entry = views.run(LENS_A).sections.find((section) => section.run === "zoom-wide" && section.rung === "r5");
+  const entry = views
+    .run(LENS_A)
+    .sections.find((section) => section.run === "zoom-wide" && section.rung === "mtf-vs-optiland-fft");
   assert.ok(entry !== undefined);
   assert.deepEqual(view.within.section, { suite: LENS_A, section: entry.section });
   const section = views.section(LENS_A, entry.section);
@@ -169,7 +212,7 @@ test("within the reference's request a difference is drawn as its section page d
     view.within.view.pairs.map((pair) => [pair.a, pair.b]),
     [
       ["optiland", "lv"],
-      ["wave", "lv"],
+      ["wave-mtf-of-lv-rays", "lv"],
     ],
   );
   const pairs = chart.pairs;
@@ -204,8 +247,8 @@ test("within the reference's request a difference is drawn as its section page d
   assert.deepEqual(
     [view.curves[7], view.curves[8]].map((curve) => [curve.suite, curve.rung, curve.frequencies?.values]),
     [
-      [LENS_B, "r5", [10, 30, 50, 90]],
-      [LENS_B, "r5", [10, 30, 50, 90]],
+      [LENS_B, "mtf-vs-optiland-fft", [10, 30, 50, 90]],
+      [LENS_B, "mtf-vs-optiland-fft", [10, 30, 50, 90]],
     ],
   );
   assert.deepEqual(reference.frequencies?.values, [10, 30, 50, 70]);
@@ -223,13 +266,20 @@ test("a curve that is not the answer the comparison judges is still within, with
   const views = viewsOf();
   const choice = {
     run: [`${LENS_A}/1`],
-    rung: ["r5"],
-    engine: ["lv", "optiland", "optiland#fft512", "wave"],
+    rung: ["mtf-vs-optiland-fft"],
+    engine: ["lv", "optiland", "optiland#fft512", "wave-mtf-of-lv-rays"],
     field: ["fraction:0.5"],
     cut: ["tangential"],
   };
   const view = withReference(views, choice, (first) =>
-    curveOf(first, { suite: LENS_A, run: "zoom-tele", rung: "r5", engine: "lv", field: 0.5, cut: "tangential" }),
+    curveOf(first, {
+      suite: LENS_A,
+      run: "zoom-tele",
+      rung: "mtf-vs-optiland-fft",
+      engine: "lv",
+      field: 0.5,
+      cut: "tangential",
+    }),
   );
   assert.ok(view.within !== null);
   assert.deepEqual(
@@ -237,11 +287,13 @@ test("a curve that is not the answer the comparison judges is still within, with
     [
       ["optiland", null, "lv", null],
       ["optiland", "fft512", "lv", null],
-      ["wave", null, "lv", null],
+      ["wave-mtf-of-lv-rays", null, "lv", null],
     ],
   );
   // At field 0.5 the stand-in's chief ray lands twice the limit away: the comparison sets the field aside as data.
-  const entry = views.run(LENS_A).sections.find((section) => section.run === "zoom-tele" && section.rung === "r5");
+  const entry = views
+    .run(LENS_A)
+    .sections.find((section) => section.run === "zoom-tele" && section.rung === "mtf-vs-optiland-fft");
   const own = views.section(LENS_A, entry!.section)?.charts.differences.find((each) => each.element === 1);
   const sorted = own?.pairs.find((pair) => pair.b === "optiland" || pair.a === "optiland")?.setAside;
   assert.ok(sorted !== null && sorted !== undefined && sorted.class === "data");
@@ -255,20 +307,27 @@ test("another field, the other cut and the reference's own engine are drawn apar
   const views = viewsOf();
   const choice = {
     run: [`${LENS_A}/1`],
-    rung: ["r5"],
+    rung: ["mtf-vs-optiland-fft"],
     engine: ["lv", "optiland", "optiland#fft512"],
     field: ["fraction:0", "fraction:0.5"],
     cut: ["sagittal", "tangential"],
   };
   const view = withReference(views, choice, (first) =>
-    curveOf(first, { suite: LENS_A, run: "zoom-tele", rung: "r5", engine: "optiland", field: 0, cut: "tangential" }),
+    curveOf(first, {
+      suite: LENS_A,
+      run: "zoom-tele",
+      rung: "mtf-vs-optiland-fft",
+      engine: "optiland",
+      field: 0,
+      cut: "tangential",
+    }),
   );
   assert.equal(view.curves.length, 12);
   const why = (where: Parameters<typeof curveOf>[1]): string | undefined => {
     const curve = curveOf(view, where).curve;
     return view.other?.lines.find((line) => line.curve === curve)?.why;
   };
-  const at = { suite: LENS_A, run: "zoom-tele", rung: "r5" };
+  const at = { suite: LENS_A, run: "zoom-tele", rung: "mtf-vs-optiland-fft" };
   assert.equal(why({ ...at, engine: "optiland", step: "fft512", field: 0, cut: "tangential" }), TEXT.whySameEngine);
   assert.equal(why({ ...at, engine: "lv", field: 0.5, cut: "tangential" }), TEXT.whyOtherField);
   assert.equal(why({ ...at, engine: "lv", field: 0, cut: "sagittal" }), TEXT.whyOtherCut);
@@ -298,7 +357,13 @@ test("nothing chosen, more curves than a page draws, a reference not among them 
   // Twelve jobs with answers (3 + 4 + 2 + 3), each at three fields and two cuts.
   assert.deepEqual(many.notes, [TEXT.tooMany("72", String(MAX_LENS_CURVES))]);
 
-  const one = { run: [`${LENS_A}/0`], rung: ["r5"], engine: ["lv"], field: ["fraction:0"], cut: ["tangential"] };
+  const one = {
+    run: [`${LENS_A}/0`],
+    rung: ["mtf-vs-optiland-fft"],
+    engine: ["lv"],
+    field: ["fraction:0"],
+    cut: ["tangential"],
+  };
   const unreferenced = views.lens(LENS_KEY, query({ ...one, ref: ["no curve"] }));
   assert.equal(unreferenced.curves.length, 1);
   assert.equal(unreferenced.referenceNote, TEXT.referenceNotChosen);
@@ -306,7 +371,13 @@ test("nothing chosen, more curves than a page draws, a reference not among them 
 
   const odd = views.lens(
     LENS_KEY,
-    query({ ...one, run: [...one.run, "nope/0"], rung: ["r5", "r9"], cut: ["tangential", "diagonal"], foo: ["1"] }),
+    query({
+      ...one,
+      run: [...one.run, "nope/0"],
+      rung: ["mtf-vs-optiland-fft", "r9"],
+      cut: ["tangential", "diagonal"],
+      foo: ["1"],
+    }),
   );
   assert.deepEqual(odd.notes, [TEXT.unknownParameters("foo"), TEXT.unknownValues("nope/0, r9, diagonal")]);
   assert.equal(odd.curves.length, 1, "what is of the lens is still drawn");
@@ -317,12 +388,12 @@ test("a reference without values draws no difference, and a curve without values
   const views = viewsOf();
   const choice = {
     run: [`${LENS_B}/0`],
-    rung: ["r5g"],
+    rung: ["geometric-mtf-vs-optiland"],
     engine: ["lv", "optiland"],
     field: ["fraction:1"],
     cut: ["tangential"],
   };
-  const at = { suite: LENS_B, run: "zoom-wide", rung: "r5g", field: 1, cut: "tangential" };
+  const at = { suite: LENS_B, run: "zoom-wide", rung: "geometric-mtf-vs-optiland", field: 1, cut: "tangential" };
   // Of field 1 the geometric stand-in for optiland has no curve: unavailable, NaN at every frequency.
   const none = withReference(views, choice, (first) => curveOf(first, { ...at, engine: "optiland" }));
   assert.equal(none.referenceNote, TEXT.referenceNoValues(TEXT.unavailable("frequency-beyond-bins")));
@@ -358,7 +429,7 @@ test("a job without an answer is named, never drawn", () => {
     "example-zoom",
     query({
       run: picker.runs.map((option) => option.id),
-      rung: ["r5"],
+      rung: ["mtf-vs-optiland-fft"],
       engine: ["optiland"],
       field: ["fraction:0"],
       cut: ["tangential"],

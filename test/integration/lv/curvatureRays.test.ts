@@ -26,7 +26,7 @@ import { test } from "node:test";
 import type { RaysTraceSpec } from "../../../src/contract/quantities/raysTrace.ts";
 import type { RunOptions } from "../../../src/contract/runSpec.ts";
 import { decodeNdArray } from "../../../src/core/numeric/ndarray.ts";
-import { loadLvBinding } from "../../../src/engines/lv/binding.ts";
+import { loadLvBinding, lvImageSurface } from "../../../src/engines/lv/binding.ts";
 import type { LvBinding } from "../../../src/engines/lv/binding.ts";
 import { rebuildCase } from "../../../src/engines/lv/caseModel.ts";
 import type { LvCaseModel } from "../../../src/engines/lv/caseModel.ts";
@@ -259,6 +259,7 @@ test(
           own.chief.uy,
           lastSurfZ,
           base.imagePlaneZ,
+          lvImageSurface(model.state),
         );
         assert.ok(landing !== null && Object.is(field.chiefImageHeight, landing.y), `${named}: chief landing`);
         assert.ok(Object.is(field.tangentialBestFocusZ, own.tangential), `${named}: tangential focus`);

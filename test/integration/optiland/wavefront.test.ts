@@ -45,7 +45,7 @@ test(
   "real optiland-wave answers native-shaped comparator OTFs and leaves failed fields unavailable",
   { skip },
   async (t) => {
-    const engine = await createEngineRegistry(optilandRoot(t)).create("optiland-wave");
+    const engine = await createEngineRegistry(optilandRoot(t)).create("otf-of-optiland-wavefront");
     t.after(() => engine.close());
     const c = JSON.parse(readFileSync(caseFixture("double-gauss"), "utf8")) as OpticalCase;
     const result = await engine.run(
@@ -74,7 +74,7 @@ test(
 
 test("real optiland-wave sums several lines while the FFT stays unsupported", { skip }, async (t) => {
   const registry = createEngineRegistry(optilandRoot(t));
-  const wave = await registry.create("optiland-wave"),
+  const wave = await registry.create("otf-of-optiland-wavefront"),
     fft = await registry.create("optiland");
   t.after(async () => {
     await wave.close();

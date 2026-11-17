@@ -32,7 +32,7 @@ import { classifyNativeField } from "./mtfNative.ts";
 import type { NativeDifferenceClass, NativeFieldFacts, NativeFieldReason } from "./mtfNative.ts";
 
 /** The rung of the engines' own chief-ray figures. */
-export const CHIEF_NATIVE_RUNG = "r9b";
+export const CHIEF_NATIVE_RUNG = "chief-vs-optiland";
 
 /** How far apart two answers' chief rays of a field land on the image plane, mm: the limit of the sorting. */
 export const CHIEF_LANDING_METRIC = "chiefLanding.maxAbs";

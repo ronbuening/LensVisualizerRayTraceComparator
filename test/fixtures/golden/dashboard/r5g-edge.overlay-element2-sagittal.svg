@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" class="lvc" width="640" height="328" viewBox="0 0 640 328" role="img">
-<title>edge, r5g: MTF at field 1, sagittal</title>
-<desc>One chart for each field and cut: each engine&#39;s own curve as its store entry holds it, its first answer and each later step a series of its own. A dashed line is a field its engine calls unconverged, a value that is not a finite number is a gap, and a field without curves is named in the legend with its status. The comparison sets this field aside for lv and optiland as unsupported (no-curve), so their differences enter no band.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" class="lvc" width="640" height="346" viewBox="0 0 640 346" role="img">
+<title>edge, geometric-mtf-vs-optiland: MTF at field 1, sagittal</title>
+<desc>One chart for each field and cut: each engine&#39;s own curve as its result cache entry holds it, its first answer and each later step a series of its own. A dashed line is a field its engine calls unconverged, a value that is not a finite number is a gap, and a field without curves is named in the legend with its status. The comparison sets this field aside for LensVisualizer and optiland (not computed by one engine: an engine has no curve of the field), so their differences enter no band.</desc>
 <style>.lvc{font:11px system-ui,-apple-system,'Segoe UI',sans-serif}
 .lvc .bg{fill:#fcfcfb}
 .lvc text{fill:#1c1c21}
@@ -104,8 +104,8 @@
 .lvc .v-BLOCKED{fill:#3d3d46}
 .lvc text.t-BLOCKED{fill:#e4e4ea}
 }</style>
-<rect class="bg" x="0" y="0" width="640" height="328"/>
-<g><title>field 1: store/b19c9ab48902f4a9120abba34742884c5aca796cb44da0d92765e17961fe1c9a /result/data/fields/2/field</title><text x="12" y="20" class="head">edge, r5g: MTF at field 1, sagittal</text></g>
+<rect class="bg" x="0" y="0" width="640" height="346"/>
+<g><title>field 1: store/b19c9ab48902f4a9120abba34742884c5aca796cb44da0d92765e17961fe1c9a /result/data/fields/2/field</title><text x="12" y="20" class="head">edge, geometric-mtf-vs-optiland: MTF at field 1, sagittal</text></g>
 <line class="grid" x1="68" y1="256" x2="624" y2="256"/>
 <text x="62" y="260" class="muted" text-anchor="end">0</text>
 <line class="grid" x1="68" y1="212" x2="624" y2="212"/>
@@ -133,16 +133,16 @@
 <text x="346" y="290" text-anchor="middle">Frequency (cycles/mm)</text>
 <text x="16" y="146" text-anchor="middle" transform="rotate(-90 16 146)">MTF</text>
 <polyline class="line s0" points="137.5,63.5 276.5,91 415.5,146 554.5,201"/>
-<circle class="dot s0" cx="137.5" cy="63.5" r="4"><title>lv, sagittal at 10 cycles/mm: 8.75e-1 (store/b19c9ab48902f4a9120abba34742884c5aca796cb44da0d92765e17961fe1c9a /result/data/fields/2/sagittal [0])</title></circle>
-<circle class="dot s0" cx="276.5" cy="91" r="4"><title>lv, sagittal at 30 cycles/mm: 7.50e-1 (store/b19c9ab48902f4a9120abba34742884c5aca796cb44da0d92765e17961fe1c9a /result/data/fields/2/sagittal [1])</title></circle>
-<circle class="dot s0" cx="415.5" cy="146" r="4"><title>lv, sagittal at 50 cycles/mm: 5.00e-1 (store/b19c9ab48902f4a9120abba34742884c5aca796cb44da0d92765e17961fe1c9a /result/data/fields/2/sagittal [2])</title></circle>
-<circle class="dot s0" cx="554.5" cy="201" r="4"><title>lv, sagittal at 70 cycles/mm: 2.50e-1 (store/b19c9ab48902f4a9120abba34742884c5aca796cb44da0d92765e17961fe1c9a /result/data/fields/2/sagittal [3])</title></circle>
+<circle class="dot s0" cx="137.5" cy="63.5" r="4"><title>LensVisualizer, sagittal at 10 cycles/mm: 8.75e-1 (store/b19c9ab48902f4a9120abba34742884c5aca796cb44da0d92765e17961fe1c9a /result/data/fields/2/sagittal [0])</title></circle>
+<circle class="dot s0" cx="276.5" cy="91" r="4"><title>LensVisualizer, sagittal at 30 cycles/mm: 7.50e-1 (store/b19c9ab48902f4a9120abba34742884c5aca796cb44da0d92765e17961fe1c9a /result/data/fields/2/sagittal [1])</title></circle>
+<circle class="dot s0" cx="415.5" cy="146" r="4"><title>LensVisualizer, sagittal at 50 cycles/mm: 5.00e-1 (store/b19c9ab48902f4a9120abba34742884c5aca796cb44da0d92765e17961fe1c9a /result/data/fields/2/sagittal [2])</title></circle>
+<circle class="dot s0" cx="554.5" cy="201" r="4"><title>LensVisualizer, sagittal at 70 cycles/mm: 2.50e-1 (store/b19c9ab48902f4a9120abba34742884c5aca796cb44da0d92765e17961fe1c9a /result/data/fields/2/sagittal [3])</title></circle>
 <polyline class="line s2" points="137.5,63.5 276.5,91 415.5,146 554.5,201"/>
-<polygon class="dot s2" points="137.5,58.5 142.5,67.5 132.5,67.5"><title>replay, sagittal at 10 cycles/mm: 8.75e-1 (store/e05638c7d89b1222bf276ee681957ea2e4d90cf18445f873b984d1c929a7232f /result/data/fields/2/sagittal [0])</title></polygon>
-<polygon class="dot s2" points="276.5,86 281.5,95 271.5,95"><title>replay, sagittal at 30 cycles/mm: 7.50e-1 (store/e05638c7d89b1222bf276ee681957ea2e4d90cf18445f873b984d1c929a7232f /result/data/fields/2/sagittal [1])</title></polygon>
-<polygon class="dot s2" points="415.5,141 420.5,150 410.5,150"><title>replay, sagittal at 50 cycles/mm: 5.00e-1 (store/e05638c7d89b1222bf276ee681957ea2e4d90cf18445f873b984d1c929a7232f /result/data/fields/2/sagittal [2])</title></polygon>
-<polygon class="dot s2" points="554.5,196 559.5,205 549.5,205"><title>replay, sagittal at 70 cycles/mm: 2.50e-1 (store/e05638c7d89b1222bf276ee681957ea2e4d90cf18445f873b984d1c929a7232f /result/data/fields/2/sagittal [3])</title></polygon>
-<g><line class="line s0" x1="68" y1="311" x2="92" y2="311"/><circle class="dot s0" cx="80" cy="311" r="4"></circle><text x="98" y="315">lv</text></g>
-<g><line class="none" x1="130.4" y1="311" x2="142.4" y2="311"/><text x="154.4" y="315">optiland (unavailable: frequency-beyond-bins)</text></g>
-<g><line class="line s2" x1="447.4" y1="311" x2="471.4" y2="311"/><polygon class="dot s2" points="459.4,306 464.4,315 454.4,315"></polygon><text x="477.4" y="315">replay</text></g>
+<polygon class="dot s2" points="137.5,58.5 142.5,67.5 132.5,67.5"><title>Replay of LensVisualizer&#39;s MTF, sagittal at 10 cycles/mm: 8.75e-1 (store/5748552a57270e5c4d29567f3e527078433f6e93a8e76d4783ae9bf928a650f4 /result/data/fields/2/sagittal [0])</title></polygon>
+<polygon class="dot s2" points="276.5,86 281.5,95 271.5,95"><title>Replay of LensVisualizer&#39;s MTF, sagittal at 30 cycles/mm: 7.50e-1 (store/5748552a57270e5c4d29567f3e527078433f6e93a8e76d4783ae9bf928a650f4 /result/data/fields/2/sagittal [1])</title></polygon>
+<polygon class="dot s2" points="415.5,141 420.5,150 410.5,150"><title>Replay of LensVisualizer&#39;s MTF, sagittal at 50 cycles/mm: 5.00e-1 (store/5748552a57270e5c4d29567f3e527078433f6e93a8e76d4783ae9bf928a650f4 /result/data/fields/2/sagittal [2])</title></polygon>
+<polygon class="dot s2" points="554.5,196 559.5,205 549.5,205"><title>Replay of LensVisualizer&#39;s MTF, sagittal at 70 cycles/mm: 2.50e-1 (store/5748552a57270e5c4d29567f3e527078433f6e93a8e76d4783ae9bf928a650f4 /result/data/fields/2/sagittal [3])</title></polygon>
+<g><line class="line s0" x1="68" y1="311" x2="92" y2="311"/><circle class="dot s0" cx="80" cy="311" r="4"></circle><text x="98" y="315">LensVisualizer</text></g>
+<g><line class="none" x1="204.8" y1="311" x2="216.8" y2="311"/><text x="228.8" y="315">optiland (unavailable: frequency-beyond-bins)</text></g>
+<g><line class="line s2" x1="68" y1="329" x2="92" y2="329"/><polygon class="dot s2" points="80,324 85,333 75,333"></polygon><text x="98" y="333">Replay of LensVisualizer&#39;s MTF</text></g>
 </svg>

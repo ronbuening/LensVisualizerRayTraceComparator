@@ -3,7 +3,7 @@
 // byte, with no engine at hand: the gated rungs as the rays report shows them, with the number of requests each
 // figure was measured in; the recorded rungs with every marked request and, for a rung of the engines' own MTF,
 // the table of it at the shown frequencies, made from the requests the baseline keeps (`BaselineRung.sets`).
-import { numberText, whereText } from "../compare/metricText.ts";
+import { numberText } from "../compare/metricText.ts";
 import { GEOMETRIC_MTF_RUNG, OFF_AXIS_METRIC, ON_AXIS_METRIC } from "../compare/mtfNative.ts";
 import type { NativeDifferenceClass, NativeFieldReason } from "../compare/mtfNative.ts";
 import type { Baseline, BaselineStep } from "../contract/baseline.ts";
@@ -12,6 +12,8 @@ import type { RungPolicy } from "../contract/policy.ts";
 import { canonicalJson } from "../core/numeric/canonicalJson.ts";
 import { formatFixed } from "../core/numeric/format.ts";
 import { HOW_TO_READ_MTF, OWN_MTF_HEADING, mtfComparisonLines } from "../report/markdown.ts";
+import { HOW_TO_READ_TEXT, MTF_TABLE_TEXT, REPORT_TEXT } from "../report/wording.ts";
+import { SORTING_LIMITS, classLabel, namesOldCheckIds, rowStatusLabel, verdictShort } from "../vocabulary/index.ts";
 import { MTF_COMPARISON_PAIR, buildMtfComparison, buildWavefrontComparison } from "../report/mtfComparison.ts";
 import type { MtfComparison, MtfFieldFlag } from "../report/mtfComparison.ts";
 import {
@@ -21,10 +23,15 @@ import {
   MTF_COMPARISON_INTROS,
   MTF_COMPARISON_OUTRO,
   MTF_ROW_STATUSES,
+  CATALOG_NOT_COVERED,
   NOT_COVERED,
 } from "../report/wording.ts";
 import type { MtfComparisonKind, MtfRowStatus } from "../report/wording.ts";
-import { buildBaselineReport, count, renderBaselineMarkdown, table } from "./report.ts";
+import { checkName, placeText } from "../report/names.ts";
+import { baselineAtCurrentIds, buildBaselineReport, count, renderBaselineMarkdown, table } from "./report.ts";
+import { LEGACY_IDS } from "../core/legacyIds.ts";
+import { SNAPSHOT_BASELINE_SUITES } from "../compare/policyFile.ts";
+import type { LegacyMaps } from "../core/legacyIds.ts";
 import type { BaselineReport, ReportRung } from "./report.ts";
 
 /** The names of an MTF baseline's two report files, inside `reports/<suite>/`. */
@@ -144,9 +151,10 @@ function aboveBand(
  * rung the support, the pairs and a row per run), and beside it the later steps of the engines, every request of a
  * recorded rung that is `ATTENTION` with the figures above their bands, and for each rung that keeps its requests
  * the table of the engines' own MTF (`buildMtfComparison`, from the kept values and the kept bands) at the shown
- * frequencies, a row per run, field and cut. A pure function of the baseline.
+ * frequencies, a row per run, field and cut. `source` is the baseline as its file holds it, whose hash the report
+ * names (`buildBaselineReport`). A pure function of the baseline.
  */
-export function buildMtfBaselineReport(baseline: Baseline): MtfBaselineReport {
+export function buildMtfBaselineReport(baseline: Baseline, source: Baseline = baseline): MtfBaselineReport {
   const wavefrontTables: { run: string; table: MtfComparison }[] = [];
   const steps: (BaselineStep & { rung: string; run: string })[] = [];
   const attention: MtfAttentionRow[] = [];
@@ -184,7 +192,7 @@ export function buildMtfBaselineReport(baseline: Baseline): MtfBaselineReport {
         class: "recorded",
         metrics: Object.fromEntries(Object.keys(bands).map((name) => [name, { attention: bands[name], unit: "1" }])),
       };
-      if (rung.rung === "r6c") {
+      if (rung.rung === "mtf-vs-optiland-wavefront") {
         for (const [request, set] of rung.sets.entries()) {
           const table = buildWavefrontComparison({ participants: set.participants, pairs: set.pairs, policy });
           if (table !== null) wavefrontTables.push({ run: run.name, table });
@@ -291,7 +299,7 @@ export function buildMtfBaselineReport(baseline: Baseline): MtfBaselineReport {
       });
     }
   }
-  const { kind: _kind, ...report } = buildBaselineReport(baseline);
+  const { kind: _kind, ...report } = buildBaselineReport(baseline, source);
   return {
     ...report,
     // The version the baseline states: that of the members this report is made from.
@@ -307,7 +315,13 @@ export function buildMtfBaselineReport(baseline: Baseline): MtfBaselineReport {
       }),
     })),
     ...(wavefrontTables.length === 0 ? {} : { wavefrontTables }),
-    notCovered: [...NOT_COVERED],
+    // A dated snapshot (the catalog) written before the rename keeps the words of its check ids; one written since,
+    // as the end-of-project refresh writes it, has today's.
+    notCovered: [
+      ...(SNAPSHOT_BASELINE_SUITES.includes(baseline.suite.name) && namesOldCheckIds(baseline)
+        ? CATALOG_NOT_COVERED
+        : NOT_COVERED),
+    ],
   };
 }
 
@@ -334,8 +348,11 @@ function tableLines(each: MtfReportTable): string[] {
     `${OWN_MTF_HEADING[each.kind]} The difference of a row is ${first} − ${second}.`,
     ...MTF_COMPARISON_INTROS[each.kind],
     "",
-    `Attention bands: ${bandText(each.bands.onAxis)} on the axis, ${bandText(each.bands.offAxis)} off it. Two chief rays that land`,
-    `more than ${bandText(each.bands.chiefLandingMm)} mm apart are of two fields.`,
+    ...MTF_TABLE_TEXT.bands(
+      bandText(each.bands.onAxis),
+      bandText(each.bands.offAxis),
+      bandText(each.bands.chiefLandingMm),
+    ),
   ];
   if (each.kind === "geometric") {
     lines.push("", ...GEOMETRIC_SAMPLING);
@@ -344,12 +361,12 @@ function tableLines(each: MtfReportTable): string[] {
   if (each.without.length > 0) {
     lines.push(
       "",
-      "Requests without a table, by what the two engines came to:",
+      MTF_TABLE_TEXT.without,
       "",
       ...table(
-        ["Verdict", "Requests", "Runs", "Reason"],
+        MTF_TABLE_TEXT.withoutColumns,
         each.without.map((group) => [
-          group.verdict ?? NOTHING,
+          group.verdict === null ? NOTHING : verdictShort(group.verdict),
           count(group.requests),
           count(group.runs.length),
           group.reason,
@@ -359,12 +376,11 @@ function tableLines(each: MtfReportTable): string[] {
   }
   lines.push(
     "",
-    `A row is one field and cut of one run, at ${frequencies.map((frequency) => String(frequency)).join(", ")} cycles/mm. Under each engine is what it says of the field`,
-    `(\`${second}\` with the step its row is of, where it was asked again); the third estimate is the comparator's`,
-    `(\`${estimator}\`). The status is the gravest of the row's frequencies; "all" is what the two engines came to over`,
-    "every frequency of the request.",
+    ...MTF_TABLE_TEXT.rows(frequencies.map((frequency) => String(frequency)).join(", "), second, estimator),
     "",
-    `Rows by status: ${each.statuses.map(({ status, rows }) => `${count(rows)} ${status}`).join(", ") || "none"}.`,
+    MTF_TABLE_TEXT.rowsByStatus(
+      each.statuses.map(({ status, rows }) => `${count(rows)} ${rowStatusLabel(status)}`).join("; ") || "none",
+    ),
     "",
     ...table(
       [
@@ -391,9 +407,13 @@ function tableLines(each: MtfReportTable): string[] {
         row.flags[0] ?? NOTHING,
         `${row.flags[1] ?? NOTHING}${row.step === null ? "" : ` (${row.step})`}`,
         row.flags[2] ?? NOTHING,
-        row.class === null ? NOTHING : row.reason === null ? row.class : `${row.class}: ${row.reason}`,
-        row.status,
-        row.overall ?? NOTHING,
+        row.class === null
+          ? NOTHING
+          : row.reason === null
+            ? classLabel(row.class)
+            : `${classLabel(row.class)}: ${row.reason}`,
+        rowStatusLabel(row.status),
+        row.overall === null ? NOTHING : verdictShort(row.overall),
         ...frequencies.flatMap((frequency) => {
           const value = row.values.find((each) => each.frequencyPerMm === frequency);
           if (value === undefined) return [NOTHING, NOTHING, NOTHING, NOTHING];
@@ -414,7 +434,7 @@ function tableLines(each: MtfReportTable): string[] {
     lines.push(
       "",
       ...table(
-        ["Reason", "Meaning"],
+        MTF_TABLE_TEXT.reasonColumns,
         reasons.map((reason) => [reason, FIELD_REASON_TEXT[reason]]),
       ),
     );
@@ -432,7 +452,13 @@ function tableLines(each: MtfReportTable): string[] {
  * of what is not covered, and how the tables are read. `head` replaces the title and the introduction, for a
  * report of a run that is no committed baseline.
  */
-export function renderMtfBaselineMarkdown(report: MtfBaselineReport, head?: readonly string[]): string {
+export function renderMtfBaselineMarkdown(
+  report: MtfBaselineReport,
+  head?: readonly string[],
+  spectra: readonly MtfReportSpectrum[] = [],
+  bands: Readonly<Record<string, Readonly<Record<string, number>>>> = {},
+): string {
+  const r = REPORT_TEXT;
   const tabled = (rung: ReportRung): MtfReportTable | undefined =>
     report.tables.find((each) => each.rung === rung.rung);
   const tail: string[] = [];
@@ -440,19 +466,18 @@ export function renderMtfBaselineMarkdown(report: MtfBaselineReport, head?: read
     const kinds = [...new Set(report.steps.map((step) => `${step.rung}\0${step.engine}\0${step.step}`))];
     tail.push(
       "",
-      "## Later steps",
+      `## ${r.laterSteps}`,
       "",
-      "An engine that was asked a request once more, with a finer sampling, because of what its first answer came to.",
-      "Its first answer is what the support counts; the step is what its row of a table is of.",
+      ...r.laterStepsIntro,
       "",
       ...table(
-        ["Rung", "Engine", "Step", "Runs", "Requests asked again", "Not ok"],
+        r.laterStepColumns,
         kinds.map((key) => {
           const [rung, engine, step] = key.split("\0");
           const of = report.steps.filter((each) => each.rung === rung && each.engine === engine && each.step === step);
           const failed = of.filter((each) => each.status !== "ok");
           return [
-            rung,
+            checkName(rung),
             engine,
             step,
             count(of.length),
@@ -469,57 +494,46 @@ export function renderMtfBaselineMarkdown(report: MtfBaselineReport, head?: read
   }
   tail.push(
     "",
-    "## Marked",
+    `## ${r.marked}`,
     "",
-    "Every request of a rung that is only written down whose two engines differ by more than an attention band,",
-    "with each figure above its band. A band is a width for attention; nothing here is a failure.",
+    ...r.markedIntro,
     "",
     ...(report.attention.length === 0
-      ? ["No request is marked."]
+      ? [r.noneMarked]
       : table(
-          ["Rung", "Run", "Field", "Pair", "Figures above their bands"],
+          r.markedColumns,
           report.attention.map((row) => [
-            row.rung,
+            checkName(row.rung),
             row.run,
             row.field === null ? NOTHING : String(row.field),
             `${row.a} – ${row.b}`,
             row.figures
               .map(
                 (figure) =>
-                  `${figure.name} ${figure.value === null ? "not finite" : numberText(figure.value)} (band ${numberText(figure.band)})${whereText(figure.where)}`,
+                  `${figure.name} ${figure.value === null ? r.notFinite : numberText(figure.value)} (${(SORTING_LIMITS.includes(figure.name) ? r.sortingLimit : r.reviewBand)(numberText(figure.band))})${placeText(figure.where, "mtf.native") === "" ? "" : ` at ${placeText(figure.where, "mtf.native")}`}`,
               )
               .join("; ") || NOTHING,
           ]),
         )),
     "",
-    "## Not covered",
+    `## ${r.notCovered}`,
     "",
-    "What this comparison does not show, whatever its verdicts:",
+    r.notCoveredIntro,
     "",
     ...report.notCovered.map((sentence) => `- ${sentence}`),
   );
-  if (report.tables.length > 0) tail.push("", ...HOW_TO_READ_MTF);
+  // The places the "Worth a look" table names: of an engine's own MTF, whose field is the request's.
+  const places = report.attention.flatMap((row) =>
+    row.figures.flatMap((figure) => Object.keys(figure.where ?? {}).map((key) => ({ key, quantity: "mtf.native" }))),
+  );
   return renderBaselineMarkdown(
     { ...report, kind: "baseline-report" },
     {
-      head: head ?? [
-        `# MTF baseline of ${report.suite.name}`,
-        "",
-        "What the committed MTF baseline of the suite holds, rung by rung, for every run as it was run (a zoom at",
-        "each end). A gated rung has a tolerance: for every pair of engines the verdict and the largest value of each",
-        "metric over the requests of the run, with the number of requests the metric was measured in, since a rung",
-        "measures a figure only where its sampling can arbitrate. A rung of two methods has no tolerance: its figures",
-        "are written down beside an attention band, and its tables set the estimates side by side.",
-        "",
-        "This file is rendered from the baseline alone (`lvrtc verify` makes it anew and fails on a byte of",
-        "difference): it holds results, counts, names and hashes, and nothing an engine traced. The hash of a run's",
-        "case says what its figures are of; `lvrtc baseline check --mtf` says whether the case and the engines are",
-        "still those, and what moved.",
-      ],
+      head: head ?? [`# ${r.mtfTitle(report.suite.name)}`, "", ...r.mtfIntro(report.suite.name)],
       measured: true,
       byRun: (rung) => tabled(rung) === undefined,
       afterRung: (rung) => {
-        if (rung.rung === "r6c")
+        if (rung.rung === "mtf-vs-optiland-wavefront")
           return (report.wavefrontTables ?? []).flatMap(({ run, table }) => [
             "",
             `#### ${run}`,
@@ -529,18 +543,85 @@ export function renderMtfBaselineMarkdown(report: MtfBaselineReport, head?: read
         return each === undefined ? [] : tableLines(each);
       },
       tail,
+      places,
+      bands: (rung) => bands[rung.rung] ?? {},
+      wavelengths: wavelengthLines(spectra),
+      howToRead: report.tables.length > 0 || (report.wavefrontTables ?? []).length > 0 ? ["", ...HOW_TO_READ_MTF] : [],
     },
   );
 }
 
+/** The legend of the wavelengths by index, one row a list of wavelengths, from what LensVisualizer's answers record. */
+function wavelengthLines(spectra: readonly MtfReportSpectrum[]): string[] {
+  if (spectra.length === 0) return [];
+  const t = HOW_TO_READ_TEXT;
+  return [
+    `### ${t.wavelengths}`,
+    "",
+    t.wavelengthsIntro,
+    "",
+    ...table(
+      t.wavelengthColumns,
+      spectra.map((spectrum) => [
+        spectrum.wavelengthsNm.map((nm, index) => `${index}: ${nm}`).join("; "),
+        count(spectrum.runs.length),
+        spectrum.runs[0],
+      ]),
+    ),
+  ];
+}
+
+/** One list of wavelengths, by index, and the runs whose LensVisualizer answers record it. */
+export interface MtfReportSpectrum {
+  readonly wavelengthsNm: readonly number[];
+  readonly runs: readonly string[];
+}
+
+/** The review bands and sorting limits of each check of the baseline, by metric, as its first record keeps them. */
+export function mtfReportBands(baseline: Baseline): Record<string, Readonly<Record<string, number>>> {
+  const bands: Record<string, Readonly<Record<string, number>>> = {};
+  for (const run of baseline.runs)
+    for (const rung of run.rungs)
+      if (rung.bands !== undefined && !Object.hasOwn(bands, rung.rung)) bands[rung.rung] = rung.bands;
+  return bands;
+}
+
 /**
- * The MTF report of a baseline as the texts of its two files: the report (`buildMtfBaselineReport`) as canonical
- * JSON and a newline, and `renderMtfBaselineMarkdown` of it. A pure function: equal baselines give equal texts.
+ * The lists of wavelengths LensVisualizer's answers record (`lineWavelengthNm` of the `lv` participant of a kept
+ * request), each with the runs it is of, in the order of the runs. Empty where the baseline keeps no request.
+ */
+export function mtfReportSpectra(baseline: Baseline): MtfReportSpectrum[] {
+  const spectra = new Map<string, { wavelengthsNm: readonly number[]; runs: string[] }>();
+  for (const run of baseline.runs) {
+    const kept = new Set<string>();
+    for (const rung of run.rungs)
+      for (const set of rung.sets ?? []) {
+        const lines = set.participants.find((each) => each.engine === "lv")?.recorded?.lineWavelengthNm;
+        if (lines !== undefined && lines.length > 0) kept.add(JSON.stringify(lines));
+      }
+    for (const key of kept) {
+      const known = spectra.get(key) ?? { wavelengthsNm: JSON.parse(key) as number[], runs: [] };
+      known.runs.push(run.name);
+      spectra.set(key, known);
+    }
+  }
+  return [...spectra.values()];
+}
+
+/**
+ * The MTF report of a baseline as the texts of its two files: the report (`buildMtfBaselineReport`) of it under its
+ * ids of today (`baselineAtCurrentIds`) as canonical JSON and a newline, and `renderMtfBaselineMarkdown` of it. A pure
+ * function: equal baselines give equal texts.
  */
 export function renderMtfBaselineReport(
-  baseline: Baseline,
+  source: Baseline,
   head?: readonly string[],
+  maps: LegacyMaps = LEGACY_IDS,
 ): { json: string; markdown: string } {
-  const report = buildMtfBaselineReport(baseline);
-  return { json: `${canonicalJson(report)}\n`, markdown: renderMtfBaselineMarkdown(report, head) };
+  const baseline = baselineAtCurrentIds(source, maps);
+  const report = buildMtfBaselineReport(baseline, source);
+  return {
+    json: `${canonicalJson(report)}\n`,
+    markdown: renderMtfBaselineMarkdown(report, head, mtfReportSpectra(baseline), mtfReportBands(baseline)),
+  };
 }

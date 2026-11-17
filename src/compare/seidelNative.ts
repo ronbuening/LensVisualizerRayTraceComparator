@@ -1,5 +1,5 @@
 // The comparator of `seidel.native` for rung R13b: two engines' own third-order sums of one case at one line, set
-// beside each other. The comparator's sums on the reference engine's model (`ref-seidel`) beside optiland's own
+// beside each other. The comparator's sums on the reference engine's model (`reference-seidel`) beside optiland's own
 // `aberrations` is the pair the rung is named for. Nothing here is gated, and no figure of it says that one engine is
 // right: the sums are the paraxial definitions of the contract, and two engines that differ in them differ in the
 // rays they traced or in the sums they formed of them.
@@ -34,7 +34,7 @@ import { classifyNativeField } from "./mtfNative.ts";
 import type { NativeFieldFacts, NativeFieldSorting } from "./mtfNative.ts";
 
 /** The rung of the engines' own Seidel sums. */
-export const SEIDEL_NATIVE_RUNG = "r13b";
+export const SEIDEL_NATIVE_RUNG = "seidel-vs-optiland";
 
 /** How far apart two answers' Lagrange invariants lie, mm: the limit of the sorting. */
 export const INVARIANT_METRIC = "invariant.maxAbs";

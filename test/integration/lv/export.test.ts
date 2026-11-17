@@ -19,7 +19,7 @@ import type { RunOptions } from "../../../src/contract/runSpec.ts";
 import { REPO_ROOT } from "../../../src/core/config.ts";
 import { decodeNdArray } from "../../../src/core/numeric/ndarray.ts";
 import { loadSuite } from "../../../src/core/suite.ts";
-import { loadLvBinding, syntheticKind } from "../../../src/engines/lv/binding.ts";
+import { loadLvBinding, lvImageSurface, syntheticKind } from "../../../src/engines/lv/binding.ts";
 import type { LvBinding } from "../../../src/engines/lv/binding.ts";
 import { createLvCaseSource, createLvExporter } from "../../../src/engines/lv/caseSource.ts";
 import { CENSUS_FILES, renderCensusMarkdown } from "../../../src/engines/lv/census.ts";
@@ -171,15 +171,21 @@ test("export --all completes with zero throws, and its counts add up", { skip },
 test(
   "every lens LensVisualizer's own MTF path covers is exported, and no lens is exported without an account",
   { skip },
-  async () => {
+  async (t) => {
     const binding = await loadLvBinding(LV_PATH);
     const exporter = createLvExporter(binding);
     const uncovered: string[] = [];
     const unaccounted: string[] = [];
     const uncoded: string[] = [];
+    // LV #960: a state with a curved image surface, which LensVisualizer's MTF covers on the surface and a case cannot
+    // state, is refused with curved-image-surface, and that code is given to no other state.
+    const curved: string[] = [];
+    const curvedMismatch: string[] = [];
     let exportedCount = 0;
     for (const { key } of (await binding.catalog()).entries) {
       const { runtime, state } = await prepared(binding, key);
+      const surface = lvImageSurface(state);
+      if (surface !== null) curved.push(`${key} (${surface.kind}, R = ${surface.radius} mm)`);
       const radius = binding.api.wideOpenStopAtZoom(0, runtime);
       const support = binding.api.assessMtfSupport(
         ...lvMtfInputs(binding.api, state, gateOptions("reference", radius)),
@@ -198,14 +204,20 @@ test(
         if (!support.available && result.opticalCase.conditions.lines[0].indexSource !== "authored")
           unaccounted.push(key);
       } else {
-        if (support.available) uncovered.push(`${key}: ${result.problems.map((problem) => problem.code).join(", ")}`);
+        const codes = result.problems.map((problem) => problem.code);
+        const refusedCurved = codes.includes("curved-image-surface");
+        if (refusedCurved !== (surface !== null)) curvedMismatch.push(`${key}: ${codes.join(", ")}`);
+        if (support.available && !refusedCurved) uncovered.push(`${key}: ${codes.join(", ")}`);
         for (const problem of result.problems)
           if (!KNOWN_CODES.includes(problem.code)) uncoded.push(`${key}: ${problem.code}`);
       }
+      if (result.ok && surface !== null) curvedMismatch.push(`${key}: exported with a curved image surface`);
     }
     assert.deepEqual(uncovered, [], "LensVisualizer traces these for its MTF, and the exporter has no case for them");
     assert.deepEqual(unaccounted, []);
     assert.deepEqual(uncoded, []);
+    assert.deepEqual(curvedMismatch, []);
+    t.diagnostic(`${binding.fingerprint().commit}: curved image surfaces, refused: ${curved.join("; ") || "none"}`);
     assert.ok(exportedCount > 800);
   },
 );
@@ -225,13 +237,16 @@ test(
         ...lvMtfInputs(binding.api, state, gateOptions("photopic", binding.api.wideOpenStopAtZoom(0, runtime))),
       );
       const result = await exporter.exportLens(key, { lines: { kind: "photopic" } });
+      // A curved image surface (LV #960) is refused whatever the lines: the test above holds it to its code.
+      if (lvImageSurface(state) !== null) continue;
       if (result.ok !== support.available)
         disagree.push(`${key}: exported ${result.ok}, LensVisualizer ${support.reason}`);
       if (result.ok) {
         exportedCount++;
         const { lines } = result.opticalCase.conditions;
         const anchored = lines.every((line) => line.indexSource === "anchored");
-        if (lines.length !== 5 || lines[0].wavelengthNm !== 555 || !anchored) wrongLight.push(key);
+        // LV #988's nine photopic lines, 560 nm first (five, 555 nm first, before f5b456fec).
+        if (lines.length !== 9 || lines[0].wavelengthNm !== 560 || !anchored) wrongLight.push(key);
       } else if (!support.available && support.reason !== "unsupported-path") {
         // What is not a matter of the optical path is reported under LensVisualizer's own code.
         const codes = result.problems.map((problem) => problem.code);
@@ -428,21 +443,26 @@ test(
 // ── Lines and indices ────────────────────────────────────────────────────────────────────────────────────────────
 
 test(
-  "a photopic export has LensVisualizer's five lines and weights, and the indices of its resolver",
+  "a photopic export has LensVisualizer's nine lines and weights, and the indices of its resolver",
   { skip },
   async () => {
     const binding = await loadLvBinding(LV_PATH);
     const { runtime, state } = await prepared(binding, "nikkor-z50f12");
     const opticalCase = await exported(binding, "nikkor-z50f12", { lines: { kind: "photopic" } });
-    // LensVisualizer's MTF_PHOTOPIC_LINES at d36f44b3.
+    // LensVisualizer's MTF_PHOTOPIC_LINES at f5b456fec (LV #988: a nine-point Gauss-Legendre quadrature of V(λ) from
+    // 470 to 650 nm, the centre first; five lines, 555 nm first, from d36f44b3 to e4c7cf11a).
     assert.deepEqual(
       opticalCase.conditions.lines.map((line) => [line.wavelengthNm, line.weight, line.indexSource]),
       [
-        [555, 1, "anchored"],
-        [470, 0.091, "anchored"],
-        [510, 0.503, "anchored"],
-        [610, 0.503, "anchored"],
-        [650, 0.107, "anchored"],
+        [560, 29.573, "anchored"],
+        [530.82, 24.475, "anchored"],
+        [589.18, 21.553, "anchored"],
+        [504.8, 9.4728, "anchored"],
+        [615.2, 10.291, "anchored"],
+        [484.76, 2.7286, "anchored"],
+        [635.24, 3.4949, "anchored"],
+        [472.87, 0.75613, "anchored"],
+        [647.13, 0.91347, "anchored"],
       ],
     );
     const support = binding.api.assessMtfSupport(
@@ -450,7 +470,7 @@ test(
     );
     assert.equal(support.available, true);
     const rows = indexRows(opticalCase);
-    assert.equal(rows.length, 5);
+    assert.equal(rows.length, 9);
     opticalCase.conditions.lines.forEach((line, row) => {
       const resolver = binding.api.mtfIndexResolver(state, support, line.wavelengthNm);
       assert.ok(resolver !== undefined);

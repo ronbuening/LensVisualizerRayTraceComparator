@@ -7,27 +7,42 @@
 import type { MtfMethod, MtfNativeSpec } from "../../contract/quantities/mtfNative.ts";
 import type {
   LvAnalysisRequest,
+  LvMtfProgress,
   LvMtfRequestOptions,
   LvApi,
   LvMtfOptions,
+  LvMtfResult,
   LvPreparedState,
   LvRuntimeLens,
 } from "./types.ts";
 
-/** The LensVisualizer exports the hook's aperture numbers are rebuilt from. */
-export type LvHookApi = Pick<
+/**
+ * The LensVisualizer exports the MTF tab's comparison is rebuilt from: the preferences it is resolved from, the stops
+ * it offers, and the stop rule.
+ */
+export type LvComparisonApi = Pick<
   LvApi,
-  | "wideOpenStopAtZoom"
   | "stopSemiDiameterForFNumber"
-  | "fopenAtZoomClamped"
-  | "fNumberAtStopdown"
-  | "computeAnalysisFieldGeometryAtState"
-  | "entrancePupilAtState"
+  | "mtfDefaultPreferences"
+  | "resolveMtfPreferences"
+  | "mtfComparisonFullStops"
+  | "isMtfComparisonFNumber"
 >;
+
+/** The LensVisualizer exports the hook's aperture numbers, and the tab's comparison, are rebuilt from. */
+export type LvHookApi = LvComparisonApi &
+  Pick<
+    LvApi,
+    | "wideOpenStopAtZoom"
+    | "fopenAtZoomClamped"
+    | "fNumberAtStopdown"
+    | "computeAnalysisFieldGeometryAtState"
+    | "entrancePupilAtState"
+  >;
 
 /** The LensVisualizer exports the tab's request is rebuilt from. */
 export type LvTabApi = LvHookApi &
-  Pick<LvApi, "createAnalysisRequest" | "resolveMtfSpectrum" | "mtfDefaultPreferences" | "mtfDefaultFrequencies">;
+  Pick<LvApi, "createAnalysisRequest" | "resolveMtfSpectrum" | "mtfDefaultFrequencies">;
 
 /**
  * The profile of `mtf.native` that is the MTF tab as it opens: LensVisualizer's default preferences, on the lens
@@ -35,8 +50,16 @@ export type LvTabApi = LvHookApi &
  */
 export const LV_TAB_PROFILE = "lv-tab-default";
 
-/** The f-number of the tab's comparison overlay: `COMPARISON_F_NUMBER` in MtfTab.tsx. */
+/**
+ * The f-number the tab's comparison overlay has with LensVisualizer's defaults, which the run aperture
+ * `lv-f8-comparison` and `lvrtc mtf --aperture f/8` are named after: `comparisonFNumber` of `DEFAULT_MTF_PREFERENCES`,
+ * and the one `resolveMtfPreferences` sets wherever the tab's advanced options are off (canaries hold both). The
+ * comparison itself is of the f-number the preferences resolve to (`lvTabComparisonFNumber`), never of this constant.
+ */
 export const LV_TAB_COMPARISON_F_NUMBER = 8;
+
+/** Within this, two f-numbers are one aperture's label: `APERTURE_LABEL_TOLERANCE` of mtfApertureSweep.ts (LV #988). */
+export const LV_APERTURE_LABEL_TOLERANCE = 0.05;
 
 /**
  * The two requests the tab makes for a state it opens on: the lens wide open, and the overlay that compares it
@@ -200,48 +223,101 @@ export function lvTabComparisonPupil(
   return (hook.currentEPSD * stopSemiDiameterMm) / hook.currentPhysStopSD;
 }
 
-/** The tab's f/8 comparison for a state: the stop it traces, and why it offers none, if it offers none. */
+/** The tab's comparison for a state: its f-number, the stop it traces, and why it offers none, if it offers none. */
 export interface LvTabComparison {
-  /** The stop radius of the comparison, mm: `stopSemiDiameterForFNumber(8, zoomT, L)`. */
+  /** The f-number of the comparison: the resolved preferences' `comparisonFNumber` (`lvTabComparisonFNumber`). */
+  readonly fNumber: number;
+  /** The stop radius of the comparison, mm: `stopSemiDiameterForFNumber(fNumber, zoomT, L)`. */
   readonly stopSemiDiameterMm: number;
   /** Why the tab does not offer the comparison for the state; null when it does. */
   readonly unavailable: string | null;
 }
 
 /**
- * The stop of the tab's f/8 comparison, restated from MtfTab.tsx (LV #933: "The f/8 stop comes from the stop rule, as
- * the aperture control's does"):
+ * The f-number of the tab's comparison: `preferences.comparisonFNumber` of MtfTab.tsx (LV #988), the preferences
+ * LensVisualizer's defaults resolve to (`resolveMtfPreferences(DEFAULT_MTF_PREFERENCES, L.isZoom)`, as `lvTabRequest`
+ * resolves them).
+ */
+export function lvTabComparisonFNumber(
+  api: Pick<LvApi, "mtfDefaultPreferences" | "resolveMtfPreferences">,
+  runtime: LvRuntimeLens,
+): number {
+  return api.resolveMtfPreferences(api.mtfDefaultPreferences, runtime.isZoom).comparisonFNumber;
+}
+
+/**
+ * The f-numbers the tab offers a comparison at, restated from `mtfComparisonFNumbers` (mtfApertureSweep.ts, LV #988),
+ * with LensVisualizer's own full stops (`MTF_COMPARISON_F_NUMBERS`) and test of a marked f-number
+ * (`isMtfComparisonFNumber`):
  *
  * ```
- * const stop = stopSemiDiameterForFNumber(COMPARISON_F_NUMBER, job.preparedGeometry.zoomT, L);
- * ```
- *
- * which is the slider's f/8 stop to the bit. `unavailable` is the tab's own rule, restated, with `fNumber` the
- * hook's:
- *
- * ```
- * const compareF8Available = !!fNumber && fNumber < COMPARISON_F_NUMBER - 0.05 && L.maxFstop >= COMPARISON_F_NUMBER;
+ * if (!fNumber || !Number.isFinite(fNumber) || fNumber <= 0) return [];
+ * const stops: number[] = MTF_COMPARISON_F_NUMBERS.filter(
+ *   (stop) => fNumber < stop - APERTURE_LABEL_TOLERANCE && stop <= maxFstop,
+ * );
+ * if (
+ *   isMtfComparisonFNumber(maxFstop) &&
+ *   fNumber < maxFstop - APERTURE_LABEL_TOLERANCE &&
+ *   stops.every((stop) => Math.abs(stop - maxFstop) > APERTURE_LABEL_TOLERANCE)
+ * ) {
+ *   stops.push(maxFstop);
+ * }
+ * return stops;
  * ```
  */
+export function lvTabComparisonFNumbers(
+  api: Pick<LvApi, "mtfComparisonFullStops" | "isMtfComparisonFNumber">,
+  fNumber: number | undefined,
+  maxFstop: number,
+): number[] {
+  if (!fNumber || !Number.isFinite(fNumber) || fNumber <= 0) return [];
+  const stops: number[] = api.mtfComparisonFullStops.filter(
+    (stop) => fNumber < stop - LV_APERTURE_LABEL_TOLERANCE && stop <= maxFstop,
+  );
+  if (
+    api.isMtfComparisonFNumber(maxFstop) &&
+    fNumber < maxFstop - LV_APERTURE_LABEL_TOLERANCE &&
+    stops.every((stop) => Math.abs(stop - maxFstop) > LV_APERTURE_LABEL_TOLERANCE)
+  ) {
+    stops.push(maxFstop);
+  }
+  return stops;
+}
+
+/**
+ * The tab's comparison, restated from MtfTab.tsx and `mtfRequestAtAperture` (mtfApertureSweep.ts, LV #988; the stop
+ * rule's since #933, as the aperture control's), with `fNumber` the hook's:
+ *
+ * ```
+ * const comparisonFNumber = preferences.comparisonFNumber;
+ * const comparisonAvailable = mtfComparisonFNumbers(fNumber, L.maxFstop).includes(comparisonFNumber);
+ * const stop = stopSemiDiameterForFNumber(fNumber, request.preparedGeometry.zoomT, lens);
+ * ```
+ *
+ * where the last `fNumber` is the comparison's. With LensVisualizer's defaults that is f/8, a full stop, so the
+ * comparison is the slider's f/8 stop to the bit, offered exactly where the lens is faster than f/7.95 and stops down
+ * to f/8. `unavailable` says which of the two the tab's rule refuses.
+ */
 export function lvTabComparison(
-  api: Pick<LvApi, "stopSemiDiameterForFNumber">,
+  api: LvComparisonApi,
   hook: Pick<LvHookAperture, "fNumber">,
   runtime: LvRuntimeLens,
   zoomT: number,
 ): LvTabComparison {
   const { fNumber } = hook;
-  const stopSemiDiameterMm = api.stopSemiDiameterForFNumber(LV_TAB_COMPARISON_F_NUMBER, zoomT, runtime);
+  const comparison = lvTabComparisonFNumber(api, runtime);
+  const stopSemiDiameterMm = api.stopSemiDiameterForFNumber(comparison, zoomT, runtime);
   let unavailable: string | null = null;
-  if (!(!!fNumber && fNumber < LV_TAB_COMPARISON_F_NUMBER - 0.05)) {
+  if (!lvTabComparisonFNumbers(api, fNumber, runtime.maxFstop).includes(comparison)) {
+    const marked = !!fNumber && Number.isFinite(fNumber) && fNumber > 0;
     unavailable =
-      `the lens is at f/${fNumber} wide open, and LensVisualizer's MTF tab compares with ` +
-      `f/${LV_TAB_COMPARISON_F_NUMBER} only a lens that is faster than f/${LV_TAB_COMPARISON_F_NUMBER - 0.05}`;
-  } else if (!(runtime.maxFstop >= LV_TAB_COMPARISON_F_NUMBER)) {
-    unavailable =
-      `the lens stops down to f/${runtime.maxFstop} at most, so LensVisualizer's MTF tab has no ` +
-      `f/${LV_TAB_COMPARISON_F_NUMBER} to compare it with`;
+      marked && fNumber < comparison - LV_APERTURE_LABEL_TOLERANCE
+        ? `the lens stops down to f/${runtime.maxFstop} at most, so LensVisualizer's MTF tab has no ` +
+          `f/${comparison} to compare it with`
+        : `the lens is at f/${fNumber} wide open, and LensVisualizer's MTF tab compares with ` +
+          `f/${comparison} only a lens that is faster than f/${comparison - LV_APERTURE_LABEL_TOLERANCE}`;
   }
-  return { stopSemiDiameterMm, unavailable };
+  return { fNumber: comparison, stopSemiDiameterMm, unavailable };
 }
 
 /**
@@ -281,28 +357,32 @@ export interface LvTabRequest {
 
 /**
  * The request the MTF tab makes for a prepared state with LensVisualizer's default preferences, restated from
- * MtfTab.tsx:
+ * MtfTab.tsx (LV #988):
  *
  * ```
- * const spectrum = resolveMtfSpectrum(preparedState, preferences.spectrum)
+ * const preferences = resolveMtfPreferences(storedPreferences, L.isZoom);
+ * const spectrum = resolveMtfSpectrum(preparedState, preferences.spectrum, preferences.wavelengthNm)
  * const options = {
  *   method: preferences.method,
- *   spectrum: spectrum.spectrum,
+ *   ...(spectrum.spectrum === "single"
+ *     ? { spectrum: "single" as const, wavelengthNm: preferences.wavelengthNm }
+ *     : { spectrum: spectrum.spectrum }),
  *   focus: preferences.focus,
  *   maxGridSize: preferences.maxGridSize,
  *   fieldFractions: mtfFieldFractions(preferences.fieldStepPercent),
- *   movementActive,
+ *   movementActive: request.pose?.active ?? movementActive,
  * }
  * ```
  *
- * with the hook's two radii (`lvHookAperture`) and no tilt or shift. The view "f8-comparison" is the tab's overlay,
- * a second analysis request with the stop rule's f/8 stop and the wide-open pupil scaled by the two stops (LV #933):
+ * with the stored preferences LensVisualizer's defaults, the hook's two radii (`lvHookAperture`) and no tilt, shift
+ * or pose. The view "f8-comparison" is the tab's overlay, a second analysis request with the stop rule's f/8 stop and
+ * the wide-open pupil scaled by the two stops (`mtfRequestAtAperture`), refocused on its own as the default
+ * `comparisonFocus` ("refocus") has it:
  *
  * ```
- * const compareF8Available = !!fNumber && fNumber < COMPARISON_F_NUMBER - 0.05 && L.maxFstop >= COMPARISON_F_NUMBER;
- * const stop = stopSemiDiameterForFNumber(COMPARISON_F_NUMBER, job.preparedGeometry.zoomT, L);
- * const pupil = (job.aperture.entrancePupilSemiDiameterMm * stop) / job.aperture.stopSemiDiameterMm;
- * currentEPSD: pupil,
+ * const comparisonAvailable = mtfComparisonFNumbers(fNumber, L.maxFstop).includes(comparisonFNumber);
+ * const stop = stopSemiDiameterForFNumber(fNumber, request.preparedGeometry.zoomT, lens);
+ * currentEPSD: (request.aperture.entrancePupilSemiDiameterMm * stop) / request.aperture.stopSemiDiameterMm,
  * currentPhysStopSD: stop,
  * ```
  *
@@ -316,12 +396,14 @@ export function lvTabRequest(
   state: LvPreparedState,
   view: LvTabView,
 ): LvTabRequest {
-  const preferences = api.mtfDefaultPreferences;
+  const preferences = api.resolveMtfPreferences(api.mtfDefaultPreferences, runtime.isZoom);
   const hook = lvHookAperture(api, runtime, state);
-  const spectrum = api.resolveMtfSpectrum(state, preferences.spectrum);
+  const spectrum = api.resolveMtfSpectrum(state, preferences.spectrum, preferences.wavelengthNm);
   const wideOpen = {
     method: preferences.method,
-    spectrum: spectrum.spectrum,
+    ...(spectrum.spectrum === "single"
+      ? { spectrum: "single", wavelengthNm: preferences.wavelengthNm }
+      : { spectrum: spectrum.spectrum }),
     focus: preferences.focus,
     maxGridSize: preferences.maxGridSize,
     fieldFractions: lvTabFieldFractions(preferences.fieldStepPercent),
@@ -338,11 +420,11 @@ export function lvTabRequest(
   if (view === "wide-open")
     return { view, request: job, settings, fNumber: hook.fNumber, options: wideOpen, ...shared, unavailable: null };
 
-  const { stopSemiDiameterMm: stop, unavailable } = lvTabComparison(api, hook, runtime, state.zoomT);
+  const { fNumber, stopSemiDiameterMm: stop, unavailable } = lvTabComparison(api, hook, runtime, state.zoomT);
   const pupil = (job.aperture.entrancePupilSemiDiameterMm * stop) / job.aperture.stopSemiDiameterMm;
   const options = { ...wideOpen, pupilSemiDiameterMm: pupil, stopSemiDiameterMm: stop };
   const [request] = lvMtfInputs(api, state, options);
-  return { view, request, settings, fNumber: LV_TAB_COMPARISON_F_NUMBER, options, ...shared, unavailable };
+  return { view, request, settings, fNumber, options, ...shared, unavailable };
 }
 
 const CONTRACT_METHODS: readonly string[] = ["geometric", "diffraction"] satisfies readonly MtfMethod[];
@@ -385,6 +467,21 @@ export function lvMtfInputs(
     currentPhysStopSD: stopSemiDiameterMm,
   });
   return [request, settings];
+}
+
+/**
+ * The request before any field is traced, from LensVisualizer's `computeMtfSteps` (LV #988): the first progress that
+ * carries a result, which LV yields once the field axis, the focus every field shares and the axial readout are known
+ * (`yield { phase: { kind: "aperture" }, result }`), or the result a request its gate refuses, or one without a field
+ * axis, is returned with. The result yielded is LV's own object, which later steps would go on filling: the
+ * generator is not stepped past it.
+ */
+export function lvMtfRequestResult(steps: Generator<LvMtfProgress, LvMtfResult>): LvMtfResult {
+  for (;;) {
+    const next = steps.next();
+    if (next.done) return next.value;
+    if (next.value.result !== undefined) return next.value.result;
+  }
 }
 
 /** LV's resolveMtfOptions, expression for expression; lower-level helpers still take both radii in options. */

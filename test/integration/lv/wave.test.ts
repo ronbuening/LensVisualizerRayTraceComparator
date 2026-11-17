@@ -27,7 +27,7 @@ import { LV_PATH, LV_UNAVAILABLE } from "./support.ts";
 
 const skip = LV_UNAVAILABLE;
 const BIN = fileURLToPath(new URL("../../../bin/lvrtc.mjs", import.meta.url));
-const R6B = loadPolicy().rungs.r6b;
+const R6B = loadPolicy().rungs["mtf-vs-wave-estimate"];
 
 /** The runs of the benchmark that are run here. */
 const RUNS = [
@@ -53,13 +53,13 @@ function lvrtc(runsDir: string, ...args: string[]): { code: number | null; out: 
 test("the engine wave conforms on the real LensVisualizer", { skip, timeout: 300_000 }, (t) => {
   const runsDir = mkdtempSync(join(tmpdir(), "lvrtc-wave-"));
   t.after(() => rmSync(runsDir, { recursive: true, force: true }));
-  const conformed = lvrtc(runsDir, "engine", "conformance", "wave");
+  const conformed = lvrtc(runsDir, "engine", "conformance", "wave-mtf-of-lv-rays");
   assert.equal(conformed.code, 0, conformed.out + conformed.err);
-  assert.match(conformed.out, /^wave: conforms: \d+ passed, 0 failed, \d+ skipped$/m);
+  assert.match(conformed.out, /^wave-mtf-of-lv-rays: conforms: \d+ passed, 0 failed, \d+ skipped$/m);
 });
 
 test(
-  "lvrtc run --rungs r6b: LensVisualizer's diffraction MTF beside the wave estimator on its rays, on six runs",
+  "lvrtc run --checks mtf-vs-wave-estimate: LensVisualizer's diffraction MTF beside the wave estimator on its rays, on six runs",
   { skip, timeout: 900_000 },
   (t) => {
     const runsDir = mkdtempSync(join(tmpdir(), "lvrtc-wave-"));
@@ -72,15 +72,15 @@ test(
     );
 
     // No --engines: the suite names lv and ref, and the rung is asked of lv and of wave whatever a run names.
-    const ran = lvrtc(runsDir, "run", suite, "--rungs", "r6b");
+    const ran = lvrtc(runsDir, "run", suite, "--checks", "mtf-vs-wave-estimate");
     assert.equal(ran.code, 0, ran.err);
-    assert.match(ran.out, /^benchmark: 12 jobs: 12 ok, 0 unsupported, 0 error, 0 pending \(12 computed, 0 cached\)$/m);
+    assert.match(ran.out, /^benchmark: 12 jobs: 12 answered \(12 asked now\)$/m);
     const compared = lvrtc(runsDir, "compare", "benchmark");
     // A recorded rung fails nothing.
     assert.equal(compared.code, 0, compared.out);
     assert.match(
       compared.out,
-      /^benchmark: 12 pairs: 0 PASS, 0 FLOOR, 0 FAIL, \d+ RECORDED, \d+ ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/m,
+      /^benchmark: 12 pairs: (?:\d+ Side by side(?!, worth)(?:, \d+ Side by side, worth a look)?|\d+ Side by side, worth a look)$/m,
     );
 
     const manifest: RunManifest = JSON.parse(readFileSync(join(runsDir, "benchmark", MANIFEST_FILE), "utf8"));
@@ -89,7 +89,7 @@ test(
       manifest.engines.map((engine) => [engine.id, engine.status]),
       [
         ["lv", "available"],
-        ["wave", "available"],
+        ["wave-mtf-of-lv-rays", "available"],
       ],
     );
     assert.deepEqual(manifest.runs.map((run) => run.name).sort(), [...RUNS].sort());
@@ -99,9 +99,9 @@ test(
     const sets = comparisons.comparisons.filter((set) => set.mode === "pairwise");
     assert.equal(sets.length, RUNS.length);
     for (const set of sets) {
-      assert.deepEqual([set.rung, set.quantity], ["r6b", "mtf.native"], set.run);
+      assert.deepEqual([set.rung, set.quantity], ["mtf-vs-wave-estimate", "mtf.native"], set.run);
       const [pair] = set.pairs;
-      assert.deepEqual([pair.a, pair.b, pair.class], ["lv", "wave", "recorded"], set.run);
+      assert.deepEqual([pair.a, pair.b, pair.class], ["lv", "wave-mtf-of-lv-rays", "recorded"], set.run);
       assert.ok(["RECORDED", "ATTENTION"].includes(pair.verdict), `${set.run}: ${pair.verdict} ${pair.reason ?? ""}`);
       const metrics = Object.fromEntries(pair.metrics.map((metric) => [metric.name, metric.value as number]));
       // The three fields a run traces rays for, each of one class.
@@ -141,7 +141,7 @@ test(
 
     // Stopped down, the estimator's lattice of 64 cells samples every wavefront: no field of it is undersampled.
     for (const set of sets.filter((each) => each.run.includes("-f8-"))) {
-      const ofWave = set.participants.find((participant) => participant.engine === "wave")?.recorded;
+      const ofWave = set.participants.find((participant) => participant.engine === "wave-mtf-of-lv-rays")?.recorded;
       assert.ok(
         ofWave?.phaseStepWaves.every((step) => (step as number) <= 0.25),
         set.run,
@@ -149,7 +149,7 @@ test(
     }
     // Wide open the fast lens is undersampled in every field: the estimator stands by none, and none is in a band.
     const fast = sets.find((set) => set.run === "nikkor-z50f12-ref");
-    const ofFast = fast?.participants.find((participant) => participant.engine === "wave")?.recorded;
+    const ofFast = fast?.participants.find((participant) => participant.engine === "wave-mtf-of-lv-rays")?.recorded;
     assert.deepEqual(ofFast?.settled, [0, 0, 0]);
     assert.ok(ofFast?.phaseStepWaves.every((step) => (step as number) > 0.25));
     assert.equal(fast?.pairs[0].verdict, "RECORDED");

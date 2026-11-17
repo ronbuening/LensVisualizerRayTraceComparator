@@ -76,7 +76,7 @@ test("the evidence table retains unconverged flags and absent curves at every fr
     focus: "design",
   };
   for (const { name } of LEVELS)
-    for (const engine of ["lv", "wave", "optiland", "optiland-wave"]) {
+    for (const engine of ["lv", "wave-mtf-of-lv-rays", "optiland", "otf-of-optiland-wavefront"]) {
       const request = makeRequest({ caseId, quantity: "mtf.native", spec });
       const result = makeResult(
         request,
@@ -86,14 +86,19 @@ test("the evidence table retains unconverged flags and absent curves at every fr
           data: {
             fields: [0.5, 1].map((field) => ({
               field,
-              status: engine === "wave" ? "unconverged" : engine === "optiland" ? "unavailable" : "ok",
+              status: engine === "wave-mtf-of-lv-rays" ? "unconverged" : engine === "optiland" ? "unavailable" : "ok",
               sagittal: encodeF8(engine === "optiland" ? [NaN, NaN] : [1, 0.125]),
               tangential: encodeF8(engine === "optiland" ? [NaN, NaN] : [1, 0.25]),
             })),
           },
         },
       );
-      jobs.push({ run: `synthetic-${name}`, rung: "r6c", engine, storeKey: store.put(request, result) });
+      jobs.push({
+        run: `synthetic-${name}`,
+        rung: "mtf-vs-optiland-wavefront",
+        engine,
+        storeKey: store.put(request, result),
+      });
     }
   mkdirSync(join(directory, "z50f12-investigation"));
   writeFileSync(

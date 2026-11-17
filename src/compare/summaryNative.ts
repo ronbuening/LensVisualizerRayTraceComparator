@@ -26,7 +26,7 @@ import { classifyNativeField } from "./mtfNative.ts";
 import type { NativeFieldFacts, NativeFieldSorting } from "./mtfNative.ts";
 
 /** The rung of the engines' own summaries. */
-export const SUMMARY_NATIVE_RUNG = "r12b";
+export const SUMMARY_NATIVE_RUNG = "summary-vs-optiland";
 
 /** How far apart two answers' rear focal points lie, mm: the limit of the sorting. */
 export const REAR_FOCUS_METRIC = "rearFocus.maxAbs";

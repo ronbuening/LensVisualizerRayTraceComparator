@@ -18,6 +18,7 @@ import { MTF_NATIVE } from "../contract/quantities/mtfNative.ts";
 import type { ManifestJob, RunManifest } from "../core/manifest.ts";
 import { RUNGS } from "../core/rungs.ts";
 import { DASHBOARD_TEXT } from "../report/wording.ts";
+import { engineName } from "../vocabulary/index.ts";
 import { answerOf, curveAt, fieldsOf, samePair, storeProblems } from "./chartViews.ts";
 import type {
   Answer,
@@ -30,6 +31,7 @@ import type {
 import { caseDocument, figureAt, optionalFigureAt } from "./figure.ts";
 import type { Curve, Derived, DocumentName, Figure } from "./figure.ts";
 import type { CaseSummary, Loaded } from "./sources.ts";
+import { currentCheckId, currentEngineId } from "../core/legacyIds.ts";
 
 const TEXT = DASHBOARD_TEXT.lens;
 const CHARTS = DASHBOARD_TEXT.charts;
@@ -385,7 +387,7 @@ function fieldOf(answer: Answer, element: number): { id: string; kind: string; f
 /** The rungs in the order of the ladder, those it does not know after them, sorted. */
 function ladderOrder(rungs: readonly string[]): string[] {
   const place = (rung: string): number => {
-    const at = RUNGS.findIndex((each) => each.id === rung);
+    const at = RUNGS.findIndex((each) => each.id === currentCheckId(rung));
     return at < 0 ? RUNGS.length : at;
   };
   return [...rungs].sort((a, b) => place(a) - place(b) || (a < b ? -1 : a > b ? 1 : 0));
@@ -475,12 +477,13 @@ function sameFrequencies(one: Curve | null, two: Curve | null): boolean {
 
 /** A curve's engine as a legend names it: its engine, and its step where its job is one. */
 export function curveEngine(curve: Pick<LensCurveView, "engine" | "step">): string {
-  return curve.step === null ? curve.engine : CHARTS.legendStep(curve.engine, curve.step);
+  const name = engineName(curve.engine);
+  return curve.step === null ? name : CHARTS.legendStep(name, curve.step);
 }
 
 /** Why a curve has no values to subtract, or null where it has some. */
 function noValuesWhy(curve: LensCurveView): string | null {
-  if (curve.state === "unavailable") return TEXT.unavailable(curve.reason ?? "no reason stated");
+  if (curve.state === "unavailable") return TEXT.unavailable(curve.reason ?? CHARTS.noReasonStated);
   if (curve.values === null || curve.values.values.every((value) => value === null)) {
     return CHARTS.noAnswer(curveEngine(curve), "missing");
   }
@@ -502,7 +505,11 @@ function pointsOf(
       frequency: figureAt(curve.answer.document!, curve.answer.entry!, ["request", "spec", "frequenciesPerMm", index]),
       difference: {
         value: value - other,
-        derivation: CHARTS.derivedDifference(`curve ${curve.view.curve}`, `curve ${reference.curve}`, String(index)),
+        derivation: CHARTS.derivedDifference(
+          DASHBOARD_TEXT.derivations.curve(String(curve.view.curve)),
+          DASHBOARD_TEXT.derivations.curve(String(reference.curve)),
+          String(index),
+        ),
         of: [x.source, y.source],
       },
     });
@@ -612,13 +619,57 @@ function differencesOf(
 }
 
 /**
+ * A choice whose checks and engines are read under the ids of today where no run names them as given: an address
+ * written before a rename (`?rung=r5`, `?engine=wave`) chooses what it chose then, quietly. A check or an engine the
+ * runs name as given is kept as it is; an engine's step (`optiland#fft512`) is kept. The check and the engine of the
+ * reference curve (its second and fourth parts) are read the same way.
+ */
+function aliasedSelection(
+  selection: LensSelection,
+  known: ReadonlySet<string>,
+  knownEngines: ReadonlySet<string>,
+): LensSelection {
+  const now = (id: string): string => (known.has(id) ? id : currentCheckId(id));
+  const engineNow = (label: string): string => {
+    const [id, ...step] = label.split("#");
+    return [knownEngines.has(id) ? id : currentEngineId(id), ...step].join("#");
+  };
+  // A part that is no encoded text (a malformed address) is left as it is, and names no curve.
+  const part = (text: string, read: (id: string) => string): string => {
+    try {
+      return encodeURIComponent(read(decodeURIComponent(text)));
+    } catch {
+      return text;
+    }
+  };
+  const reference =
+    selection.reference === null
+      ? null
+      : selection.reference
+          .split(",")
+          .map((each, at) => (at === 1 ? part(each, now) : at === 3 ? part(each, engineNow) : each))
+          .join(",");
+  return {
+    ...selection,
+    rungs: [...new Set(selection.rungs.map(now))],
+    engines: [...new Set(selection.engines.map(engineNow))],
+    reference,
+  };
+}
+
+/**
  * The view of a lens page: its runs with their conditions and requests, the picker over their `mtf.native` answers,
  * the curves the choice draws (at most `MAX_LENS_CURVES`) and, with a reference among them, the differences against
  * it, within its request as its section page draws them, and the others apart.
  */
 export function buildLensView(inputs: LensInputs): LensView {
-  const { key, runs, selection, stored } = inputs;
+  const { key, runs, stored } = inputs;
   const jobs = runs.map((input) => ({ input, jobs: jobsOf(input, stored) }));
+  const selection = aliasedSelection(
+    inputs.selection,
+    new Set(jobs.flatMap((each) => each.jobs.map((item) => item.job.rung))),
+    new Set(jobs.flatMap((each) => each.jobs.map((item) => item.job.engine))),
+  );
   const nothing = chosenNothing(selection);
   const cutsChosen = nothing ? ["tangential"] : selection.cuts;
 

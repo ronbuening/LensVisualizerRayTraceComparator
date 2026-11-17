@@ -45,11 +45,11 @@ export const R8A_GOLDEN = "r8a-stand-ins";
 export const R8B_GOLDEN = "r8b-stand-ins";
 
 /** A policy of one rung, the rung's entry of the comparator's own policy: its gates, or its bands and limits. */
-function policyOf(rung: "r8a" | "r8b"): Policy {
+function policyOf(rung: "axial-rays" | "axial-vs-optiland"): Policy {
   return { contract: "1.0", kind: "policy", version: 1, rungs: { [rung]: loadPolicy().rungs[rung] } };
 }
-export const R8A_POLICY: Policy = policyOf("r8a");
-export const R8B_POLICY: Policy = policyOf("r8b");
+export const R8A_POLICY: Policy = policyOf("axial-rays");
+export const R8B_POLICY: Policy = policyOf("axial-vs-optiland");
 
 /** What one cycle of a fixture gave. */
 export interface R8Cycle {
@@ -97,7 +97,7 @@ function pairsAt(line: number): RaysTraceSpec {
 
 /** The rung `r8a` as a case without a LensVisualizer tab can be asked it: the pairs at both lines of `LENS`. */
 export const R8A_FIXTURE_RUNG: RungDefinition = {
-  id: "r8a",
+  id: "axial-rays",
   quantity: RAYS_TRACE,
   buildRequests: (opticalCase) =>
     [pairsAt(0), pairsAt(1)].map((spec) => makeRequest({ caseId: opticalCase.id, quantity: RAYS_TRACE, spec })),
@@ -106,7 +106,10 @@ export const R8A_FIXTURE_RUNG: RungDefinition = {
 /** The reference engine, under the id it is made with, answering as `answer` changes its trace. */
 function refLike(change?: (data: RaysTraceData, request: QuantityRequest) => RaysTraceData): EngineMaker {
   return async (id) => {
-    const adapter = new RemoteEngineAdapter({ id: "ref", transport: createInProcessTransport(createRefEngine()) });
+    const adapter = new RemoteEngineAdapter({
+      id: "reference-tracer",
+      transport: createInProcessTransport(createRefEngine()),
+    });
     const described = await adapter.describe();
     const descriptor: EngineDescriptor = { ...described, identity: { ...described.identity, id } };
     return {
@@ -125,13 +128,13 @@ function refLike(change?: (data: RaysTraceData, request: QuantityRequest) => Ray
 }
 
 /**
- * The engines of R8a: `ref`; `moved`, which has ray 2 of the second line leave the last surface 2^-26 mm (1.49e-8
- * mm) further along y in the same direction, so that it crosses the axis that over its slope further on, beyond the
- * gate on the transverse scale; and `stopped`, which stops ray 1 of the first line at the first surface.
+ * The engines of R8a: `reference-tracer`; `moved`, which has ray 2 of the second line leave the last surface 2^-26 mm
+ * (1.49e-8 mm) further along y in the same direction, so that it crosses the axis that over its slope further on,
+ * beyond the gate on the transverse scale; and `stopped`, which stops ray 1 of the first line at the first surface.
  */
 function r8aEngines(): { readonly [engine: string]: EngineMaker } {
   return {
-    ref: refLike(),
+    "reference-tracer": refLike(),
     moved: refLike((data, request) =>
       (request.spec as { line: number }).line === 1
         ? changed(data, (arrays) => {
@@ -151,7 +154,7 @@ export function r8aCycle(runsDir: string): Promise<R8Cycle> {
     runsDir,
     R8A_GOLDEN,
     R8A_FIXTURE_RUNG,
-    [{ name: "lens", opticalCase: LENS, referenceEngine: "ref" }],
+    [{ name: "lens", opticalCase: LENS, referenceEngine: "reference-tracer" }],
     r8aEngines(),
     R8A_POLICY,
   );
@@ -170,7 +173,7 @@ const COLOUR: AxialNativeSpec = { kind: "colour", lines: [0, 1], marginal: [1, 0
 
 /** The rung `r8b` as stand-ins can be asked it: spherical aberration at the first line and colour at both. */
 export const R8B_FIXTURE_RUNG: RungDefinition = {
-  id: "r8b",
+  id: "axial-vs-optiland",
   quantity: AXIAL_NATIVE,
   engines: ["lv", "optiland"],
   buildRequests: (opticalCase) =>

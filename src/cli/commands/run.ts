@@ -21,8 +21,27 @@ import { createEngineRegistry } from "../../engines/registry.ts";
 import type { EngineRegistry } from "../../engines/registry.ts";
 import { assertJobs, jobsOption, memoryBudgetOption, suiteJobEstimate } from "../jobs.ts";
 import { parseArguments } from "../arguments.ts";
+import { JOBS_OPTIONS, ROOT_OPTION, checkListLines, engineListLines, helpText, options, paragraph } from "../help.ts";
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "../command.ts";
 import type { CliCommand } from "../command.ts";
+import {
+  codeLines,
+  codeOf,
+  countsText,
+  distinct,
+  engineIdentifierLines,
+  explainedProblem,
+  legendLines,
+} from "../output.ts";
+import {
+  IDENTIFIERS_TEXT,
+  JOB_SOURCE_SUMMARY_TEXT,
+  JOB_SOURCE_TEXT,
+  JOB_STATUS_TEXT,
+  LEGEND_TEXT,
+  OLD_ID_TEXT,
+  RUN_OUTPUT_TEXT,
+} from "../../vocabulary/index.ts";
 
 /** What `lvrtc run` is wired to, injected so that tests choose all three. */
 export interface RunCommandInputs {
@@ -36,58 +55,39 @@ export interface RunCommandInputs {
 }
 
 const SYNOPSIS =
-  "Usage: lvrtc run <suite.json> [--root <dir>] [--engines <id,...>] [--rungs <id,...>] [--jobs <n>] [--memory-budget <GiB>] [--json]\n";
-const HELP = [
+  "Usage: lvrtc run <suite.json> [--root <dir>] [--engines <id,...>] [--checks <id,...>] [--jobs <n>] [--memory-budget <GiB>] [--details] [--json]\n";
+const HELP = helpText([
   SYNOPSIS,
-  "Runs every run of the suite on each selected engine, asking an engine only for what the result store does not",
-  "hold, and writes <runsDir>/<suite name>/manifest.json with the cases beside it. A run that names a",
-  "LensVisualizer lens has its case built from the configured checkout (lvPath).",
-  "",
-  "A run of a LensVisualizer zoom lens that states no zoom position (state.zoomT) is run at both ends, as two",
-  "runs: <name>-wide at zoom 0 and <name>-tele at zoom 1. A run that states a position is that one state.",
-  "",
-  "  --root <dir>     the directory that holds lvrtc.config.json (default: this repository)",
-  "  --engines <ids>  engines for every run, in place of the run's own list and of every configured engine;",
-  "                   a built-in engine (lv, ref, optiland) is run only where it is named",
-  "  --rungs <ids>    rungs for every run, in place of the run's own list and of every rung: selftest, r0, r1,",
-  "                   r2, r3, r4, r4f, r6a and r6b; r2, r3 and r4 trace each run's ray sets, and share one answer",
-  "                   per engine and set; r4f is asked of lv and of replay, the replay of its MTF sampling, and",
-  "                   r6b of lv and of wave, whatever is named. r5 is run only where it is named: it is asked",
-  "                   of lv, optiland and wave, and asks optiland once more, at 512 rays, for a run whose",
-  "                   figures are outside their band. r5g is run only where it is named: the geometric MTF of",
-  "                   lv, optiland and replay, with the same second asking of optiland for a run on one line",
-  "                   r6c is named-only: lv, wave, optiland FFT and the comparator OTF of optiland",
-  "                   wavefronts (optiland-wave), with R5 bands and no automatic second asking. r7a traces",
-  "                   the rays LensVisualizer's coma and bokeh tabs launch and compares their spots and fans;",
-  "                   r7b is named-only: lv's coma and bokeh tabs beside optiland's own spot and ray fan.",
-  "                   r8a traces the rays LensVisualizer's spherical-aberration and axial-colour sections",
-  "                   launch and compares where each crosses the axis; r8b is named-only: lv's two sections",
-  "                   beside optiland's own real rays and paraxial focus at each line. r9a traces the chief rays",
-  "                   LensVisualizer's distortion, pupils and lateral-colour tabs launch and compares where they",
-  "                   land; r9b is named-only: lv's three tabs beside optiland's own distortion and chief rays.",
-  "                   r10a traces the rays LensVisualizer's field-curve sections launch and compares each field's",
-  "                   tangential and sagittal focus; r10b is named-only: lv's field curves beside optiland's own",
-  "                   FieldCurvature. r11a traces the beams LensVisualizer's vignetting tab traces over each",
-  "                   field's stop lattice and each field's stop-centre ray, and compares which rays get through,",
-  "                   the flux into the image and where the stop-centre rays land; r11b is named-only: lv's vignetting",
-  "                   tab beside the comparator's flux on its own lattices. r12b is named-only: lv's summary tab",
-  "                   and aperture control beside optiland's paraxial accessors and its working f-number. r13b is",
-  "                   named-only: the comparator's Seidel sums (ref-seidel) beside optiland's; r14b is named-only:",
-  "                   optiland's Zernike fit of its wavefront beside the comparator's fit of the same samples.",
-  "  --jobs <n>      concurrent jobs in isolated processes (default: 1, serial)",
-  "  --memory-budget <GiB>  replica RSS budget (default: 25% of installed RAM minus 2 GiB);",
-  "                         jobs are capped at 2.5 GiB each, 4 GiB when R6c is selected",
-  "  --json           print one JSON object in place of the lines",
-  "",
-  "Exit code: 0 when no job ended as an error (unsupported is an answer, not a failure), every run could be",
-  "started and LensVisualizer did not change under the run; 1 otherwise; 2 when nothing was run because the suite",
-  "file, an engine or a rung cannot be used as asked. A field that has no rays is reported and fails nothing.",
-  "",
-].join("\n");
+  ...paragraph(
+    "Runs a suite: every run of the suite file on each of its engines, asking an engine only for what the result cache (the store directory under the runs directory) does not already hold. It writes a run record of the suite, the lens states and the jobs into <runsDir>/<suite name>/, where lvrtc compare and lvrtc report read it. A run that names a LensVisualizer lens has its lens state exported from the configured LensVisualizer checkout (lvPath).",
+  ),
+  ...paragraph(
+    "A LensVisualizer zoom lens run without a zoom position (state.zoomT) is run at both ends, as two runs: <name>-wide at zoom 0 and <name>-tele at zoom 1. A run that states a position is that one state.",
+  ),
+  ...options([
+    ROOT_OPTION,
+    [
+      "--engines <ids>",
+      "the engines of every run, in place of the run's own list and of every configured engine. A built-in engine is run only where it is named; the built-in engines are:",
+      (column) => engineListLines(column + 2),
+    ],
+    [
+      "--checks <ids>",
+      "the checks of every run, in place of the run's own list (the option's older spelling is still read, with a note). Without it every check runs but those run only where named. A check asked of engines of its own is asked of them whatever --engines names. lvrtc checks <id> says what each compares. The checks are:",
+      (column) => checkListLines(column + 2),
+    ],
+    ...JOBS_OPTIONS,
+    ["--details", IDENTIFIERS_TEXT.option],
+    ["--json", "print one JSON object in place of the lines"],
+  ]),
+  ...paragraph(
+    "Exit code: 0 when no job ended in an error (an engine that answers that it does not compute something has answered, and has not failed), every run could be started and LensVisualizer did not change during the run; 1 otherwise; 2 when nothing was run because the suite file, an engine or a check cannot be used as asked. A field that has no rays is reported and fails nothing.",
+  ),
+]);
 
 const STATUSES: readonly ResultStatus[] = ["ok", "unsupported", "error", "pending"];
 const SOURCES: readonly JobSource[] = ["computed", "cached", "negotiated", "unavailable"];
-const VALUE_OPTIONS = ["--root", "--engines", "--rungs", "--jobs", "--memory-budget"] as const;
+const VALUE_OPTIONS = ["--root", "--engines", "--checks", "--rungs", "--jobs", "--memory-budget"] as const;
 type ValueOption = (typeof VALUE_OPTIONS)[number];
 
 /** The command line of `lvrtc run`, read. */
@@ -98,12 +98,15 @@ interface RunArguments {
   readonly rungs: readonly string[] | undefined;
   readonly jobs: number;
   readonly memoryBudgetGiB: number;
+  readonly details: boolean;
   readonly json: boolean;
+  /** Whether the checks were named by `--rungs`, the older spelling of `--checks`: the command says so once. */
+  readonly olderSpelling: boolean;
 }
 
 /** Reads the arguments. Throws a `UsageError` for anything that is not the command line the synopsis shows. */
 function readArguments(args: readonly string[]): RunArguments {
-  const { positionals: files, values, flags } = parseArguments(args, VALUE_OPTIONS, ["--json"]);
+  const { positionals: files, values, flags } = parseArguments(args, VALUE_OPTIONS, ["--json", "--details"]);
   if (files.length === 0) throw new UsageError("no suite file was named");
   if (files.length > 1) throw new UsageError(`more than one suite file was named: ${files.join(", ")}`);
 
@@ -112,15 +115,20 @@ function readArguments(args: readonly string[]): RunArguments {
     if (ids?.includes("")) throw new UsageError(`${option} needs ids separated by commas, got "${values.get(option)}"`);
     return ids;
   };
+  if (values.has("--checks") && values.has("--rungs")) {
+    throw new UsageError("--checks and --rungs are two spellings of one option: give one of them");
+  }
   const memoryBudgetGiB = memoryBudgetOption(values.get("--memory-budget"));
   return {
     suite: files[0],
     root: values.get("--root"),
     engines: list("--engines"),
-    rungs: list("--rungs"),
+    rungs: list("--checks") ?? list("--rungs"),
     jobs: jobsOption(values.get("--jobs"), memoryBudgetGiB),
     memoryBudgetGiB,
+    details: flags.has("--details"),
     json: flags.has("--json"),
+    olderSpelling: values.has("--rungs"),
   };
 }
 
@@ -167,13 +175,23 @@ export async function prepareSuiteRun(
   }
 }
 
-/** One line per job: run, rung, engine, status and how the status was come by, in columns; then what went wrong. */
+/** The words of a job's stored status and source; a value with no words is given as it is. */
+const statusText = (status: string): string => JOB_STATUS_TEXT[status] ?? status;
+const sourceText = (source: string): string => JOB_SOURCE_TEXT[source] ?? source;
+
+/**
+ * One line per job: run, check, engine, how it ended and how it came by that, in columns; then what went wrong, and
+ * under it what the code of an error means and what to do about it.
+ */
 function jobLine(outcome: JobOutcome, widths: readonly number[]): string {
   const { job, source, detail } = outcome;
   const engine = job.step === undefined ? job.engine : `${job.engine} +${job.step}`;
-  const cells = [job.run, job.rung, engine, job.status, source].map((cell, column) => cell.padEnd(widths[column]));
+  const cells = [job.run, job.rung, engine, statusText(job.status), sourceText(source)].map((cell, column) =>
+    cell.padEnd(widths[column]),
+  );
   const said = job.error === undefined ? detail : `${job.error.code}: ${detail ?? ""}`;
-  return `${[...cells, ...(said === null ? [] : [said])].join("  ").trimEnd()}\n`;
+  const means = codeLines(job.error?.code ?? null, 4, job.engine, said ?? "");
+  return [`${[...cells, ...(said === null ? [] : [said])].join("  ").trimEnd()}`, ...means, ""].join("\n");
 }
 
 /** How many of `values` are each of `keys`. */
@@ -193,17 +211,37 @@ function countsOf(outcomes: readonly JobOutcome[]): {
   return { status: countBy(STATUSES, statuses), source: countBy(SOURCES, sources) };
 }
 
-/** The closing lines of the text output. */
-function summaryText(suite: LoadedSuite, result: SuiteRunResult): string {
+/** The closing lines of the text output: the legend of the ids the job lines kept, the counts, the run record. */
+function summaryText(suite: LoadedSuite, result: SuiteRunResult, details: boolean): string {
   const { status, source } = countsOf(result.outcomes);
   const jobs = result.outcomes.length;
-  const byStatus = STATUSES.map((name) => `${status[name]} ${name}`).join(", ");
-  const bySource = `${source.computed} computed, ${source.cached} cached`;
+  const t = RUN_OUTPUT_TEXT;
+  const byStatus = countsText(STATUSES.map((name) => [statusText(name), status[name]] as const));
+  // Every source is counted, so that the counts add up to the jobs.
+  const bySource = countsText(SOURCES.map((name) => [JOB_SOURCE_SUMMARY_TEXT[name] ?? name, source[name]] as const));
+  const legend = legendLines({
+    checks: distinct(result.outcomes.map((outcome) => outcome.job.rung)),
+    engines: distinct(result.outcomes.map((outcome) => outcome.job.engine)),
+  });
   return [
-    `${suite.name}: ${jobs} ${jobs === 1 ? "job" : "jobs"}: ${byStatus} (${bySource})`,
-    `manifest: ${result.manifestPath}`,
+    ...(legend.length > 0 ? [LEGEND_TEXT.above, ...legend.map((line) => `  ${line}`)] : []),
+    `${suite.name}: ${jobs} ${jobs === 1 ? t.job : t.jobs}: ${byStatus} (${bySource})`,
+    `${t.runRecord}: ${result.manifestPath}`,
+    ...(details ? identifierLines(result) : []),
     "",
   ].join("\n");
+}
+
+/** What `--details` adds: the suite file's hash, each run's lens state and each engine's code, by their hashes. */
+function identifierLines(result: SuiteRunResult): string[] {
+  const { manifest } = result;
+  const t = IDENTIFIERS_TEXT;
+  return [
+    `${t.title}:`,
+    `  ${t.suite} ${manifest.suite.hash}`,
+    ...manifest.runs.map((run) => `  ${t.lensState} ${run.name} ${run.caseId ?? "-"}`),
+    ...engineIdentifierLines(manifest.engines),
+  ];
 }
 
 /** Everything the run did as one JSON object with sorted keys. It is console output: it may hold absolute paths. */
@@ -224,18 +262,19 @@ function jsonText(result: SuiteRunResult): string {
 }
 
 /**
- * Builds `lvrtc run <suite.json> [--root <dir>] [--engines <id,...>] [--rungs <id,...>] [--jobs <n>] [--memory-budget <GiB>] [--json]`.
+ * Builds `lvrtc run <suite.json> [--root <dir>] [--engines <id,...>] [--rungs <id,...>] [--jobs <n>] [--memory-budget
+ * <GiB>] [--json]`.
  *
  * It loads the configuration of the root, loads the suite and runs it (`runSuite`), with every engine the
- * configuration defines unless a run or `--engines` names others; a built-in engine, `lv` or `ref`, is run only
- * where it is named. A fixture lens is read from the root; a LensVisualizer lens is exported from the checkout the
+ * configuration defines unless a run or `--engines` names others; a built-in engine, `lv` or `reference-tracer`, is run
+ * only where it is named. A fixture lens is read from the root; a LensVisualizer lens is exported from the checkout the
  * configuration names (`lvPath`), which is loaded only when a run asks for one or the engine `lv` is run, and the
  * two share the one binding. A run of a LensVisualizer zoom that states no zoom position is two runs, one for each
  * end, by the rule of that case source (`CaseSource.expand`). A run of a rung that traces rays (`r2`, `r3`, `r4`)
- * has its ray sets generated by the source of its case. Each job is printed as it finishes, as a line of run, rung, engine,
- * status and "computed", "cached", "negotiated" or "unavailable", and a summary follows; with `--json` one object is
- * printed in their place. Which jobs were cached is said only here, never in the manifest. A run that could not be
- * started, a field that has no rays, and a warning, go to the error stream.
+ * has its ray sets generated by the source of its case. Each job is printed as it finishes, as a line of run, rung,
+ * engine, status and "computed", "cached", "negotiated" or "unavailable", and a summary follows; with `--json` one
+ * object is printed in their place. Which jobs were cached is said only here, never in the manifest. A run that could
+ * not be started, a field that has no rays, and a warning, go to the error stream.
  *
  * Exit codes: 0 when no job ended as "error", every run was started ("unsupported" is an answer) and no case source
  * changed during the run, whether or not every field had rays; 1 otherwise; 2, with nothing run, for a command line
@@ -246,7 +285,7 @@ function jsonText(result: SuiteRunResult): string {
 export function createRunCommand(inputs: RunCommandInputs): CliCommand {
   return {
     name: "run",
-    summary: "Run a suite on the configured engines, reusing stored results",
+    summary: "Run a suite on its engines, reusing answers already in the result cache",
     run: async (args, io) => {
       if (args.includes("-h") || args.includes("--help")) {
         io.stdout(HELP);
@@ -260,6 +299,7 @@ export function createRunCommand(inputs: RunCommandInputs): CliCommand {
         io.stderr(`lvrtc run: ${error.message}\n${SYNOPSIS}`);
         return EXIT_USAGE;
       }
+      if (asked.olderSpelling) io.stderr(`${OLD_ID_TEXT.olderOption}\n`);
 
       let suite: LoadedSuite;
       let result: SuiteRunResult;
@@ -279,8 +319,8 @@ export function createRunCommand(inputs: RunCommandInputs): CliCommand {
           Math.max(0, ...suite.runs.map((run) => run.spec.name.length)),
           Math.max(0, ...RUNGS.map((rung) => rung.id.length)),
           Math.max(0, ...[...registry.ids(), ...registry.builtinIds()].map((id) => id.length)),
-          Math.max(...STATUSES.map((status) => status.length)),
-          Math.max(...SOURCES.map((source) => source.length)),
+          Math.max(...STATUSES.map((status) => statusText(status).length)),
+          Math.max(...SOURCES.map((source) => sourceText(source).length)),
         ];
         result = await runSuite({
           suite,
@@ -299,42 +339,34 @@ export function createRunCommand(inputs: RunCommandInputs): CliCommand {
         return EXIT_USAGE;
       }
 
+      const t = RUN_OUTPUT_TEXT;
       const notStarted = result.manifest.runs.filter((run) => run.caseId === null);
       for (const run of notStarted) {
-        for (const problem of run.problems) io.stderr(`lvrtc run: run ${run.name} was not started: ${problem}\n`);
+        for (const problem of run.problems)
+          io.stderr(explainedProblem(`lvrtc run: run ${run.name} ${t.notStarted}: `, problem));
       }
       for (const run of result.manifest.runs) {
-        for (const problem of run.raySets?.problems ?? []) {
-          io.stderr(`lvrtc run: run ${run.name}: a field has no rays: ${problem}\n`);
-        }
-        for (const problem of run.fineRaySets?.problems ?? []) {
-          io.stderr(`lvrtc run: run ${run.name}: a field has no rays on the finer lattice: ${problem}\n`);
-        }
-        for (const problem of run.spotRaySets?.problems ?? []) {
-          io.stderr(`lvrtc run: run ${run.name}: a spot or fan has no rays: ${problem}\n`);
-        }
-        for (const problem of run.axialRaySets?.problems ?? []) {
-          io.stderr(`lvrtc run: run ${run.name}: the axial tabs have no rays: ${problem}\n`);
-        }
-        for (const problem of run.chiefRaySets?.problems ?? []) {
-          io.stderr(`lvrtc run: run ${run.name}: a chief-ray tab has no rays: ${problem}\n`);
-        }
-        for (const problem of run.curvatureRaySets?.problems ?? []) {
-          io.stderr(`lvrtc run: run ${run.name}: the field curves have no rays: ${problem}\n`);
-        }
-        for (const problem of run.vignettingRaySets?.problems ?? []) {
-          io.stderr(`lvrtc run: run ${run.name}: the vignetting sets: ${problem}\n`);
-        }
+        const said = (what: string, problems: readonly string[] | undefined): void => {
+          for (const problem of problems ?? [])
+            io.stderr(explainedProblem(`lvrtc run: run ${run.name}: ${what}: `, problem));
+        };
+        said(t.noRays, run.raySets?.problems);
+        said(t.noFineRays, run.fineRaySets?.problems);
+        said(t.noSpotRays, run.spotRaySets?.problems);
+        said(t.noAxialRays, run.axialRaySets?.problems);
+        said(t.noChiefRays, run.chiefRaySets?.problems);
+        said(t.noCurvatureRays, run.curvatureRaySets?.problems);
+        said(t.noVignettingRays, run.vignettingRaySets?.problems);
       }
-      for (const warning of result.warnings) io.stderr(`lvrtc run: warning: ${warning}\n`);
-      io.stdout(asked.json ? jsonText(result) : summaryText(suite, result));
+      for (const warning of result.warnings) io.stderr(explainedProblem(`lvrtc run: ${t.warning}: `, warning));
+      io.stdout(asked.json ? jsonText(result) : summaryText(suite, result, asked.details));
 
       const failed = result.outcomes.some((outcome) => outcome.job.status === "error");
       const changed = Object.values(result.manifest.sources ?? {}).some((source) => source.status === SOURCE_CHANGED);
       const refusedOnly = notStarted.every(
         (run) =>
           run.problems.length > 0 &&
-          run.problems.every((problem) => problem.startsWith("finite-conjugate-unavailable: ")),
+          run.problems.every((problem) => codeOf(problem) === "finite-conjugate-unavailable"),
       );
       return failed || changed || !refusedOnly ? EXIT_FAILURE : EXIT_OK;
     },

@@ -29,7 +29,7 @@ test("child case export, zoom expansion, coarse/fine rays, recipes, store and co
       kind: "suite",
       name: "preparation",
       defaults: {
-        engines: ["lv", "ref"],
+        engines: ["lv", "reference-tracer"],
         fields: { kind: "image-height-fractions", values: [0, 0.5, 1] },
         sampling: { bundleGrid: 4 },
       },
@@ -62,11 +62,11 @@ test("child case export, zoom expansion, coarse/fine rays, recipes, store and co
       ...prepared,
       runsDir,
       jobs,
-      rungs: ["r0", "r1", "r2", "r3", "r4", "r4f", "r6a"],
+      rungs: ["built-system", "first-order", "ray-trace", "optical-path", "geometric-mtf", "lv-mtf-replay", "wave-mtf"],
       followUps: [
         {
-          rung: "r4",
-          engine: "ref",
+          rung: "geometric-mtf",
+          engine: "reference-tracer",
           step: "again",
           options: { poolRetrace: true },
           needed: (_answers, { spec }) => {
@@ -135,8 +135,8 @@ test("folded run refusals and coarse/fine confirmation provenance are identical 
       kind: "suite",
       name: "folded-pool",
       defaults: {
-        engines: ["lv", "ref"],
-        rungs: ["r0", "r2", "r3", "r6a"],
+        engines: ["lv", "reference-tracer"],
+        rungs: ["built-system", "ray-trace", "optical-path", "wave-mtf"],
         fields: { kind: "angles-deg", values: [0, 0.25] },
         sampling: { bundleGrid: 4 },
       },
